@@ -1,0 +1,3 @@
+[submodule "go-llms"]
+	path = go-llms
+	url = https://github.com/lexlapax/go-llms.git
