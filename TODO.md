@@ -9,36 +9,12 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [x] Initial project structure
 - [x] Architecture documentation
 - [x] go-llms dependency integration
-- [ ] Core implementation
+- [x] Core implementation (Phase 1 complete)
 - [ ] Script engine integration
 - [ ] Testing and examples
 - [ ] Release preparation
 
-## Phase 1: Core Infrastructure (Priority: Critical)
-
-### 1.1 Engine Interface System
-- [x] Create `pkg/engine/interface.go` with core `Engine` interface (using existing engine.go)
-- [x] Implement `ExecutionResult` and `LogEntry` types (adapted to existing Result type)
-- [x] Define `EngineConfig` with memory limits and timeouts (adapted to existing Config type)
-- [x] Create `pkg/engine/errors.go` for engine-specific errors
-
-### 1.2 Engine Registry
-- [x] Implement `pkg/engine/registry.go` with thread-safe registry
-- [x] Add factory pattern for engine creation
-- [x] Create registry tests
-- [x] Add engine discovery mechanism
-
-### 1.3 Bridge Infrastructure
-- [ ] Define `pkg/bridge/interface.go` with `Bridge` interface
-- [ ] Implement `BridgeSet` for managing multiple bridges
-- [ ] Create bridge registration mechanism
-- [ ] Add bridge lifecycle management (init/cleanup)
-
-### 1.4 Context and Security
-- [ ] Implement `pkg/security/context.go` for secure execution contexts
-- [ ] Create resource tracking for memory/CPU limits
-- [ ] Add timeout enforcement
-- [ ] Implement context cancellation propagation
+## Phase 1: Core Infrastructure (Priority: Critical) [COMPLETED - See TODO-DONE.md]
 
 ## Phase 2: LLM Bridge Enhancement (Priority: Critical)
 
