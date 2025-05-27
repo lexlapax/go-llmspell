@@ -17,16 +17,16 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 ## Phase 1: Core Infrastructure (Priority: Critical)
 
 ### 1.1 Engine Interface System
-- [ ] Create `pkg/engine/interface.go` with core `Engine` interface
-- [ ] Implement `ExecutionResult` and `LogEntry` types
-- [ ] Define `EngineConfig` with memory limits and timeouts
-- [ ] Create `pkg/engine/errors.go` for engine-specific errors
+- [x] Create `pkg/engine/interface.go` with core `Engine` interface (using existing engine.go)
+- [x] Implement `ExecutionResult` and `LogEntry` types (adapted to existing Result type)
+- [x] Define `EngineConfig` with memory limits and timeouts (adapted to existing Config type)
+- [x] Create `pkg/engine/errors.go` for engine-specific errors
 
 ### 1.2 Engine Registry
-- [ ] Implement `pkg/engine/registry.go` with thread-safe registry
-- [ ] Add factory pattern for engine creation
-- [ ] Create registry tests
-- [ ] Add engine discovery mechanism
+- [x] Implement `pkg/engine/registry.go` with thread-safe registry
+- [x] Add factory pattern for engine creation
+- [x] Create registry tests
+- [x] Add engine discovery mechanism
 
 ### 1.3 Bridge Infrastructure
 - [ ] Define `pkg/bridge/interface.go` with `Bridge` interface

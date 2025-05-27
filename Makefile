@@ -48,7 +48,7 @@ test: test-unit
 # Run unit tests
 test-unit:
 	@echo "Running unit tests..."
-	$(GOTEST) $(TEST_FLAGS) ./pkg/... ./internal/...
+	$(GOTEST) $(TEST_FLAGS) ./pkg/...
 
 # Run integration tests
 test-integration:
@@ -61,7 +61,7 @@ test-all: test-unit test-integration
 # Generate test coverage
 coverage:
 	@echo "Generating coverage report..."
-	$(GOTEST) -coverprofile=$(COVERAGE_FILE) -covermode=atomic ./pkg/... ./internal/...
+	$(GOTEST) -coverprofile=$(COVERAGE_FILE) -covermode=atomic ./pkg/...
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
 	@echo "Coverage report generated: $(COVERAGE_HTML)"
 

@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	
+
 	"github.com/lexlapax/go-llms/pkg/llm/domain"
 	"github.com/lexlapax/go-llms/pkg/util/llmutil"
 )
@@ -30,17 +30,17 @@ func NewLLMBridge() (*LLMBridge, error) {
 	} else {
 		return nil, fmt.Errorf("no API key found in environment (OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY)")
 	}
-	
+
 	// Create provider with config from environment
 	config := llmutil.ModelConfig{
 		Provider: providerName,
 	}
-	
+
 	provider, err := llmutil.CreateProvider(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create provider: %w", err)
 	}
-	
+
 	return &LLMBridge{
 		provider: provider,
 	}, nil
@@ -50,7 +50,7 @@ func NewLLMBridge() (*LLMBridge, error) {
 func (b *LLMBridge) Chat(ctx context.Context, prompt string) (string, error) {
 	messages := []domain.Message{
 		{
-			Role:    domain.RoleUser,
+			Role: domain.RoleUser,
 			Content: []domain.ContentPart{
 				{
 					Type: domain.ContentTypeText,
@@ -59,12 +59,12 @@ func (b *LLMBridge) Chat(ctx context.Context, prompt string) (string, error) {
 			},
 		},
 	}
-	
+
 	response, err := b.provider.GenerateMessage(ctx, messages)
 	if err != nil {
 		return "", fmt.Errorf("LLM completion failed: %w", err)
 	}
-	
+
 	return response.Content, nil
 }
 
@@ -75,12 +75,12 @@ func (b *LLMBridge) Complete(ctx context.Context, prompt string, maxTokens int) 
 	if maxTokens > 0 {
 		options = append(options, domain.WithMaxTokens(maxTokens))
 	}
-	
+
 	response, err := b.provider.Generate(ctx, prompt, options...)
 	if err != nil {
 		return "", fmt.Errorf("completion failed: %w", err)
 	}
-	
+
 	return response, nil
 }
 
@@ -89,7 +89,7 @@ func (b *LLMBridge) StreamChat(ctx context.Context, prompt string, callback func
 	// Create message for streaming
 	messages := []domain.Message{
 		{
-			Role:    domain.RoleUser,
+			Role: domain.RoleUser,
 			Content: []domain.ContentPart{
 				{
 					Type: domain.ContentTypeText,
@@ -98,23 +98,23 @@ func (b *LLMBridge) StreamChat(ctx context.Context, prompt string, callback func
 			},
 		},
 	}
-	
+
 	// Start streaming
 	stream, err := b.provider.StreamMessage(ctx, messages)
 	if err != nil {
 		return fmt.Errorf("failed to start stream: %w", err)
 	}
-	
+
 	// Process stream chunks from channel
 	for token := range stream {
 		if err := callback(token.Text); err != nil {
 			return fmt.Errorf("callback error: %w", err)
 		}
-		
+
 		if token.Finished {
 			break
 		}
 	}
-	
+
 	return nil
 }

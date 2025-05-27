@@ -31,7 +31,7 @@ func main() {
 	}
 
 	fmt.Printf("🧙‍♂️ Casting spell from %s using %s engine...\n", *scriptPath, *engine)
-	
+
 	if *verbose {
 		log.Printf("Verbose mode enabled")
 	}
