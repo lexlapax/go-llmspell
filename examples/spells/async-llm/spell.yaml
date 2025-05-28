@@ -1,0 +1,14 @@
+name: async-llm
+version: 1.0.0
+description: Demonstrates promise-based async LLM operations
+author: go-llmspell
+
+requires:
+  - llm
+  - promise
+
+parameters:
+  prompts:
+    description: List of prompts to process asynchronously
+    type: array
+    default: []

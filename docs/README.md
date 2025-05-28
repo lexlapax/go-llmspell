@@ -13,6 +13,7 @@ Welcome to the go-llmspell documentation. This directory contains comprehensive 
 - [`getting-started.md`](getting-started.md) - Quick start guide for new users
 
 ### API Reference
+- [`lua-stdlib.md`](lua-stdlib.md) - Lua standard library reference
 - `api-reference.md` - Complete API documentation (coming soon)
 - `bridge-api.md` - Bridge interface documentation (coming soon)
 

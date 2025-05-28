@@ -56,7 +56,12 @@ This project is under active development. See our [TODO](TODO.md) for current ta
   - ✅ Provider switching and model discovery
   - ✅ Type conversion utilities
   - ✅ Comprehensive test coverage
-- 📋 Lua engine implementation in progress (Phase 3)
+- ✅ Lua engine implementation (Phase 3 complete)
+  - ✅ Full Lua VM integration with security sandbox
+  - ✅ Complete standard library (JSON, HTTP, Storage, Log, Promise)
+  - ✅ LLM bridge for Lua scripts
+  - ✅ Example spells demonstrating capabilities
+- 🔄 Agent System implementation in progress (Phase 4)
 
 ## 🛠️ Installation
 
@@ -77,17 +82,37 @@ make test
 
 ## 🎯 Quick Start
 
-Once implemented, you'll be able to:
+### Running Example Spells
+
+```bash
+# Run the async LLM example (demonstrates promises)
+go run examples/run_spell.go examples/spells/async-llm
+
+# Compare multiple LLM providers
+go run examples/run_spell.go examples/spells/provider-compare --param prompt="What is AI?"
+
+# Simple chat assistant demo
+go run examples/run_spell.go examples/spells/chat-assistant
+```
+
+### Available Example Spells
+
+- **async-llm**: Demonstrates promise-based async patterns with LLMs
+- **provider-compare**: Compares responses from multiple providers
+- **chat-assistant**: Interactive chat with conversation history (demo version)
+- **hello-world**: Basic spell structure example
+
+### Future CLI (Coming Soon)
 
 ```bash
 # Run a spell
-llmspell -script examples/hello.lua
+llmspell run my-spell.lua
 
 # List available spells
-llmspell -list
+llmspell list
 
 # Create a new spell
-llmspell -create my-spell.lua
+llmspell create my-spell
 ```
 
 ## 🏛️ Architecture
@@ -158,7 +183,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 ## 📦 Dependencies
 
 - [go-llms](https://github.com/lexlapax/go-llms) v0.2.6 - LLM provider abstraction
-- [gopher-lua](https://github.com/yuin/gopher-lua) - Lua 5.1 VM (planned)
+- [gopher-lua](https://github.com/yuin/gopher-lua) v1.1.1 - Lua 5.1 VM (integrated)
 - [goja](https://github.com/dop251/goja) - JavaScript engine (planned)
 - [tengo](https://github.com/d5/tengo) - Embeddable script language (planned)
 

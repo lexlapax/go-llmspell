@@ -6,12 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 go-llmspell is a Go library that provides a scriptable interface for LLM interactions using embedded scripting languages (starting with Lua, then JavaScript and Tengo). It acts as a wrapper around the go-llms library, providing scripting capabilities for AI agent orchestration and workflow automation.
 
-## Current Status (Last Updated: December 2024)
+## Current Status (Last Updated: May 27, 2025)
 
 ### Completed
 - ✅ Initial project structure with comprehensive directory layout
 - ✅ Architecture documentation (docs/architecture.md, implementation-guide.md, spell-development.md)
 - ✅ go-llms v0.2.6 integration as git submodule
+- ✅ Basic LLM bridge implementation (pkg/bridge/llm.go)
 - ✅ Makefile with build, test, lint, and fmt targets
 - ✅ .gitignore for Go projects
 - ✅ Comprehensive TODO.md for tracking implementation
@@ -29,18 +30,32 @@ go-llmspell is a Go library that provides a scriptable interface for LLM interac
   - ✅ Type conversion utilities for Go<->Script bridging
   - ✅ Comprehensive test coverage with race detection
   - ✅ Fixed concurrent access issues
+- ✅ **Phase 3: Lua Engine Integration (COMPLETE)**
+  - ✅ GopherLua integration with full Engine interface
+  - ✅ Comprehensive Lua<->Go type conversions
+  - ✅ LLM bridge adapter for Lua scripts
+  - ✅ Complete standard library (JSON, HTTP, Storage, Log, Promise)
+  - ✅ Security sandbox with disabled dangerous functions
+  - ✅ Promise implementation for async patterns (using .next() instead of then)
+  - ✅ Example spells: async-llm, provider-compare, chat-assistant
+  - ✅ All tests passing with race detection
 
 ### In Progress
-- 🔄 Phase 3: Lua Engine Integration
+- 🔄 Phase 4: Tool System - Create tool interface
 
 ### Next Steps
-1. Begin Lua engine integration (Phase 3)
-   - GopherLua integration
-   - Lua type conversions
-   - Lua bridge adapters
-   - Lua standard library
-2. Implement Tool and Agent systems (Phase 4-6)
-3. Add multi-language support (JavaScript, Tengo)
+1. Implement Tool System (Phase 4)
+   - Create tool interface and registry
+   - Integrate with go-llms built-in tools
+   - Add tool bridge for script-defined tools
+2. Implement Agent System (Phase 5)
+   - Create agent interface and configuration
+   - Integrate with go-llms agent capabilities
+   - Add conversation memory management
+3. Add missing LLM bridge features:
+   - llm.stream_chat_with_history() for message-based streaming
+   - Safe alternatives to io.read/write for interactive spells
+4. Continue with Workflow system (Phase 6)
 
 ## Development Commands
 

@@ -299,5 +299,113 @@ go-llmspell/
 - Passes go vet checks
 - No build errors or warnings
 
+## Phase 3: Lua Engine (Completed: May 27, 2025)
+
+### 3.1 GopherLua Integration [COMPLETED]
+- [x] Create `pkg/engine/lua/engine.go` implementing Engine interface
+  - Full implementation with thread-safe execution
+  - Support for LoadScript and LoadScriptFile
+  - Context-based execution with timeout support
+  - Comprehensive error handling with stack traces
+- [x] Add gopher-lua dependency (v1.1.1)
+- [x] Implement script loading and execution
+  - Script compilation and caching
+  - Detailed error messages
+  - Proper stack management
+- [x] Add proper error handling and stack traces
+
+### 3.2 Lua Type Conversions [COMPLETED]
+- [x] Implement `pkg/engine/lua/conversions.go` for Go<->Lua types
+  - Bidirectional type conversion for all basic types
+  - Complex type support: slices, arrays, maps, structs
+  - Function wrapping for Go functions callable from Lua
+  - Userdata support for custom types
+- [x] Handle tables, functions, and userdata
+  - Automatic array/map detection for tables
+  - JSON tag support for struct conversions
+  - Function parameter and return value marshaling
+- [x] Add support for async operations
+  - Callback-based async pattern
+  - Error propagation from callbacks
+- [x] Create conversion tests
+
+### 3.3 Lua Bridge Adapters [COMPLETED]
+- [x] Create `pkg/engine/lua/bridges/llm_bridge.go` for LLM bridge
+  - Full LLM API: chat, complete, stream_chat
+  - Provider management: list_providers, get_provider, set_provider
+  - Model listing functionality
+- [x] Implement promise-like pattern for async operations
+  - Created `pkg/engine/lua/stdlib/promise.go`
+  - Uses `promise.next()` instead of `then` (Lua keyword conflict)
+  - Full implementation: new, resolve, reject, all, race, catch, await
+  - Thread-safe with proper mutex usage
+  - Comprehensive test coverage
+- [x] Add callback support for streaming
+  - Lua callback functions for stream chunks
+  - Proper error handling in callbacks
+- [x] Create Lua-specific helper functions
+
+### 3.4 Lua Standard Library [COMPLETED]
+- [x] Implement safe stdlib subset
+  - Security sandbox with disabled dangerous functions
+  - Removed io, os, debug libraries for security
+  - Safe execution environment
+- [x] Add JSON support via `json` module
+  - `pkg/engine/lua/stdlib/json.go`
+  - json.encode() and json.decode() functions
+  - Handles all Lua types correctly
+- [x] Add HTTP client via `http` module
+  - `pkg/engine/lua/stdlib/http.go`
+  - http.get(), http.post(), http.request() functions
+  - Security restrictions (domain allowlisting)
+  - Timeout support
+- [x] Add filesystem access via `storage` module (safe subset)
+  - `pkg/engine/lua/stdlib/storage.go`
+  - storage.get(), set(), exists(), read(), write() functions
+  - Sandboxed to storage directory only
+  - Path traversal protection
+- [x] Add logging via `log` module (using slog)
+  - `pkg/engine/lua/stdlib/log.go`
+  - Structured logging with slog backend
+  - Log levels: debug, info, warn, error
+  - Spell name included in log context
+
+### Implementation Highlights
+
+#### Promise Implementation
+- Simplified synchronous implementation due to Lua's single-threaded nature
+- Provides familiar promise patterns for clean async code
+- All promise tests passing with race detector
+- Example spell created: `examples/spells/async-llm`
+
+#### Security First Approach
+- Comprehensive sandbox from the beginning
+- No access to filesystem outside storage directory
+- No network access except through controlled HTTP module
+- No ability to load external code
+
+#### Example Spells Created
+1. **async-llm** - Demonstrates promise-based async patterns
+   - promise.all() for concurrent operations
+   - Promise chaining with .next()
+   - Error handling with .catch()
+   - Promise racing
+
+2. **provider-compare** - Compares multiple LLM providers
+   - Consolidated from main.lua and main_full.lua
+   - Works within sandbox restrictions (no os.clock)
+
+3. **chat-assistant** - Interactive chat with history
+   - Working demo in main.lua
+   - Full implementation in main_full.lua (requires TODO features)
+   - Clear documentation of missing features
+
+#### Files Created/Modified
+- `pkg/engine/lua/stdlib/` - Complete standard library implementation
+- `pkg/engine/lua/stdlib/promise.go` - Promise implementation
+- `pkg/engine/lua/stdlib/promise_test.go` - Promise tests
+- `examples/spells/async-llm/` - Complete async example
+- Updated and consolidated example spells
+
 ## Next Steps
-Continue with Phase 3.4: Lua Standard Library implementation or move to Phase 4: Agent System as outlined in TODO.md
+Continue with Phase 4: Agent System as outlined in TODO.md

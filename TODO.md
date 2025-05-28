@@ -11,7 +11,11 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [x] go-llms dependency integration
 - [x] Core implementation (Phase 1 complete)
 - [x] LLM Bridge Enhancement (Phase 2 complete)
-- [ ] Script engine integration
+- [x] Lua Script Engine Integration (Phase 3 complete)
+- [ ] Tool System (Phase 4 in progress)
+- [ ] Agent System (Phase 5)
+- [ ] Workflow System (Phase 6)
+- [ ] JavaScript/Tengo engines
 - [ ] Testing and examples
 - [ ] Release preparation
 
@@ -19,104 +23,100 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 
 ## Phase 2: LLM Bridge Enhancement (Priority: Critical) [COMPLETED - See TODO-DONE.md]
 
-## Phase 3: Lua Engine (Priority: High)
+## Phase 3: Lua Engine (Priority: High) [COMPLETED - See TODO-DONE.md]
 
-### 3.1 GopherLua Integration [COMPLETED]
-- [x] Create `pkg/engine/lua/engine.go` implementing Engine interface
-- [x] Add gopher-lua dependency
-- [x] Implement script loading and execution
-- [x] Add proper error handling and stack traces
+## Pending Items from Completed Phases (Revisit)
 
-### 3.2 Lua Type Conversions [COMPLETED]
-- [x] Implement `pkg/engine/lua/conversions.go` for Go<->Lua types
-- [x] Handle tables, functions, and userdata
-- [x] Add support for async operations
-- [x] Create conversion tests
+### From Phase 3 Implementation
+- [ ] Add llm.stream_chat_with_history() for message-based streaming
+  - Required for full chat-assistant example
+  - Accept array of message objects with role and content
+- [ ] Implement safe alternatives to io.read/write for interactive spells
+  - Required for interactive chat functionality
+  - Options: stdin/stdout bridge, event system, or web interface
+- [ ] Add promise implementation for true async operations
+  - Current implementation is synchronous due to Lua limitations
+  - Consider goroutine-based approach for true concurrency
 
-### 3.3 Lua Bridge Adapters [PARTIALLY COMPLETED]
-- [x] Create `pkg/engine/lua/bridges/llm_bridge.go` for LLM bridge
-- [ ] Implement promise-like pattern for async operations
-- [x] Add callback support for streaming
-- [x] Create Lua-specific helper functions
+## Phase 4: Tool System (Priority: High)
 
-### 3.4 Lua Standard Library
-- [ ] Implement safe stdlib subset
-- [ ] Add JSON support via `json` module
-- [ ] Add HTTP client via `http` module
-- [ ] Add filesystem access via `fs` module
-- [ ] Add logging via `log` module
-
-## Phase 4: Agent System (Priority: High)
-
-### 4.1 Agent Interface
-- [ ] Create `pkg/agents/interface.go`
-- [ ] Define agent configuration structure
-- [ ] Add agent lifecycle management
-- [ ] Create agent context handling
-
-### 4.2 Agent Implementation
-- [ ] Implement `pkg/agents/agent.go` using go-llms agents
-- [ ] Add tool integration for agents
-- [ ] Create conversation memory management
-- [ ] Add agent state persistence
-
-### 4.3 Agent Bridge
-- [ ] Create `pkg/bridge/agents.go`
-- [ ] Implement agent creation from scripts
-- [ ] Add agent execution with streaming
-- [ ] Create agent composition patterns
-
-### 4.4 Pre-built Agents
-- [ ] Create research assistant agent
-- [ ] Implement code review agent
-- [ ] Add writing assistant agent
-- [ ] Create data analysis agent
-
-## Phase 5: Workflow System (Priority: High)
-
-### 5.1 Workflow Engine
-- [ ] Create `pkg/workflows/engine.go`
-- [ ] Implement step execution logic
-- [ ] Add conditional branching
-- [ ] Create parallel execution support
-
-### 5.2 Workflow Bridge
-- [ ] Create `pkg/bridge/workflows.go`
-- [ ] Implement workflow creation from scripts
-- [ ] Add workflow composition (chain, parallel)
-- [ ] Create workflow debugging support
-
-### 5.3 Workflow Patterns
-- [ ] Implement sequential workflow
-- [ ] Add parallel workflow with result aggregation
-- [ ] Create conditional workflow with branching
-- [ ] Add loop/iteration support
-
-## Phase 6: Tool System (Priority: Medium)
-
-### 6.1 Tool Interface
+### 4.1 Tool Interface
 - [ ] Create `pkg/tools/interface.go` with Tool interface
 - [ ] Implement parameter schema validation
 - [ ] Add tool metadata support
 - [ ] Create tool execution context
 
-### 6.2 Tool Registry
+### 4.2 Tool Registry
 - [ ] Implement `pkg/tools/registry.go`
 - [ ] Add tool discovery from filesystem
 - [ ] Create tool validation
 - [ ] Add tool versioning
 
-### 6.3 Tool Bridge
+### 4.3 Tool Bridge
 - [ ] Create `pkg/bridge/tools.go`
 - [ ] Implement tool creation from scripts
 - [ ] Add tool execution with result handling
 - [ ] Create tool composition utilities
 
-### 6.4 Built-in Tools
+### 4.4 Built-in Tools from go-llms
+- [ ] make built-in tools from go-llms available for use
+- [ ] test those tools
+
+### 4.5 Built-in scripted Tools (Priority: Medium)
 - [ ] Implement web search tool
 - [ ] Create calculator tool
 - [ ] Add file manipulation tools
 - [ ] Create JSON/YAML processing tools
+
+## Phase 5: Agent System (Priority: High)
+
+### 5.1 Agent Interface
+- [ ] Create `pkg/agents/interface.go`
+- [ ] Define agent configuration structure
+- [ ] Add agent lifecycle management
+- [ ] Create agent context handling
+
+### 5.2 Agent Implementation
+- [ ] Implement `pkg/agents/agent.go` using go-llms agents
+- [ ] Add tool integration for agents - use existing go-llms tools
+- [ ] Create conversation memory management
+- [ ] Add agent state persistence
+
+### 5.3 Agent Bridge
+- [ ] Create `pkg/bridge/agents.go`
+- [ ] Implement agent creation from scripts
+- [ ] Add agent execution with streaming
+- [ ] Create agent composition patterns
+
+### 5.4 Built-in Agents from go-llms
+- [ ] make built-in agents from go-llms available for use
+- [ ] test those agents
+
+### 5.5 Pre-built Scripted Agents (ask first)
+- [ ] Create research assistant agent
+- [ ] Implement code review agent
+- [ ] Add writing assistant agent
+- [ ] Create data analysis agent
+
+## Phase 6: Workflow System (Priority: High)
+
+### 6.1 Workflow Engine
+- [ ] Create `pkg/workflows/engine.go`
+- [ ] Implement step execution logic
+- [ ] Add conditional branching
+- [ ] Create parallel execution support
+
+### 6.2 Workflow Bridge
+- [ ] Create `pkg/bridge/workflows.go`
+- [ ] Implement workflow creation from scripts
+- [ ] Add workflow composition (chain, parallel)
+- [ ] Create workflow debugging support
+
+### 6.3 Workflow Patterns
+- [ ] Implement sequential workflow
+- [ ] Add parallel workflow with result aggregation
+- [ ] Create conditional workflow with branching
+- [ ] Add loop/iteration support
 
 
 ## Phase 7: Spell System (Priority: Medium)
@@ -299,15 +299,17 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - Basic bridge system
 - Security context
 
-### Milestone 2: Lua Support (Week 3-4)
-- Complete Lua engine
-- All bridges working in Lua
-- Basic spell execution
+### Milestone 2: Lua Support (Week 3-4) [COMPLETED]
+- Complete Lua engine with full Engine interface implementation
+- LLM bridge fully working in Lua
+- Standard library modules (JSON, HTTP, Storage, Log, Promise)
+- Security sandbox implemented
+- Example spells created and tested
 
 ### Milestone 3: Tools and Agents (Week 5-6)
-- Tool system complete
-- Agent system working
-- Integration with go-llms
+- Tool system complete (Phase 4)
+- Agent system working (Phase 5)
+- Integration with go-llms tools and agents
 
 ### Milestone 4: Multi-language Support (Week 7-8)
 - JavaScript engine complete

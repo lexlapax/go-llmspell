@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,12 +16,14 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/bridges"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/stdlib"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run run_spell.go <spell-directory>")
+		fmt.Println("Usage: go run run_spell.go <spell-directory> [param=value ...]")
 		fmt.Println("Example: go run run_spell.go spells/hello-llm")
+		fmt.Println("Example: go run run_spell.go spells/web-summarizer url=https://example.com")
 		os.Exit(1)
 	}
 
@@ -68,8 +71,17 @@ func main() {
 		}
 	}
 
-	// Register standard library functions
-	registerStdLib(eng)
+	// Register standard library
+	spellName := filepath.Base(spellDir)
+	stdlibConfig := &stdlib.Config{
+		SpellName: spellName,
+		LogLevel:  slog.LevelInfo,
+		Storage:   stdlib.DefaultStorageConfig(),
+		HTTP:      stdlib.DefaultHTTPConfig(),
+	}
+	if err := stdlib.RegisterAll(eng.GetLuaState(), stdlibConfig); err != nil {
+		log.Fatalf("Failed to register stdlib: %v", err)
+	}
 
 	// First, set up the global modules
 	setupScript := ""
@@ -95,28 +107,19 @@ llm = {
 `
 	}
 
-	// Add other modules
-	setupScript += `
--- Set up global log module  
-log = {
-	info = log_info,
-	error = log_error
-}
+	// Set up params from command line
+	paramsTable := "params = {"
+	for i := 2; i < len(os.Args); i++ {
+		if strings.Contains(os.Args[i], "=") {
+			parts := strings.SplitN(os.Args[i], "=", 2)
+			if len(parts) == 2 {
+				paramsTable += fmt.Sprintf("\n\t%s = %q,", parts[0], parts[1])
+			}
+		}
+	}
+	paramsTable += "\n}"
 
--- Set up global storage module
-storage = {
-	get = storage_get,
-	set = storage_set
-}
-
--- Set up global http module
-http = {
-	get = http_get
-}
-
--- Set up params (empty for now)
-params = {}
-`
+	setupScript += paramsTable
 
 	err = eng.LoadScript(strings.NewReader(setupScript))
 	if err != nil {
@@ -162,33 +165,5 @@ func registerMockLLM(eng *lua.LuaEngine) {
 
 	eng.RegisterFunction("llm_set_provider", func(name string) string {
 		return fmt.Sprintf("[Mock] Would switch to provider: %s", name)
-	})
-}
-
-// registerStdLib registers standard library functions
-func registerStdLib(eng *lua.LuaEngine) {
-	// Simple log module
-	eng.RegisterFunction("log_info", func(msg string) {
-		fmt.Printf("[INFO] %s\n", msg)
-	})
-
-	eng.RegisterFunction("log_error", func(msg string) {
-		fmt.Printf("[ERROR] %s\n", msg)
-	})
-
-	// Simple storage module (in-memory for demo)
-	storage := make(map[string]string)
-
-	eng.RegisterFunction("storage_get", func(key string) string {
-		return storage[key]
-	})
-
-	eng.RegisterFunction("storage_set", func(key, value string) {
-		storage[key] = value
-	})
-
-	// Mock HTTP module
-	eng.RegisterFunction("http_get", func(url string) string {
-		return fmt.Sprintf("[Mock HTTP Response] Would fetch: %s", url)
 	})
 }

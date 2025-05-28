@@ -90,11 +90,11 @@ if storage then
     -- Save with metadata
     local output = string.format([[
 URL: %s
-Date: %s
+Date: [date unavailable]
 Style: %s
 
 %s
-]], url, os.date(), style, summary)
+]], url, style, summary)
     
     local save_err = storage.write(filename, output)
     
