@@ -13,32 +13,86 @@ go-llmspell is designed as a multi-layered system that provides scriptable inter
 5. **Bridge Pattern**: Maintain clean separation between Go runtime and script environments
 
 ## Architectural Layers
+```mermaid
+flowchart TD
+    subgraph SpellLayer ["🔮 Spell Layer"]
+        SpellLua["spells/lua"]
+        SpellJS["spells/js"] 
+        SpellTengo["spells/tengo"]
+    end
+    
+    subgraph ScriptEngine ["⚙️ Script Engine Layer"]
+        GopherLua["GopherLua"]
+        Goja["Goja"]
+        Tengo["Tengo"]
+        Future["Future..."]
+        EngineRegistry["Engine Registry"]
+    end
+    
+    subgraph BridgeLayer ["🌉 Bridge Layer"]
+        LLMBridge["LLM Bridge"]
+        ToolBridge["Tool Bridge"]
+        AgentBridge["Agent Bridge"]
+        StdLibBridge["StdLib Bridge"]
+    end
+    
+    subgraph GoLLMsLayer ["🤖 go-llms Layer"]
+        Providers["Providers"]
+        Tools["Tools"]
+        Agents["Agents"]
+        Schema["Schema"]
+        Workflows["Workflows"]
+    end
+    
+    %% Connections between layers
+    SpellLayer --> ScriptEngine
+    ScriptEngine --> BridgeLayer
+    BridgeLayer --> GoLLMsLayer
+    
+    %% Internal connections within Script Engine Layer
+    GopherLua -.-> EngineRegistry
+    Goja -.-> EngineRegistry
+    Tengo -.-> EngineRegistry
+    Future -.-> EngineRegistry
+    
+    %% Style the diagram
+    classDef spellStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef engineStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef bridgeStyle fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef llmStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    
+    class SpellLua,SpellJS,SpellTengo spellStyle
+    class GopherLua,Goja,Tengo,Future,EngineRegistry engineStyle
+    class LLMBridge,ToolBridge,AgentBridge,StdLibBridge bridgeStyle
+    class Providers,Tools,Agents,Schema,Workflows llmStyle
+```
+
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │                 Spell Layer                         │
-│         (spells/lua, spells/js, spells/tengo)      │
+│         (spells/lua, spells/js, spells/tengo)       │
 └─────────────────────┬───────────────────────────────┘
                       │
 ┌─────────────────────┴───────────────────────────────┐
 │              Script Engine Layer                    │
-│   ┌──────────┬──────────┬──────────┬──────────┐   │
-│   │GopherLua │   Goja   │  Tengo   │ Future...│   │
-│   └──────────┴──────────┴──────────┴──────────┘   │
+│   ┌──────────┬──────────┬──────────┬──────────┐     │
+│   │GopherLua │   Goja   │  Tengo   │ Future...│     │
+│   └──────────┴──────────┴──────────┴──────────┘     │
 │                  Engine Registry                    │
 └─────────────────────┬───────────────────────────────┘
                       │
 ┌─────────────────────┴───────────────────────────────┐
 │               Bridge Layer                          │
-│  ┌─────────┬────────┬─────────┬──────────────┐    │
-│  │   LLM   │  Tool  │  Agent  │   StdLib     │    │
-│  │ Bridge  │ Bridge │ Bridge  │   Bridge     │    │
-│  └─────────┴────────┴─────────┴──────────────┘    │
+│  ┌─────────┬────────┬─────────┬──────────────┐      │
+│  │   LLM   │  Tool  │  Agent  │   StdLib     │      │
+│  │ Bridge  │ Bridge │ Bridge  │   Bridge     │      │
+│  └─────────┴────────┴─────────┴──────────────┘      │
 └─────────────────────┬───────────────────────────────┘
                       │
 ┌─────────────────────┴───────────────────────────────┐
 │                 go-llms Layer                       │
-│   Providers, Tools, Agents, Schema, Workflows      │
+│   Providers, Tools, Agents, Schema, Workflows       │
 └─────────────────────────────────────────────────────┘
 ```
 

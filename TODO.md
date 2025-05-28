@@ -10,26 +10,14 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [x] Architecture documentation
 - [x] go-llms dependency integration
 - [x] Core implementation (Phase 1 complete)
+- [x] LLM Bridge Enhancement (Phase 2 complete)
 - [ ] Script engine integration
 - [ ] Testing and examples
 - [ ] Release preparation
 
 ## Phase 1: Core Infrastructure (Priority: Critical) [COMPLETED - See TODO-DONE.md]
 
-## Phase 2: LLM Bridge Enhancement (Priority: Critical)
-
-### 2.1 Complete LLM Bridge (PARTIALLY COMPLETE - REVISIT)
-- [x] Basic implementation of `pkg/bridge/llm.go` 
-- [ ] Add provider switching support
-- [ ] Implement model listing from go-llms
-- [x] Add streaming with proper error handling (basic implementation done)
-- [ ] Create comprehensive tests
-
-### 2.2 Bridge Registration
-- [ ] Implement bridge registration with script engines
-- [ ] Add type conversion utilities
-- [ ] Create bridge documentation generator
-- [ ] Add bridge versioning support
+## Phase 2: LLM Bridge Enhancement (Priority: Critical) [COMPLETED - See TODO-DONE.md]
 
 ## Phase 3: Lua Engine (Priority: High)
 
@@ -306,7 +294,7 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 
 ## Milestones
 
-### Milestone 1: Core Infrastructure (Week 1-2)
+### Milestone 1: Core Infrastructure (Week 1-2) [COMPLETED]
 - Engine interface and registry
 - Basic bridge system
 - Security context
