@@ -143,3 +143,6 @@ The project follows a layered architecture:
 
 ### Post-Feature Workflow
 - Run make build, make test, make lint, make fmt, make vet and fix errors after feature completion
+
+### Dependency Management
+- Never change underlying dependency libraries even if you have access to source via git sub-modules etc.

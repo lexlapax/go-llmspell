@@ -9,6 +9,11 @@ import (
 	"reflect"
 )
 
+// Common type references for conversions
+var (
+	MapType = reflect.TypeOf(map[string]interface{}{})
+)
+
 // Converter defines the interface for type conversion between Go and script languages
 type Converter interface {
 	// ToScript converts a Go value to a script-compatible representation

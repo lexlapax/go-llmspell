@@ -1,0 +1,25 @@
+name: web-summarizer
+version: 1.0.0
+description: Fetches and summarizes web pages using LLM
+author: Example Author
+engine: lua
+entry: main.lua
+timeout: 60
+memory_limit: 128MB
+env:
+  - OPENAI_API_KEY
+  - ANTHROPIC_API_KEY
+  - GEMINI_API_KEY
+capabilities:
+  - llm.chat
+  - http.get
+  - storage.write
+parameters:
+  url:
+    type: string
+    description: URL of the web page to summarize
+    required: true
+  style:
+    type: string
+    description: Summary style (brief, detailed, bullet-points)
+    default: brief

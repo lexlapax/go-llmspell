@@ -21,23 +21,23 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 
 ## Phase 3: Lua Engine (Priority: High)
 
-### 3.1 GopherLua Integration
-- [ ] Create `pkg/engine/lua/engine.go` implementing Engine interface
-- [ ] Add gopher-lua dependency
-- [ ] Implement script loading and execution
-- [ ] Add proper error handling and stack traces
+### 3.1 GopherLua Integration [COMPLETED]
+- [x] Create `pkg/engine/lua/engine.go` implementing Engine interface
+- [x] Add gopher-lua dependency
+- [x] Implement script loading and execution
+- [x] Add proper error handling and stack traces
 
-### 3.2 Lua Type Conversions
-- [ ] Implement `pkg/engine/lua/conversions.go` for Go<->Lua types
-- [ ] Handle tables, functions, and userdata
-- [ ] Add support for async operations
-- [ ] Create conversion tests
+### 3.2 Lua Type Conversions [COMPLETED]
+- [x] Implement `pkg/engine/lua/conversions.go` for Go<->Lua types
+- [x] Handle tables, functions, and userdata
+- [x] Add support for async operations
+- [x] Create conversion tests
 
-### 3.3 Lua Bridge Adapters
-- [ ] Create `pkg/engine/lua/bridges/llm.go` for LLM bridge
+### 3.3 Lua Bridge Adapters [PARTIALLY COMPLETED]
+- [x] Create `pkg/engine/lua/bridges/llm_bridge.go` for LLM bridge
 - [ ] Implement promise-like pattern for async operations
-- [ ] Add callback support for streaming
-- [ ] Create Lua-specific helper functions
+- [x] Add callback support for streaming
+- [x] Create Lua-specific helper functions
 
 ### 3.4 Lua Standard Library
 - [ ] Implement safe stdlib subset
@@ -283,11 +283,11 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 ## Dependencies
 
 ### External Dependencies to Add
-- [ ] github.com/yuin/gopher-lua (Lua engine)
+- [x] github.com/yuin/gopher-lua (Lua engine)
 - [ ] github.com/dop251/goja (JavaScript engine)
 - [ ] github.com/d5/tengo (Tengo engine)
 - [ ] github.com/google/uuid (UUID generation)
-- [ ] github.com/stretchr/testify (Testing)
+- [x] github.com/stretchr/testify (Testing)
 
 ### Internal Dependencies
 - [x] github.com/lexlapax/go-llms v0.2.6

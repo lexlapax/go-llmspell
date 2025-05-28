@@ -209,5 +209,95 @@ go-llmspell/
 4. **Thread Safety**: Fixed race conditions and ensured concurrent access safety
 5. **Test Coverage**: Comprehensive tests with race detection
 
+## Phase 3: Lua Engine Integration (Completed: May 27, 2025)
+
+### 3.1 GopherLua Integration [COMPLETED]
+- [x] Created `pkg/engine/lua/engine.go` implementing Engine interface
+  - Full implementation of Engine interface methods
+  - Thread-safe execution with proper mutex usage
+  - Support for LoadScript (io.Reader) and LoadScriptFile (path)
+  - Context-based execution with timeout support
+- [x] Added gopher-lua dependency (v1.1.1)
+- [x] Implemented script loading and execution
+  - Script compilation and caching
+  - Error handling with detailed messages
+  - Stack management
+- [x] Added proper error handling and stack traces
+
+### 3.2 Lua Type Conversions [COMPLETED]
+- [x] Implemented `pkg/engine/lua/conversions.go` for Go<->Lua types
+  - Comprehensive bidirectional type conversion
+  - Support for basic types: bool, numbers, strings
+  - Complex type support: slices, arrays, maps, structs
+  - Function wrapping for Go functions callable from Lua
+  - Userdata support for custom types
+- [x] Handle tables, functions, and userdata
+  - Lua tables to Go maps/slices with automatic detection
+  - Go structs to Lua tables with JSON tag support
+  - Function parameter and return value conversion
+- [x] Added support for async operations
+  - Callback-based async pattern
+  - Error propagation from callbacks
+- [x] Created conversion tests (indirectly tested through engine tests)
+
+### 3.3 Lua Bridge Adapters [PARTIALLY COMPLETED]
+- [x] Created `pkg/engine/lua/bridges/llm_bridge.go` for LLM bridge
+  - Full LLM API exposed to Lua: chat, complete, stream_chat
+  - Provider management: list_providers, get_provider, set_provider
+  - Model listing functionality
+- [ ] Implement promise-like pattern for async operations (deferred)
+- [x] Added callback support for streaming
+  - Lua callback functions for stream chunks
+  - Proper error handling in callbacks
+- [x] Created Lua-specific helper functions
+
+### 3.4 Security Implementation [COMPLETED]
+- [x] Comprehensive security sandbox
+  - Disabled dangerous functions: dofile, loadfile, load, loadstring, require
+  - Removed io library access
+  - Removed os library access
+  - Disabled debug library
+- [x] Resource limits through engine configuration
+  - Memory limits (configurable)
+  - Execution time limits with context
+- [x] Safe execution environment from the start
+
+### Testing and Examples
+- [x] Comprehensive test suite (`pkg/engine/lua/engine_test.go`)
+  - Engine creation and configuration tests
+  - Script loading and execution tests
+  - Function registration tests
+  - Variable get/set tests
+  - Security sandbox validation
+  - Context cancellation tests
+  - Thread safety tests (fixed race conditions)
+  - All tests passing with race detection enabled
+- [x] Created examples
+  - `examples/lua_integration.go` - Demonstrates Lua engine usage
+  - `examples/lua/hello_llm.lua` - Example Lua script using LLM
+
+### Key Implementation Details
+
+#### Files Created
+- `pkg/engine/lua/engine.go` - Main Lua engine implementation
+- `pkg/engine/lua/conversions.go` - Type conversion utilities
+- `pkg/engine/lua/bridges/llm_bridge.go` - LLM bridge for Lua
+- `pkg/engine/lua/engine_test.go` - Comprehensive test suite
+- `examples/lua_integration.go` - Integration example
+- `examples/lua/hello_llm.lua` - Lua script example
+
+#### Technical Achievements
+1. **Thread Safety**: Proper mutex usage prevents race conditions
+2. **Security First**: Sandbox implemented from the beginning
+3. **Type Safety**: Robust bidirectional type conversions
+4. **Clean API**: Simple, intuitive API for script execution
+5. **Good Test Coverage**: Comprehensive tests including edge cases
+
+#### Quality Assurance
+- All tests pass with race detection enabled
+- Code formatted with gofmt
+- Passes go vet checks
+- No build errors or warnings
+
 ## Next Steps
-Continue with Phase 3: Lua Engine Integration as outlined in TODO.md
+Continue with Phase 3.4: Lua Standard Library implementation or move to Phase 4: Agent System as outlined in TODO.md

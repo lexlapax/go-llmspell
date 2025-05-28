@@ -1,0 +1,24 @@
+name: provider-compare
+version: 1.0.0
+description: Compare responses from multiple LLM providers
+author: Example Author
+engine: lua
+entry: main.lua
+timeout: 60
+memory_limit: 128MB
+env:
+  - OPENAI_API_KEY
+  - ANTHROPIC_API_KEY
+  - GEMINI_API_KEY
+capabilities:
+  - llm.chat
+  - llm.switch_provider
+parameters:
+  prompt:
+    type: string
+    description: The prompt to send to all providers
+    required: true
+  providers:
+    type: array
+    description: List of providers to compare
+    default: ["openai", "anthropic", "gemini"]

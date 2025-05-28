@@ -1,0 +1,26 @@
+name: chat-assistant
+version: 1.0.0
+description: Interactive chat assistant with conversation history
+author: Example Author
+engine: lua
+entry: main.lua
+timeout: 300
+memory_limit: 128MB
+env:
+  - OPENAI_API_KEY
+  - ANTHROPIC_API_KEY
+  - GEMINI_API_KEY
+capabilities:
+  - llm.chat
+  - llm.stream
+  - storage.read
+  - storage.write
+parameters:
+  system_prompt:
+    type: string
+    description: System prompt for the assistant
+    default: "You are a helpful assistant."
+  max_history:
+    type: integer
+    description: Maximum number of conversation turns to keep
+    default: 10

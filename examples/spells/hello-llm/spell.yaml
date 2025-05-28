@@ -1,0 +1,16 @@
+name: hello-llm
+version: 1.0.0
+description: A simple example spell that demonstrates basic LLM interaction
+author: Example Author
+engine: lua
+entry: main.lua
+timeout: 30
+memory_limit: 64MB
+env:
+  - OPENAI_API_KEY
+  - ANTHROPIC_API_KEY
+  - GEMINI_API_KEY
+capabilities:
+  - llm.chat
+  - llm.complete
+  - llm.stream

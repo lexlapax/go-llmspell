@@ -22,7 +22,7 @@ TEST_FLAGS=-v -race
 COVERAGE_FILE=coverage.out
 COVERAGE_HTML=coverage.html
 
-.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help
+.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help examples example example-mock
 
 # Default target
 all: clean fmt vet lint test build
@@ -104,6 +104,47 @@ run: build
 	@echo "Running $(BINARY_NAME)..."
 	./$(BINARY_DIR)/$(BINARY_NAME)
 
+# Example targets
+examples:
+	@echo "Available example spells:"
+	@echo "  hello-llm         - Basic LLM interaction example"
+	@echo "  chat-assistant    - Interactive chat assistant"
+	@echo "  provider-compare  - Compare responses across providers"
+	@echo "  web-summarizer    - Summarize web content (requires http module)"
+	@echo ""
+	@echo "Run an example with: make example SPELL=<spell-name>"
+	@echo "Example: make example SPELL=hello-llm"
+
+# Run a specific example spell
+example:
+	@if [ -z "$(SPELL)" ]; then \
+		echo "Error: SPELL not specified. Usage: make example SPELL=<spell-name>"; \
+		echo "Run 'make examples' to see available spells"; \
+		exit 1; \
+	fi
+	@if [ ! -d "examples/spells/$(SPELL)" ]; then \
+		echo "Error: Spell '$(SPELL)' not found in examples/spells/"; \
+		echo "Run 'make examples' to see available spells"; \
+		exit 1; \
+	fi
+	@echo "Running example spell: $(SPELL)"
+	@cd examples && $(GOCMD) run run_spell.go spells/$(SPELL)
+
+# Run example with mock LLM (no API key required)
+example-mock:
+	@if [ -z "$(SPELL)" ]; then \
+		echo "Error: SPELL not specified. Usage: make example-mock SPELL=<spell-name>"; \
+		echo "Run 'make examples' to see available spells"; \
+		exit 1; \
+	fi
+	@if [ ! -d "examples/spells/$(SPELL)" ]; then \
+		echo "Error: Spell '$(SPELL)' not found in examples/spells/"; \
+		echo "Run 'make examples' to see available spells"; \
+		exit 1; \
+	fi
+	@echo "Running example spell with mock LLM: $(SPELL)"
+	@cd examples && MOCK_LLM=true $(GOCMD) run run_spell.go spells/$(SPELL)
+
 # Build for multiple platforms
 build-all: build-linux build-darwin build-windows
 
@@ -165,6 +206,9 @@ help:
 	@echo "  make deps           - Download dependencies"
 	@echo "  make install-tools  - Install development tools"
 	@echo "  make run            - Build and run the application"
+	@echo "  make examples       - List available example spells"
+	@echo "  make example SPELL=<name> - Run a specific example spell"
+	@echo "  make example-mock SPELL=<name> - Run example with mock LLM"
 	@echo "  make build-all      - Build for all platforms"
 	@echo "  make bench          - Run benchmarks"
 	@echo "  make watch          - Watch for changes and rebuild"

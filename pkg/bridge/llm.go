@@ -6,9 +6,11 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lexlapax/go-llms/pkg/llm/domain"
 	"github.com/lexlapax/go-llms/pkg/util/llmutil"
@@ -64,8 +66,17 @@ func NewLLMBridge() (*LLMBridge, error) {
 
 // initProvider initializes a provider by name
 func (b *LLMBridge) initProvider(name string) error {
+	// Create HTTP client with proper timeout
+	httpClient := &http.Client{
+		Timeout: 120 * time.Second, // 2 minutes
+	}
+
 	config := llmutil.ModelConfig{
 		Provider: name,
+		Options: []domain.ProviderOption{
+			domain.NewHTTPClientOption(httpClient),
+			domain.NewTimeoutOption(120000), // 120 seconds in milliseconds
+		},
 	}
 
 	provider, err := llmutil.CreateProvider(config)
