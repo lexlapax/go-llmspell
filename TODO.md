@@ -43,7 +43,7 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
   - Check what other tools are available in go-llms
   - [ ] update/create documentation about tool implementation
 
-## Phase 5: Agent System (Priority: High) [COMPLETED - See TODO-DONE.md]
+## Phase 5: Agent System (Priority: High) [IN PROGESS - See TODO-DONE.md]
 
 ## Pending Items from Phase 5 (Revisit)
 - [ ] Create additional agent examples:
