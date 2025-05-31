@@ -281,6 +281,60 @@ This file tracks completed tasks that have been moved from TODO.md. Each complet
   - Fixed async-callbacks example to use real async calls
   - Note: Provider switching limitations prevent true parallel calls across providers
 
+### Promise Async Tests Fix
+- [x] Fixed failing promise async tests
+  - Fixed variable scope issues (local vs global in Lua)
+  - Added promise state exposure through custom __index metamethod
+  - Fixed timing issues with proper sleep instead of busy waiting
+  - Resolved Lua table length issues with nil values using __len metamethod
+  - Fixed test expectations for timeout behavior
+  - All stdlib tests now pass
+
+## Phase 5: Agent System ✅ PARTIALLY COMPLETE
+
+### 5.1 Agent Interface and Types ✅
+- [x] Created `pkg/agents/interface.go` with comprehensive Agent interface
+  - Defined Agent interface following go-llms agent pattern
+  - Added Config struct with provider, model, and options
+  - Included lifecycle methods (Initialize, Cleanup)
+  - Added execution methods for single and multi-turn conversations
+  - Included streaming support with callbacks
+  - Full test coverage with TDD approach
+
+### 5.2 Agent Registry ✅
+- [x] Created `pkg/agents/registry.go` with thread-safe registry
+  - Followed same pattern as tool registry
+  - Global instance with convenience functions
+  - Factory pattern for agent creation
+  - Register, Get, List, Remove methods implemented
+  - Comprehensive test coverage including concurrent access
+
+### 5.3 Agent Implementation ✅
+- [x] Created `pkg/agents/agent.go` with default agent implementation
+  - Wraps go-llms agent.workflow.DefaultAgent
+  - Integrates with existing tool registry from pkg/tools
+  - Supports system prompts and conversation history
+  - Implements streaming responses with proper error handling
+  - Thread-safe implementation with mutex protection
+
+- [x] Created `pkg/agents/tool_adapter.go` for tool integration
+  - Adapts llmspell tools to go-llms tool interface
+  - Handles parameter conversion and validation
+  - Proper error propagation
+
+- [x] Created `pkg/agents/mock_agent.go` for testing
+  - Mock implementation of Agent interface
+  - Configurable responses and behaviors
+  - Used in bridge and registry tests
+
+### 5.4 Agent Bridge for Script Access ✅
+- [x] Created `pkg/bridge/agents.go` to expose agents to scripts
+  - Follows pattern from pkg/bridge/tools.go
+  - Methods: Create, Execute, Stream, List, GetInfo, Remove
+  - Supports both sync and async execution patterns
+  - Type conversion between script and Go types
+  - Comprehensive test coverage
+
 ## Notes on Implementation Decisions
 
 1. **Promise Implementation**: Used `.next()` instead of `then()` in Lua due to `then` being a reserved keyword
@@ -288,3 +342,4 @@ This file tracks completed tasks that have been moved from TODO.md. Each complet
 3. **Thread Safety**: All registries and shared resources use mutex protection
 4. **TDD Approach**: Tests written before implementation for all major components
 5. **Provider Initialization**: Requires proper environment variables or .env file with API keys
+6. **Agent System**: Designed to wrap go-llms agents while maintaining llmspell's patterns

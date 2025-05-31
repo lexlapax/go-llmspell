@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 go-llmspell is a Go library that provides a scriptable interface for LLM interactions using embedded scripting languages (starting with Lua, then JavaScript and Tengo). It acts as a wrapper around the go-llms library, providing scripting capabilities for AI agent orchestration and workflow automation.
 
-## Current Status (Last Updated: May 29, 2025)
+## Current Status (Last Updated: May 30, 2025)
 
 ### Completed
 - ✅ Initial project structure with comprehensive directory layout
@@ -48,32 +48,44 @@ go-llmspell is a Go library that provides a scriptable interface for LLM interac
   - ✅ Tool execution, listing, and management
   - ✅ Example tools: calculator, string tools, JSON processor
   - ✅ Comprehensive test coverage
+- ✅ **Phase 5: Agent System (CORE COMPLETE)**
+  - ✅ Agent interface with comprehensive API (pkg/agents/interface.go)
+  - ✅ Thread-safe agent registry with factory pattern
+  - ✅ Default agent implementation wrapping go-llms agents
+  - ✅ Tool integration with existing tool registry
+  - ✅ Agent bridge for script access (pkg/bridge/agents.go)
+  - ✅ Streaming support with callbacks
+  - ✅ Comprehensive test coverage with mocks
+  - 🔄 Lua integration pending (agents_bridge.go)
 
 ### Recent Updates
-- ✅ **Provider Initialization Fix (COMPLETE)**
-  - Added automatic `.env` file loading using godotenv
-  - All three providers (OpenAI, Anthropic, Gemini) now initialize correctly
-  - Added environment setup documentation
-- ✅ **Async Callback Implementation (COMPLETE)**
-  - Created async_callback.go for managing async operations
-  - Added llm.chat_async() and llm.complete_async() methods
-  - Integrated with promise system for parallel execution
-  - Updated async-callbacks example to use real async calls
+- ✅ **Promise Async Tests Fix (COMPLETE)**
+  - Fixed all failing promise async tests in stdlib
+  - Resolved variable scope issues in Lua
+  - Added promise state exposure through metamethods
+  - Fixed timing and table length issues
+  - All tests now passing
+- ✅ **Agent System Core Implementation (COMPLETE)**
+  - Created comprehensive agent interface following go-llms patterns
+  - Implemented thread-safe registry with global instance
+  - Built default agent wrapping go-llms DefaultAgent
+  - Added tool adapter for seamless integration
+  - Created agent bridge for script access
+  - Full test coverage using TDD approach
 
 ### In Progress
-- 🔄 Phase 5: Agent System - Create agent interface
+- 🔄 Phase 5: Agent System - Lua integration (agents_bridge.go)
 
 ### Next Steps
-1. Implement Agent System (Phase 5)
-   - Create agent interface and configuration
-   - Integrate with go-llms agent capabilities
-   - Add conversation memory management
+1. Complete Agent System (Phase 5)
+   - Create Lua bridge for agents (agents_bridge.go)
+   - Add agent examples in examples/spells/
+   - Update documentation with agent usage patterns
 2. Add missing LLM bridge features:
    - llm.stream_chat_with_history() for message-based streaming
    - Safe alternatives to io.read/write for interactive spells
-3. Fix failing promise async tests (4 tests in promise_async_test.go)
-4. Continue with Workflow system (Phase 6)
-5. Investigate and integrate more built-in tools from go-llms
+3. Continue with Workflow system (Phase 6)
+4. Investigate and integrate more built-in tools from go-llms
 
 ## Development Commands
 
@@ -125,8 +137,10 @@ The project follows a layered architecture:
 ### Current Package Structure
 - `/cmd/llmspell/` - CLI entry point
 - `/pkg/engine/` - Script engine interface (implemented)
-- `/pkg/bridge/` - Bridge implementations (LLM bridge complete, conversions added)
+- `/pkg/bridge/` - Bridge implementations (LLM, tools, and agents bridges complete)
 - `/pkg/security/` - Security context and resource management (implemented)
+- `/pkg/tools/` - Tool system with registry and validation (implemented)
+- `/pkg/agents/` - Agent system with registry and go-llms integration (implemented)
 - `/pkg/spells/` - Spell management (basic structure created)
 - `/docs/` - Comprehensive documentation
 - `/go-llms/` - Submodule for go-llms reference

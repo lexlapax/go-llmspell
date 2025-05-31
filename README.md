@@ -66,7 +66,12 @@ This project is under active development. See our [TODO](TODO.md) for current ta
   - ✅ Script-based tool creation with parameter validation
   - ✅ Lua bridge for tool system (tools module)
   - ✅ Example tools demonstrating the system
-- 🔄 Agent System implementation in progress (Phase 5)
+- ✅ Agent System core implementation (Phase 5 mostly complete)
+  - ✅ Agent interface and registry system
+  - ✅ Default agent implementation with go-llms integration
+  - ✅ Tool integration for agent capabilities
+  - ✅ Agent bridge for script access
+  - 🔄 Lua integration pending
 
 ## 🛠️ Installation
 
