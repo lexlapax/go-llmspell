@@ -175,6 +175,11 @@ func (c *LuaConverter) FromLua(lval lua.LValue, targetType reflect.Type) (interf
 	return v.Interface(), nil
 }
 
+// ToInterface converts a Lua value to interface{}
+func (c *LuaConverter) ToInterface(lval lua.LValue) interface{} {
+	return c.luaToInterface(lval)
+}
+
 // luaToInterface converts a Lua value to interface{}
 func (c *LuaConverter) luaToInterface(lval lua.LValue) interface{} {
 	switch v := lval.(type) {

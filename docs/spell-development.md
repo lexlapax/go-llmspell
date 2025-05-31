@@ -94,46 +94,80 @@ return {
 }
 ```
 
-### Advanced Example with Tools
+### Using Built-in Tools
+
+go-llmspell comes with several built-in tools from the go-llms library:
+
+```lua
+-- List available built-in tools
+local tools_list = tools.list()
+for _, tool in ipairs(tools_list) do
+    print(string.format("- %s: %s", tool.name, tool.description))
+end
+
+-- Built-in tools include:
+-- - web_fetch: Fetches content from a URL
+
+-- Example: Using the web_fetch tool
+local result = tools.execute("web_fetch", {
+    url = "https://example.com"
+})
+
+print("Status:", result.status)
+print("Content:", result.content)
+```
+
+Note: Additional built-in tools (execute_command, read_file, write_file) are available but disabled by default for security reasons.
+
+### Advanced Example with Custom Tools
 
 ```lua
 -- web-researcher.lua
--- Research a topic using web search and summarization
+-- Research a topic using custom tools
 
--- Create a web search tool
-local web_search = tool.create({
-    name = "web_search",
-    description = "Search the web for information",
-    parameters = {
-        query = {
+-- Create a custom tool
+tools.register("summarize", "Summarizes text content", {
+    type = "object",
+    properties = {
+        text = {
             type = "string",
-            required = true,
-            description = "Search query"
+            description = "Text to summarize"
         },
-        max_results = {
+        max_sentences = {
             type = "number",
-            default = 5,
-            description = "Maximum number of results"
+            description = "Maximum sentences in summary",
+            default = 3
         }
     },
-    execute = function(args)
-        -- Simulated web search
-        log.debug("Searching for", args.query)
-        
-        -- In real implementation, this would call an actual search API
-        local results = http.get("https://api.search.example.com/search", {
-            params = {
-                q = args.query,
-                limit = args.max_results
-            }
-        })
-        
-        return json.decode(results.body)
-    end
-})
+    required = {"text"}
+}, function(params)
+    -- Use LLM to summarize
+    local prompt = string.format(
+        "Summarize the following text in %d sentences:\n\n%s",
+        params.max_sentences or 3,
+        params.text
+    )
+    return llm.chat(prompt)
+end)
 
--- Register the tool
-tool.register(web_search)
+-- Use built-in web_fetch with custom summarize
+local url = params.url or "https://example.com"
+
+-- Fetch content
+local fetch_result = tools.execute("web_fetch", {url = url})
+
+if fetch_result.status == 200 then
+    -- Summarize the content
+    local summary = tools.execute("summarize", {
+        text = fetch_result.content,
+        max_sentences = 5
+    })
+    
+    print("Summary of", url)
+    print(summary)
+else
+    print("Failed to fetch URL:", fetch_result.status)
+end
 
 -- Create a research agent with the tool
 local researcher = agent.create({

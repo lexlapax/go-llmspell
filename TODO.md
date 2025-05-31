@@ -12,7 +12,7 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [x] Core implementation (Phase 1 complete)
 - [x] LLM Bridge Enhancement (Phase 2 complete)
 - [x] Lua Script Engine Integration (Phase 3 complete)
-- [ ] Tool System (Phase 4 in progress)
+- [x] Tool System (Phase 4 complete)
 - [ ] Agent System (Phase 5)
 - [ ] Workflow System (Phase 6)
 - [ ] JavaScript/Tengo engines
@@ -25,6 +25,8 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 
 ## Phase 3: Lua Engine (Priority: High) [COMPLETED - See TODO-DONE.md]
 
+## Phase 4: Tool System (Priority: High) [COMPLETED - See TODO-DONE.md]
+
 ## Pending Items from Completed Phases (Revisit)
 
 ### From Phase 3 Implementation
@@ -34,39 +36,14 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [ ] Implement safe alternatives to io.read/write for interactive spells
   - Required for interactive chat functionality
   - Options: stdin/stdout bridge, event system, or web interface
-- [ ] Add promise implementation for true async operations
-  - Current implementation is synchronous due to Lua limitations
-  - Consider goroutine-based approach for true concurrency
+- [ ] Fix failing promise async tests
+  - promise_async_test.go has 4 failing tests
+  - Tests are expecting different behavior than current implementation
 
-## Phase 4: Tool System (Priority: High)
-
-### 4.1 Tool Interface
-- [ ] Create `pkg/tools/interface.go` with Tool interface
-- [ ] Implement parameter schema validation
-- [ ] Add tool metadata support
-- [ ] Create tool execution context
-
-### 4.2 Tool Registry
-- [ ] Implement `pkg/tools/registry.go`
-- [ ] Add tool discovery from filesystem
-- [ ] Create tool validation
-- [ ] Add tool versioning
-
-### 4.3 Tool Bridge
-- [ ] Create `pkg/bridge/tools.go`
-- [ ] Implement tool creation from scripts
-- [ ] Add tool execution with result handling
-- [ ] Create tool composition utilities
-
-### 4.4 Built-in Tools from go-llms
-- [ ] make built-in tools from go-llms available for use
-- [ ] test those tools
-
-### 4.5 Built-in scripted Tools (Priority: Medium)
-- [ ] Implement web search tool
-- [ ] Create calculator tool
-- [ ] Add file manipulation tools
-- [ ] Create JSON/YAML processing tools
+### From Phase 4 Implementation
+- [ ] Investigate and integrate more built-in tools from go-llms
+  - Currently only using web_fetch, calculator, string tools
+  - Check what other tools are available in go-llms
 
 ## Phase 5: Agent System (Priority: High)
 
@@ -89,8 +66,10 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [ ] Create agent composition patterns
 
 ### 5.4 Built-in Agents from go-llms
-- [ ] make built-in agents from go-llms available for use
-- [ ] test those agents
+- [ ] Investigate available agents in go-llms
+- [ ] Create agent adapter similar to tool adapter
+- [ ] Register built-in agents with configuration options
+- [ ] Test agent integration with examples
 
 ### 5.5 Pre-built Scripted Agents (ask first)
 - [ ] Create research assistant agent
@@ -284,6 +263,7 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 
 ### External Dependencies to Add
 - [x] github.com/yuin/gopher-lua (Lua engine)
+- [x] github.com/joho/godotenv (Environment file loading)
 - [ ] github.com/dop251/goja (JavaScript engine)
 - [ ] github.com/d5/tengo (Tengo engine)
 - [ ] github.com/google/uuid (UUID generation)
@@ -306,9 +286,9 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - Security sandbox implemented
 - Example spells created and tested
 
-### Milestone 3: Tools and Agents (Week 5-6)
-- Tool system complete (Phase 4)
-- Agent system working (Phase 5)
+### Milestone 3: Tools and Agents (Week 5-6) [IN PROGRESS]
+- Tool system complete (Phase 4) ✅
+- Agent system working (Phase 5) - Current focus
 - Integration with go-llms tools and agents
 
 ### Milestone 4: Multi-language Support (Week 7-8)

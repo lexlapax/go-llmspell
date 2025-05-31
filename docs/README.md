@@ -11,6 +11,7 @@ Welcome to the go-llmspell documentation. This directory contains comprehensive 
 
 ### Getting Started
 - [`getting-started.md`](getting-started.md) - Quick start guide for new users
+- [`env-setup.md`](env-setup.md) - Environment and API key configuration
 
 ### API Reference
 - [`lua-stdlib.md`](lua-stdlib.md) - Lua standard library reference

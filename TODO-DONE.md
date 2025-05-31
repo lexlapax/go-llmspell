@@ -1,152 +1,43 @@
-# go-llmspell Completed Tasks
+# TODO-DONE.md
 
-This document tracks completed implementation tasks moved from TODO.md.
+This file tracks completed tasks that have been moved from TODO.md. Each completed phase is documented here for reference.
 
-## Completed Tasks
+## Phase 1: Core Infrastructure ✅ COMPLETE
 
-### Project Setup (Completed)
-- [x] Initial project structure
-  - Created directory structure: /cmd, /pkg, /docs, /examples, /internal
-  - Set up cmd/llmspell/main.go with basic CLI
-  - Created package structure in /pkg/
-  - Added documentation files in /docs/
-  - Created example scripts in /examples/
+### 1.1 Engine Interface and Registry
+- [x] Define `Engine` interface in `pkg/engine/engine.go`
+  - Common interface for all script engines (Lua, JS, Tengo)
+  - Script loading, execution, and state management
+  - Built with TDD approach - tests written first
+  
+- [x] Implement registry pattern in `pkg/engine/registry.go`
+  - Thread-safe registry with concurrent access support
+  - Factory pattern for engine creation
+  - Configuration validation and default values
+  - Full test coverage with race detection
 
-- [x] Architecture documentation
-  - Created comprehensive architecture.md
-  - Created implementation-guide.md
-  - Created spell-development.md
-  - Updated docs/README.md with navigation
-
-- [x] go-llms dependency integration
-  - Added go-llms v0.2.6 as git submodule
-  - Configured go.mod with dependency
-  - Vendored dependencies
-  - Created initial LLM bridge in pkg/bridge/llm.go
-
-### Infrastructure Components (Completed)
-- [x] Basic project structure with Makefile
-- [x] .gitignore for Go projects
-- [x] Initial engine interface design (pkg/engine/engine.go)
-- [x] Initial spell management structure (pkg/spells/spell.go)
-- [x] Initial bridge implementation (pkg/bridge/llm.go)
-
-## Implementation Notes
-
-### LLM Bridge Status
-The LLM bridge has been partially implemented with:
-- Provider detection from environment variables
-- Basic chat functionality
-- Completion with max tokens support
-- Streaming support using go-llms ResponseStream
-
-### Directory Structure
-```
-go-llmspell/
-├── cmd/llmspell/        # CLI entry point
-├── pkg/
-│   ├── bridge/          # Bridge implementations
-│   ├── engine/          # Script engine interface
-│   └── spells/          # Spell management
-├── docs/                # Documentation
-├── go-llms/             # Submodule for reference
-└── vendor/              # Vendored dependencies
-```
-
-## Phase 1: Core Infrastructure (Completed: December 2024)
-
-### 1.1 Engine Interface System
-- [x] Create `pkg/engine/interface.go` with core `Engine` interface (using existing engine.go)
-  - Implemented comprehensive Engine interface with LoadScript, ExecuteScript, SetVariable, GetVariable, RegisterFunction methods
-  - Created ExecutionResult type with output, error handling, and execution time tracking
-  - Defined EngineConfig with memory limits, timeouts, and security settings
-  - Complete test coverage with TDD approach
-
-- [x] Implement `ExecutionResult` and `LogEntry` types (adapted to existing Result type)
-  - ExecutionResult includes Output, Error, ExecutionTime, and Logs
-  - LogEntry supports different log levels (Debug, Info, Warn, Error)
-  - Proper JSON marshaling support
-
-- [x] Define `EngineConfig` with memory limits and timeouts (adapted to existing Config type)
-  - Memory limits (MaxMemory)
-  - CPU time limits (MaxExecutionTime)
-  - Goroutine limits (MaxGoroutines)
-  - Security policy settings
-
-- [x] Create `pkg/engine/errors.go` for engine-specific errors
-  - ScriptError for runtime errors with line/column info
-  - LoadError for script loading failures
-  - ConfigError for invalid configurations
-  - SecurityError for security violations
-  - Helper functions for error creation and checking
-
-### 1.2 Engine Registry
-- [x] Implement `pkg/engine/registry.go` with thread-safe registry
-  - Global registry with mutex protection
-  - Thread-safe Register and Get operations
-  - Support for multiple engine instances
-
-- [x] Add factory pattern for engine creation
-  - EngineFactory interface with Create method
-  - Factory registration in registry
-  - Metadata support for engines
-
-- [x] Create registry tests
+### 1.2 Bridge Infrastructure
+- [x] Define Bridge interface in `pkg/bridge/interface.go`
+  - Standard interface for script engine bridges
+  - Method metadata and parameter information
+  - Lifecycle management (Initialize/Cleanup)
+  
+- [x] Create bridge registry system
+  - BridgeSet for managing multiple bridges
+  - Thread-safe bridge registration and retrieval
   - Comprehensive test coverage
-  - Concurrency tests
-  - Edge case handling
 
-- [x] Add engine discovery mechanism
-  - Auto-discovery by file extension
-  - MIME type support
-  - Language name lookup
+### 1.3 Security Foundation
+- [x] Implement security context in `pkg/security/context.go`
+  - Resource tracking (memory, CPU, goroutines)
+  - Timeout enforcement with context cancellation
+  - Periodic resource monitoring
+  - Security policy framework
+  - Full test coverage including concurrent access
 
-### 1.3 Bridge Infrastructure
-- [x] Define `pkg/bridge/interface.go` with `Bridge` interface
-  - Bridge interface with Register and Unregister methods
-  - Support for registering Go functions to script engines
-  - Clean separation between Go and script environments
+## Phase 2: LLM Bridge Enhancement ✅ COMPLETE
 
-- [x] Implement `BridgeSet` for managing multiple bridges
-  - Thread-safe bridge collection
-  - Add/Remove/Get operations
-  - Iteration support with callback
-
-- [x] Create bridge registration mechanism
-  - RegisterAll for bulk registration
-  - UnregisterAll for cleanup
-  - Type-safe registration
-
-- [x] Add bridge lifecycle management (init/cleanup)
-  - Lifecycle interface with Initialize and Cleanup methods
-  - Proper initialization order
-  - Cleanup on shutdown
-
-### 1.4 Context and Security
-- [x] Implement `pkg/security/context.go` for secure execution contexts
-  - SecurityContext with resource limits
-  - Context integration for cancellation
-  - Resource usage tracking
-
-- [x] Create resource tracking for memory/CPU limits
-  - Real-time memory usage monitoring
-  - CPU time tracking
-  - Goroutine counting
-  - Resource limit enforcement
-
-- [x] Add timeout enforcement
-  - Context-based timeouts
-  - Graceful cancellation
-  - Timeout error reporting
-
-- [x] Implement context cancellation propagation
-  - Proper context chaining
-  - Cancellation signal handling
-  - Resource cleanup on cancellation
-
-## Phase 2: LLM Bridge Enhancement (Completed: December 2024)
-
-### 2.1 Complete LLM Bridge
+### 2.1 Multi-Provider Support
 - [x] Basic implementation of `pkg/bridge/llm.go`
   - Initial implementation with provider detection from environment variables
   
@@ -192,220 +83,208 @@ go-llmspell/
 - [ ] Create bridge documentation generator (deferred to Phase 13)
 - [ ] Add bridge versioning support (deferred for future release)
 
-## Implementation Highlights
+## Phase 3: Lua Engine Integration ✅ COMPLETE
 
-### New Files Created
-- `pkg/bridge/conversions.go` - Type conversion utilities
-- `pkg/bridge/conversions_test.go` - Type conversion tests  
-- `pkg/bridge/llm_test.go` - Comprehensive LLM bridge tests
-
-### Enhanced Files
-- `pkg/bridge/llm.go` - Added provider switching, model listing, and Bridge interface implementation
-
-### Key Features Implemented
-1. **Multi-Provider Support**: Can initialize and switch between OpenAI, Anthropic, and Gemini providers
-2. **Model Discovery**: Integration with go-llms model inventory for listing available models
-3. **Type Safety**: Robust type conversion system for bridging Go and script types
-4. **Thread Safety**: Fixed race conditions and ensured concurrent access safety
-5. **Test Coverage**: Comprehensive tests with race detection
-
-## Phase 3: Lua Engine Integration (Completed: May 27, 2025)
-
-### 3.1 GopherLua Integration [COMPLETED]
-- [x] Created `pkg/engine/lua/engine.go` implementing Engine interface
-  - Full implementation of Engine interface methods
-  - Thread-safe execution with proper mutex usage
-  - Support for LoadScript (io.Reader) and LoadScriptFile (path)
-  - Context-based execution with timeout support
-- [x] Added gopher-lua dependency (v1.1.1)
-- [x] Implemented script loading and execution
-  - Script compilation and caching
-  - Error handling with detailed messages
-  - Stack management
-- [x] Added proper error handling and stack traces
-
-### 3.2 Lua Type Conversions [COMPLETED]
-- [x] Implemented `pkg/engine/lua/conversions.go` for Go<->Lua types
-  - Comprehensive bidirectional type conversion
-  - Support for basic types: bool, numbers, strings
-  - Complex type support: slices, arrays, maps, structs
-  - Function wrapping for Go functions callable from Lua
-  - Userdata support for custom types
-- [x] Handle tables, functions, and userdata
-  - Lua tables to Go maps/slices with automatic detection
-  - Go structs to Lua tables with JSON tag support
-  - Function parameter and return value conversion
-- [x] Added support for async operations
-  - Callback-based async pattern
-  - Error propagation from callbacks
-- [x] Created conversion tests (indirectly tested through engine tests)
-
-### 3.3 Lua Bridge Adapters [PARTIALLY COMPLETED]
-- [x] Created `pkg/engine/lua/bridges/llm_bridge.go` for LLM bridge
-  - Full LLM API exposed to Lua: chat, complete, stream_chat
-  - Provider management: list_providers, get_provider, set_provider
-  - Model listing functionality
-- [ ] Implement promise-like pattern for async operations (deferred)
-- [x] Added callback support for streaming
-  - Lua callback functions for stream chunks
-  - Proper error handling in callbacks
-- [x] Created Lua-specific helper functions
-
-### 3.4 Security Implementation [COMPLETED]
-- [x] Comprehensive security sandbox
-  - Disabled dangerous functions: dofile, loadfile, load, loadstring, require
-  - Removed io library access
-  - Removed os library access
-  - Disabled debug library
-- [x] Resource limits through engine configuration
-  - Memory limits (configurable)
-  - Execution time limits with context
-- [x] Safe execution environment from the start
-
-### Testing and Examples
-- [x] Comprehensive test suite (`pkg/engine/lua/engine_test.go`)
-  - Engine creation and configuration tests
-  - Script loading and execution tests
-  - Function registration tests
-  - Variable get/set tests
-  - Security sandbox validation
-  - Context cancellation tests
-  - Thread safety tests (fixed race conditions)
-  - All tests passing with race detection enabled
-- [x] Created examples
-  - `examples/lua_integration.go` - Demonstrates Lua engine usage
-  - `examples/lua/hello_llm.lua` - Example Lua script using LLM
-
-### Key Implementation Details
-
-#### Files Created
-- `pkg/engine/lua/engine.go` - Main Lua engine implementation
-- `pkg/engine/lua/conversions.go` - Type conversion utilities
-- `pkg/engine/lua/bridges/llm_bridge.go` - LLM bridge for Lua
-- `pkg/engine/lua/engine_test.go` - Comprehensive test suite
-- `examples/lua_integration.go` - Integration example
-- `examples/lua/hello_llm.lua` - Lua script example
-
-#### Technical Achievements
-1. **Thread Safety**: Proper mutex usage prevents race conditions
-2. **Security First**: Sandbox implemented from the beginning
-3. **Type Safety**: Robust bidirectional type conversions
-4. **Clean API**: Simple, intuitive API for script execution
-5. **Good Test Coverage**: Comprehensive tests including edge cases
-
-#### Quality Assurance
-- All tests pass with race detection enabled
-- Code formatted with gofmt
-- Passes go vet checks
-- No build errors or warnings
-
-## Phase 3: Lua Engine (Completed: May 27, 2025)
-
-### 3.1 GopherLua Integration [COMPLETED]
-- [x] Create `pkg/engine/lua/engine.go` implementing Engine interface
-  - Full implementation with thread-safe execution
-  - Support for LoadScript and LoadScriptFile
-  - Context-based execution with timeout support
-  - Comprehensive error handling with stack traces
-- [x] Add gopher-lua dependency (v1.1.1)
-- [x] Implement script loading and execution
-  - Script compilation and caching
-  - Detailed error messages
-  - Proper stack management
-- [x] Add proper error handling and stack traces
-
-### 3.2 Lua Type Conversions [COMPLETED]
-- [x] Implement `pkg/engine/lua/conversions.go` for Go<->Lua types
-  - Bidirectional type conversion for all basic types
-  - Complex type support: slices, arrays, maps, structs
-  - Function wrapping for Go functions callable from Lua
-  - Userdata support for custom types
-- [x] Handle tables, functions, and userdata
-  - Automatic array/map detection for tables
-  - JSON tag support for struct conversions
-  - Function parameter and return value marshaling
-- [x] Add support for async operations
-  - Callback-based async pattern
-  - Error propagation from callbacks
-- [x] Create conversion tests
-
-### 3.3 Lua Bridge Adapters [COMPLETED]
-- [x] Create `pkg/engine/lua/bridges/llm_bridge.go` for LLM bridge
-  - Full LLM API: chat, complete, stream_chat
-  - Provider management: list_providers, get_provider, set_provider
-  - Model listing functionality
-- [x] Implement promise-like pattern for async operations
-  - Created `pkg/engine/lua/stdlib/promise.go`
-  - Uses `promise.next()` instead of `then` (Lua keyword conflict)
-  - Full implementation: new, resolve, reject, all, race, catch, await
-  - Thread-safe with proper mutex usage
-  - Comprehensive test coverage
-- [x] Add callback support for streaming
-  - Lua callback functions for stream chunks
-  - Proper error handling in callbacks
-- [x] Create Lua-specific helper functions
-
-### 3.4 Lua Standard Library [COMPLETED]
-- [x] Implement safe stdlib subset
+### 3.1 GopherLua Integration
+- [x] Add GopherLua dependency
+  - Successfully integrated github.com/yuin/gopher-lua v1.1.1
+  
+- [x] Implement Lua engine wrapper in `pkg/engine/lua/engine.go`
+  - Full Engine interface implementation
+  - Thread-safe Lua state management
+  - Resource limit enforcement
   - Security sandbox with disabled dangerous functions
-  - Removed io, os, debug libraries for security
-  - Safe execution environment
-- [x] Add JSON support via `json` module
-  - `pkg/engine/lua/stdlib/json.go`
-  - json.encode() and json.decode() functions
-  - Handles all Lua types correctly
-- [x] Add HTTP client via `http` module
-  - `pkg/engine/lua/stdlib/http.go`
-  - http.get(), http.post(), http.request() functions
-  - Security restrictions (domain allowlisting)
-  - Timeout support
-- [x] Add filesystem access via `storage` module (safe subset)
-  - `pkg/engine/lua/stdlib/storage.go`
-  - storage.get(), set(), exists(), read(), write() functions
-  - Sandboxed to storage directory only
-  - Path traversal protection
-- [x] Add logging via `log` module (using slog)
-  - `pkg/engine/lua/stdlib/log.go`
-  - Structured logging with slog backend
-  - Log levels: debug, info, warn, error
-  - Spell name included in log context
+  - Script loading from readers and files
+  - Proper cleanup and error handling
+  
+- [x] Create comprehensive tests for Lua engine
+  - Script execution tests
+  - Resource limit tests (memory, execution time)
+  - Security tests (filesystem access prevention)
+  - Error handling and state management
+  - All tests pass with race detection
 
-### Implementation Highlights
+### 3.2 Lua<->Go Type Conversions
+- [x] Implement type conversion layer in `pkg/engine/lua/conversions.go`
+  - Go to Lua conversions (all basic types, slices, maps, structs)
+  - Lua to Go conversions with type coercion
+  - Error value handling
+  - Function conversion support
+  - Comprehensive test coverage
+  
+- [x] Add conversion tests
+  - Basic type conversions
+  - Complex nested structures
+  - Error propagation
+  - Edge cases and nil handling
 
-#### Promise Implementation
-- Simplified synchronous implementation due to Lua's single-threaded nature
-- Provides familiar promise patterns for clean async code
-- All promise tests passing with race detector
-- Example spell created: `examples/spells/async-llm`
+### 3.3 LLM Bridge for Lua
+- [x] Create Lua adapter for LLM bridge in `pkg/engine/lua/bridges/llm_bridge.go`
+  - Complete llm module implementation
+  - All LLM bridge methods exposed to Lua
+  - Type conversions for all parameters and returns
+  - Streaming support with Lua callbacks
+  - Error handling and propagation
+  
+- [x] Implement example Lua spells
+  - async-llm: Demonstrates promise-based async patterns
+  - provider-compare: Compares multiple providers (shows available providers)
+  - chat-assistant: Simple conversation demo
+  - hello-llm: Basic LLM interaction example
 
-#### Security First Approach
-- Comprehensive sandbox from the beginning
-- No access to filesystem outside storage directory
-- No network access except through controlled HTTP module
-- No ability to load external code
+### 3.4 Lua Standard Library
+- [x] Implement JSON module (`json.encode`, `json.decode`)
+  - Full JSON encoding/decoding support
+  - Proper error handling
+  - Lua table to JSON object conversion
+  
+- [x] Implement HTTP client module
+  - GET, POST, PUT, DELETE methods
+  - Header and timeout support
+  - JSON request/response handling
+  - Security restrictions (no file:// URLs)
+  
+- [x] Implement Storage module
+  - Key-value storage per spell
+  - Sandboxed to spell-specific directory
+  - JSON serialization of values
+  - get, set, delete, list operations
+  
+- [x] Implement logging module
+  - Structured logging with slog
+  - Multiple log levels (debug, info, warn, error)
+  - Context fields support
+  
+- [x] Implement Promise module for async patterns
+  - Promise.new for creating promises
+  - resolve/reject functionality
+  - .next() method for chaining (Lua-friendly alternative to then)
+  - .catch() for error handling
+  - Promise.all for parallel operations
+  - Promise.race for competitive operations
+  - Full test coverage
 
-#### Example Spells Created
-1. **async-llm** - Demonstrates promise-based async patterns
-   - promise.all() for concurrent operations
-   - Promise chaining with .next()
-   - Error handling with .catch()
-   - Promise racing
+### 3.5 Lua Security Sandbox ✅ COMPLETE
+- [x] Disable dangerous Lua functions
+  - os.execute, io operations disabled
+  - loadfile, dofile restricted
+  - require limited to safe modules
+  - debug library disabled
+  
+- [x] Implement filesystem restrictions
+  - No access to filesystem through Lua
+  - Storage module provides sandboxed alternative
+  
+- [x] Add resource monitoring
+  - Memory limits enforced
+  - Execution time limits
+  - CPU usage tracking
 
-2. **provider-compare** - Compares multiple LLM providers
-   - Consolidated from main.lua and main_full.lua
-   - Works within sandbox restrictions (no os.clock)
+## Phase 4: Tool System ✅ COMPLETE
 
-3. **chat-assistant** - Interactive chat with history
-   - Working demo in main.lua
-   - Full implementation in main_full.lua (requires TODO features)
-   - Clear documentation of missing features
+### 4.1 Tool Interface Design
+- [x] Define Tool interface in `pkg/tools/interface.go`
+  - Name, Description, Schema methods
+  - Execute method with context and parameters
+  - Comprehensive parameter validation
+  
+- [x] Create tool registry in `pkg/tools/registry.go`
+  - Thread-safe tool registration
+  - Tool discovery and listing
+  - Duplicate detection
+  - Default registry singleton
 
-#### Files Created/Modified
-- `pkg/engine/lua/stdlib/` - Complete standard library implementation
-- `pkg/engine/lua/stdlib/promise.go` - Promise implementation
-- `pkg/engine/lua/stdlib/promise_test.go` - Promise tests
-- `examples/spells/async-llm/` - Complete async example
-- Updated and consolidated example spells
+### 4.2 Parameter Validation
+- [x] JSON Schema support for parameters
+  - Full JSON Schema validation
+  - Type checking and constraints
+  - Required field validation
+  - Nested object support
+  
+- [x] Error handling for invalid parameters
+  - Clear error messages
+  - Schema violation details
+  - Type mismatch reporting
 
-## Next Steps
-Continue with Phase 4: Agent System as outlined in TODO.md
+### 4.3 Tool Bridge Implementation
+- [x] Create tool bridge in `pkg/bridge/tools.go`
+  - Bridge between Go tools and script engines
+  - Tool registration from scripts
+  - Tool execution with type conversion
+  - Tool listing and discovery
+  
+- [x] Implement script-callable tool creation
+  - Scripts can register new tools
+  - Parameter schema definition
+  - Execution function binding
+
+### 4.4 Built-in Tools
+- [x] File system tools (sandboxed)
+  - JSON processor tool
+  - Basic read/write operations
+  - Security restrictions
+  
+- [x] String manipulation tools
+  - reverse, uppercase, lowercase
+  - Pattern matching
+  - Text processing
+  
+- [x] Math/calculation tools
+  - Basic calculator
+  - Statistical functions
+  - Random number generation
+
+### 4.5 Lua Tool Module
+- [x] Create Lua bridge for tools in `pkg/engine/lua/bridges/tools_bridge.go`
+  - tools.register() for creating tools from Lua
+  - tools.execute() for running tools
+  - tools.list() for discovery
+  - tools.remove() for cleanup
+  
+- [x] Type conversion for tool parameters
+  - Lua table to Go map conversion
+  - Result conversion back to Lua
+  - Error propagation
+  
+- [x] Tool execution from Lua scripts
+  - Async tool execution support
+  - Result handling
+  - Error handling
+
+### 4.6 Example Tools and Tests
+- [x] Create example tool implementations
+  - Calculator tool
+  - String manipulation tools
+  - JSON processing tool
+  
+- [x] Integration tests for tool system
+  - Tool registration and execution
+  - Parameter validation
+  - Error handling
+  - Lua integration
+
+## Bug Fixes and Improvements
+
+### Provider Initialization Fix
+- [x] Fixed issue where only OpenAI provider was initializing
+  - Added automatic `.env` file loading using godotenv
+  - API keys are now loaded from `.env` file if present
+  - All three providers (OpenAI, Anthropic, Gemini) now initialize correctly
+  - Added documentation for environment setup
+  - Updated README with API key setup instructions
+
+### Async Implementation
+- [x] Implemented true async callbacks for Lua
+  - Created async_callback.go for managing async operations
+  - Added llm.chat_async() and llm.complete_async() methods
+  - Integrated with promise system for parallel execution
+  - Fixed async-callbacks example to use real async calls
+  - Note: Provider switching limitations prevent true parallel calls across providers
+
+## Notes on Implementation Decisions
+
+1. **Promise Implementation**: Used `.next()` instead of `then()` in Lua due to `then` being a reserved keyword
+2. **Security First**: All filesystem access is sandboxed, dangerous functions disabled
+3. **Thread Safety**: All registries and shared resources use mutex protection
+4. **TDD Approach**: Tests written before implementation for all major components
+5. **Provider Initialization**: Requires proper environment variables or .env file with API keys

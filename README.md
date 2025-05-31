@@ -61,7 +61,12 @@ This project is under active development. See our [TODO](TODO.md) for current ta
   - ✅ Complete standard library (JSON, HTTP, Storage, Log, Promise)
   - ✅ LLM bridge for Lua scripts
   - ✅ Example spells demonstrating capabilities
-- 🔄 Agent System implementation in progress (Phase 4)
+- ✅ Tool System implementation (Phase 4 complete)
+  - ✅ Tool interface and registry for managing tools
+  - ✅ Script-based tool creation with parameter validation
+  - ✅ Lua bridge for tool system (tools module)
+  - ✅ Example tools demonstrating the system
+- 🔄 Agent System implementation in progress (Phase 5)
 
 ## 🛠️ Installation
 
@@ -82,17 +87,33 @@ make test
 
 ## 🎯 Quick Start
 
+### Setting Up API Keys
+
+The easiest way to configure API keys is using a `.env` file:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env and add your API keys:
+# OPENAI_API_KEY=sk-...
+# ANTHROPIC_API_KEY=sk-ant-...
+# GEMINI_API_KEY=AI...
+```
+
+The CLI will automatically load the `.env` file. See [Environment Setup](docs/env-setup.md) for more details.
+
 ### Running Example Spells
 
 ```bash
 # Run the async LLM example (demonstrates promises)
-go run examples/run_spell.go examples/spells/async-llm
+./bin/llmspell run examples/spells/async-llm
 
 # Compare multiple LLM providers
-go run examples/run_spell.go examples/spells/provider-compare --param prompt="What is AI?"
+./bin/llmspell run examples/spells/provider-compare --param prompt="What is AI?"
 
 # Simple chat assistant demo
-go run examples/run_spell.go examples/spells/chat-assistant
+./bin/llmspell run examples/spells/chat-assistant
 ```
 
 ### Available Example Spells

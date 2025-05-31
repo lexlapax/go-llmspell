@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 go-llmspell is a Go library that provides a scriptable interface for LLM interactions using embedded scripting languages (starting with Lua, then JavaScript and Tengo). It acts as a wrapper around the go-llms library, providing scripting capabilities for AI agent orchestration and workflow automation.
 
-## Current Status (Last Updated: May 27, 2025)
+## Current Status (Last Updated: May 29, 2025)
 
 ### Completed
 - ✅ Initial project structure with comprehensive directory layout
@@ -39,23 +39,41 @@ go-llmspell is a Go library that provides a scriptable interface for LLM interac
   - ✅ Promise implementation for async patterns (using .next() instead of then)
   - ✅ Example spells: async-llm, provider-compare, chat-assistant
   - ✅ All tests passing with race detection
+- ✅ **Phase 4: Tool System (COMPLETE)**
+  - ✅ Tool interface and registry implementation
+  - ✅ Thread-safe tool registration and execution
+  - ✅ Parameter validation with JSON schemas
+  - ✅ Lua bridge for tool system (tools module)
+  - ✅ Script-based tool creation with tools.register()
+  - ✅ Tool execution, listing, and management
+  - ✅ Example tools: calculator, string tools, JSON processor
+  - ✅ Comprehensive test coverage
+
+### Recent Updates
+- ✅ **Provider Initialization Fix (COMPLETE)**
+  - Added automatic `.env` file loading using godotenv
+  - All three providers (OpenAI, Anthropic, Gemini) now initialize correctly
+  - Added environment setup documentation
+- ✅ **Async Callback Implementation (COMPLETE)**
+  - Created async_callback.go for managing async operations
+  - Added llm.chat_async() and llm.complete_async() methods
+  - Integrated with promise system for parallel execution
+  - Updated async-callbacks example to use real async calls
 
 ### In Progress
-- 🔄 Phase 4: Tool System - Create tool interface
+- 🔄 Phase 5: Agent System - Create agent interface
 
 ### Next Steps
-1. Implement Tool System (Phase 4)
-   - Create tool interface and registry
-   - Integrate with go-llms built-in tools
-   - Add tool bridge for script-defined tools
-2. Implement Agent System (Phase 5)
+1. Implement Agent System (Phase 5)
    - Create agent interface and configuration
    - Integrate with go-llms agent capabilities
    - Add conversation memory management
-3. Add missing LLM bridge features:
+2. Add missing LLM bridge features:
    - llm.stream_chat_with_history() for message-based streaming
    - Safe alternatives to io.read/write for interactive spells
+3. Fix failing promise async tests (4 tests in promise_async_test.go)
 4. Continue with Workflow system (Phase 6)
+5. Investigate and integrate more built-in tools from go-llms
 
 ## Development Commands
 
@@ -143,7 +161,8 @@ The project follows a layered architecture:
 
 ## Key Dependencies
 - `github.com/lexlapax/go-llms` v0.2.6 - Core LLM wrapper library (integrated)
-- `github.com/yuin/gopher-lua` - Lua scripting engine (to be added)
+- `github.com/yuin/gopher-lua` v1.1.1 - Lua scripting engine (integrated)
+- `github.com/joho/godotenv` v1.5.1 - Environment file loading (integrated)
 - `github.com/dop251/goja` - JavaScript scripting engine (to be added)
 - `github.com/d5/tengo` - Tengo scripting engine (to be added)
 

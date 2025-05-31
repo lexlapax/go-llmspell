@@ -41,6 +41,10 @@ func (lb *LLMBridge) Register(L *lua.LState) error {
 	L.SetField(llmModule, "list_providers", L.NewFunction(lb.listProviders))
 	L.SetField(llmModule, "get_provider", L.NewFunction(lb.getProvider))
 	L.SetField(llmModule, "set_provider", L.NewFunction(lb.setProvider))
+	
+	// Register async functions
+	L.SetField(llmModule, "chat_async", L.NewFunction(lb.chatAsync))
+	L.SetField(llmModule, "complete_async", L.NewFunction(lb.completeAsync))
 
 	// Register the module
 	L.SetGlobal("llm", llmModule)

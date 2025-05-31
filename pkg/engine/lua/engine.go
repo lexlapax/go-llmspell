@@ -11,18 +11,21 @@ import (
 	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/stdlib"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // LuaEngine implements the Engine interface for Lua scripts
 type LuaEngine struct {
-	vm       *lua.LState
-	config   *engine.Config
-	ctx      context.Context
-	cancel   context.CancelFunc
-	mu       sync.RWMutex
-	loaded   bool
-	bindings map[string]interface{}
+	vm               *lua.LState
+	config           *engine.Config
+	ctx              context.Context
+	cancel           context.CancelFunc
+	mu               sync.RWMutex
+	loaded           bool
+	bindings         map[string]interface{}
+	stdlibRegistered bool
+	bridges          map[string]interface{}
 }
 
 // NewLuaEngine creates a new Lua engine instance
@@ -37,6 +40,7 @@ func NewLuaEngine(config *engine.Config) (*LuaEngine, error) {
 	engine := &LuaEngine{
 		config:   config,
 		bindings: make(map[string]interface{}),
+		bridges:  make(map[string]interface{}),
 	}
 
 	// Initialize the Lua VM
@@ -86,6 +90,20 @@ func (e *LuaEngine) initVM() error {
 	for name, fn := range e.bindings {
 		if err := e.registerFunctionInternal(name, fn); err != nil {
 			return fmt.Errorf("failed to re-register function %s: %w", name, err)
+		}
+	}
+
+	// Register standard library modules if available
+	if e.stdlibRegistered {
+		if err := e.registerStandardLibrary(); err != nil {
+			return fmt.Errorf("failed to register standard library: %w", err)
+		}
+	}
+
+	// Register all previously registered bridges
+	for name, bridge := range e.bridges {
+		if err := e.registerBridgeInternal(name, bridge); err != nil {
+			return fmt.Errorf("failed to re-register bridge %s: %w", name, err)
 		}
 	}
 
@@ -369,4 +387,68 @@ func luaTableToMap(table *lua.LTable) map[string]interface{} {
 	})
 
 	return result
+}
+
+// RegisterBridge registers a bridge object that can provide functionality to Lua
+func (e *LuaEngine) RegisterBridge(name string, bridge interface{}) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.bridges[name] = bridge
+
+	// If VM is already initialized, register the bridge now
+	if e.vm != nil {
+		return e.registerBridgeInternal(name, bridge)
+	}
+
+	return nil
+}
+
+// registerBridgeInternal registers a bridge without locking
+func (e *LuaEngine) registerBridgeInternal(name string, bridge interface{}) error {
+	// For now, we'll handle specific bridge types
+	// In the future, this could use reflection or interfaces
+
+	switch name {
+	case "stdlib":
+		// Standard library is registered differently
+		e.stdlibRegistered = true
+		return e.registerStandardLibrary()
+	case "tools":
+		// Register tools bridge if it's the right type
+		if toolsBridge, ok := bridge.(interface{ Register(*lua.LState) error }); ok {
+			return toolsBridge.Register(e.vm)
+		}
+		return fmt.Errorf("invalid tools bridge type")
+	case "llm":
+		// Register LLM bridge if it's the right type
+		if llmBridge, ok := bridge.(interface{ Register(*lua.LState) error }); ok {
+			return llmBridge.Register(e.vm)
+		}
+		return fmt.Errorf("invalid LLM bridge type")
+	default:
+		// Store for later registration
+		return nil
+	}
+}
+
+// registerStandardLibrary registers all standard library modules
+func (e *LuaEngine) registerStandardLibrary() error {
+	if e.vm == nil {
+		return fmt.Errorf("Lua VM not initialized")
+	}
+
+	// Register stdlib modules
+	if err := e.registerStdlibModules(); err != nil {
+		return fmt.Errorf("failed to register stdlib modules: %w", err)
+	}
+
+	return nil
+}
+
+// registerStdlibModules registers individual stdlib modules
+func (e *LuaEngine) registerStdlibModules() error {
+	// Register all standard library modules with default config
+	config := stdlib.DefaultConfig()
+	return stdlib.RegisterAll(e.vm, config)
 }

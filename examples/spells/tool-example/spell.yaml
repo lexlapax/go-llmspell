@@ -1,0 +1,13 @@
+name: tool-example
+version: 1.0.0
+description: Demonstrates creating and using custom tools from Lua scripts
+author: Example Author
+tags:
+  - tools
+  - custom
+  - lua
+
+entry: main.lua
+
+dependencies:
+  go-llmspell: ">=0.1.0"

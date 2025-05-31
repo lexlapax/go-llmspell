@@ -128,7 +128,7 @@ example:
 		exit 1; \
 	fi
 	@echo "Running example spell: $(SPELL)"
-	@cd examples && $(GOCMD) run run_spell.go spells/$(SPELL)
+	@./bin/llmspell run examples/spells/$(SPELL)
 
 # Run example with mock LLM (no API key required)
 example-mock:
@@ -143,7 +143,7 @@ example-mock:
 		exit 1; \
 	fi
 	@echo "Running example spell with mock LLM: $(SPELL)"
-	@cd examples && MOCK_LLM=true $(GOCMD) run run_spell.go spells/$(SPELL)
+	@MOCK_LLM=true ./bin/llmspell run examples/spells/$(SPELL)
 
 # Build for multiple platforms
 build-all: build-linux build-darwin build-windows

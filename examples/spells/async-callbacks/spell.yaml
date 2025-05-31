@@ -1,0 +1,19 @@
+name: async-callbacks
+version: 1.0.0
+description: Demonstrates how async callbacks could enable parallel LLM calls
+author: Example Author
+tags:
+  - async
+  - callbacks
+  - parallel
+
+entry: main.lua
+
+parameters:
+  - name: mode
+    description: Demo mode (simple, parallel, promise)
+    type: string
+    default: simple
+
+dependencies:
+  go-llmspell: ">=0.1.0"

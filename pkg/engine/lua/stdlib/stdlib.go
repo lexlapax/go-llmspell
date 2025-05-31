@@ -53,6 +53,12 @@ func RegisterAll(L *lua.LState, config *Config) error {
 
 	// Register Promise module for async operations
 	RegisterPromise(L)
+	
+	// Register Async callback module
+	RegisterAsyncCallback(L)
+	
+	// Register Promise-Async integration
+	RegisterPromiseAsync(L)
 
 	return nil
 }

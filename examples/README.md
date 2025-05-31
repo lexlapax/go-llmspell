@@ -7,9 +7,19 @@ This directory contains example spells and integration code for go-llmspell.
 ### /spells/
 Contains ready-to-run spell examples that demonstrate various capabilities:
 
-- **hello-llm/** - Basic LLM interaction example
-- **chat-assistant/** - Interactive chat with conversation history
+#### Basic Examples
+- **hello-llm/** - Basic LLM interaction example with chat, completion, and streaming
+- **web-summarizer/** - Fetches and summarizes web content using LLM
+
+#### Advanced LLM Features
+- **async-llm/** - Demonstrates promise-based async patterns with LLMs
+- **async-callbacks/** - Shows how async callbacks enable parallel LLM operations
 - **provider-compare/** - Compare responses from multiple LLM providers
+- **chat-assistant/** - Interactive chat with conversation history
+
+#### Tool System
+- **builtin-tools/** - Demonstrates using built-in tools with LLM tool calling
+- **tool-example/** - Shows how to create and use custom tools from Lua scripts
 
 ### /integration/
 Contains Go code examples showing how to integrate the spell engine:
@@ -25,9 +35,21 @@ llmspell run <spell-name>
 
 For example:
 ```bash
+# Basic examples
 llmspell run hello-llm
-llmspell run chat-assistant
+llmspell run web-summarizer --param url="https://example.com"
+
+# Async/parallel examples
+llmspell run async-llm
+llmspell run async-callbacks --param mode=parallel
 llmspell run provider-compare --param prompt="What is the meaning of life?"
+
+# Interactive examples
+llmspell run chat-assistant
+
+# Tool examples
+llmspell run builtin-tools --param query="What is 25 * 4 + 10?"
+llmspell run tool-example
 ```
 
 ## Creating Your Own Spells

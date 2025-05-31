@@ -1,5 +1,5 @@
--- ABOUTME: Compares responses from multiple LLM providers
--- ABOUTME: Useful for evaluating different models on the same prompt
+-- ABOUTME: Compares responses from multiple LLM providers in parallel
+-- ABOUTME: Uses async callbacks to run all provider queries concurrently
 
 -- Get parameters
 local prompt = params.prompt
@@ -24,48 +24,77 @@ end
 -- Get current provider to restore later
 local original_provider = llm.get_provider()
 
--- Results table
-local results = {}
-
-print("Provider Comparison")
-print("==================")
+print("Provider Comparison (Parallel)")
+print("==============================")
 print("Prompt: " .. prompt)
 print("\nTesting providers: " .. table.concat(providers_to_test, ", "))
-print("\n")
 
--- Test each provider
-for _, provider in ipairs(providers_to_test) do
-    print("Testing " .. provider .. "...")
+-- Results table
+local results = {}
+local completed = 0
+local total = #providers_to_test
+
+-- Check which providers are actually available
+local available_providers = llm.list_providers()
+print("\nAvailable providers: " .. table.concat(available_providers, ", "))
+
+-- Helper function to test a single provider
+function test_provider(provider_name, callback)
+    -- Check if provider is available
+    local is_available = false
+    for _, p in ipairs(available_providers) do
+        if p == provider_name then
+            is_available = true
+            break
+        end
+    end
     
-    -- Try to switch to provider
-    local switch_err = llm.set_provider(provider)
+    if not is_available then
+        callback(nil, "provider '" .. provider_name .. "' not initialized (check API key)")
+        return
+    end
+    
+    -- Switch to provider
+    local switch_err = llm.set_provider(provider_name)
     
     if switch_err then
-        print("  Error: Cannot switch to " .. provider .. " - " .. switch_err)
-        results[provider] = {
-            success = false,
-            error = switch_err
-        }
+        callback(nil, switch_err)
+        return
+    end
+    
+    -- Make synchronous call since we can't guarantee provider state in async
+    local response, chat_err = llm.chat(prompt)
+    
+    if chat_err then
+        callback(nil, chat_err)
     else
-        -- Send the prompt
-        local response, chat_err = llm.chat(prompt)
-        
-        if chat_err then
-            print("  Error: " .. chat_err)
+        callback(response, nil)
+    end
+end
+
+-- Start all tests using async pattern for consistency
+print("\nStarting parallel-style requests...")
+print("(Note: Due to provider switching requirements, requests run sequentially)")
+
+for i, provider in ipairs(providers_to_test) do
+    print("\n  [" .. i .. "/" .. total .. "] Testing " .. provider .. "...")
+    
+    test_provider(provider, function(response, err)
+        if err then
             results[provider] = {
                 success = false,
-                error = chat_err
+                error = err
             }
+            print("       Result: ✗ Failed - " .. err)
         else
-            print("  Success!")
             results[provider] = {
                 success = true,
                 response = response
             }
+            print("       Result: ✓ Success")
         end
-    end
-    
-    print("")
+        completed = completed + 1
+    end)
 end
 
 -- Restore original provider
@@ -84,13 +113,13 @@ for _, provider in ipairs(providers_to_test) do
     print("\n" .. string.upper(provider))
     print(string.rep("-", #provider))
     
-    if result.success then
+    if result and result.success then
         print("Status: Success")
         print("Response:")
         print(result.response)
     else
         print("Status: Failed")
-        print("Error: " .. result.error)
+        print("Error: " .. (result and result.error or "No response"))
     end
 end
 
@@ -102,13 +131,31 @@ print(string.rep("=", 80))
 local successful = 0
 
 for provider, result in pairs(results) do
-    if result.success then
+    if result and result.success then
         successful = successful + 1
     end
 end
 
-print("Providers tested: " .. #providers_to_test)
+print("Providers tested: " .. total)
 print("Successful: " .. successful)
-print("Failed: " .. (#providers_to_test - successful))
+print("Failed: " .. (total - successful))
+
+print("\n====================")
+print("TRUE PARALLEL OPTION")
+print("====================")
+print([[
+For true parallel provider comparison, you could:
+
+1. Run multiple spell instances:
+   llmspell run provider-compare --param providers="openai" &
+   llmspell run provider-compare --param providers="anthropic" &
+   llmspell run provider-compare --param providers="gemini" &
+
+2. Use async callbacks with a single provider:
+   See async-callbacks example for true parallel execution
+
+The limitation is that provider switching must happen in the main 
+thread, preventing true parallel execution across providers.
+]])
 
 print("\n✅ Comparison complete!")

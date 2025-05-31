@@ -44,6 +44,9 @@ func NewLLMBridge() (*LLMBridge, error) {
 	if os.Getenv("ANTHROPIC_API_KEY") != "" {
 		if err := bridge.initProvider("anthropic"); err == nil {
 			availableProviders = append(availableProviders, "anthropic")
+		} else {
+			// Log the error for debugging
+			fmt.Printf("Warning: Failed to initialize Anthropic provider: %v\n", err)
 		}
 	}
 
@@ -51,6 +54,9 @@ func NewLLMBridge() (*LLMBridge, error) {
 	if os.Getenv("GEMINI_API_KEY") != "" {
 		if err := bridge.initProvider("gemini"); err == nil {
 			availableProviders = append(availableProviders, "gemini")
+		} else {
+			// Log the error for debugging
+			fmt.Printf("Warning: Failed to initialize Gemini provider: %v\n", err)
 		}
 	}
 

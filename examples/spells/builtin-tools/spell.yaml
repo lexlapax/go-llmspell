@@ -1,0 +1,19 @@
+name: builtin-tools
+version: 1.0.0
+description: Demonstrates the use of built-in tools with LLM tool calling
+author: Example Author
+tags:
+  - tools
+  - llm
+  - builtin
+
+entry: main.lua
+
+parameters:
+  - name: query
+    description: Query to solve using tools
+    type: string
+    default: "What is 25 * 4 + 10?"
+
+dependencies:
+  go-llmspell: ">=0.1.0"
