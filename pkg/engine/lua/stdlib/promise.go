@@ -42,21 +42,21 @@ func RegisterPromise(L *lua.LState) {
 
 	// Register promise type
 	mt := L.NewTypeMetatable("promise")
-	
+
 	// Create index table with methods
 	indexTable := L.SetFuncs(L.NewTable(), promiseMethods)
-	
+
 	// Add custom __index function to handle both methods and state
 	L.SetField(mt, "__index", L.NewFunction(func(L *lua.LState) int {
 		ud := L.CheckUserData(1)
 		key := L.CheckString(2)
-		
+
 		// Check if it's a method first
 		if method := indexTable.RawGetString(key); method != lua.LNil {
 			L.Push(method)
 			return 1
 		}
-		
+
 		// Handle state property
 		if key == "state" {
 			if p, ok := ud.Value.(*Promise); ok {
@@ -75,7 +75,7 @@ func RegisterPromise(L *lua.LState) {
 				return 1
 			}
 		}
-		
+
 		L.Push(lua.LNil)
 		return 1
 	}))

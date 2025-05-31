@@ -66,12 +66,13 @@ This project is under active development. See our [TODO](TODO.md) for current ta
   - ✅ Script-based tool creation with parameter validation
   - ✅ Lua bridge for tool system (tools module)
   - ✅ Example tools demonstrating the system
-- ✅ Agent System core implementation (Phase 5 mostly complete)
+- ✅ Agent System implementation (Phase 5 complete)
   - ✅ Agent interface and registry system
   - ✅ Default agent implementation with go-llms integration
   - ✅ Tool integration for agent capabilities
   - ✅ Agent bridge for script access
-  - 🔄 Lua integration pending
+  - ✅ Lua integration with comprehensive examples
+  - ✅ Research, Code Analysis, and Planning agent examples
 
 ## 🛠️ Installation
 
@@ -126,7 +127,13 @@ The CLI will automatically load the `.env` file. See [Environment Setup](docs/en
 - **async-llm**: Demonstrates promise-based async patterns with LLMs
 - **provider-compare**: Compares responses from multiple providers
 - **chat-assistant**: Interactive chat with conversation history (demo version)
-- **hello-world**: Basic spell structure example
+- **hello-llm**: Basic spell structure example
+- **lua-agent**: Comprehensive agent examples showing:
+  - Research agent with web_fetch tool integration
+  - Code analysis agent with custom Lua tools
+  - Planning agent for task decomposition
+- **builtin-tools**: Demonstrates using built-in tools from go-llms
+- **tool-example**: Shows how to create and use custom tools
 
 ### Future CLI (Coming Soon)
 

@@ -6,13 +6,12 @@ package bridges
 import (
 	"context"
 
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	engLua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // RegisterToolsModule registers the tools module in Lua
-func RegisterToolsModule(L *lua.LState, toolBridge *bridge.ToolBridge) error {
+func RegisterToolsModule(L *lua.LState, toolBridge ToolBridgeInterface) error {
 	// Create tools module
 	toolsMod := L.NewTable()
 
@@ -33,7 +32,7 @@ func RegisterToolsModule(L *lua.LState, toolBridge *bridge.ToolBridge) error {
 }
 
 // toolsRegister creates a Lua function for registering tools
-func toolsRegister(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGFunction {
+func toolsRegister(tb ToolBridgeInterface, converter *engLua.LuaConverter) lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Get arguments
 		name := L.CheckString(1)
@@ -80,7 +79,7 @@ func toolsRegister(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LG
 }
 
 // toolsExecute creates a Lua function for executing tools
-func toolsExecute(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGFunction {
+func toolsExecute(tb ToolBridgeInterface, converter *engLua.LuaConverter) lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Get arguments
 		name := L.CheckString(1)
@@ -113,7 +112,7 @@ func toolsExecute(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGF
 }
 
 // toolsGet creates a Lua function for getting tool information
-func toolsGet(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGFunction {
+func toolsGet(tb ToolBridgeInterface, converter *engLua.LuaConverter) lua.LGFunction {
 	return func(L *lua.LState) int {
 		name := L.CheckString(1)
 
@@ -131,7 +130,7 @@ func toolsGet(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGFunct
 }
 
 // toolsList creates a Lua function for listing all tools
-func toolsList(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGFunction {
+func toolsList(tb ToolBridgeInterface, converter *engLua.LuaConverter) lua.LGFunction {
 	return func(L *lua.LState) int {
 		tools := tb.ListTools()
 
@@ -142,7 +141,7 @@ func toolsList(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGFunc
 }
 
 // toolsRemove creates a Lua function for removing tools
-func toolsRemove(tb *bridge.ToolBridge) lua.LGFunction {
+func toolsRemove(tb ToolBridgeInterface) lua.LGFunction {
 	return func(L *lua.LState) int {
 		name := L.CheckString(1)
 
@@ -159,7 +158,7 @@ func toolsRemove(tb *bridge.ToolBridge) lua.LGFunction {
 }
 
 // toolsValidate creates a Lua function for validating parameters
-func toolsValidate(tb *bridge.ToolBridge, converter *engLua.LuaConverter) lua.LGFunction {
+func toolsValidate(tb ToolBridgeInterface, converter *engLua.LuaConverter) lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Get arguments
 		name := L.CheckString(1)

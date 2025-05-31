@@ -426,6 +426,12 @@ func (e *LuaEngine) registerBridgeInternal(name string, bridge interface{}) erro
 			return llmBridge.Register(e.vm)
 		}
 		return fmt.Errorf("invalid LLM bridge type")
+	case "agents":
+		// Register agents bridge if it's the right type
+		if agentsBridge, ok := bridge.(interface{ Register(*lua.LState) error }); ok {
+			return agentsBridge.Register(e.vm)
+		}
+		return fmt.Errorf("invalid agents bridge type")
 	default:
 		// Store for later registration
 		return nil

@@ -1,0 +1,8 @@
+name: lua-agent-example
+version: 1.0.0
+description: Demonstrates creating custom agents in Lua
+author: go-llmspell
+requirements:
+  llm: true
+  tools: false
+  agents: true

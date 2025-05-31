@@ -51,7 +51,7 @@ func TestDefaultAgent(t *testing.T) {
 		}
 
 		agent := NewDefaultAgent(config)
-		
+
 		// Initial prompt
 		assert.Equal(t, "Initial prompt", agent.GetSystemPrompt())
 

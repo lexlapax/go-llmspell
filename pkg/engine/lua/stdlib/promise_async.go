@@ -5,7 +5,7 @@ package stdlib
 
 import (
 	"time"
-	
+
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -13,10 +13,10 @@ import (
 func RegisterPromiseAsync(L *lua.LState) {
 	// Add helper functions to promise module
 	promiseMod := L.GetGlobal("promise").(*lua.LTable)
-	
+
 	// Add promise.async for creating async promises
 	L.SetField(promiseMod, "async", L.NewFunction(promiseAsync))
-	
+
 	// Add promise.await_all for waiting on async operations
 	L.SetField(promiseMod, "await_all", L.NewFunction(promiseAwaitAll))
 }
@@ -25,31 +25,31 @@ func RegisterPromiseAsync(L *lua.LState) {
 // Usage: p = promise.async(function(resolve, reject) ... end)
 func promiseAsync(L *lua.LState) int {
 	executor := L.CheckFunction(1)
-	
+
 	// Create promise
 	promise := &Promise{
 		state:    PromisePending,
 		handlers: []handler{},
 	}
-	
+
 	// Create userdata
 	ud := L.NewUserData()
 	ud.Value = promise
 	L.SetMetatable(ud, L.GetTypeMetatable("promise"))
-	
+
 	// Create resolve/reject functions
 	resolveFunc := L.NewClosure(func(L *lua.LState) int {
 		value := L.Get(1)
 		promise.resolveWithLua(L, value)
 		return 0
 	})
-	
+
 	rejectFunc := L.NewClosure(func(L *lua.LState) int {
 		reason := L.Get(1)
 		promise.rejectWithLua(L, reason)
 		return 0
 	})
-	
+
 	// Execute the executor
 	L.Push(executor)
 	L.Push(resolveFunc)
@@ -57,7 +57,7 @@ func promiseAsync(L *lua.LState) int {
 	if err := L.PCall(2, 0, nil); err != nil {
 		promise.rejectWithLua(L, lua.LString(err.Error()))
 	}
-	
+
 	L.Push(ud)
 	return 1
 }
@@ -67,10 +67,10 @@ func promiseAsync(L *lua.LState) int {
 func promiseAwaitAll(L *lua.LState) int {
 	promises := L.CheckTable(1)
 	timeout := L.OptInt(2, 30) // Default 30 second timeout
-	
+
 	// Get callback manager for processing
 	_ = GetCallbackManager(L)
-	
+
 	// Check if all promises are resolved or rejected
 	allSettled := func() bool {
 		settled := true
@@ -87,11 +87,11 @@ func promiseAwaitAll(L *lua.LState) int {
 		})
 		return settled
 	}
-	
+
 	// Event loop with timeout
 	iterations := 0
 	maxIterations := timeout * 100 // Check every 10ms
-	
+
 	// Only run the loop if timeout > 0
 	if timeout > 0 {
 		for !allSettled() && iterations < maxIterations {
@@ -106,23 +106,23 @@ func promiseAwaitAll(L *lua.LState) int {
 					continue
 				}
 			}
-			
+
 			iterations++
-			
+
 			// Sleep for 10ms between checks
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
-	
+
 	// Collect results
 	results := L.NewTable()
 	count := 0
-	
+
 	// First pass: count total promises
 	promises.ForEach(func(_, v lua.LValue) {
 		count++
 	})
-	
+
 	// Second pass: collect results
 	idx := 1
 	promises.ForEach(func(_, v lua.LValue) {
@@ -147,7 +147,7 @@ func promiseAwaitAll(L *lua.LState) int {
 		}
 		idx++
 	})
-	
+
 	// Set metatable to override length operator
 	mt := L.NewTable()
 	L.SetField(mt, "__len", L.NewFunction(func(L *lua.LState) int {
@@ -155,7 +155,7 @@ func promiseAwaitAll(L *lua.LState) int {
 		return 1
 	}))
 	L.SetMetatable(results, mt)
-	
+
 	L.Push(results)
 	return 1
 }

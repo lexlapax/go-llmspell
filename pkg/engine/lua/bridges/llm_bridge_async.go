@@ -5,7 +5,7 @@ package bridges
 
 import (
 	"context"
-	
+
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/stdlib"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -16,13 +16,13 @@ func (lb *LLMBridge) chatAsync(L *lua.LState) int {
 	prompt := L.CheckString(1)
 	callback := L.CheckFunction(2)
 	errback := L.OptFunction(3, nil)
-	
+
 	// Get callback manager
 	mgr := stdlib.GetCallbackManager(L)
-	
+
 	// Register callback
 	id := mgr.RegisterCallback(callback, errback)
-	
+
 	// Start async operation
 	go func() {
 		result, err := lb.bridge.Chat(context.Background(), prompt)
@@ -32,7 +32,7 @@ func (lb *LLMBridge) chatAsync(L *lua.LState) int {
 			mgr.QueueStringResult(id, result)
 		}
 	}()
-	
+
 	// Return callback ID
 	L.Push(lua.LNumber(id))
 	return 1
@@ -45,13 +45,13 @@ func (lb *LLMBridge) completeAsync(L *lua.LState) int {
 	maxTokens := L.CheckInt(2)
 	callback := L.CheckFunction(3)
 	errback := L.OptFunction(4, nil)
-	
+
 	// Get callback manager
 	mgr := stdlib.GetCallbackManager(L)
-	
+
 	// Register callback
 	id := mgr.RegisterCallback(callback, errback)
-	
+
 	// Start async operation
 	go func() {
 		result, err := lb.bridge.Complete(context.Background(), prompt, maxTokens)
@@ -61,7 +61,7 @@ func (lb *LLMBridge) completeAsync(L *lua.LState) int {
 			mgr.QueueStringResult(id, result)
 		}
 	}()
-	
+
 	// Return callback ID
 	L.Push(lua.LNumber(id))
 	return 1

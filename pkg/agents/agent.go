@@ -56,12 +56,12 @@ func (a *defaultAgent) Initialize(ctx context.Context) error {
 
 	// Create the go-llms agent
 	a.llmsAgent = agentworkflow.NewAgent(llm)
-	
+
 	// Set system prompt
 	if a.systemPrompt != "" {
 		a.llmsAgent.SetSystemPrompt(a.systemPrompt)
 	}
-	
+
 	// Set model
 	if a.config.Model != "" {
 		a.llmsAgent.WithModel(a.config.Model)
@@ -189,11 +189,11 @@ func (a *defaultAgent) Stream(ctx context.Context, input string, opts *Execution
 		if end > len(response) {
 			end = len(response)
 		}
-		
+
 		if err := callback(response[i:end]); err != nil {
 			return err
 		}
-		
+
 		// Small delay to simulate streaming
 		select {
 		case <-ctx.Done():

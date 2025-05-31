@@ -148,39 +148,39 @@ func TestAgentInterface(t *testing.T) {
 
 func TestMockAgent(t *testing.T) {
 	ctx := context.Background()
-	
+
 	t.Run("basic operations", func(t *testing.T) {
 		agent := NewMockAgent("test-agent")
-		
+
 		// Test name
 		assert.Equal(t, "test-agent", agent.Name())
-		
+
 		// Test initialization
 		err := agent.Initialize(ctx)
 		require.NoError(t, err)
 		assert.True(t, agent.initialized)
-		
+
 		// Test system prompt
 		agent.SetSystemPrompt("Test prompt")
 		assert.Equal(t, "Test prompt", agent.GetSystemPrompt())
-		
+
 		// Test tools
 		err = agent.AddTool("calculator")
 		require.NoError(t, err)
 		err = agent.AddTool("web_fetch")
 		require.NoError(t, err)
 		assert.Equal(t, []string{"calculator", "web_fetch"}, agent.GetTools())
-		
+
 		// Test cleanup
 		err = agent.Cleanup()
 		require.NoError(t, err)
 		assert.False(t, agent.initialized)
 	})
-	
+
 	t.Run("execution", func(t *testing.T) {
 		agent := NewMockAgent("test-agent")
 		agent.SetResponse("Custom response")
-		
+
 		result, err := agent.Execute(ctx, "Test input", nil)
 		require.NoError(t, err)
 		assert.Equal(t, "Custom response", result.Response)
@@ -190,17 +190,17 @@ func TestMockAgent(t *testing.T) {
 		assert.Equal(t, AssistantRole, result.Messages[1].Role)
 		assert.Equal(t, "Custom response", result.Messages[1].Content)
 	})
-	
+
 	t.Run("streaming", func(t *testing.T) {
 		agent := NewMockAgent("test-agent")
 		agent.SetResponse("Hello world")
-		
+
 		var collected string
 		err := agent.Stream(ctx, "Test", nil, func(chunk string) error {
 			collected += chunk
 			return nil
 		})
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, "Hello world", collected)
 	})

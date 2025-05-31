@@ -7,19 +7,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	llmspellua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // LLMBridge wraps the core LLM bridge for Lua integration
 type LLMBridge struct {
-	bridge    *bridge.LLMBridge
+	bridge    LLMBridgeInterface
 	converter *llmspellua.LuaConverter
 }
 
 // NewLLMBridge creates a new Lua LLM bridge
-func NewLLMBridge(b *bridge.LLMBridge) *LLMBridge {
+func NewLLMBridge(b LLMBridgeInterface) *LLMBridge {
 	return &LLMBridge{
 		bridge: b,
 	}
@@ -41,7 +40,7 @@ func (lb *LLMBridge) Register(L *lua.LState) error {
 	L.SetField(llmModule, "list_providers", L.NewFunction(lb.listProviders))
 	L.SetField(llmModule, "get_provider", L.NewFunction(lb.getProvider))
 	L.SetField(llmModule, "set_provider", L.NewFunction(lb.setProvider))
-	
+
 	// Register async functions
 	L.SetField(llmModule, "chat_async", L.NewFunction(lb.chatAsync))
 	L.SetField(llmModule, "complete_async", L.NewFunction(lb.completeAsync))

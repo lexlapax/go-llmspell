@@ -27,9 +27,9 @@ func (e *Error) Unwrap() error {
 
 // Common error codes
 const (
-	ErrCodeNotInitialized = "AGENT_NOT_INITIALIZED"
-	ErrCodeInvalidConfig  = "INVALID_CONFIG"
-	ErrCodeToolNotFound   = "TOOL_NOT_FOUND"
+	ErrCodeNotInitialized  = "AGENT_NOT_INITIALIZED"
+	ErrCodeInvalidConfig   = "INVALID_CONFIG"
+	ErrCodeToolNotFound    = "TOOL_NOT_FOUND"
 	ErrCodeExecutionFailed = "EXECUTION_FAILED"
-	ErrCodeNoUserMessage  = "NO_USER_MESSAGE"
+	ErrCodeNoUserMessage   = "NO_USER_MESSAGE"
 )

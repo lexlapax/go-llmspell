@@ -211,6 +211,118 @@ return {
 }
 ```
 
+### Creating Custom Agents in Lua
+
+You can create custom agents directly in Lua using the `agents.register()` function:
+
+```lua
+-- custom-agent.lua
+-- Create a custom agent with Lua
+
+-- Simple function-based agent
+function my_simple_agent(input, options)
+    -- Process the input and return a response
+    return "Processed: " .. input
+end
+
+-- Register the function as an agent
+agents.register("my-simple-agent", my_simple_agent)
+
+-- Table-based agent with full features
+local my_complex_agent = {
+    -- Optional: Override the registration name
+    name = "complex-agent",
+    
+    -- Optional: System prompt
+    system_prompt = "You are a helpful assistant",
+    
+    -- Optional: List of tools the agent can use
+    tools = {"calculator", "web_fetch"},
+    
+    -- Required: Execute method
+    execute = function(self, input, options)
+        -- Access options like max_tokens, temperature
+        local max_tokens = options and options.max_tokens or 100
+        
+        -- You can maintain state in the table
+        self.call_count = (self.call_count or 0) + 1
+        
+        -- Return the response
+        return string.format("Call #%d: %s", self.call_count, input)
+    end,
+    
+    -- Optional: Streaming support
+    stream = function(self, input, options, callback)
+        -- Stream response word by word
+        for word in string.gmatch(input, "%S+") do
+            -- Call the callback with each chunk
+            local err = callback(word .. " ")
+            if err then
+                return err  -- Stop streaming on error
+            end
+        end
+        return nil  -- Success
+    end,
+    
+    -- Optional: Custom getters/setters
+    get_system_prompt = function(self)
+        return self.system_prompt
+    end,
+    
+    set_system_prompt = function(self, prompt)
+        self.system_prompt = prompt
+    end,
+    
+    -- Optional: Tool management
+    add_tool = function(self, tool_name)
+        table.insert(self.tools, tool_name)
+        return nil  -- Return error string if failed
+    end,
+    
+    get_tools = function(self)
+        return self.tools
+    end
+}
+
+-- Register the table-based agent
+agents.register("my-complex-agent", my_complex_agent)
+
+-- Use the registered agents
+local result = agents.execute("my-simple-agent", "Hello")
+print(result)  -- "Processed: Hello"
+
+-- Stream with the complex agent
+agents.stream("my-complex-agent", "Hello streaming world", function(chunk)
+    io.write(chunk)  -- Print each chunk as it arrives
+    io.flush()
+    return nil  -- Continue streaming
+end)
+
+-- Agents can also use the LLM
+local smart_agent = {
+    execute = function(self, input, options)
+        -- Use the LLM to process input
+        local prompt = "Please respond to: " .. input
+        return llm.chat(prompt)
+    end,
+    
+    stream = function(self, input, options, callback)
+        -- Stream from the LLM
+        local prompt = "Please respond to: " .. input
+        return llm.stream_chat(prompt, callback)
+    end
+}
+
+agents.register("smart-agent", smart_agent)
+```
+
+Lua agents are particularly useful for:
+- Rapid prototyping of agent behaviors
+- Creating specialized agents without modifying Go code
+- Implementing custom conversation logic
+- Building agents that maintain state across calls
+- Testing different agent strategies quickly
+
 ### Working with Workflows
 
 ```lua

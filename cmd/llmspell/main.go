@@ -161,6 +161,16 @@ func initializeBridges(eng *lua.LuaEngine, spellName string) {
 		log.Printf("Warning: Failed to register tools module: %v", err)
 	}
 
+	// Register agents bridge
+	agentBridge, err := bridge.NewAgentBridge(context.Background())
+	if err != nil {
+		log.Printf("Warning: Failed to create agent bridge: %v", err)
+	} else {
+		if err := bridges.RegisterAgentsModule(luaState, agentBridge); err != nil {
+			log.Printf("Warning: Failed to register agents module: %v", err)
+		}
+	}
+
 	// Register LLM bridge
 	if os.Getenv("MOCK_LLM") == "true" {
 		fmt.Println("🎭 Using mock LLM for demonstration")
@@ -174,7 +184,8 @@ func initializeBridges(eng *lua.LuaEngine, spellName string) {
 			registerMockLLM(eng)
 		} else {
 			fmt.Printf("✅ LLM Bridge initialized with provider: %s\n\n", llmBridge.GetCurrentProvider())
-			luaBridge := bridges.NewLLMBridge(llmBridge)
+			adapter := bridges.NewLLMBridgeAdapter(llmBridge)
+			luaBridge := bridges.NewLLMBridge(adapter)
 			if err := luaBridge.Register(luaState); err != nil {
 				log.Fatalf("Failed to register LLM bridge: %v", err)
 			}

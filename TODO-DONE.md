@@ -290,7 +290,7 @@ This file tracks completed tasks that have been moved from TODO.md. Each complet
   - Fixed test expectations for timeout behavior
   - All stdlib tests now pass
 
-## Phase 5: Agent System ✅ PARTIALLY COMPLETE
+## Phase 5: Agent System ✅ COMPLETE
 
 ### 5.1 Agent Interface and Types ✅
 - [x] Created `pkg/agents/interface.go` with comprehensive Agent interface
@@ -334,6 +334,37 @@ This file tracks completed tasks that have been moved from TODO.md. Each complet
   - Supports both sync and async execution patterns
   - Type conversion between script and Go types
   - Comprehensive test coverage
+
+### 5.5 Lua Integration ✅
+- [x] Created `pkg/engine/lua/bridges/agents_bridge.go` for Lua bindings
+  - Full agents module implementation for Lua
+  - All agent methods exposed to Lua scripts
+  - Type conversions for all parameters and returns
+  - Support for both function and table-based agents
+  
+- [x] Created `pkg/engine/lua/bridges/lua_agent.go` for Lua agent wrapping
+  - Wraps Lua functions and tables as Go agents
+  - Supports streaming with Lua callbacks
+  - State management for table-based agents
+  - Tool integration support
+  
+- [x] Created `pkg/engine/lua/bridges/agents_wrapper.go` for additional functionality
+  - Helper functions for agent management
+  - Lua-specific agent utilities
+
+### 5.6 Agent Examples ✅
+- [x] Created comprehensive lua-agent example in `examples/spells/lua-agent/`
+  - Research Agent: Demonstrates integration with web_fetch tool and LLM summarization
+  - Code Analysis Agent: Shows custom Lua tool creation and integration
+  - Planning Agent: Illustrates multi-step LLM orchestration
+  - Fully functional examples with error handling and best practices
+
+### 5.7 Testing ✅
+- [x] Created comprehensive test suite
+  - `agents_bridge_test.go` - Tests for Lua bridge functionality
+  - `agents_bridge_register_test.go` - Tests for agent registration
+  - `lua_agent_test.go` - Tests for Lua agent implementation
+  - All tests pass with race detection enabled
 
 ## Notes on Implementation Decisions
 

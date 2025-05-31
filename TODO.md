@@ -13,7 +13,7 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [x] LLM Bridge Enhancement (Phase 2 complete)
 - [x] Lua Script Engine Integration (Phase 3 complete)
 - [x] Tool System (Phase 4 complete)
-- [x] Agent System (Phase 5 - Core implementation complete, Lua integration pending)
+- [x] Agent System (Phase 5 complete - including Lua agent support)
 - [ ] Workflow System (Phase 6)
 - [ ] JavaScript/Tengo engines
 - [ ] Testing and examples
@@ -41,49 +41,16 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - [ ] Investigate and integrate more built-in tools from go-llms
   - Currently only using web_fetch, calculator, string tools
   - Check what other tools are available in go-llms
+  - [ ] update/create documentation about tool implementation
 
-## Phase 5: Agent System (Priority: High) [PARTIALLY COMPLETE]
+## Phase 5: Agent System (Priority: High) [COMPLETED - See TODO-DONE.md]
 
-### 5.1 Agent Interface and Types [COMPLETED]
-- [x] Create `pkg/agents/interface.go` with Agent interface
-  - Define Agent interface following go-llms agent pattern
-  - Add Config struct for agent configuration
-  - Include lifecycle methods (Initialize, Cleanup)
-- [x] Write comprehensive tests for interface (TDD approach)
-
-### 5.2 Agent Registry [COMPLETED]
-- [x] Create `pkg/agents/registry.go` with thread-safe registry
-  - Follow same pattern as tool registry (global instance, Factory pattern)
-  - Include Register, Get, List, Remove methods
-  - Add factory function support for agent creation
-- [x] Write tests for registry operations
-
-### 5.3 Agent Implementation [COMPLETED]
-- [x] Create `pkg/agents/agent.go` with default agent implementation
-  - Wrap go-llms agent.workflow.Agent
-  - Integrate with existing tool registry from pkg/tools
-  - Add support for system prompts and conversation history
-  - Implement streaming responses
-- [x] Create `pkg/agents/tool_adapter.go` for go-llms tool integration
-  - Adapter pattern for tools in agents
-- [x] Write comprehensive tests for agent implementation
-
-### 5.4 Agent Bridge for Script Access [COMPLETED]
-- [x] Create `pkg/bridge/agents.go` to expose agents to scripts
-  - Follow pattern from pkg/bridge/tools.go
-  - Methods: create(), list(), get(), execute()
-  - Support both sync and async execution
-- [ ] Integrate with Lua engine (pkg/engine/lua/bridges/)
-  - Create agents_bridge.go for Lua bindings
-  - Add to stdlib registration
-- [x] Write tests for bridge functionality
-
-### 5.5 Agent Examples
-- [ ] Create example agents in examples/spells/
-  - Simple chat agent example
-  - Agent with tools example
-  - Multi-turn conversation example
-- [ ] Update documentation with agent usage patterns
+## Pending Items from Phase 5 (Revisit)
+- [ ] Create additional agent examples:
+  - [ ] Simplified agent with tools example
+    - [ ] Agent in lua with built-in web-get or another built-in tool
+    - [ ] Agent in lua with a tool in lua
+  - [ ] Multi-turn conversation example
 
 ## Phase 6: Workflow System (Priority: High)
 
@@ -295,10 +262,10 @@ This document tracks the implementation progress of go-llmspell. Tasks are organ
 - Security sandbox implemented
 - Example spells created and tested
 
-### Milestone 3: Tools and Agents (Week 5-6) [IN PROGRESS]
+### Milestone 3: Tools and Agents (Week 5-6) [COMPLETED]
 - Tool system complete (Phase 4) ✅
-- Agent system working (Phase 5) - Core complete, Lua integration pending
-- Integration with go-llms tools and agents
+- Agent system complete (Phase 5) ✅
+- Integration with go-llms tools and agents ✅
 
 ### Milestone 4: Multi-language Support (Week 7-8)
 - JavaScript engine complete

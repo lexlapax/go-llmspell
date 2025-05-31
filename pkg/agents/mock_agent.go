@@ -193,7 +193,7 @@ func (m *MockAgent) SetError(err error) {
 func splitIntoChunks(s string, chunkSize int) []string {
 	var chunks []string
 	runes := []rune(s)
-	
+
 	for i := 0; i < len(runes); i += chunkSize {
 		end := i + chunkSize
 		if end > len(runes) {
@@ -201,6 +201,6 @@ func splitIntoChunks(s string, chunkSize int) []string {
 		}
 		chunks = append(chunks, string(runes[i:end]))
 	}
-	
+
 	return chunks
 }

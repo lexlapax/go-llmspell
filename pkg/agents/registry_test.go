@@ -143,19 +143,19 @@ func TestAgentRegistry(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
-				
+
 				config := Config{
 					Name:     "concurrent-agent",
 					Provider: "mock",
 					Model:    "mock-model",
 				}
-				
+
 				agent, err := registry.Create(config)
 				if err != nil {
 					errChan <- err
 					return
 				}
-				
+
 				// Try to get the agent
 				_, err = registry.Get(agent.Name())
 				if err != nil {
@@ -215,7 +215,7 @@ func TestDefaultRegistry(t *testing.T) {
 		// Test that default registry is properly initialized
 		registry := DefaultRegistry()
 		require.NotNil(t, registry)
-		
+
 		// Should be the same instance on multiple calls
 		registry2 := DefaultRegistry()
 		assert.Equal(t, registry, registry2)

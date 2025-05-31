@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/lexlapax/go-llmspell/pkg/agents"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/lexlapax/go-llmspell/pkg/agents"
 )
 
 func TestAgentBridge(t *testing.T) {
@@ -38,11 +38,14 @@ func TestAgentBridge(t *testing.T) {
 			agent := agents.NewMockAgent(config.Name)
 			agent.SetSystemPrompt(config.SystemPrompt)
 			for _, tool := range config.Tools {
-				agent.AddTool(tool)
+				err := agent.AddTool(tool)
+				if err != nil {
+					return nil, err
+				}
 			}
 			return agent, nil
 		}
-		
+
 		err = agents.RegisterAgentFactory("mock", factory)
 		require.NoError(t, err)
 
@@ -169,7 +172,7 @@ func TestAgentBridge(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "info-agent", info["name"])
 		assert.Equal(t, "Test prompt", info["systemPrompt"])
-		
+
 		tools, ok := info["tools"].([]string)
 		assert.True(t, ok)
 		assert.Contains(t, tools, "calculator")

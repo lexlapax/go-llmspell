@@ -118,7 +118,7 @@ func mapToProperty(m map[string]interface{}) schemadomain.Property {
 	}
 
 	if enum, ok := m["enum"].([]interface{}); ok {
-		// Convert to []string 
+		// Convert to []string
 		strEnum := make([]string, 0, len(enum))
 		for _, e := range enum {
 			if s, ok := e.(string); ok {
@@ -253,7 +253,7 @@ func (a *LLMSAgentAdapter) Stream(ctx context.Context, input string, opts *Execu
 		if end > len(result.Response) {
 			end = len(result.Response)
 		}
-		
+
 		if err := callback(result.Response[i:end]); err != nil {
 			return err
 		}
@@ -305,7 +305,7 @@ func (a *LLMSAgentAdapter) AddTool(toolName string) error {
 	// Adapt and add to go-llms agent
 	llmsTool := &toolAdapter{tool: tool}
 	a.agent.AddTool(llmsTool)
-	
+
 	a.tools = append(a.tools, toolName)
 	return nil
 }

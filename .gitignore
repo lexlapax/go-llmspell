@@ -66,8 +66,8 @@ coverage.html
 tmp/
 temp/
 
-# Project specific
-llmspell
+# # Project specific
+# llmspell
 
 
 # Debug files

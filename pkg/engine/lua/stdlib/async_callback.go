@@ -6,7 +6,7 @@ package stdlib
 import (
 	"sync"
 	"sync/atomic"
-	
+
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -41,11 +41,11 @@ var (
 func GetCallbackManager(L *lua.LState) *CallbackManager {
 	managersMu.Lock()
 	defer managersMu.Unlock()
-	
+
 	if mgr, exists := managers[L]; exists {
 		return mgr
 	}
-	
+
 	// Create new manager
 	mgr := &CallbackManager{
 		callbacks: make(map[int64]*pendingCallback),
@@ -59,7 +59,7 @@ func GetCallbackManager(L *lua.LState) *CallbackManager {
 // RegisterAsyncCallback registers the async callback module
 func RegisterAsyncCallback(L *lua.LState) {
 	mgr := GetCallbackManager(L)
-	
+
 	asyncMod := L.NewTable()
 	L.SetField(asyncMod, "process_callbacks", L.NewFunction(mgr.processCallbacks))
 	L.SetField(asyncMod, "pending_count", L.NewFunction(mgr.pendingCount))
@@ -70,7 +70,7 @@ func RegisterAsyncCallback(L *lua.LState) {
 // RegisterCallback registers a new callback and returns its ID
 func (cm *CallbackManager) RegisterCallback(callback, errback *lua.LFunction) int64 {
 	id := atomic.AddInt64(&cm.nextID, 1)
-	
+
 	cm.mu.Lock()
 	cm.callbacks[id] = &pendingCallback{
 		id:       id,
@@ -78,7 +78,7 @@ func (cm *CallbackManager) RegisterCallback(callback, errback *lua.LFunction) in
 		errback:  errback,
 	}
 	cm.mu.Unlock()
-	
+
 	return id
 }
 
@@ -108,7 +108,7 @@ func (cm *CallbackManager) QueueStringResult(id int64, result string) {
 // processCallbacks processes pending callbacks
 func (cm *CallbackManager) processCallbacks(L *lua.LState) int {
 	processed := 0
-	
+
 	// Process all available results
 	for {
 		select {
@@ -119,18 +119,16 @@ func (cm *CallbackManager) processCallbacks(L *lua.LState) int {
 				delete(cm.callbacks, result.id)
 			}
 			cm.mu.Unlock()
-			
+
 			if !exists {
 				continue
 			}
-			
+
 			// Execute callback
 			if result.err != "" && cb.errback != nil {
 				L.Push(cb.errback)
 				L.Push(lua.LString(result.err))
-				if err := L.PCall(1, 0, nil); err != nil {
-					// Ignore callback errors for now
-				}
+				_ = L.PCall(1, 0, nil) // Ignore callback errors
 			} else if result.err == "" && cb.callback != nil {
 				L.Push(cb.callback)
 				if result.value != nil {
@@ -138,13 +136,11 @@ func (cm *CallbackManager) processCallbacks(L *lua.LState) int {
 				} else {
 					L.Push(lua.LNil)
 				}
-				if err := L.PCall(1, 0, nil); err != nil {
-					// Ignore callback errors for now
-				}
+				_ = L.PCall(1, 0, nil) // Ignore callback errors
 			}
-			
+
 			processed++
-			
+
 		default:
 			// No more results
 			L.Push(lua.LNumber(processed))
@@ -158,7 +154,7 @@ func (cm *CallbackManager) pendingCount(L *lua.LState) int {
 	cm.mu.Lock()
 	count := len(cm.callbacks)
 	cm.mu.Unlock()
-	
+
 	L.Push(lua.LNumber(count))
 	return 1
 }
@@ -167,9 +163,9 @@ func (cm *CallbackManager) pendingCount(L *lua.LState) int {
 func (cm *CallbackManager) createCallback(L *lua.LState) int {
 	callback := L.CheckFunction(1)
 	errback := L.OptFunction(2, nil)
-	
+
 	id := cm.RegisterCallback(callback, errback)
-	
+
 	L.Push(lua.LNumber(id))
 	return 1
 }
@@ -178,7 +174,7 @@ func (cm *CallbackManager) createCallback(L *lua.LState) int {
 func CleanupCallbackManager(L *lua.LState) {
 	managersMu.Lock()
 	defer managersMu.Unlock()
-	
+
 	if mgr, exists := managers[L]; exists {
 		close(mgr.results)
 		delete(managers, L)
