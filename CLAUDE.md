@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 go-llmspell is a Go library that provides a scriptable interface for LLM interactions using embedded scripting languages (starting with Lua, then JavaScript and Tengo). It acts as a wrapper around the go-llms library, providing scripting capabilities for AI agent orchestration and workflow automation.
 
-## Current Status (Last Updated: May 31, 2025)
+## Current Status (Last Updated: June 2, 2025)
 
 ### Completed
 - ✅ Initial project structure with comprehensive directory layout
 - ✅ Architecture documentation (docs/architecture.md, implementation-guide.md, spell-development.md)
-- ✅ go-llms v0.2.6 integration as git submodule
+- ✅ go-llms v0.3.0 integration as git submodule (updated June 2, 2025)
 - ✅ Basic LLM bridge implementation (pkg/bridge/llm.go)
 - ✅ Makefile with build, test, lint, and fmt targets
 - ✅ .gitignore for Go projects
@@ -60,6 +60,12 @@ go-llmspell is a Go library that provides a scriptable interface for LLM interac
   - ✅ Comprehensive lua-agent example with research, code analysis, and planning agents
 
 ### Recent Updates
+- ✅ **go-llms v0.3.0 Update (June 2, 2025)**
+  - Updated go-llms submodule from v0.2.6 to v0.3.0
+  - Fixed breaking changes in tool interfaces
+  - Updated tool names: read_file → file_read, write_file → file_write
+  - Updated imports to use new builtins registry system
+  - All tests passing with the new version
 - ✅ **Agent System Complete (May 31, 2025)**
   - Completed full Lua integration for agents
   - Created comprehensive lua-agent example with three agent patterns
@@ -232,7 +238,7 @@ The project follows a layered architecture:
 6. Update documentation as needed
 
 ## Key Dependencies
-- `github.com/lexlapax/go-llms` v0.2.6 - Core LLM wrapper library (integrated)
+- `github.com/lexlapax/go-llms` v0.3.0 - Core LLM wrapper library (integrated)
 - `github.com/yuin/gopher-lua` v1.1.1 - Lua scripting engine (integrated)
 - `github.com/joho/godotenv` v1.5.1 - Environment file loading (integrated)
 - `github.com/dop251/goja` - JavaScript scripting engine (to be added)

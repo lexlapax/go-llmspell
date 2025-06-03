@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/lexlapax/go-llms/pkg/agent/tools"
+	"github.com/lexlapax/go-llms/pkg/agent/builtins/tools"
+	_ "github.com/lexlapax/go-llms/pkg/agent/builtins/tools/file"
+	_ "github.com/lexlapax/go-llms/pkg/agent/builtins/tools/system"
+	_ "github.com/lexlapax/go-llms/pkg/agent/builtins/tools/web"
 )
 
 func TestLLMSToolAdapter(t *testing.T) {
 	// Create a WebFetch tool from go-llms
-	webFetchTool := tools.WebFetch()
+	webFetchTool := tools.MustGetTool("web_fetch")
 
 	// Wrap it with our adapter
 	adapter := NewLLMSToolAdapter(webFetchTool)
@@ -21,8 +24,9 @@ func TestLLMSToolAdapter(t *testing.T) {
 	}
 
 	// Test Description
-	if adapter.Description() != "Fetches content from a URL" {
-		t.Errorf("Expected description 'Fetches content from a URL', got %s", adapter.Description())
+	expectedDesc := "Fetches content from a URL with customizable timeout"
+	if adapter.Description() != expectedDesc {
+		t.Errorf("Expected description '%s', got %s", expectedDesc, adapter.Description())
 	}
 
 	// Test Parameters
@@ -99,7 +103,7 @@ func TestRegisterBuiltinTools(t *testing.T) {
 				EnableReadFile:       true,
 				EnableWriteFile:      true,
 			},
-			expectedTools: []string{"web_fetch", "execute_command", "read_file", "write_file"},
+			expectedTools: []string{"web_fetch", "execute_command", "file_read", "file_write"},
 			expectError:   false,
 		},
 		{

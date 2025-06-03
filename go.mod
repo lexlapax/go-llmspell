@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/lexlapax/go-llms v0.2.6
+	github.com/lexlapax/go-llms v0.3.0
 	github.com/stretchr/testify v1.10.0
 	github.com/yuin/gopher-lua v1.1.1
 )

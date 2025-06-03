@@ -9,7 +9,10 @@ import (
 	"fmt"
 
 	agentdomain "github.com/lexlapax/go-llms/pkg/agent/domain"
-	agenttools "github.com/lexlapax/go-llms/pkg/agent/tools"
+	"github.com/lexlapax/go-llms/pkg/agent/builtins/tools"
+	_ "github.com/lexlapax/go-llms/pkg/agent/builtins/tools/file"
+	_ "github.com/lexlapax/go-llms/pkg/agent/builtins/tools/system"
+	_ "github.com/lexlapax/go-llms/pkg/agent/builtins/tools/web"
 	schemadomain "github.com/lexlapax/go-llms/pkg/schema/domain"
 )
 
@@ -168,7 +171,7 @@ func RegisterBuiltinTools(registry Registry, config *BuiltinToolConfig) error {
 	}
 
 	if config.EnableWebFetch {
-		tool := agenttools.WebFetch()
+		tool := tools.MustGetTool("web_fetch")
 		adapter := NewLLMSToolAdapter(tool)
 		if err := registry.Register(adapter); err != nil {
 			return fmt.Errorf("failed to register WebFetch tool: %w", err)
@@ -176,7 +179,7 @@ func RegisterBuiltinTools(registry Registry, config *BuiltinToolConfig) error {
 	}
 
 	if config.EnableExecuteCommand {
-		tool := agenttools.ExecuteCommand()
+		tool := tools.MustGetTool("execute_command")
 		adapter := NewLLMSToolAdapter(tool)
 		if err := registry.Register(adapter); err != nil {
 			return fmt.Errorf("failed to register ExecuteCommand tool: %w", err)
@@ -184,7 +187,7 @@ func RegisterBuiltinTools(registry Registry, config *BuiltinToolConfig) error {
 	}
 
 	if config.EnableReadFile {
-		tool := agenttools.ReadFile()
+		tool := tools.MustGetTool("file_read")
 		adapter := NewLLMSToolAdapter(tool)
 		if err := registry.Register(adapter); err != nil {
 			return fmt.Errorf("failed to register ReadFile tool: %w", err)
@@ -192,7 +195,7 @@ func RegisterBuiltinTools(registry Registry, config *BuiltinToolConfig) error {
 	}
 
 	if config.EnableWriteFile {
-		tool := agenttools.WriteFile()
+		tool := tools.MustGetTool("file_write")
 		adapter := NewLLMSToolAdapter(tool)
 		if err := registry.Register(adapter); err != nil {
 			return fmt.Errorf("failed to register WriteFile tool: %w", err)
