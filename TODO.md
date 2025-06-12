@@ -47,35 +47,36 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
 - ✅ Fixed breaking changes in tool interfaces
 - ✅ Updated tool names: read_file → file_read, write_file → file_write
 - ✅ All tests passing with go-llms v0.3.0
-- ⏳ Migration to v0.3.3 pending (clean slate implementation)
+- ⏳ Migration to v0.3.3 in progress (clean slate implementation)
 
 ---
 
 ## New Multi-Engine Architecture Implementation
+No need for backward compatibility. clean room implementation. overwrite existing code. Delete duplicate old code after implementation. Always TDD , tests first and then code.
 
 ### Phase 1: Engine-Agnostic Foundation (Weeks 1-2)
 
 #### 1.1 Script Engine Interface
-- [ ] **Task 1.1.1: Define Core Interfaces** ⭐ PRIORITY
-  - [ ] Create `/pkg/engine/interface.go`
-  - [ ] Define ScriptEngine interface
-  - [ ] Define Bridge interface
-  - [ ] Define TypeConverter interface
-  - [ ] Create EngineConfig structure
+- ✅ **Task 1.1.1: Define Core Interfaces**
+  - ✅ Create `/pkg/engine/interface.go`
+  - ✅ Define ScriptEngine interface
+  - ✅ Define Bridge interface
+  - ✅ Define TypeConverter interface
+  - ✅ Create EngineConfig structure
 
-- [ ] **Task 1.1.2: Engine Registry**
-  - [ ] Create `/pkg/engine/registry.go`
-  - [ ] Implement engine registration system
-  - [ ] Add engine discovery mechanism
-  - [ ] Support runtime engine switching
-  - [ ] Create engine factory pattern
+- ✅ **Task 1.1.2: Engine Registry**
+  - ✅ Create `/pkg/engine/registry.go`
+  - ✅ Implement engine registration system
+  - ✅ Add engine discovery mechanism
+  - ✅ Support runtime engine switching
+  - ✅ Create engine factory pattern
 
-- [ ] **Task 1.1.3: Type System Foundation**
-  - [ ] Create `/pkg/engine/types.go`
-  - [ ] Define common type representations
-  - [ ] Create type mapping system
-  - [ ] Implement type validation
-  - [ ] Design error handling for type mismatches
+- ✅ **Task 1.1.3: Type System Foundation**
+  - ✅ Create `/pkg/engine/types.go`
+  - ✅ Define common type representations
+  - ✅ Create type mapping system
+  - ✅ Implement type validation
+  - ✅ Design error handling for type mismatches
 
 - [ ] **Task 1.1.4: Bridge Manager**
   - [ ] Create `/pkg/bridge/manager.go`
@@ -84,8 +85,29 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
   - [ ] Add bridge dependency resolution
   - [ ] Support hot-reloading of bridges
 
+- [ ] **Task 1.1.5: Core LLM Bridge**
+  - [ ] Create `/pkg/bridge/llm.go`
+  - [ ] Bridge pkg/llm provider interfaces
+  - [ ] Expose message handling and options
+  - [ ] Support provider switching and pooling
+  - [ ] Add streaming and non-streaming responses
+
+- [ ] **Task 1.1.6: Essential Utilities Bridge**
+  - [ ] Create `/pkg/bridge/util.go`
+  - [ ] Bridge core pkg/util functions
+  - [ ] Expose JSON utilities and helpers
+  - [ ] Add environment variable access
+  - [ ] Include basic auth utilities
+
+- [ ] **Task 1.1.7: Model Info Bridge**
+  - [ ] Create `/pkg/bridge/modelinfo.go`
+  - [ ] Bridge pkg/util/llmutil/modelinfo
+  - [ ] Expose model inventory and discovery
+  - [ ] Add provider-specific model fetchers
+  - [ ] Include caching and service interfaces
+
 #### 1.2 Core Agent System (Engine-Agnostic)
-- [ ] **Task 1.2.1: Agent Interface** ⭐ PRIORITY
+- [ ] **Task 1.2.1: Agent Interface**
   - [ ] Create `/pkg/core/agent/interface.go`
   - [ ] Define lifecycle methods (init, run, cleanup)
   - [ ] Add metadata and capability declaration
@@ -114,7 +136,7 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
   - [ ] Support multi-engine execution
 
 #### 1.3 State Management System
-- [ ] **Task 1.3.1: State Object Design** ⭐ PRIORITY
+- [ ] **Task 1.3.1: State Object Design**
   - [ ] Create `/pkg/core/state/state.go`
   - [ ] Implement immutable state operations
   - [ ] Add metadata layer support
@@ -143,7 +165,7 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
   - [ ] Handle concurrent state access
 
 #### 1.4 Universal Bridge System
-- [ ] **Task 1.4.1: Agent Bridge** ⭐ PRIORITY
+- [ ] **Task 1.4.1: Agent Bridge**
   - [ ] Create `/pkg/bridge/agent.go`
   - [ ] Implement engine-agnostic agent bridge
   - [ ] Add type conversion layer
@@ -171,10 +193,212 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
   - [ ] Add workflow composition
   - [ ] Handle workflow state
 
+- [ ] **Task 1.4.5: Tool Bridge**
+  - [ ] Create `/pkg/bridge/tool.go`
+  - [ ] Bridge pkg/agent/tools interfaces
+  - [ ] Support tool registration and execution
+  - [ ] Add parameter validation and conversion
+  - [ ] Enable tool composition and chaining
+
+- [ ] **Task 1.4.6: Built-in Tools Bridge**
+  - [ ] Create `/pkg/bridge/builtins.go`
+  - [ ] Expose pkg/agent/builtins/tools
+  - [ ] Bridge file, web, data, datetime tools
+  - [ ] Add math, system, and feed tools
+  - [ ] Support tool discovery and registration
+
+- [ ] **Task 1.4.7: Schema Bridge**
+  - [ ] Create `/pkg/bridge/schema.go`
+  - [ ] Bridge pkg/schema validation system
+  - [ ] Expose reflection-based generation
+  - [ ] Add coercion and validation utilities
+  - [ ] Support custom validator registration
+
+- [ ] **Task 1.4.8: Structured Output Bridge**
+  - [ ] Create `/pkg/bridge/structured.go`
+  - [ ] Bridge pkg/structured processing
+  - [ ] Expose JSON extraction utilities
+  - [ ] Add prompt enhancement features
+  - [ ] Support schema caching
+
+- [ ] **Task 1.4.9: Logging Bridge**
+  - [ ] Create `/pkg/bridge/logging.go`
+  - [ ] Bridge pkg/internal/debug logging system
+  - [ ] Support script-agnostic logging (info, warn, error, debug)
+  - [ ] Integrate with component-based debug filtering
+  - [ ] Enable structured logging with metadata
+  - [ ] Ensure thread-safety across engines
+
+- [ ] **Task 1.4.10: Hook Bridge**
+  - [ ] Create `/pkg/bridge/hooks.go`
+  - [ ] Bridge pkg/agent/domain Hook interface with full method support
+  - [ ] Support BeforeGenerate(ctx, request) and AfterGenerate(ctx, request, response) hooks
+  - [ ] Support BeforeToolCall(ctx, tool, input) and AfterToolCall(ctx, tool, input, output) hooks
+  - [ ] Enable agent lifecycle hooks via OnStart(ctx, agent) and OnStop(ctx, agent)
+  - [ ] Allow multiple script-based hooks with priority ordering and chain execution
+  - [ ] Integrate with built-in LoggingHook and MetricsHook for automatic instrumentation
+  - [ ] Support context propagation and metadata passing between hooks
+  - [ ] Enable conditional hook execution based on agent state and request properties
+  - [ ] Provide hook registry for dynamic registration/deregistration from scripts
+  - [ ] Support async hooks with proper error handling and timeout management
+
+- [ ] **Task 1.4.11: Event Bridge**
+  - [ ] Create `/pkg/bridge/events.go`
+  - [ ] Bridge pkg/agent/domain event system
+  - [ ] Support real-time event streaming to scripts
+  - [ ] Enable event filtering and subscription by type
+  - [ ] Handle lifecycle, execution, tool, and workflow events
+  - [ ] Support event metadata and correlation
+
+- [ ] **Task 1.4.12: Tracing Bridge**
+  - [ ] Create `/pkg/bridge/tracing.go`
+  - [ ] Bridge core/tracing.go distributed tracing system
+  - [ ] Support OpenTelemetry span creation and management
+  - [ ] Enable trace correlation across agents and tools
+  - [ ] Provide span annotation and attribute setting
+  - [ ] Support trace sampling and export configuration
+  - [ ] Integrate with agent execution context
+
+- [ ] **Task 1.4.13: Event Utilities Bridge**
+  - [ ] Create `/pkg/bridge/event_utils.go`
+  - [ ] Bridge event utility functions and helpers
+  - [ ] Support event transformation and filtering
+  - [ ] Enable event batching and aggregation
+  - [ ] Provide event pattern matching utilities
+  - [ ] Support event correlation and causality tracking
+  - [ ] Include event replay and debugging tools
+
+- [ ] **Task 1.4.14: State Utilities Bridge**
+  - [ ] Create `/pkg/bridge/state_utils.go`
+  - [ ] Bridge state utility functions and helpers
+  - [ ] Support state validation and transformation
+  - [ ] Enable state diff and merge operations
+  - [ ] Provide state serialization utilities
+  - [ ] Support state migration and versioning
+  - [ ] Include state debugging and inspection tools
+
+- [ ] **Task 1.4.15: Artifact Bridge**
+  - [ ] Create `/pkg/bridge/artifact.go`
+  - [ ] Bridge artifact.go agent artifact management
+  - [ ] Support file and data artifact creation
+  - [ ] Enable artifact sharing between agents
+  - [ ] Provide artifact versioning and metadata
+  - [ ] Support artifact storage backends (local, cloud)
+  - [ ] Include artifact lifecycle management
+
+- [ ] **Task 1.4.16: Tool Context Bridge**
+  - [ ] Create `/pkg/bridge/tool_context.go`
+  - [ ] Bridge tool execution context system
+  - [ ] Support context propagation to tools
+  - [ ] Enable tool metadata and configuration access
+  - [ ] Provide tool resource limits and monitoring
+  - [ ] Support tool cancellation and timeout
+  - [ ] Include tool error handling and recovery
+
+- [ ] **Task 1.4.17: Agent Handoff Bridge**
+  - [ ] Create `/pkg/bridge/handoff.go`
+  - [ ] Bridge handoff.go agent handoff system
+  - [ ] Support agent-to-agent state transfer
+  - [ ] Enable handoff condition evaluation
+  - [ ] Provide handoff metadata and context
+  - [ ] Support handoff validation and rollback
+  - [ ] Include handoff monitoring and debugging
+
+- [ ] **Task 1.4.18: Guardrails Bridge**
+  - [ ] Create `/pkg/bridge/guardrails.go`
+  - [ ] Bridge guardrails.go agent safety system
+  - [ ] Support content filtering and validation
+  - [ ] Enable behavioral constraint enforcement
+  - [ ] Provide safety policy configuration
+  - [ ] Support custom guardrail implementation
+  - [ ] Include guardrail violation reporting
+
+- [ ] **Task 1.4.19: Tool Event Emitter Bridge**
+  - [ ] Create `/pkg/bridge/tool_events.go`
+  - [ ] Bridge tool event emission system
+  - [ ] Support tool execution event streaming
+  - [ ] Enable tool performance monitoring
+  - [ ] Provide tool error event handling
+  - [ ] Support tool lifecycle events
+  - [ ] Include tool usage analytics
+
+- [ ] **Task 1.4.20: Memory Management Bridge** ⏸️ **[DEFERRED - Awaiting go-llms implementation]**
+  - [ ] Create `/pkg/bridge/memory.go`
+  - [ ] Bridge agent memory management system
+  - [ ] Support short-term and long-term memory
+  - [ ] Enable memory persistence and retrieval
+  - [ ] Provide memory search and indexing
+  - [ ] Support memory compression and optimization
+  - [ ] Include memory debugging and inspection
+  - [ ] **NOTE: Memory subsystem not yet implemented in go-llms v0.3.3**
+
+- [ ] **Task 1.4.21: Conversation Bridge**
+  - [ ] Create `/pkg/bridge/conversation.go`
+  - [ ] Bridge conversation management system
+  - [ ] Support multi-turn conversation handling
+  - [ ] Enable conversation state persistence
+  - [ ] Provide conversation branching and merging
+  - [ ] Support conversation templates and patterns
+  - [ ] Include conversation analytics and insights
+
+- [ ] **Task 1.4.22: Model Management Bridge**
+  - [ ] Create `/pkg/bridge/model_mgmt.go`
+  - [ ] Bridge dynamic model management system
+  - [ ] Support runtime model switching
+  - [ ] Enable model performance monitoring
+  - [ ] Provide model capability discovery
+  - [ ] Support model pooling and load balancing
+  - [ ] Include model cost optimization
+
+- [ ] **Task 1.4.23: Provider Pooling Bridge**
+  - [ ] Create `/pkg/bridge/provider_pool.go`
+  - [ ] Bridge provider connection pooling system
+  - [ ] Support connection lifecycle management
+  - [ ] Enable load balancing across providers
+  - [ ] Provide connection health monitoring
+  - [ ] Support failover and redundancy
+  - [ ] Include connection performance metrics
+
+- [ ] **Task 1.4.24: Resilience Bridge**
+  - [ ] Create `/pkg/bridge/resilience.go`
+  - [ ] Bridge retry and circuit breaker patterns
+  - [ ] Support configurable retry policies
+  - [ ] Enable circuit breaker state management
+  - [ ] Provide timeout and deadline handling
+  - [ ] Support rate limiting and throttling
+  - [ ] Include resilience pattern monitoring
+
+- [ ] **Task 1.4.25: Collaboration Bridge**
+  - [ ] Create `/pkg/bridge/collaboration.go`
+  - [ ] Bridge multi-agent collaboration system
+  - [ ] Support agent coordination patterns
+  - [ ] Enable agent communication protocols
+  - [ ] Provide collaboration state management
+  - [ ] Support collaborative workflow execution
+  - [ ] Include collaboration monitoring and debugging
+
+- [ ] **Task 1.4.26: Security Bridge**
+  - [ ] Create `/pkg/bridge/security.go`
+  - [ ] Bridge authentication and authorization system
+  - [ ] Support user and agent identity management
+  - [ ] Enable permission and role-based access
+  - [ ] Provide security policy enforcement
+  - [ ] Support audit logging and compliance
+  - [ ] Include security threat detection
+
+- [ ] **Task 1.4.27: Metrics Bridge**
+  - [ ] Create `/pkg/bridge/metrics.go`
+  - [ ] Bridge performance and usage metrics system
+  - [ ] Support custom metric collection
+  - [ ] Enable metric aggregation and reporting
+  - [ ] Provide metric alerting and notification
+  - [ ] Support metric visualization and dashboards
+  - [ ] Include metric-based optimization
+
 ### Phase 2: Lua Engine Implementation (Weeks 3-4)
 
 #### 2.1 Lua Engine Core
-- [ ] **Task 2.1.1: Engine Implementation** ⭐ PRIORITY
+- [ ] **Task 2.1.1: Engine Implementation**
   - [ ] Create `/pkg/engine/lua/engine.go`
   - [ ] Implement ScriptEngine interface for Lua
   - [ ] Integrate GopherLua
@@ -210,31 +434,114 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
   - [ ] Create debugging helpers
   - [ ] Include performance utilities
 
-- [ ] **Task 2.2.2: Async Module**
-  - [ ] Create `/pkg/engine/lua/stdlib/async.lua`
-  - [ ] Implement Promise-like API
-  - [ ] Add async/await patterns
-  - [ ] Support coroutines
-  - [ ] Create timer functions
+- [ ] **Task 2.2.2: LLM Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/llm.lua`
+  - [ ] Wrap LLM bridge for Lua
+  - [ ] Expose provider switching
+  - [ ] Add streaming support
+  - [ ] Include message handling
 
-- [ ] **Task 2.2.3: Agent Module**
+- [ ] **Task 2.2.3: Tools Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/tools.lua`
+  - [ ] Wrap tool bridge for Lua
+  - [ ] Expose built-in tools
+  - [ ] Add custom tool registration
+  - [ ] Support tool composition
+
+- [ ] **Task 2.2.4: Agent Module**
   - [ ] Create `/pkg/engine/lua/stdlib/agent.lua`
   - [ ] Wrap agent bridge for Lua
   - [ ] Add Lua-idiomatic API
   - [ ] Support method chaining
   - [ ] Include helper functions
 
-- [ ] **Task 2.2.4: Workflow Module**
+- [ ] **Task 2.2.5: Schema Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/schema.lua`
+  - [ ] Wrap schema bridge for Lua
+  - [ ] Add validation utilities
+  - [ ] Support custom validators
+  - [ ] Include reflection helpers
+
+- [ ] **Task 2.2.6: Structured Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/structured.lua`
+  - [ ] Wrap structured output bridge
+  - [ ] Add JSON extraction utilities
+  - [ ] Support prompt enhancement
+  - [ ] Include schema caching
+
+- [ ] **Task 2.2.7: Utils Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/utils.lua`
+  - [ ] Wrap utility bridge for Lua
+  - [ ] Add JSON helpers
+  - [ ] Include auth utilities
+  - [ ] Support metrics access
+
+- [ ] **Task 2.2.8: ModelInfo Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/modelinfo.lua`
+  - [ ] Wrap modelinfo bridge for Lua
+  - [ ] Expose model discovery and inventory
+  - [ ] Add provider-specific fetchers
+  - [ ] Include caching utilities
+
+- [ ] **Task 2.2.9: Logging Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/log.lua`
+  - [ ] Wrap logging bridge for Lua
+  - [ ] Expose log.info, log.warn, log.error, log.debug
+  - [ ] Support component-based debug logging
+  - [ ] Enable structured logging with metadata
+  - [ ] Include thread-safe logging utilities
+
+- [ ] **Task 2.2.10: Hooks Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/hooks.lua`
+  - [ ] Wrap hook bridge for Lua
+  - [ ] Expose before_generate/after_generate hooks
+  - [ ] Add before_tool/after_tool hook registration
+  - [ ] Support agent lifecycle hooks
+  - [ ] Enable multiple hook registration
+
+- [ ] **Task 2.2.11: Events Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/events.lua`
+  - [ ] Wrap event bridge for Lua
+  - [ ] Support event subscription and filtering
+  - [ ] Enable real-time event streaming
+  - [ ] Handle all event types (lifecycle, tool, workflow)
+  - [ ] Support event metadata access
+
+- [ ] **Task 2.2.12: Async Module**
+  - [ ] Create `/pkg/engine/lua/stdlib/async.lua`
+  - [ ] Implement Promise-like API
+  - [ ] Add async/await patterns
+  - [ ] Support coroutines
+  - [ ] Create timer functions
+
+- [ ] **Task 2.2.13: Workflow Module**
   - [ ] Create `/pkg/engine/lua/stdlib/workflow.lua`
   - [ ] Implement workflow builders
   - [ ] Add DSL for workflows
   - [ ] Support composition
   - [ ] Create debugging tools
 
+- [ ] **Task 2.2.14: Advanced Lua Standard Library Modules**
+  - [ ] Create `/pkg/engine/lua/stdlib/tracing.lua` - Distributed tracing with span management
+  - [ ] Create `/pkg/engine/lua/stdlib/event_utils.lua` - Event transformation and correlation
+  - [ ] Create `/pkg/engine/lua/stdlib/state_utils.lua` - State validation and migration
+  - [ ] Create `/pkg/engine/lua/stdlib/artifacts.lua` - Agent artifact management
+  - [ ] Create `/pkg/engine/lua/stdlib/tool_context.lua` - Tool execution context
+  - [ ] Create `/pkg/engine/lua/stdlib/handoff.lua` - Agent handoff system
+  - [ ] Create `/pkg/engine/lua/stdlib/guardrails.lua` - Content filtering and safety
+  - [ ] Create `/pkg/engine/lua/stdlib/memory.lua` - Agent memory management ⏸️ **[DEFERRED]**
+  - [ ] Create `/pkg/engine/lua/stdlib/conversation.lua` - Multi-turn conversation handling
+  - [ ] Create `/pkg/engine/lua/stdlib/model_mgmt.lua` - Dynamic model management
+  - [ ] Create `/pkg/engine/lua/stdlib/provider_pool.lua` - Provider connection pooling
+  - [ ] Create `/pkg/engine/lua/stdlib/resilience.lua` - Retry and circuit breaker patterns
+  - [ ] Create `/pkg/engine/lua/stdlib/collaboration.lua` - Multi-agent collaboration
+  - [ ] Create `/pkg/engine/lua/stdlib/security.lua` - Authentication and authorization
+  - [ ] Create `/pkg/engine/lua/stdlib/metrics.lua` - Performance and usage metrics
+
 ### Phase 3: Workflow System (Weeks 5-6)
 
 #### 3.1 Engine-Agnostic Workflow Engine
-- [ ] **Task 3.1.1: Workflow Interface** ⭐ PRIORITY
+- [ ] **Task 3.1.1: Workflow Interface**
   - [ ] Create `/pkg/core/workflow/interface.go`
   - [ ] Define workflow step interface
   - [ ] Support multiple execution strategies
@@ -294,7 +601,7 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
 ### Phase 4: JavaScript Engine Implementation (Weeks 7-8)
 
 #### 4.1 JavaScript Engine Core
-- [ ] **Task 4.1.1: Engine Implementation** ⭐ PRIORITY
+- [ ] **Task 4.1.1: Engine Implementation**
   - [ ] Create `/pkg/engine/javascript/engine.go`
   - [ ] Implement ScriptEngine interface for JS
   - [ ] Integrate Goja
@@ -330,55 +637,183 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
   - [ ] Create type helpers
   - [ ] Include debugging tools
 
-- [ ] **Task 4.2.2: Async Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/async.js`
-  - [ ] Leverage native Promises
-  - [ ] Add async/await support
-  - [ ] Implement observables
-  - [ ] Create reactive patterns
+- [ ] **Task 4.2.2: LLM Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/llm.js`
+  - [ ] Wrap LLM bridge for JavaScript
+  - [ ] Expose provider switching
+  - [ ] Add streaming with async/await
+  - [ ] Include message handling
 
-- [ ] **Task 4.2.3: Agent Module**
+- [ ] **Task 4.2.3: Tools Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/tools.js`
+  - [ ] Wrap tool bridge for JavaScript
+  - [ ] Expose built-in tools
+  - [ ] Add custom tool registration
+  - [ ] Support tool composition
+
+- [ ] **Task 4.2.4: Agent Module**
   - [ ] Create `/pkg/engine/javascript/stdlib/agent.js`
   - [ ] Implement JS-idiomatic API
   - [ ] Support class-based agents
   - [ ] Add decorators
   - [ ] Include TypeScript definitions
 
-- [ ] **Task 4.2.4: Workflow Module**
+- [ ] **Task 4.2.5: Schema Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/schema.js`
+  - [ ] Wrap schema bridge for JavaScript
+  - [ ] Add validation utilities
+  - [ ] Support custom validators
+  - [ ] Include reflection helpers
+
+- [ ] **Task 4.2.6: Structured Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/structured.js`
+  - [ ] Wrap structured output bridge
+  - [ ] Add JSON extraction utilities
+  - [ ] Support prompt enhancement
+  - [ ] Include schema caching
+
+- [ ] **Task 4.2.7: Utils Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/utils.js`
+  - [ ] Wrap utility bridge for JavaScript
+  - [ ] Add JSON helpers
+  - [ ] Include auth utilities
+  - [ ] Support metrics access
+
+- [ ] **Task 4.2.8: ModelInfo Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/modelinfo.js`
+  - [ ] Wrap modelinfo bridge for JavaScript
+  - [ ] Expose model discovery and inventory
+  - [ ] Add provider-specific fetchers
+  - [ ] Include caching utilities
+
+- [ ] **Task 4.2.9: Logging Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/log.js`
+  - [ ] Wrap logging bridge for JavaScript
+  - [ ] Expose log.info, log.warn, log.error, log.debug
+  - [ ] Support component-based debug logging
+  - [ ] Enable structured logging with metadata
+  - [ ] Include thread-safe logging utilities
+
+- [ ] **Task 4.2.10: Hooks Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/hooks.js`
+  - [ ] Wrap hook bridge for JavaScript
+  - [ ] Expose beforeGenerate/afterGenerate hooks
+  - [ ] Add beforeTool/afterTool hook registration
+  - [ ] Support agent lifecycle hooks
+  - [ ] Enable multiple hook registration
+
+- [ ] **Task 4.2.11: Events Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/events.js`
+  - [ ] Wrap event bridge for JavaScript
+  - [ ] Support event subscription and filtering
+  - [ ] Enable real-time event streaming
+  - [ ] Handle all event types (lifecycle, tool, workflow)
+  - [ ] Support event metadata access
+
+- [ ] **Task 4.2.12: Async Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/async.js`
+  - [ ] Leverage native Promises
+  - [ ] Add async/await support
+  - [ ] Implement observables
+  - [ ] Create reactive patterns
+
+- [ ] **Task 4.2.13: Workflow Module**
   - [ ] Create `/pkg/engine/javascript/stdlib/workflow.js`
   - [ ] Implement fluent API
   - [ ] Add JSX-like syntax
   - [ ] Support functional composition
   - [ ] Create visual debugger
 
-### Phase 5: Built-in Components (Weeks 9-10)
+- [ ] **Task 4.2.14: Advanced JavaScript Standard Library Modules**
+  - [ ] Create `/pkg/engine/javascript/stdlib/tracing.js` - Distributed tracing with modern API
+  - [ ] Create `/pkg/engine/javascript/stdlib/eventUtils.js` - Event transformation with Promise chains
+  - [ ] Create `/pkg/engine/javascript/stdlib/stateUtils.js` - State validation with Promise-based API
+  - [ ] Create `/pkg/engine/javascript/stdlib/artifacts.js` - Agent artifact management with async/await
+  - [ ] Create `/pkg/engine/javascript/stdlib/toolContext.js` - Tool execution context with AbortController
+  - [ ] Create `/pkg/engine/javascript/stdlib/handoff.js` - Agent handoff system with Promise API
+  - [ ] Create `/pkg/engine/javascript/stdlib/guardrails.js` - Content filtering and safety constraints
+  - [ ] Create `/pkg/engine/javascript/stdlib/memory.js` - Agent memory management with Promise-based API ⏸️ **[DEFERRED]**
+  - [ ] Create `/pkg/engine/javascript/stdlib/conversation.js` - Multi-turn conversation with async/await
+  - [ ] Create `/pkg/engine/javascript/stdlib/modelMgmt.js` - Dynamic model management
+  - [ ] Create `/pkg/engine/javascript/stdlib/providerPool.js` - Provider connection pooling
+  - [ ] Create `/pkg/engine/javascript/stdlib/resilience.js` - Retry and circuit breaker patterns
+  - [ ] Create `/pkg/engine/javascript/stdlib/collaboration.js` - Multi-agent collaboration
+  - [ ] Create `/pkg/engine/javascript/stdlib/security.js` - Authentication and authorization
+  - [ ] Create `/pkg/engine/javascript/stdlib/metrics.js` - Performance and usage metrics
 
-#### 5.1 Engine-Agnostic Components
-- [ ] **Task 5.1.1: LLM Agents** ⭐ PRIORITY
-  - [ ] Create `/pkg/components/agents/llm/`
-  - [ ] Implement provider abstraction
-  - [ ] Add model selection
-  - [ ] Support streaming
-  - [ ] Create prompt templates
+### Phase 5: Agent Built-ins Integration (Weeks 9-10)
 
-- [ ] **Task 5.1.2: Tool Library**
-  - [ ] Create `/pkg/components/tools/`
-  - [ ] Implement core tools
-  - [ ] Add tool discovery
-  - [ ] Support tool composition
-  - [ ] Create tool testing framework
+#### 5.1 Built-in Tool Categories (via pkg/agent/builtins/tools/)
+- [ ] **Task 5.1.1: File System Tools**
+  - [ ] Expose pkg/agent/builtins/tools/file
+  - [ ] Bridge file_read, file_write, file_delete
+  - [ ] Add file_list, file_search, file_move
+  - [ ] Include permission and sandboxing
+  - [ ] Create comprehensive tests
 
-- [ ] **Task 5.1.3: Workflow Templates**
-  - [ ] Create `/pkg/components/workflows/`
-  - [ ] Build common patterns
-  - [ ] Add parameterization
-  - [ ] Support inheritance
-  - [ ] Create template gallery
+- [ ] **Task 5.1.2: Web and API Tools**
+  - [ ] Expose pkg/agent/builtins/tools/web
+  - [ ] Bridge web_fetch, web_scrape, web_search
+  - [ ] Add api_client, graphql, openapi tools
+  - [ ] Include authentication support
+  - [ ] Support rate limiting and caching
 
-- [ ] **Task 5.1.4: Cross-Engine Examples**
+- [ ] **Task 5.1.3: Data Processing Tools**
+  - [ ] Expose pkg/agent/builtins/tools/data
+  - [ ] Bridge csv_process, json_process, xml_process
+  - [ ] Add data_transform utilities
+  - [ ] Include format conversion
+  - [ ] Support large data handling
+
+- [ ] **Task 5.1.4: DateTime Tools**
+  - [ ] Expose pkg/agent/builtins/tools/datetime
+  - [ ] Bridge datetime_now, datetime_parse, datetime_format
+  - [ ] Add datetime_calculate, datetime_compare
+  - [ ] Include timezone support
+  - [ ] Support various date formats
+
+- [ ] **Task 5.1.5: Math and Calculation Tools**
+  - [ ] Expose pkg/agent/builtins/tools/math
+  - [ ] Bridge calculator tool with full functions
+  - [ ] Add mathematical constants
+  - [ ] Include statistical functions
+  - [ ] Support complex calculations
+
+- [ ] **Task 5.1.6: System Tools**
+  - [ ] Expose pkg/agent/builtins/tools/system
+  - [ ] Bridge env_var, system_info tools
+  - [ ] Add process_list, execute tools
+  - [ ] Include security restrictions
+  - [ ] Support cross-platform operations
+
+- [ ] **Task 5.1.7: Feed and Content Tools**
+  - [ ] Expose pkg/agent/builtins/tools/feed
+  - [ ] Bridge feed_fetch, feed_parse, feed_filter
+  - [ ] Add feed_discover, feed_aggregate
+  - [ ] Include content extraction
+  - [ ] Support multiple feed formats
+
+#### 5.2 Built-in Agent Templates (via pkg/agent/builtins/agents/)
+- [ ] **Task 5.2.1: Agent Registry Integration**
+  - [ ] Expose pkg/agent/builtins/agents registry
+  - [ ] Bridge pre-built agent templates
+  - [ ] Add provider-specific optimizations
+  - [ ] Support streaming patterns
+  - [ ] Include model selection helpers
+
+#### 5.3 Built-in Workflow Patterns (via pkg/agent/builtins/workflows/)
+- [ ] **Task 5.3.1: Workflow Registry Integration**
+  - [ ] Expose pkg/agent/builtins/workflows registry
+  - [ ] Bridge common workflow patterns
+  - [ ] Add parameterization support
+  - [ ] Include error handling templates
+  - [ ] Support workflow inheritance
+
+#### 5.4 Cross-Engine Integration Examples
+- [ ] **Task 5.4.1: Multi-Engine Examples**
   - [ ] Create examples for each engine
   - [ ] Show language-specific features
-  - [ ] Demonstrate portability
+  - [ ] Demonstrate built-ins integration
   - [ ] Include benchmarks
   - [ ] Add migration guides
 
