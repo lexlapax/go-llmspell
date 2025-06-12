@@ -1,10 +1,10 @@
 # TODO: Go-LLMSpell Multi-Engine Architecture Implementation
 
 ## Overview
-This TODO tracks the implementation of go-llmspell's multi-engine architecture supporting Lua, JavaScript, and Tengo scripting languages, fully leveraging go-llms v0.3.2's multi-agent orchestration capabilities.
+This TODO tracks the implementation of go-llmspell's multi-engine architecture supporting Lua, JavaScript, and Tengo scripting languages, fully leveraging go-llms v0.3.3's multi-agent orchestration capabilities.
 
 ## Historical Progress (Legacy Implementation)
-### Completed Phases (Prior to v0.3.2 Migration)
+### Completed Phases (Prior to v0.3.3 Migration)
 - ✅ **Phase 1: Core Infrastructure** (Completed)
   - ✅ Engine interface system with comprehensive API
   - ✅ Thread-safe engine registry with factory pattern
@@ -47,7 +47,7 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
 - ✅ Fixed breaking changes in tool interfaces
 - ✅ Updated tool names: read_file → file_read, write_file → file_write
 - ✅ All tests passing with go-llms v0.3.0
-- ⏳ Migration to v0.3.2 pending (clean slate implementation)
+- ⏳ Migration to v0.3.3 pending (clean slate implementation)
 
 ---
 

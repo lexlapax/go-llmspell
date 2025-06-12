@@ -1,4 +1,4 @@
-# Go-LLMSpell Clean Slate Migration Plan: Multi-Engine Architecture for go-llms v0.3.2
+# Go-LLMSpell Clean Slate Migration Plan: Multi-Engine Architecture for go-llms v0.3.3
 
 ## Introduction
 
@@ -8,9 +8,9 @@ go-llmspell is a Go library that provides a **scriptable interface for LLM inter
 
 ### Why This Migration?
 
-We are migrating to go-llms v0.3.2 to leverage its significant architectural improvements:
+We are migrating to go-llms v0.3.3 to leverage its significant architectural improvements:
 
-1. **Advanced Multi-Agent Orchestration** - v0.3.2 provides enhanced capabilities for coordinating multiple AI agents
+1. **Advanced Multi-Agent Orchestration** - v0.3.3 provides enhanced capabilities for coordinating multiple AI agents
 2. **Agent-First Architecture** - Everything is now an agent (tools, workflows, even scripts), enabling more flexible composition
 3. **Better State Management** - Improved immutable state operations and inter-agent state sharing
 4. **Enhanced Event System** - Real-time event streaming and better event-driven patterns
@@ -42,11 +42,11 @@ local result = researcher.run("Research quantum computing")
 fs.write("research.md", result)
 ```
 
-This migration to v0.3.2 represents a fundamental shift to fully leverage the latest go-llms capabilities while maintaining the ease of scripting that makes go-llmspell valuable for AI developers.
+This migration to v0.3.3 represents a fundamental shift to fully leverage the latest go-llms capabilities while maintaining the ease of scripting that makes go-llmspell valuable for AI developers.
 
 ## Executive Summary
 
-This document outlines a complete redesign of go-llmspell to fully leverage go-llms v0.3.2's advanced multi-agent orchestration capabilities while supporting multiple scripting languages. The architecture is designed around a language-agnostic scripting engine interface, with Lua (GopherLua) as the first implementation, followed by JavaScript (Goja) and Tengo.
+This document outlines a complete redesign of go-llmspell to fully leverage go-llms v0.3.3's advanced multi-agent orchestration capabilities while supporting multiple scripting languages. The architecture is designed around a language-agnostic scripting engine interface, with Lua (GopherLua) as the first implementation, followed by JavaScript (Goja) and Tengo.
 
 ## Vision and Objectives
 
