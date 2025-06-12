@@ -116,3 +116,21 @@ This section laid the foundation for the multi-engine architecture with the foll
 - **Task 1.1.7: Model Info Bridge** - Added model discovery with caching and filtering
 
 All components follow TDD principles with comprehensive test coverage and have passed lint, vet, and fmt checks.
+
+---
+
+### Phase 1.2: Core Agent System (Engine-Agnostic)
+
+#### 1.2 Core Agent System
+
+- ✅ **Task 1.2.1: Agent Interface** (Completed with tests) - [Date: 2025-06-12]
+  - ✅ Created test file `/pkg/core/agent/interface_test.go`
+  - ✅ Tested lifecycle methods (init, run, cleanup)
+  - ✅ Tested metadata and capability declaration
+  - ✅ Tested extension points for custom agents
+  - ✅ Tested engine independence
+  - ✅ Created `/pkg/core/agent/interface.go`
+  - ✅ Defined lifecycle methods (init, run, cleanup)
+  - ✅ Added metadata and capability declaration
+  - ✅ Designed extension points for custom agents
+  - ✅ Ensured engine independence

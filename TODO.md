@@ -28,17 +28,17 @@ No need for backward compatibility. clean room implementation. overwrite existin
 #### 1.1 Script Engine Interface ✅ **[COMPLETED - 2025-06-12]**
 
 #### 1.2 Core Agent System (Engine-Agnostic)
-- [ ] **Task 1.2.1: Agent Interface**
-  - [ ] Create test file `/pkg/core/agent/interface_test.go`
-  - [ ] Test lifecycle methods (init, run, cleanup)
-  - [ ] Test metadata and capability declaration
-  - [ ] Test extension points for custom agents
-  - [ ] Test engine independence
-  - [ ] Create `/pkg/core/agent/interface.go`
-  - [ ] Define lifecycle methods (init, run, cleanup)
-  - [ ] Add metadata and capability declaration
-  - [ ] Design extension points for custom agents
-  - [ ] Ensure engine independence
+- [x] **Task 1.2.1: Agent Interface** ✅ **[COMPLETED - 2025-06-12]**
+  - [x] Create test file `/pkg/core/agent/interface_test.go`
+  - [x] Test lifecycle methods (init, run, cleanup)
+  - [x] Test metadata and capability declaration
+  - [x] Test extension points for custom agents
+  - [x] Test engine independence
+  - [x] Create `/pkg/core/agent/interface.go`
+  - [x] Define lifecycle methods (init, run, cleanup)
+  - [x] Add metadata and capability declaration
+  - [x] Design extension points for custom agents
+  - [x] Ensure engine independence
 
 - [ ] **Task 1.2.2: Base Agent Implementation**
   - [ ] Create test file `/pkg/core/agent/base_test.go`

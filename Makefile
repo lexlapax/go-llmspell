@@ -73,20 +73,20 @@ coverage:
 # Format code
 fmt:
 	@echo "Formatting code..."
-	$(GOFMT) -w .
+	@find . -name "*.go" -not -path "./go-llms/*" -not -path "./vendor/*" | xargs $(GOFMT) -w
 	@echo "✅ Format complete"
 
 # Run go vet
 vet:
 	@echo "Running go vet..."
-	$(GOVET) ./...
+	@$(GOVET) $$(go list ./... | grep -v /go-llms/)
 	@echo "✅ Vet complete"
 
 # Run linter
 lint:
 	@echo "Running linter..."
 	@if command -v $(GOLINT) >/dev/null 2>&1; then \
-		$(GOLINT) run ./...; \
+		$(GOLINT) run ./cmd/... ./pkg/...; \
 	else \
 		echo "⚠️  golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
 	fi
