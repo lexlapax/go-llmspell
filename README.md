@@ -2,214 +2,155 @@
 
 **Cast scripting spells to animate LLM golems** 🧙‍♂️✨
 
-go-llmspell transforms complex LLM interactions into simple, magical scripts. Write spells in Lua, JavaScript, or Tengo that bring AI agents to life, with use of tools, automate conversations, and orchestrate intelligent workflows—all with the reliability and performance of Go.
+go-llmspell makes LLM interactions scriptable. Write spells in Lua, JavaScript, or Tengo that control AI agents, tools, and workflows—all with Go's reliability and performance.
 
 ```lua
 -- example spell: creative-writer.lua
-local topic = params.topic or "the future of AI"
-
--- Create an agent with creative writing abilities
-local writer = agent.create({
-    name = "creative_writer",
-    system_prompt = "You are a creative writer with a vivid imagination."
+local writer = llm.agent({
+    model = "claude-3-opus",
+    system = "You are a creative writer with vivid imagination."
 })
 
--- Generate a story
-local story = writer.run("Write a short story about " .. topic)
-
--- Save the result
+local story = writer:run("Write a short story about " .. params.topic)
 fs.write("story.md", story)
-log.info("Story created!", {topic = topic})
+log.info("Story created!")
 ```
 
 ## 🚀 Key Features
 
-- **🪄 Scriptable Magic**: Write spells in Lua, JavaScript, or Tengo to control LLMs
-- **🤖 Agent Orchestration**: Create and manage AI agents with tools and workflows
-- **🔧 Tool Integration**: Build custom tools that agents can use
-- **⚡ Go Performance**: Native Go speed with embedded scripting flexibility
-- **🔒 Secure Execution**: Sandboxed script execution with resource limits
-- **📚 Spellbook Library**: Pre-written spells for common AI tasks
+- **🪄 Multi-Language Spells**: Lua, JavaScript, or Tengo scripting
+- **🤖 Agent Orchestration**: AI agents with tools and workflows  
+- **⚡ Go Performance**: Native speed with scripting flexibility
+- **🔒 Secure Execution**: Sandboxed scripts with resource limits
+- **🌉 Bridge Architecture**: Leverages go-llms without duplication
 
 ## 📖 Documentation
 
-- [**Architecture Overview**](docs/technical/architecture.md) - System design and components
-- [**Implementation Guide**](docs/technical/implementation-guide.md) - Development roadmap
-- [**Getting Started**](docs/user-guide/getting-started.md) - Quick start guide
-- [**Spell Development Guide**](docs/user-guide/spell-development.md) - How to write spells
-- [**Documentation Index**](docs/README.md) - All documentation
+### 📚 **Essential Reading**
+- [**📋 Documentation Hub**](docs/README.md) - Complete documentation index
+- [**🏛️ Architecture Overview**](docs/technical/architecture.md) - System design and philosophy
+- [**👥 User Guide**](docs/user-guide/README.md) - Writing spells and using APIs
 
-## 🏗️ Project Status
+### 🔧 **Development**
+- [**📋 Current Tasks**](TODO.md) - Active development priorities
+- [**✅ Completed Work**](TODO-DONE.md) - Development history
+- [**🤝 Contributing Guide**](CONTRIBUTING.md) - How to contribute
 
-This project is under active development. See our [TODO](TODO.md) for current tasks and [TODO-DONE](TODO-DONE.md) for completed work.
+## 🏗️ Project Status (June 2025)
 
-### Current Status (June 2025)
-- ✅ Architecture designed and documented
-- ✅ go-llms v0.3.3 integration in progress
-- ✅ Basic project structure
-- ✅ Phase 1.1: Script Engine Interface complete
-- ✅ Phase 1.2: Core Agent System complete
-  - Core interfaces (ScriptEngine, Bridge, TypeConverter)
-  - Engine registry and type system
-  - Bridge manager with lifecycle support
-  - Core bridges: LLM, Utilities, Model Info
-- 🚧 Phase 1.2: Core Agent System (next)
-- 🚧 Multi-engine support (Lua, JavaScript, Tengo)
+- ✅ **Architecture** - Bridge-first design documented and implemented
+- ✅ **Phase 1.1** - Script Engine Interface complete
+- ✅ **Core Bridges** - LLM, Utilities, Model Info bridges working
+- 🚧 **Phase 1.2** - State and workflow bridges in progress
+- 🔮 **Coming Soon** - Lua engine, then JavaScript and Tengo
 
-## 🛠️ Installation
+## 🛠️ Quick Start
 
+### Installation
 ```bash
-# Clone the repository
 git clone https://github.com/lexlapax/go-llmspell.git
 cd go-llmspell
-
-# Initialize submodules (for go-llms reference)
 git submodule update --init --recursive
-
-# Build the project
-make build
-
-# Run tests
-make test
+make build && make test
 ```
 
-## 🎯 Quick Start
-
-### Setting Up API Keys
-
-The easiest way to configure API keys is using a `.env` file:
-
+### Setup API Keys
 ```bash
-# Copy the example environment file
 cp .env.example .env
-
-# Edit .env and add your API keys:
+# Edit .env with your API keys:
 # OPENAI_API_KEY=sk-...
 # ANTHROPIC_API_KEY=sk-ant-...
-# GEMINI_API_KEY=AI...
 ```
 
-The CLI will automatically load the `.env` file. See [Environment Setup](docs/env-setup.md) for more details.
-
-### Running Example Spells
-
+### Run Examples
 ```bash
-# Run the async LLM example (demonstrates promises)
-./bin/llmspell run examples/spells/async-llm
+# Basic LLM interaction
+./bin/llmspell run examples/hello-llm
 
-# Compare multiple LLM providers
-./bin/llmspell run examples/spells/provider-compare --param prompt="What is AI?"
+# Agent with tools
+./bin/llmspell run examples/research-agent
 
-# Simple chat assistant demo
-./bin/llmspell run examples/spells/chat-assistant
-```
-
-### Available Example Spells
-
-- **async-llm**: Demonstrates promise-based async patterns with LLMs
-- **provider-compare**: Compares responses from multiple providers
-- **chat-assistant**: Interactive chat with conversation history (demo version)
-- **hello-llm**: Basic spell structure example
-- **lua-agent**: Comprehensive agent examples showing:
-  - Research agent with web_fetch tool integration
-  - Code analysis agent with custom Lua tools
-  - Planning agent for task decomposition
-- **builtin-tools**: Demonstrates using built-in tools from go-llms
-- **tool-example**: Shows how to create and use custom tools
-
-### Future CLI (Coming Soon)
-
-```bash
-# Run a spell
-llmspell run my-spell.lua
-
-# List available spells
-llmspell list
-
-# Create a new spell
-llmspell create my-spell
+# Provider comparison
+./bin/llmspell run examples/provider-compare --param prompt="Explain AI"
 ```
 
 ## 🏛️ Architecture
 
-go-llmspell uses a layered architecture:
-
 ```
-┌─────────────────────────────────────┐
-│        Spell Scripts (Lua/JS)       │
-├─────────────────────────────────────┤
-│         Script Engines              │
-├─────────────────────────────────────┤
-│          Bridge Layer               │
-├─────────────────────────────────────┤
-│           go-llms                   │
-└─────────────────────────────────────┘
+┌─────────────────────────┐
+│   Spell Scripts         │  ← Your spells (Lua/JS/Tengo)
+├─────────────────────────┤
+│   Script Engines        │  ← Multi-language execution
+├─────────────────────────┤  
+│   Bridge Layer          │  ← Type-safe go-llms access
+├─────────────────────────┤
+│   go-llms Library       │  ← LLM providers & tools
+└─────────────────────────┘
 ```
 
-### Core Components
-- **Script Engines**: Lua (gopher-lua), JavaScript (goja), Tengo
-- **Bridges**: LLM, Tools, Agents, Workflows, StdLib
-- **Security**: Sandboxing, resource limits, filesystem jail
-- **Spells**: Reusable scripts for common tasks
+**Key Principle**: We bridge to go-llms functionality rather than reimplementing it.
 
-## 🔮 Example Spells (Coming Soon)
+## 🔮 Example Spells
 
-### Web Researcher
+### Simple LLM Chat
 ```lua
--- Research a topic using web search and LLM analysis
-local researcher = spell.load("web-researcher")
-local report = researcher.run({topic = "quantum computing"})
-```
-
-### Code Reviewer
-```javascript
-// Automated code review with AI
-const reviewer = await spell.load("code-reviewer");
-const review = await reviewer.run({
-    file: "main.go",
-    style: "golang"
-});
-```
-
-### Blog Writer
-```lua
--- Generate blog posts with research and editing
-local writer = spell.load("blog-writer")
-local post = writer.run({
-    topic = "The Future of AI",
-    tone = "professional",
-    length = 1000
+local response = llm.complete({
+    model = "gpt-4",
+    messages = {{role = "user", content = "Explain quantum computing"}}
 })
+print(response.content)
+```
+
+### Agent with Tools
+```javascript
+const agent = await llm.agent({
+    model: "claude-3-opus",
+    tools: ["calculator", "web_search"]
+});
+const result = await agent.run("What's 15% of 2847?");
+```
+
+### Workflow Orchestration
+```lua
+local workflow = workflow.sequential({
+    {name = "research", agent = researcher},
+    {name = "summarize", agent = summarizer},
+    {name = "save", tool = "file_write"}
+})
+local result = workflow:run({topic = "climate change"})
 ```
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) (coming soon).
+We welcome contributions! See our [Contributing Guidelines](CONTRIBUTING.md) for:
 
-### Development Setup
+- **Development setup** and TDD workflow
+- **Code standards** and quality requirements  
+- **Architecture principles** and bridge-first design
+- **Community guidelines** and communication channels
 
-1. Fork the repository
-2. Create a feature branch
-3. Write tests first (TDD approach)
-4. Implement your feature
-5. Run quality checks: `make fmt vet lint test`
-6. Submit a pull request
+**Quick development workflow:**
+```bash
+git checkout -b feature/my-feature
+# Write tests first, then implement
+make all  # Must pass before submitting
+```
 
-## 📦 Dependencies
+## 📦 Core Dependencies
 
-- [go-llms](https://github.com/lexlapax/go-llms) v0.2.6 - LLM provider, tool, agents and workflow abstraction
-- [gopher-lua](https://github.com/yuin/gopher-lua) v1.1.1 - Lua 5.1 VM (integrated)
-- [goja](https://github.com/dop251/goja) - JavaScript engine (planned)
-- [tengo](https://github.com/d5/tengo) - Embeddable script language (planned)
+- [**go-llms**](https://github.com/lexlapax/go-llms) v0.3.3 - LLM providers and agent framework
+- [**gopher-lua**](https://github.com/yuin/gopher-lua) - Lua 5.1 VM
+- [**goja**](https://github.com/dop251/goja) - JavaScript engine *(planned)*
+- [**tengo**](https://github.com/d5/tengo) - Compiled script language *(planned)*
 
 ## 📄 License
 
-[License information to be added]
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🎉 Acknowledgments
 
-Built on top of the excellent [go-llms](https://github.com/lexlapax/go-llms) library.
+Built on the excellent [go-llms](https://github.com/lexlapax/go-llms) library.
 
 ---
 
-**Note**: This project is under active development. APIs and features may change. Check the [documentation](docs/) for the latest information.
+**⚡ Ready to cast your first spell?** Start with the [User Guide](docs/user-guide/README.md)!

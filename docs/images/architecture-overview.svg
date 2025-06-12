@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .box { fill: #f0f4f8; stroke: #2d3748; stroke-width: 2; }
+      .engine { fill: #bee3f8; stroke: #2b6cb0; stroke-width: 2; }
+      .bridge { fill: #c6f6d5; stroke: #2f855a; stroke-width: 2; }
+      .external { fill: #fed7d7; stroke: #c53030; stroke-width: 2; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; text-anchor: middle; }
+      .title { font-size: 18px; font-weight: bold; }
+      .arrow { fill: none; stroke: #4a5568; stroke-width: 2; marker-end: url(#arrowhead); }
+      .label { font-size: 12px; fill: #4a5568; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4a5568" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" class="text title">Go-LLMSpell Architecture Overview</text>
+  
+  <!-- User Scripts Layer -->
+  <rect x="50" y="60" width="700" height="80" class="box" rx="5"/>
+  <text x="400" y="90" class="text title">User Scripts (Spells)</text>
+  <rect x="100" y="100" width="180" height="30" class="engine" rx="3"/>
+  <text x="190" y="120" class="text">Lua Scripts</text>
+  <rect x="310" y="100" width="180" height="30" class="engine" rx="3"/>
+  <text x="400" y="120" class="text">JavaScript Scripts</text>
+  <rect x="520" y="100" width="180" height="30" class="engine" rx="3"/>
+  <text x="610" y="120" class="text">Tengo Scripts</text>
+  
+  <!-- Script Engine Layer -->
+  <rect x="50" y="170" width="700" height="100" class="box" rx="5"/>
+  <text x="400" y="195" class="text title">Script Engine System (pkg/engine/)</text>
+  <rect x="100" y="210" width="180" height="40" class="engine" rx="3"/>
+  <text x="190" y="235" class="text">Lua Engine</text>
+  <rect x="310" y="210" width="180" height="40" class="engine" rx="3"/>
+  <text x="400" y="235" class="text">JavaScript Engine</text>
+  <rect x="520" y="210" width="180" height="40" class="engine" rx="3"/>
+  <text x="610" y="235" class="text">Tengo Engine</text>
+  
+  <!-- Bridge Layer -->
+  <rect x="50" y="300" width="700" height="120" class="box" rx="5"/>
+  <text x="400" y="325" class="text title">Bridge Layer (pkg/bridge/)</text>
+  <rect x="80" y="345" width="120" height="60" class="bridge" rx="3"/>
+  <text x="140" y="370" class="text">LLM Agent</text>
+  <text x="140" y="385" class="text label">Bridge</text>
+  <rect x="220" y="345" width="120" height="60" class="bridge" rx="3"/>
+  <text x="280" y="370" class="text">State</text>
+  <text x="280" y="385" class="text label">Bridge</text>
+  <rect x="360" y="345" width="120" height="60" class="bridge" rx="3"/>
+  <text x="420" y="370" class="text">Workflow</text>
+  <text x="420" y="385" class="text label">Bridge</text>
+  <rect x="500" y="345" width="120" height="60" class="bridge" rx="3"/>
+  <text x="560" y="370" class="text">Tools</text>
+  <text x="560" y="385" class="text label">Bridge</text>
+  <rect x="640" y="345" width="80" height="60" class="bridge" rx="3"/>
+  <text x="680" y="370" class="text">Events</text>
+  <text x="680" y="385" class="text label">Bridge</text>
+  
+  <!-- go-llms Layer -->
+  <rect x="50" y="450" width="700" height="80" class="external" rx="5"/>
+  <text x="400" y="480" class="text title">go-llms Library</text>
+  <text x="400" y="505" class="text">Agents • State • Workflows • Tools • Events • Providers</text>
+  
+  <!-- Arrows -->
+  <path d="M 400 140 L 400 170" class="arrow"/>
+  <path d="M 400 270 L 400 300" class="arrow"/>
+  <path d="M 400 420 L 400 450" class="arrow"/>
+  
+  <!-- Labels on arrows -->
+  <text x="420" y="160" class="label">Script Execution</text>
+  <text x="420" y="290" class="label">Type Conversion</text>
+  <text x="420" y="440" class="label">Go Function Calls</text>
+  
+  <!-- Type System Box -->
+  <rect x="550" y="200" width="120" height="70" fill="#faf5ff" stroke="#805ad5" stroke-width="2" rx="3"/>
+  <text x="610" y="225" class="text">Type System</text>
+  <text x="610" y="245" class="label">• Conversions</text>
+  <text x="610" y="260" class="label">• Validation</text>
+  
+  <!-- Registry Box -->
+  <rect x="130" y="200" width="120" height="70" fill="#faf5ff" stroke="#805ad5" stroke-width="2" rx="3"/>
+  <text x="190" y="225" class="text">Engine Registry</text>
+  <text x="190" y="245" class="label">• Discovery</text>
+  <text x="190" y="260" class="label">• Lifecycle</text>
+</svg>

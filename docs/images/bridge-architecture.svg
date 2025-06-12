@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .box { fill: #f0f4f8; stroke: #2d3748; stroke-width: 2; }
+      .bridge { fill: #c6f6d5; stroke: #2f855a; stroke-width: 2; }
+      .gollms { fill: #fed7d7; stroke: #c53030; stroke-width: 2; }
+      .interface { fill: #e9d8fd; stroke: #6b46c1; stroke-width: 2; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; text-anchor: middle; }
+      .small { font-size: 12px; }
+      .title { font-size: 18px; font-weight: bold; }
+      .arrow { fill: none; stroke: #4a5568; stroke-width: 2; marker-end: url(#arrowhead); }
+      .bidirectional { marker-start: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4a5568" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" class="text title">Bridge Layer Architecture</text>
+  
+  <!-- Bridge Interface -->
+  <rect x="250" y="60" width="300" height="100" class="interface" rx="5"/>
+  <text x="400" y="85" class="text title">Bridge Interface</text>
+  <text x="400" y="110" class="text small">Register(engine) → error</text>
+  <text x="400" y="130" class="text small">Methods() → []MethodInfo</text>
+  <text x="400" y="150" class="text small">TypeMappings() → map[string]TypeMapping</text>
+  
+  <!-- Bridge Manager -->
+  <rect x="50" y="60" width="180" height="100" class="box" rx="5"/>
+  <text x="140" y="85" class="text">Bridge Manager</text>
+  <text x="140" y="110" class="text small">• Lifecycle control</text>
+  <text x="140" y="130" class="text small">• Dependency resolution</text>
+  <text x="140" y="150" class="text small">• Hot reloading</text>
+  
+  <!-- Bridge Implementations -->
+  <rect x="50" y="200" width="140" height="80" class="bridge" rx="5"/>
+  <text x="120" y="225" class="text">LLM Agent</text>
+  <text x="120" y="245" class="text small">• Agent creation</text>
+  <text x="120" y="265" class="text small">• Tool execution</text>
+  
+  <rect x="210" y="200" width="140" height="80" class="bridge" rx="5"/>
+  <text x="280" y="225" class="text">State Manager</text>
+  <text x="280" y="245" class="text small">• State ops</text>
+  <text x="280" y="265" class="text small">• Persistence</text>
+  
+  <rect x="370" y="200" width="140" height="80" class="bridge" rx="5"/>
+  <text x="440" y="225" class="text">Workflow</text>
+  <text x="440" y="245" class="text small">• All types</text>
+  <text x="440" y="265" class="text small">• Composition</text>
+  
+  <rect x="530" y="200" width="120" height="80" class="bridge" rx="5"/>
+  <text x="590" y="225" class="text">Tools</text>
+  <text x="590" y="245" class="text small">• Built-ins</text>
+  <text x="590" y="265" class="text small">• Custom</text>
+  
+  <rect x="670" y="200" width="100" height="80" class="bridge" rx="5"/>
+  <text x="720" y="225" class="text">Events</text>
+  <text x="720" y="245" class="text small">• Streaming</text>
+  <text x="720" y="265" class="text small">• Filtering</text>
+  
+  <!-- Type Conversion Layer -->
+  <rect x="50" y="320" width="720" height="60" class="box" rx="5"/>
+  <text x="410" y="345" class="text title">Type Conversion Layer</text>
+  <text x="410" y="365" class="text small">Script Types ↔ Go Types ↔ go-llms Types</text>
+  
+  <!-- go-llms Components -->
+  <rect x="50" y="420" width="140" height="80" class="gollms" rx="5"/>
+  <text x="120" y="445" class="text">go-llms</text>
+  <text x="120" y="465" class="text small">Agent System</text>
+  <text x="120" y="485" class="text small">• LLMAgent</text>
+  
+  <rect x="210" y="420" width="140" height="80" class="gollms" rx="5"/>
+  <text x="280" y="445" class="text">go-llms</text>
+  <text x="280" y="465" class="text small">StateManager</text>
+  <text x="280" y="485" class="text small">• Transforms</text>
+  
+  <rect x="370" y="420" width="140" height="80" class="gollms" rx="5"/>
+  <text x="440" y="445" class="text">go-llms</text>
+  <text x="440" y="465" class="text small">Workflow Engine</text>
+  <text x="440" y="485" class="text small">• All types</text>
+  
+  <rect x="530" y="420" width="120" height="80" class="gollms" rx="5"/>
+  <text x="590" y="445" class="text">go-llms</text>
+  <text x="590" y="465" class="text small">Tool System</text>
+  <text x="590" y="485" class="text small">• Registry</text>
+  
+  <rect x="670" y="420" width="100" height="80" class="gollms" rx="5"/>
+  <text x="720" y="445" class="text">go-llms</text>
+  <text x="720" y="465" class="text small">Events</text>
+  <text x="720" y="485" class="text small">• Dispatcher</text>
+  
+  <!-- Additional Bridges -->
+  <rect x="50" y="540" width="100" height="60" class="bridge" rx="5"/>
+  <text x="100" y="560" class="text small">Hooks</text>
+  <text x="100" y="580" class="text small">Bridge</text>
+  
+  <rect x="170" y="540" width="100" height="60" class="bridge" rx="5"/>
+  <text x="220" y="560" class="text small">Tracing</text>
+  <text x="220" y="580" class="text small">Bridge</text>
+  
+  <rect x="290" y="540" width="100" height="60" class="bridge" rx="5"/>
+  <text x="340" y="560" class="text small">Metrics</text>
+  <text x="340" y="580" class="text small">Bridge</text>
+  
+  <rect x="410" y="540" width="100" height="60" class="bridge" rx="5"/>
+  <text x="460" y="560" class="text small">Guardrails</text>
+  <text x="460" y="580" class="text small">Bridge</text>
+  
+  <rect x="530" y="540" width="100" height="60" class="bridge" rx="5"/>
+  <text x="580" y="560" class="text small">Schema</text>
+  <text x="580" y="580" class="text small">Bridge</text>
+  
+  <rect x="650" y="540" width="120" height="60" class="bridge" rx="5"/>
+  <text x="710" y="560" class="text small">Structured</text>
+  <text x="710" y="580" class="text small">Output Bridge</text>
+  
+  <!-- Arrows -->
+  <path d="M 120 280 L 120 320" class="arrow"/>
+  <path d="M 280 280 L 280 320" class="arrow"/>
+  <path d="M 440 280 L 440 320" class="arrow"/>
+  <path d="M 590 280 L 590 320" class="arrow"/>
+  <path d="M 720 280 L 720 320" class="arrow"/>
+  
+  <path d="M 120 380 L 120 420" class="arrow"/>
+  <path d="M 280 380 L 280 420" class="arrow"/>
+  <path d="M 440 380 L 440 420" class="arrow"/>
+  <path d="M 590 380 L 590 420" class="arrow"/>
+  <path d="M 720 380 L 720 420" class="arrow"/>
+  
+  <path d="M 140 160 L 400 160" class="arrow bidirectional"/>
+  
+  <!-- Labels -->
+  <text x="270" y="155" class="small">manages</text>
+  
+  <!-- Legend -->
+  <rect x="620" y="80" width="150" height="80" fill="white" stroke="#2d3748" stroke-width="1" rx="3"/>
+  <text x="695" y="100" class="text small">Legend</text>
+  <rect x="630" y="110" width="30" height="15" class="bridge"/>
+  <text x="690" y="122" class="small">Bridges</text>
+  <rect x="630" y="135" width="30" height="15" class="gollms"/>
+  <text x="690" y="147" class="small">go-llms</text>
+</svg>

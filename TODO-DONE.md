@@ -197,3 +197,23 @@ Key features implemented:
 - Agent templating system
 - Error handling with retry mechanisms
 - Comprehensive metrics collection
+
+---
+
+## Architecture Cleanup - [Date: 2025-06-12]
+
+### ✅ 0.1 Clean Architecture (Immediate Actions)
+
+Based on the bridge-first architecture revision in docs/MIGRATION_PLAN_V0.3.3.md, the following cleanup actions were completed:
+
+- ✅ **DELETED `/pkg/core/agent/`** directory entirely - Removed all agent-related code that was duplicating go-llms functionality
+- ✅ **DELETED `/pkg/core/`** directory - Removed after it was empty following agent removal
+- ✅ **VERIFIED** no imports of deleted packages remain - Searched all Go files and confirmed no references to pkg/core/agent or pkg/core
+
+**Rationale**: The agent system was creating unnecessary abstraction and duplicating functionality that already exists in go-llms. Per the bridge-first architecture, we should bridge to go-llms agents rather than building our own parallel system.
+
+**Result**: Clean two-package architecture achieved:
+- `/pkg/engine/` - Script engine interfaces and implementations (our core value)
+- `/pkg/bridge/` - Bridges to go-llms functionality (not reimplementing)
+
+All tests pass after deletion, confirming no dependencies on the removed code.
