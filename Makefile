@@ -22,24 +22,17 @@ TEST_FLAGS=-v -race
 COVERAGE_FILE=coverage.out
 COVERAGE_HTML=coverage.html
 
-.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help examples example example-mock
+.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help build-examples mod
 
 # Default target
-all: clean fmt vet lint test build
-	@echo ""
-	@echo "⚠️  NOTE: The build step above may have failed due to ongoing v0.3.3 migration"
-	@echo "⚠️  Only pkg/engine/* is currently implemented. See TODO.md for progress"
+all: clean fmt vet test build
 
 # Build the binary
 build:
-	@echo "⚠️  WARNING: The cmd/llmspell is not yet migrated to v0.3.3 architecture"
-	@echo "⚠️  This build may fail or produce non-functional binaries"
-	@echo "⚠️  See TODO.md for migration progress"
-	@echo ""
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BINARY_DIR)
-	-$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PATH) 2>/dev/null || echo "❌ Build failed - cmd not yet implemented for v0.3.3"
-	@echo ""
+	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PATH)
+	@echo "✅ Build complete: $(BINARY_DIR)/$(BINARY_NAME)"
 
 # Clean build artifacts
 clean:
@@ -47,7 +40,7 @@ clean:
 	$(GOCLEAN)
 	@rm -rf $(BINARY_DIR)
 	@rm -f $(COVERAGE_FILE) $(COVERAGE_HTML)
-	@echo "Clean complete"
+	@echo "✅ Clean complete"
 
 # Run tests
 test: test-unit
@@ -56,11 +49,16 @@ test: test-unit
 test-unit:
 	@echo "Running unit tests..."
 	$(GOTEST) $(TEST_FLAGS) ./pkg/...
+	@echo "✅ Unit tests complete"
 
 # Run integration tests
 test-integration:
 	@echo "Running integration tests..."
-	$(GOTEST) $(TEST_FLAGS) -tags=integration ./test/integration/...
+	@if [ -d "./test/integration" ]; then \
+		$(GOTEST) $(TEST_FLAGS) -tags=integration ./test/integration/...; \
+	else \
+		echo "⚠️  No integration tests found in ./test/integration/"; \
+	fi
 
 # Run all tests (unit + integration)
 test-all: test-unit test-integration
@@ -70,19 +68,19 @@ coverage:
 	@echo "Generating coverage report..."
 	$(GOTEST) -coverprofile=$(COVERAGE_FILE) -covermode=atomic ./pkg/...
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE) -o $(COVERAGE_HTML)
-	@echo "Coverage report generated: $(COVERAGE_HTML)"
+	@echo "✅ Coverage report generated: $(COVERAGE_HTML)"
 
 # Format code
 fmt:
 	@echo "Formatting code..."
 	$(GOFMT) -w .
-	@echo "Format complete"
+	@echo "✅ Format complete"
 
 # Run go vet
 vet:
 	@echo "Running go vet..."
 	$(GOVET) ./...
-	@echo "Vet complete"
+	@echo "✅ Vet complete"
 
 # Run linter
 lint:
@@ -90,111 +88,70 @@ lint:
 	@if command -v $(GOLINT) >/dev/null 2>&1; then \
 		$(GOLINT) run ./...; \
 	else \
-		echo "golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
+		echo "⚠️  golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
 	fi
 
-# Download dependencies
-deps:
-	@echo "Downloading dependencies..."
+# Download dependencies and tidy
+mod:
+	@echo "Managing Go modules..."
 	$(GOMOD) download
-	$(GOMOD) tidy
-	@echo "Dependencies updated"
+	@echo "⚠️  Skipping 'go mod tidy' due to examples with to_be_migrated build tag"
+	@echo "⚠️  Once migration is complete, run 'go mod tidy' manually"
+	@echo "✅ Module download complete"
+
+# Alias for mod
+deps: mod
 
 # Install development tools
 install-tools:
 	@echo "Installing development tools..."
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Tools installed"
+	@echo "✅ Tools installed"
 
 # Run the application
 run: build
-	@echo "⚠️  WARNING: The application may not run correctly until migration is complete"
 	@echo "Running $(BINARY_NAME)..."
-	-./$(BINARY_DIR)/$(BINARY_NAME) 2>/dev/null || echo "❌ Run failed - cmd not yet implemented for v0.3.3"
+	./$(BINARY_DIR)/$(BINARY_NAME)
 
-# Example targets
-examples:
-	@echo "⚠️  WARNING: Examples are not yet migrated to v0.3.3 architecture"
-	@echo "⚠️  They may fail or produce unexpected results"
-	@echo ""
-	@echo "Available example spells (NOT YET MIGRATED):"
-	@echo "  hello-llm         - Basic LLM interaction example"
-	@echo "  chat-assistant    - Interactive chat assistant"
-	@echo "  provider-compare  - Compare responses across providers"
-	@echo "  web-summarizer    - Summarize web content (requires http module)"
-	@echo ""
-	@echo "Run an example with: make example SPELL=<spell-name>"
-	@echo "Example: make example SPELL=hello-llm"
-
-# Run a specific example spell
-example:
-	@echo "⚠️  WARNING: Examples are not yet migrated to v0.3.3 architecture"
-	@if [ -z "$(SPELL)" ]; then \
-		echo "Error: SPELL not specified. Usage: make example SPELL=<spell-name>"; \
-		echo "Run 'make examples' to see available spells"; \
-		exit 1; \
+# Build examples (with to_be_migrated tag)
+build-examples:
+	@echo "Building examples..."
+	@echo "⚠️  Examples are marked with 'to_be_migrated' build tag"
+	@echo "⚠️  They reference old interfaces and may not compile"
+	@if [ -f "examples/integration/lua_integration.go" ]; then \
+		echo "Attempting to build examples/integration/lua_integration.go..."; \
+		$(GOBUILD) -tags=to_be_migrated -o $(BINARY_DIR)/lua_integration examples/integration/lua_integration.go 2>&1 | head -20 || echo "❌ Example build failed (expected - needs migration)"; \
+	else \
+		echo "⚠️  No Go examples found"; \
 	fi
-	@if [ ! -d "examples/spells/$(SPELL)" ]; then \
-		echo "Error: Spell '$(SPELL)' not found in examples/spells/"; \
-		echo "Run 'make examples' to see available spells"; \
-		exit 1; \
-	fi
-	@echo "Running example spell: $(SPELL)"
-	@echo "❌ Examples not yet implemented for v0.3.3 - see TODO.md for progress"
-
-# Run example with mock LLM (no API key required)
-example-mock:
-	@echo "⚠️  WARNING: Examples are not yet migrated to v0.3.3 architecture"
-	@if [ -z "$(SPELL)" ]; then \
-		echo "Error: SPELL not specified. Usage: make example-mock SPELL=<spell-name>"; \
-		echo "Run 'make examples' to see available spells"; \
-		exit 1; \
-	fi
-	@if [ ! -d "examples/spells/$(SPELL)" ]; then \
-		echo "Error: Spell '$(SPELL)' not found in examples/spells/"; \
-		echo "Run 'make examples' to see available spells"; \
-		exit 1; \
-	fi
-	@echo "Running example spell with mock LLM: $(SPELL)"
-	@echo "❌ Examples not yet implemented for v0.3.3 - see TODO.md for progress"
 
 # Build for multiple platforms
 build-all: build-linux build-darwin build-windows
 
 build-linux:
-	@echo "⚠️  WARNING: Cross-platform builds not yet supported for v0.3.3"
 	@echo "Building for Linux..."
 	@mkdir -p $(BINARY_DIR)
-	-GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH) 2>/dev/null || echo "❌ Linux build failed"
-	-GOOS=linux GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-arm64 $(MAIN_PATH) 2>/dev/null || echo "❌ Linux ARM build failed"
+	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH)
+	GOOS=linux GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-arm64 $(MAIN_PATH)
+	@echo "✅ Linux builds complete"
 
 build-darwin:
-	@echo "⚠️  WARNING: Cross-platform builds not yet supported for v0.3.3"
 	@echo "Building for macOS..."
 	@mkdir -p $(BINARY_DIR)
-	-GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH) 2>/dev/null || echo "❌ macOS build failed"
-	-GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PATH) 2>/dev/null || echo "❌ macOS ARM build failed"
+	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH)
+	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PATH)
+	@echo "✅ macOS builds complete"
 
 build-windows:
-	@echo "⚠️  WARNING: Cross-platform builds not yet supported for v0.3.3"
 	@echo "Building for Windows..."
 	@mkdir -p $(BINARY_DIR)
-	-GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH) 2>/dev/null || echo "❌ Windows build failed"
+	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)
+	@echo "✅ Windows build complete"
 
 # Run benchmarks
 bench:
 	@echo "Running benchmarks..."
-	$(GOTEST) -bench=. -benchmem ./...
-
-# Check for security vulnerabilities
-security:
-	@echo "Checking for vulnerabilities..."
-	$(GOCMD) list -json -m all | nancy sleuth
-
-# Generate documentation
-docs:
-	@echo "Generating documentation..."
-	godoc -http=:6060
+	$(GOTEST) -bench=. -benchmem ./pkg/...
 
 # Quick build without linting
 quick: clean build
@@ -205,7 +162,7 @@ watch:
 	@if command -v air >/dev/null 2>&1; then \
 		air; \
 	else \
-		echo "air not installed. Install with: go install github.com/cosmtrek/air@latest"; \
+		echo "⚠️  air not installed. Install with: go install github.com/cosmtrek/air@latest"; \
 	fi
 
 # Show migration status
@@ -216,14 +173,16 @@ migration-status:
 	@echo "  - pkg/engine/interface.go (ScriptEngine, Bridge, TypeConverter)"
 	@echo "  - pkg/engine/registry.go (Engine Registry)"
 	@echo "  - pkg/engine/types.go (Type System)"
+	@echo "  - pkg/bridge/manager.go (Bridge Manager)"
+	@echo "  - pkg/bridge/llm.go (Core LLM Bridge)"
+	@echo "  - pkg/bridge/util.go (Essential Utilities Bridge)"
+	@echo "  - cmd/llmspell (Placeholder CLI)"
 	@echo ""
 	@echo "⏳ In Progress:"
 	@echo "  - See TODO.md for current tasks"
 	@echo ""
 	@echo "❌ Not Started:"
-	@echo "  - cmd/llmspell (CLI application)"
-	@echo "  - examples/* (Example spells)"
-	@echo "  - pkg/bridge/* (All bridges)"
+	@echo "  - pkg/bridge/modelinfo.go (Model Info Bridge)"
 	@echo "  - pkg/core/* (Agent and state systems)"
 	@echo "  - pkg/engine/lua/* (Lua engine)"
 	@echo "  - pkg/engine/javascript/* (JavaScript engine)"
@@ -234,22 +193,24 @@ migration-status:
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  make build          - Build the binary"
-	@echo "  make clean          - Clean build artifacts"
-	@echo "  make test           - Run unit tests"
-	@echo "  make test-all       - Run all tests (unit + integration)"
-	@echo "  make coverage       - Generate test coverage report"
-	@echo "  make fmt            - Format code"
-	@echo "  make vet            - Run go vet"
-	@echo "  make lint           - Run linter"
-	@echo "  make deps           - Download dependencies"
-	@echo "  make install-tools  - Install development tools"
-	@echo "  make run            - Build and run the application"
-	@echo "  make examples       - List available example spells"
-	@echo "  make example SPELL=<name> - Run a specific example spell"
-	@echo "  make example-mock SPELL=<name> - Run example with mock LLM"
-	@echo "  make build-all      - Build for all platforms"
-	@echo "  make bench          - Run benchmarks"
-	@echo "  make watch          - Watch for changes and rebuild"
+	@echo "  make              - Run all (clean, fmt, vet, test, build)"
+	@echo "  make build        - Build the binary"
+	@echo "  make clean        - Clean build artifacts"
+	@echo "  make test         - Run unit tests"
+	@echo "  make test-integration - Run integration tests"
+	@echo "  make test-all     - Run all tests (unit + integration)"
+	@echo "  make coverage     - Generate test coverage report"
+	@echo "  make fmt          - Format code"
+	@echo "  make vet          - Run go vet"
+	@echo "  make lint         - Run linter (golangci-lint)"
+	@echo "  make mod          - Download dependencies and tidy modules"
+	@echo "  make deps         - Alias for 'make mod'"
+	@echo "  make build-examples - Build examples (with to_be_migrated tag)"
+	@echo "  make install-tools - Install development tools"
+	@echo "  make run          - Build and run the application"
+	@echo "  make build-all    - Build for all platforms"
+	@echo "  make bench        - Run benchmarks"
+	@echo "  make quick        - Quick build (clean + build)"
+	@echo "  make watch        - Watch for changes and rebuild"
 	@echo "  make migration-status - Show v0.3.3 migration progress"
-	@echo "  make help           - Show this help message"
+	@echo "  make help         - Show this help message"

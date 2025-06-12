@@ -145,11 +145,12 @@ func (m *mockRegistryScriptEngine) Shutdown() error {
 	return nil
 }
 
-func (m *mockRegistryScriptEngine) RegisterBridge(name string, bridge Bridge) error {
-	if _, exists := m.bridges[name]; exists {
+func (m *mockRegistryScriptEngine) RegisterBridge(bridge Bridge) error {
+	id := bridge.GetID()
+	if _, exists := m.bridges[id]; exists {
 		return errors.New("bridge already registered")
 	}
-	m.bridges[name] = bridge
+	m.bridges[id] = bridge
 	return nil
 }
 
@@ -226,10 +227,18 @@ func (m *mockRegistryScriptEngine) GetMetrics() EngineMetrics {
 	return m.metrics
 }
 
-func (m *mockRegistryScriptEngine) CreateContext() (ScriptContext, error) {
+func (m *mockRegistryScriptEngine) CreateContext(options ContextOptions) (ScriptContext, error) {
+	id := options.ID
+	if id == "" {
+		id = "ctx-" + time.Now().Format("20060102150405")
+	}
 	ctx := &mockRegistryScriptContext{
-		id:        "ctx-" + time.Now().Format("20060102150405"),
+		id:        id,
 		variables: make(map[string]interface{}),
+	}
+	// Initialize with provided variables
+	for k, v := range options.Variables {
+		ctx.variables[k] = v
 	}
 	m.contexts[ctx.ID()] = ctx
 	return ctx, nil
@@ -238,6 +247,16 @@ func (m *mockRegistryScriptEngine) CreateContext() (ScriptContext, error) {
 func (m *mockRegistryScriptEngine) DestroyContext(ctx ScriptContext) error {
 	delete(m.contexts, ctx.ID())
 	return nil
+}
+
+func (m *mockRegistryScriptEngine) ExecuteScript(ctx context.Context, script string, options ExecutionOptions) (*ExecutionResult, error) {
+	start := time.Now()
+	result := &ExecutionResult{
+		Value:    "executed: " + script,
+		Duration: time.Since(start),
+		Metadata: make(map[string]interface{}),
+	}
+	return result, nil
 }
 
 // Mock implementation of ScriptContext for registry testing
@@ -289,7 +308,7 @@ func TestRegistry(t *testing.T) {
 
 	t.Run("Initialize", func(t *testing.T) {
 		registry := NewRegistry(RegistryConfig{})
-		
+
 		err := registry.Initialize()
 		assert.NoError(t, err)
 
@@ -420,7 +439,7 @@ func TestRegistry(t *testing.T) {
 		engine2, err := registry.GetEngine("lua", EngineConfig{})
 		assert.NoError(t, err)
 		assert.NotNil(t, engine2)
-		
+
 		// Verify they are different instances (different memory addresses)
 		assert.NotSame(t, engine1, engine2)
 

@@ -1,3 +1,5 @@
+//go:build to_be_migrated
+
 // ABOUTME: Example demonstrating Lua engine integration with LLM bridge
 // ABOUTME: Shows how to run Lua scripts that interact with LLMs
 

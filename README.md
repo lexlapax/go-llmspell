@@ -2,7 +2,7 @@
 
 **Cast scripting spells to animate LLM golems** 🧙‍♂️✨
 
-go-llmspell transforms complex LLM interactions into simple, magical scripts. Write spells in Lua, JavaScript, or Tengo that bring AI agents to life, automate conversations, and orchestrate intelligent workflows—all with the reliability and performance of Go.
+go-llmspell transforms complex LLM interactions into simple, magical scripts. Write spells in Lua, JavaScript, or Tengo that bring AI agents to life, with use of tools, automate conversations, and orchestrate intelligent workflows—all with the reliability and performance of Go.
 
 ```lua
 -- example spell: creative-writer.lua
@@ -33,10 +33,10 @@ log.info("Story created!", {topic = topic})
 
 ## 📖 Documentation
 
-- [**Architecture Overview**](docs/architecture.md) - System design and components
-- [**Implementation Guide**](docs/implementation-guide.md) - Development roadmap
-- [**Spell Development Guide**](docs/spell-development.md) - How to write spells
-- [**Getting Started**](docs/getting-started.md) - Quick start guide
+- [**Architecture Overview**](docs/technical/architecture.md) - System design and components
+- [**Implementation Guide**](docs/technical/implementation-guide.md) - Development roadmap
+- [**Getting Started**](docs/user-guide/getting-started.md) - Quick start guide
+- [**Spell Development Guide**](docs/user-guide/spell-development.md) - How to write spells
 - [**Documentation Index**](docs/README.md) - All documentation
 
 ## 🏗️ Project Status

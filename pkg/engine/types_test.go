@@ -44,14 +44,14 @@ func (m *mockTypeAdapter) SupportsType(typeName string) bool {
 
 // Test struct for conversion testing
 type testStruct struct {
-	Name      string    `json:"name"`
-	Age       int       `json:"age"`
-	Active    bool      `json:"active"`
-	Score     float64   `json:"score"`
-	Tags      []string  `json:"tags"`
-	CreatedAt time.Time `json:"created_at"`
+	Name      string                 `json:"name"`
+	Age       int                    `json:"age"`
+	Active    bool                   `json:"active"`
+	Score     float64                `json:"score"`
+	Tags      []string               `json:"tags"`
+	CreatedAt time.Time              `json:"created_at"`
 	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-	private   string    // Should be ignored
+	private   string                 //nolint:unused // Should be ignored by ToMap
 }
 
 // Tests for BaseTypeConverter
@@ -70,7 +70,7 @@ func TestBaseTypeConverter(t *testing.T) {
 		}
 
 		converter.RegisterAdapter("custom", adapter)
-		
+
 		// Test that the adapter was registered
 		assert.True(t, converter.SupportsType("custom"))
 	})
@@ -125,7 +125,7 @@ func TestToBoolean(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := converter.ToBoolean(tt.input)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -181,7 +181,7 @@ func TestToNumber(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := converter.ToNumber(tt.input)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -198,9 +198,9 @@ func TestToString(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name     string
-		input    interface{}
-		expected string
+		name      string
+		input     interface{}
+		expected  string
 		checkFunc func(string) bool
 	}{
 		// String input
@@ -238,7 +238,7 @@ func TestToString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := converter.ToString(tt.input)
 			assert.NoError(t, err)
-			
+
 			if tt.checkFunc != nil {
 				assert.True(t, tt.checkFunc(result), "Result: %s", result)
 			} else {
@@ -279,7 +279,7 @@ func TestToArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := converter.ToArray(tt.input)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -371,7 +371,7 @@ func TestToMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := converter.ToMap(tt.input)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -397,7 +397,7 @@ func TestToStruct(t *testing.T) {
 
 		var target testStruct
 		err := converter.ToStruct(source, &target)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, "Alice", target.Name)
 		assert.Equal(t, 28, target.Age)
@@ -430,14 +430,14 @@ func TestToStruct(t *testing.T) {
 	t.Run("Type conversion in fields", func(t *testing.T) {
 		source := map[string]interface{}{
 			"name":   "Charlie",
-			"age":    "35", // String that should convert to int
+			"age":    "35",   // String that should convert to int
 			"active": "true", // String that should convert to bool
 			"score":  "92.3", // String that should convert to float
 		}
 
 		var target testStruct
 		err := converter.ToStruct(source, &target)
-		
+
 		assert.NoError(t, err)
 		assert.Equal(t, "Charlie", target.Name)
 		assert.Equal(t, 35, target.Age)
@@ -472,7 +472,7 @@ func TestFunctionConversions(t *testing.T) {
 	t.Run("FromFunction without adapter", func(t *testing.T) {
 		// Create a mock function
 		mockFn := &mockFunction{}
-		
+
 		result, err := converter.FromFunction(mockFn)
 		assert.NoError(t, err)
 		assert.Equal(t, mockFn, result) // Should return as-is
@@ -537,7 +537,7 @@ func TestSupportsType(t *testing.T) {
 			supportedTypes: []string{"custom"},
 		}
 		converter.RegisterAdapter("custom", adapter)
-		
+
 		assert.True(t, converter.SupportsType("custom"))
 	})
 }
@@ -643,7 +643,7 @@ func TestValidateType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := converter.ValidateType(tt.value, tt.expectedType)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -685,7 +685,7 @@ func TestGetConversionPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path, err := converter.GetConversionPath(tt.fromType, tt.toType)
-			
+
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "no conversion path")
@@ -720,7 +720,7 @@ func TestComplexConversions(t *testing.T) {
 
 		var target NestedStruct
 		err := converter.ToStruct(source, &target)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, "nested", target.Inner.Value)
 		assert.Equal(t, 42, target.Inner.Count)
@@ -738,7 +738,7 @@ func TestComplexConversions(t *testing.T) {
 
 		var target testStruct
 		err := converter.ToStruct(source, &target)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, "Test", target.Name)
 		assert.Equal(t, "value1", target.Metadata["key1"])
@@ -756,7 +756,7 @@ func TestComplexConversions(t *testing.T) {
 		}
 
 		result, err := converter.ToArray(input)
-		
+
 		require.NoError(t, err)
 		assert.Len(t, result, 6)
 		assert.Equal(t, "string", result[0])
@@ -805,19 +805,19 @@ func TestTypeConverterErrorHandling(t *testing.T) {
 // Benchmark tests
 func BenchmarkToBoolean(b *testing.B) {
 	converter := NewBaseTypeConverter("bench")
-	
+
 	b.Run("bool", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, _ = converter.ToBoolean(true)
 		}
 	})
-	
+
 	b.Run("string", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, _ = converter.ToBoolean("true")
 		}
 	})
-	
+
 	b.Run("int", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			_, _ = converter.ToBoolean(1)
@@ -834,7 +834,7 @@ func BenchmarkToMap(b *testing.B) {
 		Score:  95.5,
 		Tags:   []string{"test", "bench"},
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = converter.ToMap(testData)
@@ -850,7 +850,7 @@ func BenchmarkToStruct(b *testing.B) {
 		"score":  95.5,
 		"tags":   []interface{}{"test", "bench"},
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var target testStruct

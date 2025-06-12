@@ -1,265 +1,95 @@
-// ABOUTME: Main entry point for the llmspell CLI
-// ABOUTME: Provides commands to run spells and manage the spell environment
+// ABOUTME: Main entry point for the llmspell CLI - placeholder for multi-engine implementation
+// ABOUTME: Will provide commands to run spells in Lua, JavaScript, and Tengo engines
 
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"log/slog"
 	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/joho/godotenv"
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
-	"github.com/lexlapax/go-llmspell/pkg/engine/lua/bridges"
-	"github.com/lexlapax/go-llmspell/pkg/engine/lua/stdlib"
-	"github.com/lexlapax/go-llmspell/pkg/tools"
 )
 
 func main() {
-	// Load .env file if it exists
-	if err := godotenv.Load(); err != nil {
-		// .env file is optional, so we don't exit on error
-		if !os.IsNotExist(err) {
-			log.Printf("Warning: Error loading .env file: %v", err)
-		}
-	}
+	fmt.Println("🧙 go-llmspell v0.3.3 - Multi-Engine Spell Caster")
+	fmt.Println("================================================")
+	fmt.Println()
+	fmt.Println("⚠️  This is a placeholder for the multi-engine implementation.")
+	fmt.Println()
+	fmt.Println("📋 What this CLI will do:")
+	fmt.Println("   • Execute spells written in Lua, JavaScript, or Tengo")
+	fmt.Println("   • Support multiple LLM providers through go-llms v0.3.3")
+	fmt.Println("   • Provide agent orchestration and workflow capabilities")
+	fmt.Println("   • Enable tool usage and function calling")
+	fmt.Println("   • Support streaming responses and async operations")
+	fmt.Println("   • Manage distributed execution and agent handoffs")
+	fmt.Println()
+	fmt.Println("🔧 Planned Commands:")
+	fmt.Println("   llmspell run <spell-path>           - Execute a spell file")
+	fmt.Println("   llmspell new <template> <name>      - Create new spell from template")
+	fmt.Println("   llmspell validate <spell-path>      - Validate spell syntax")
+	fmt.Println("   llmspell list-engines               - Show available script engines")
+	fmt.Println("   llmspell list-providers             - Show available LLM providers")
+	fmt.Println("   llmspell list-tools                 - Show available tools")
+	fmt.Println("   llmspell list-agents                - Show registered agents")
+	fmt.Println("   llmspell config                     - Manage configuration")
+	fmt.Println("   llmspell server                     - Start spell server mode")
+	fmt.Println("   llmspell version                    - Show version information")
+	fmt.Println()
+	fmt.Println("🚧 Current Status:")
+	fmt.Println("   The multi-engine architecture is being implemented.")
+	fmt.Println("   Core interfaces and bridges are being developed.")
+	fmt.Println()
+	fmt.Println("📚 For more information:")
+	fmt.Println("   See docs/MIGRATION_PLAN_V0.3.3.md for architecture details")
+	fmt.Println("   Check TODO.md for implementation progress")
+	fmt.Println()
 
-	if len(os.Args) < 2 {
-		printUsage()
-		os.Exit(1)
-	}
-
-	command := os.Args[1]
-
-	switch command {
-	case "run":
-		if len(os.Args) < 3 {
-			fmt.Println("Error: spell path required")
-			fmt.Println("Usage: llmspell run <spell-path> [param=value ...]")
-			os.Exit(1)
-		}
-		runSpell(os.Args[2], os.Args[3:])
-	case "help", "-h", "--help":
-		printUsage()
-	case "version", "-v", "--version":
-		fmt.Println("llmspell v0.1.0")
-	default:
-		fmt.Printf("Unknown command: %s\n", command)
-		printUsage()
-		os.Exit(1)
-	}
+	// Exit with status 0 since this is just a placeholder
+	os.Exit(0)
 }
 
-func printUsage() {
-	fmt.Println("llmspell - Cast scripting spells to animate LLM golems")
-	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Println("  llmspell run <spell-path> [param=value ...]  Run a spell")
-	fmt.Println("  llmspell help                                 Show this help")
-	fmt.Println("  llmspell version                              Show version")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  llmspell run examples/spells/hello-llm")
-	fmt.Println("  llmspell run examples/spells/tool-example")
-	fmt.Println("  llmspell run my-spell.lua topic=\"AI safety\"")
-	fmt.Println()
-	fmt.Println("Environment Variables:")
-	fmt.Println("  OPENAI_API_KEY      OpenAI API key")
-	fmt.Println("  ANTHROPIC_API_KEY   Anthropic API key")
-	fmt.Println("  GEMINI_API_KEY      Google Gemini API key")
-	fmt.Println("  MOCK_LLM            Set to 'true' to use mock LLM for testing")
-}
+// Future functions to be implemented:
 
+// runSpell will execute a spell file using the appropriate engine
+//
+//nolint:unused // Will be implemented when spell execution is added
 func runSpell(spellPath string, args []string) {
-	// Determine if it's a directory or file
-	info, err := os.Stat(spellPath)
-	if err != nil {
-		log.Fatalf("Cannot access spell: %v", err)
-	}
-
-	var mainScript string
-	var spellName string
-
-	if info.IsDir() {
-		// Look for main.lua in the directory
-		mainScript = filepath.Join(spellPath, "main.lua")
-		spellName = filepath.Base(spellPath)
-	} else {
-		// Single file spell
-		mainScript = spellPath
-		spellName = strings.TrimSuffix(filepath.Base(spellPath), filepath.Ext(spellPath))
-	}
-
-	// Check if the script exists
-	if _, err := os.Stat(mainScript); err != nil {
-		log.Fatalf("Cannot find spell script: %v", err)
-	}
-
-	fmt.Printf("🧙 Running spell: %s\n\n", spellName)
-
-	// Create Lua engine
-	config := &engine.Config{
-		MaxExecutionTime: 30,
-		MaxMemory:        64 * 1024 * 1024,
-	}
-
-	eng, err := lua.NewLuaEngine(config)
-	if err != nil {
-		log.Fatalf("Failed to create Lua engine: %v", err)
-	}
-	defer eng.Close()
-
-	// Initialize bridges
-	initializeBridges(eng, spellName)
-
-	// Set up parameters
-	setupParams(eng, args)
-
-	// Load and execute the spell
-	err = eng.LoadScriptFile(mainScript)
-	if err != nil {
-		log.Fatalf("Failed to load spell: %v", err)
-	}
-
-	fmt.Println("=== Spell Output ===")
-	err = eng.Execute(context.Background())
-	if err != nil {
-		log.Fatalf("Failed to execute spell: %v", err)
-	}
-	fmt.Println("\n=== Spell Complete ===")
+	// TODO: Implement multi-engine spell execution
 }
 
-func initializeBridges(eng *lua.LuaEngine, spellName string) {
-	// Register standard library
-	stdlibConfig := &stdlib.Config{
-		SpellName: spellName,
-		LogLevel:  slog.LevelInfo,
-		Storage:   stdlib.DefaultStorageConfig(),
-		HTTP:      stdlib.DefaultHTTPConfig(),
-	}
-
-	luaState := eng.GetLuaState()
-	if err := stdlib.RegisterAll(luaState, stdlibConfig); err != nil {
-		log.Fatalf("Failed to register stdlib: %v", err)
-	}
-
-	// Register tools bridge with built-in tools
-	toolRegistry := tools.NewRegistry()
-	toolBridge, err := bridge.NewToolBridgeWithBuiltins(toolRegistry, tools.DefaultBuiltinToolConfig())
-	if err != nil {
-		log.Printf("Warning: Failed to create tool bridge with builtins: %v", err)
-		// Fallback to bridge without builtins
-		toolBridge = bridge.NewToolBridge(toolRegistry)
-	}
-	if err := bridges.RegisterToolsModule(luaState, toolBridge); err != nil {
-		log.Printf("Warning: Failed to register tools module: %v", err)
-	}
-
-	// Register agents bridge
-	agentBridge, err := bridge.NewAgentBridge(context.Background())
-	if err != nil {
-		log.Printf("Warning: Failed to create agent bridge: %v", err)
-	} else {
-		if err := bridges.RegisterAgentsModule(luaState, agentBridge); err != nil {
-			log.Printf("Warning: Failed to register agents module: %v", err)
-		}
-	}
-
-	// Register LLM bridge
-	if os.Getenv("MOCK_LLM") == "true" {
-		fmt.Println("🎭 Using mock LLM for demonstration")
-		registerMockLLM(eng)
-	} else {
-		llmBridge, err := bridge.NewLLMBridge()
-		if err != nil {
-			fmt.Printf("⚠️  LLM Bridge not available: %v\n", err)
-			fmt.Println("   Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY to enable LLM features.")
-			fmt.Println("   Running with mock LLM functions...")
-			registerMockLLM(eng)
-		} else {
-			fmt.Printf("✅ LLM Bridge initialized with provider: %s\n\n", llmBridge.GetCurrentProvider())
-			adapter := bridges.NewLLMBridgeAdapter(llmBridge)
-			luaBridge := bridges.NewLLMBridge(adapter)
-			if err := luaBridge.Register(luaState); err != nil {
-				log.Fatalf("Failed to register LLM bridge: %v", err)
-			}
-		}
-	}
+// validateSpell will check spell syntax without executing
+//
+//nolint:unused // Will be implemented when spell validation is added
+func validateSpell(spellPath string) {
+	// TODO: Implement spell validation
 }
 
-func setupParams(eng *lua.LuaEngine, args []string) {
-	// Parse parameters
-	params := make(map[string]string)
-	for _, arg := range args {
-		if strings.Contains(arg, "=") {
-			parts := strings.SplitN(arg, "=", 2)
-			if len(parts) == 2 {
-				params[parts[0]] = parts[1]
-			}
-		}
-	}
-
-	// Create params table
-	paramsScript := "params = {"
-	for k, v := range params {
-		paramsScript += fmt.Sprintf("\n\t%s = %q,", k, v)
-	}
-	paramsScript += "\n}"
-
-	// Execute setup script
-	err := eng.LoadScript(strings.NewReader(paramsScript))
-	if err != nil {
-		log.Printf("Warning: Failed to set up parameters: %v", err)
-	}
-
-	err = eng.Execute(context.Background())
-	if err != nil {
-		log.Printf("Warning: Failed to execute parameter setup: %v", err)
-	}
+// listEngines will show available script engines
+//
+//nolint:unused // Will be implemented when engine listing is added
+func listEngines() {
+	// TODO: Query engine registry
 }
 
-func registerMockLLM(eng *lua.LuaEngine) {
-	// Create mock LLM module
-	mockScript := `
-llm = {
-	chat = function(prompt)
-		return "[Mock LLM Response] I received your prompt: '" .. prompt .. "'. This is a mock response for demonstration."
-	end,
-	complete = function(prompt, maxTokens)
-		return prompt .. "... [Mock completion with max " .. tostring(maxTokens) .. " tokens]"
-	end,
-	get_provider = function()
-		return "mock"
-	end,
-	list_providers = function()
-		return {"mock"}
-	end,
-	set_provider = function(name)
-		return "[Mock] Would switch to provider: " .. name
-	end,
-	stream_chat = function(prompt, callback)
-		-- Mock streaming by calling callback with chunks
-		callback("[Mock streaming: ")
-		callback(prompt)
-		callback(" - completed]")
-		return nil
-	end
+// listProviders will show available LLM providers
+//
+//nolint:unused // Will be implemented when provider listing is added
+func listProviders() {
+	// TODO: Query LLM bridge for providers
 }
-`
-	err := eng.LoadScript(strings.NewReader(mockScript))
-	if err != nil {
-		log.Printf("Warning: Failed to register mock LLM: %v", err)
-		return
-	}
 
-	err = eng.Execute(context.Background())
-	if err != nil {
-		log.Printf("Warning: Failed to execute mock LLM setup: %v", err)
-	}
+// startServer will run in server mode for distributed execution
+//
+//nolint:unused // Will be implemented when server mode is added
+func startServer(config ServerConfig) {
+	// TODO: Implement server mode
+}
+
+// ServerConfig holds server configuration
+//
+//nolint:unused // Will be used when server mode is implemented
+type ServerConfig struct {
+	Port      int
+	EnableTLS bool
+	CertFile  string
+	KeyFile   string
 }

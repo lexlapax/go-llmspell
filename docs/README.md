@@ -1,47 +1,90 @@
-# go-llmspell Documentation
+# go-llmspell Documentation Reference
 
-Welcome to the go-llmspell documentation. This directory contains comprehensive guides for understanding and using go-llmspell.
+Welcome to the comprehensive go-llmspell documentation. This directory contains all documentation resources organized to serve different audiences and use cases.
 
-## Documentation Structure
 
-### Core Documentation
-- [`architecture.md`](architecture.md) - System architecture and design principles
-- [`implementation-guide.md`](implementation-guide.md) - Step-by-step implementation roadmap
-- [`spell-development.md`](spell-development.md) - Guide to writing spells in Lua, JavaScript, and Tengo
+## 📚 Documentation Structure
 
-### Getting Started
-- [`getting-started.md`](getting-started.md) - Quick start guide for new users
-- [`env-setup.md`](env-setup.md) - Environment and API key configuration
+### [User Guide](user-guide/) 👥
+**For developers using Go-llmmspell**
+- [Getting Started](user-guide/getting-started.md) - Quick start and basic concepts
 
-### API Reference
-- [`lua-stdlib.md`](lua-stdlib.md) - Lua standard library reference
-- `api-reference.md` - Complete API documentation (coming soon)
-- `bridge-api.md` - Bridge interface documentation (coming soon)
+### [API Reference](api/) 🔧
+**Complete API documentation**
 
-### Examples
-- `spellbook.md` - Collection of pre-written spells (coming soon)
-- `tutorials/` - Step-by-step tutorials (coming soon)
+### [Technical Documentation](technical/) ⚙️
+**For contributors and advanced users**
 
-## Overview
+#### Core Architecture
+- [Architecture Overview](technical/architecture.md) - System design and component structure
 
-go-llmspell transforms complex LLM interactions into simple, scriptable spells. It provides:
+#### Implementation Guides
 
-- **Multi-language Support**: Write spells in Lua, JavaScript, or Tengo
-- **Unified API**: Consistent interface across all scripting languages
-- **Tool Integration**: Create and use custom tools in your spells
-- **Agent Orchestration**: Build intelligent agents with access to tools
-- **Workflow Automation**: Chain operations into complex workflows
-- **Security**: Sandboxed execution with resource limits
+#### Performance & Optimization
 
-## Quick Links
+#### Testing & Quality
 
-- [Project README](../README.md)
-- [Architecture Overview](architecture.md)
-- [Writing Your First Spell](spell-development.md#basic-example)
-- [Implementation Roadmap](implementation-guide.md)
+#### Development Practices
 
-## Getting Help
+### [Archives](archives/) 📦
+**Historical documentation**
+- [Historical Documentation](archives/README.md) - Preserved documentation for reference
 
-- Check the [Architecture](architecture.md) for system design questions
-- See [Spell Development](spell-development.md) for scripting help
-- Review [Implementation Guide](implementation-guide.md) for development roadmap
+## 🚀 Quick Start Paths
+
+### For New Users
+1. Start with [Getting Started](user-guide/getting-started.md)
+2. Understand [Core Concepts](user-guide/core-concepts.md)
+3. Explore [Examples Gallery](user-guide/examples-gallery.md)
+
+### For API Users
+
+### For Contributors
+1. Read [Architecture Overview](technical/architecture.md)
+2. Understand [Testing Framework](technical/testing.md)
+3. Follow [Contributing Guidelines](../CONTRIBUTING.md)
+
+### For Scripting Engine Developers
+
+## 🔗 Quick Links
+
+### Documentation Home
+- **[Go-llmspell Home](/)** - Project home and quick start
+- **[Examples Repository](/examples/)** - 40+ working examples
+- **[CLI Documentation](/cmd/README.md)** - Command line interface
+- **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute
+
+### Project Information
+- **[Changelog](../CHANGELOG.md)** - Complete version history and release notes
+- **[Project Status](../TODO.md)** - Current development status and roadmap
+- **[Completed Tasks](../TODO-DONE.md)** - Development history
+
+## 🎯 Examples Index
+
+### Basic llm Examples
+
+### Built-in Tools Examples
+
+### Agent Examples
+
+### Workflow Examples
+
+### Structured Output Examples
+
+### Utility Examples
+## 📖 Documentation Versions
+
+This documentation corresponds to **Go-llmspell XXX June 2025).
+
+### Version Highlights
+
+For release details, see the [Changelog](../CHANGELOG.md).
+
+## 📝 Documentation Feedback
+
+If you find issues with the documentation or have suggestions for improvement:
+1. Check the [Contributing Guidelines](../CONTRIBUTING.md)
+2. Open an issue on the project repository
+3. Submit a pull request with improvements
+
+The documentation is continuously updated to reflect the latest features and best practices.

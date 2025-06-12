@@ -19,7 +19,7 @@ type ScriptEngine interface {
 	Shutdown() error
 
 	// Bridge management - allows engines to register functionality from Go
-	RegisterBridge(name string, bridge Bridge) error
+	RegisterBridge(bridge Bridge) error
 	UnregisterBridge(name string) error
 	GetBridge(name string) (Bridge, error)
 	ListBridges() []string
@@ -41,29 +41,46 @@ type ScriptEngine interface {
 	GetMetrics() EngineMetrics
 
 	// Script state management
-	CreateContext() (ScriptContext, error)
+	CreateContext(options ContextOptions) (ScriptContext, error)
 	DestroyContext(ctx ScriptContext) error
+	ExecuteScript(ctx context.Context, script string, options ExecutionOptions) (*ExecutionResult, error)
 }
 
 // Bridge defines the interface for functionality that can be exposed to scripts.
 // Bridges are engine-agnostic and handle the translation between Go functions
 // and script-callable methods.
 type Bridge interface {
-	// Registration lifecycle
-	Register(engine ScriptEngine) error
-	Unregister() error
+	// Identity and metadata
+	GetID() string
+	GetMetadata() BridgeMetadata
 
-	// Metadata
-	Name() string
+	// Lifecycle management
+	Initialize(ctx context.Context) error
+	Cleanup(ctx context.Context) error
+	IsInitialized() bool
+
+	// Engine registration
+	RegisterWithEngine(engine ScriptEngine) error
+
+	// Method exposure
 	Methods() []MethodInfo
-	Version() string
+	ValidateMethod(name string, args []interface{}) error
 
 	// Type conversion hints for engines
 	TypeMappings() map[string]TypeMapping
 
-	// Validation and security
-	ValidateMethod(name string, args []interface{}) error
+	// Security
 	RequiredPermissions() []Permission
+}
+
+// BridgeMetadata contains metadata about a bridge.
+type BridgeMetadata struct {
+	Name         string   `json:"name"`
+	Version      string   `json:"version"`
+	Description  string   `json:"description"`
+	Dependencies []string `json:"dependencies"`
+	Author       string   `json:"author"`
+	License      string   `json:"license"`
 }
 
 // TypeConverter handles conversion between Go types and script engine types.
@@ -106,10 +123,38 @@ type EngineConfig struct {
 	EngineOptions map[string]interface{} `json:"engine_options"`
 
 	// Debugging and observability
-	DebugMode    bool   `json:"debug_mode"`
-	LogLevel     string `json:"log_level"`
-	MetricsMode  bool   `json:"metrics_mode"`
-	TracingMode  bool   `json:"tracing_mode"`
+	DebugMode   bool   `json:"debug_mode"`
+	LogLevel    string `json:"log_level"`
+	MetricsMode bool   `json:"metrics_mode"`
+	TracingMode bool   `json:"tracing_mode"`
+}
+
+// ContextOptions defines options for creating a script context.
+type ContextOptions struct {
+	ID           string                 `json:"id"`
+	MemoryLimit  int64                  `json:"memory_limit"`
+	TimeoutLimit time.Duration          `json:"timeout_limit"`
+	Variables    map[string]interface{} `json:"variables"`
+	Metadata     map[string]interface{} `json:"metadata"`
+}
+
+// ExecutionOptions defines options for script execution.
+type ExecutionOptions struct {
+	Timeout         time.Duration          `json:"timeout"`
+	MemoryLimit     int64                  `json:"memory_limit"`
+	Context         ScriptContext          `json:"-"`
+	Variables       map[string]interface{} `json:"variables"`
+	CaptureOutput   bool                   `json:"capture_output"`
+	ReturnLastValue bool                   `json:"return_last_value"`
+}
+
+// ExecutionResult contains the result of script execution.
+type ExecutionResult struct {
+	Value    interface{}            `json:"value"`
+	Output   string                 `json:"output"`
+	Error    error                  `json:"-"`
+	Duration time.Duration          `json:"duration"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 // ResourceLimits defines resource constraints for script execution.
@@ -124,22 +169,22 @@ type ResourceLimits struct {
 // EngineMetrics provides runtime metrics for script engine performance.
 type EngineMetrics struct {
 	// Execution metrics
-	ScriptsExecuted   int64         `json:"scripts_executed"`
-	TotalExecTime     time.Duration `json:"total_exec_time"`
-	AverageExecTime   time.Duration `json:"average_exec_time"`
-	ErrorCount        int64         `json:"error_count"`
+	ScriptsExecuted int64         `json:"scripts_executed"`
+	TotalExecTime   time.Duration `json:"total_exec_time"`
+	AverageExecTime time.Duration `json:"average_exec_time"`
+	ErrorCount      int64         `json:"error_count"`
 
 	// Resource usage
-	MemoryUsed        int64 `json:"memory_used"`
-	PeakMemoryUsed    int64 `json:"peak_memory_used"`
-	GoroutinesActive  int   `json:"goroutines_active"`
-	BridgeCallsCount  int64 `json:"bridge_calls_count"`
+	MemoryUsed       int64 `json:"memory_used"`
+	PeakMemoryUsed   int64 `json:"peak_memory_used"`
+	GoroutinesActive int   `json:"goroutines_active"`
+	BridgeCallsCount int64 `json:"bridge_calls_count"`
 
 	// Performance counters
-	CacheHits         int64 `json:"cache_hits"`
-	CacheMisses       int64 `json:"cache_misses"`
-	CompilationTime   time.Duration `json:"compilation_time"`
-	GCCollections     int64 `json:"gc_collections"`
+	CacheHits       int64         `json:"cache_hits"`
+	CacheMisses     int64         `json:"cache_misses"`
+	CompilationTime time.Duration `json:"compilation_time"`
+	GCCollections   int64         `json:"gc_collections"`
 }
 
 // ScriptContext represents an isolated execution context within an engine.
@@ -218,14 +263,14 @@ type Permission struct {
 type EngineFeature string
 
 const (
-	FeatureAsync        EngineFeature = "async"
-	FeatureCoroutines   EngineFeature = "coroutines"
-	FeatureModules      EngineFeature = "modules"
-	FeatureDebugging    EngineFeature = "debugging"
-	FeatureHotReload    EngineFeature = "hot_reload"
-	FeatureCompilation  EngineFeature = "compilation"
-	FeatureInteractive  EngineFeature = "interactive"
-	FeatureStreaming    EngineFeature = "streaming"
+	FeatureAsync       EngineFeature = "async"
+	FeatureCoroutines  EngineFeature = "coroutines"
+	FeatureModules     EngineFeature = "modules"
+	FeatureDebugging   EngineFeature = "debugging"
+	FeatureHotReload   EngineFeature = "hot_reload"
+	FeatureCompilation EngineFeature = "compilation"
+	FeatureInteractive EngineFeature = "interactive"
+	FeatureStreaming   EngineFeature = "streaming"
 )
 
 // FSMode defines filesystem access modes for scripts.
@@ -286,13 +331,13 @@ func (e *EngineError) Unwrap() error {
 type ErrorType string
 
 const (
-	ErrorTypeSyntax      ErrorType = "syntax"
-	ErrorTypeRuntime     ErrorType = "runtime"
-	ErrorTypeType        ErrorType = "type"
-	ErrorTypeResource    ErrorType = "resource"
-	ErrorTypeSecurity    ErrorType = "security"
-	ErrorTypeBridge      ErrorType = "bridge"
-	ErrorTypeTimeout     ErrorType = "timeout"
-	ErrorTypeMemory      ErrorType = "memory"
-	ErrorTypePermission  ErrorType = "permission"
+	ErrorTypeSyntax     ErrorType = "syntax"
+	ErrorTypeRuntime    ErrorType = "runtime"
+	ErrorTypeType       ErrorType = "type"
+	ErrorTypeResource   ErrorType = "resource"
+	ErrorTypeSecurity   ErrorType = "security"
+	ErrorTypeBridge     ErrorType = "bridge"
+	ErrorTypeTimeout    ErrorType = "timeout"
+	ErrorTypeMemory     ErrorType = "memory"
+	ErrorTypePermission ErrorType = "permission"
 )

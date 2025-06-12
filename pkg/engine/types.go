@@ -200,7 +200,7 @@ func (c *BaseTypeConverter) ToArray(v interface{}) ([]interface{}, error) {
 		if rv.Kind() != reflect.Slice && rv.Kind() != reflect.Array {
 			return nil, fmt.Errorf("cannot convert %T to array", v)
 		}
-		
+
 		result := make([]interface{}, rv.Len())
 		for i := 0; i < rv.Len(); i++ {
 			result[i] = rv.Index(i).Interface()
@@ -238,27 +238,27 @@ func (c *BaseTypeConverter) ToMap(v interface{}) (map[string]interface{}, error)
 		// Use reflection for struct types
 		rv := reflect.ValueOf(v)
 		rt := reflect.TypeOf(v)
-		
+
 		// Dereference pointer if needed
 		if rv.Kind() == reflect.Ptr {
 			rv = rv.Elem()
 			rt = rt.Elem()
 		}
-		
+
 		if rv.Kind() != reflect.Struct {
 			return nil, fmt.Errorf("cannot convert %T to map", v)
 		}
-		
+
 		result := make(map[string]interface{})
 		for i := 0; i < rv.NumField(); i++ {
 			field := rt.Field(i)
 			value := rv.Field(i)
-			
+
 			// Skip unexported fields
 			if !field.IsExported() {
 				continue
 			}
-			
+
 			// Use json tag if available, otherwise use field name
 			key := field.Name
 			if tag := field.Tag.Get("json"); tag != "" && tag != "-" {
@@ -268,10 +268,10 @@ func (c *BaseTypeConverter) ToMap(v interface{}) (map[string]interface{}, error)
 					key = tag
 				}
 			}
-			
+
 			result[key] = value.Interface()
 		}
-		
+
 		return result, nil
 	}
 }
@@ -310,7 +310,7 @@ func (c *BaseTypeConverter) ToFunction(v interface{}) (Function, error) {
 	if fn, ok := v.(Function); ok {
 		return fn, nil
 	}
-	
+
 	// Check if there's a registered adapter for this type
 	typeName := reflect.TypeOf(v).String()
 	if adapter, exists := c.adapters[typeName]; exists {
@@ -322,7 +322,7 @@ func (c *BaseTypeConverter) ToFunction(v interface{}) (Function, error) {
 			return fn, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("cannot convert %T to Function", v)
 }
 
@@ -332,7 +332,7 @@ func (c *BaseTypeConverter) FromFunction(fn Function) (interface{}, error) {
 	if adapter, exists := c.adapters["function"]; exists {
 		return adapter.FromNative(fn)
 	}
-	
+
 	// Default: return as-is
 	return fn, nil
 }
@@ -345,13 +345,13 @@ func (c *BaseTypeConverter) SupportsType(typeName string) bool {
 		"int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
 		"float32", "time.Time",
 	}
-	
+
 	for _, builtin := range builtinTypes {
 		if builtin == typeName {
 			return true
 		}
 	}
-	
+
 	// Check registered adapters
 	_, exists := c.adapters[typeName]
 	return exists
@@ -409,16 +409,16 @@ func (c *BaseTypeConverter) GetTypeInfo(typeName string) TypeInfo {
 // mapToStruct uses reflection to populate a struct from a map.
 func (c *BaseTypeConverter) mapToStruct(source map[string]interface{}, target reflect.Value) error {
 	targetType := target.Type()
-	
+
 	for i := 0; i < target.NumField(); i++ {
 		field := targetType.Field(i)
 		fieldValue := target.Field(i)
-		
+
 		// Skip unexported fields
 		if !field.IsExported() {
 			continue
 		}
-		
+
 		// Get the key to look for in the source map
 		key := field.Name
 		if tag := field.Tag.Get("json"); tag != "" && tag != "-" {
@@ -428,19 +428,19 @@ func (c *BaseTypeConverter) mapToStruct(source map[string]interface{}, target re
 				key = tag
 			}
 		}
-		
+
 		// Check if the key exists in the source map
 		sourceValue, exists := source[key]
 		if !exists {
 			continue
 		}
-		
+
 		// Convert and set the value
 		if err := c.setFieldValue(sourceValue, fieldValue); err != nil {
 			return fmt.Errorf("error setting field %s: %w", field.Name, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -449,16 +449,16 @@ func (c *BaseTypeConverter) setFieldValue(source interface{}, target reflect.Val
 	if source == nil {
 		return nil
 	}
-	
+
 	sourceValue := reflect.ValueOf(source)
 	targetType := target.Type()
-	
+
 	// Direct assignment if types match
 	if sourceValue.Type().AssignableTo(targetType) {
 		target.Set(sourceValue)
 		return nil
 	}
-	
+
 	// Type conversion based on target type
 	switch targetType.Kind() {
 	case reflect.Bool:
@@ -467,41 +467,41 @@ func (c *BaseTypeConverter) setFieldValue(source interface{}, target reflect.Val
 			return err
 		}
 		target.SetBool(val)
-		
+
 	case reflect.String:
 		val, err := c.ToString(source)
 		if err != nil {
 			return err
 		}
 		target.SetString(val)
-		
+
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		val, err := c.ToNumber(source)
 		if err != nil {
 			return err
 		}
 		target.SetInt(int64(val))
-		
+
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		val, err := c.ToNumber(source)
 		if err != nil {
 			return err
 		}
 		target.SetUint(uint64(val))
-		
+
 	case reflect.Float32, reflect.Float64:
 		val, err := c.ToNumber(source)
 		if err != nil {
 			return err
 		}
 		target.SetFloat(val)
-		
+
 	case reflect.Slice:
 		val, err := c.ToArray(source)
 		if err != nil {
 			return err
 		}
-		
+
 		slice := reflect.MakeSlice(targetType, len(val), len(val))
 		for i, item := range val {
 			if err := c.setFieldValue(item, slice.Index(i)); err != nil {
@@ -509,43 +509,43 @@ func (c *BaseTypeConverter) setFieldValue(source interface{}, target reflect.Val
 			}
 		}
 		target.Set(slice)
-		
+
 	case reflect.Map:
 		val, err := c.ToMap(source)
 		if err != nil {
 			return err
 		}
-		
+
 		mapValue := reflect.MakeMap(targetType)
 		for k, v := range val {
 			keyValue := reflect.ValueOf(k)
 			valueValue := reflect.New(targetType.Elem()).Elem()
-			
+
 			if err := c.setFieldValue(v, valueValue); err != nil {
 				return fmt.Errorf("error setting map value for key %s: %w", k, err)
 			}
-			
+
 			mapValue.SetMapIndex(keyValue, valueValue)
 		}
 		target.Set(mapValue)
-		
+
 	case reflect.Struct:
 		val, err := c.ToMap(source)
 		if err != nil {
 			return err
 		}
 		return c.mapToStruct(val, target)
-		
+
 	case reflect.Ptr:
 		if target.IsNil() {
 			target.Set(reflect.New(targetType.Elem()))
 		}
 		return c.setFieldValue(source, target.Elem())
-		
+
 	default:
 		return fmt.Errorf("unsupported target type: %s", targetType.Kind())
 	}
-	
+
 	return nil
 }
 
@@ -554,7 +554,7 @@ func (c *BaseTypeConverter) ValidateType(value interface{}, expectedType string)
 	if value == nil {
 		return nil // nil is valid for any type
 	}
-	
+
 	switch expectedType {
 	case "bool", "boolean":
 		_, err := c.ToBoolean(value)
@@ -593,7 +593,7 @@ func (c *BaseTypeConverter) GetConversionPath(fromType, toType string) ([]string
 		"array":  {"string"},
 		"object": {"string"},
 	}
-	
+
 	if targets, exists := directConversions[fromType]; exists {
 		for _, target := range targets {
 			if target == toType {
@@ -601,7 +601,7 @@ func (c *BaseTypeConverter) GetConversionPath(fromType, toType string) ([]string
 			}
 		}
 	}
-	
+
 	// No conversion path found
 	return nil, fmt.Errorf("no conversion path from %s to %s", fromType, toType)
 }

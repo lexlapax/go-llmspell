@@ -21,7 +21,7 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
 ---
 
 ## New Multi-Engine Architecture Implementation
-No need for backward compatibility. clean room implementation. overwrite existing code. Delete duplicate old code after implementation. Always TDD , tests first and then code. after implementation need to run build, run tests, run lint, vet and fmt.
+No need for backward compatibility. clean room implementation. overwrite existing code. Delete duplicate old code after implementation. Always TDD , tests first and then code. after implementation need to run build, run tests, run lint, vet and fmt. Update completed task/sub-task after each implementation.
 
 ### Phase 1: Engine-Agnostic Foundation (Weeks 1-2)
 
@@ -30,41 +30,41 @@ No need for backward compatibility. clean room implementation. overwrite existin
 - ✅ **Task 1.1.2: Engine Registry** (Completed with tests)
 - ✅ **Task 1.1.3: Type System Foundation** (Completed with tests)
 
-- [ ] **Task 1.1.4: Bridge Manager**
-  - [ ] Create test file `/pkg/bridge/manager_test.go`
-  - [ ] Test bridge lifecycle management
-  - [ ] Test thread-safe bridge registration
-  - [ ] Test bridge dependency resolution
-  - [ ] Test hot-reloading functionality
-  - [ ] Create `/pkg/bridge/manager.go`
-  - [ ] Implement bridge lifecycle management
-  - [ ] Create bridge registration system
-  - [ ] Add bridge dependency resolution
-  - [ ] Support hot-reloading of bridges
+- ✅ **Task 1.1.4: Bridge Manager** (Completed with tests)
+  - ✅ Create test file `/pkg/bridge/manager_test.go`
+  - ✅ Test bridge lifecycle management
+  - ✅ Test thread-safe bridge registration
+  - ✅ Test bridge dependency resolution
+  - ✅ Test hot-reloading functionality
+  - ✅ Create `/pkg/bridge/manager.go`
+  - ✅ Implement bridge lifecycle management
+  - ✅ Create bridge registration system
+  - ✅ Add bridge dependency resolution
+  - ✅ Support hot-reloading of bridges
 
-- [ ] **Task 1.1.5: Core LLM Bridge**
-  - [ ] Create test file `/pkg/bridge/llm_test.go`
-  - [ ] Test provider interface bridging
-  - [ ] Test message handling and options
-  - [ ] Test provider switching and pooling
-  - [ ] Test streaming and non-streaming responses
-  - [ ] Create `/pkg/bridge/llm.go`
-  - [ ] Bridge pkg/llm provider interfaces
-  - [ ] Expose message handling and options
-  - [ ] Support provider switching and pooling
-  - [ ] Add streaming and non-streaming responses
+- ✅ **Task 1.1.5: Core LLM Bridge** (Completed with tests)
+  - ✅ Create test file `/pkg/bridge/llm_test.go`
+  - ✅ Test provider interface bridging
+  - ✅ Test message handling and options
+  - ✅ Test provider switching and pooling
+  - ✅ Test streaming and non-streaming responses
+  - ✅ Create `/pkg/bridge/llm.go`
+  - ✅ Bridge pkg/llm provider interfaces
+  - ✅ Expose message handling and options
+  - ✅ Support provider switching and pooling
+  - ✅ Add streaming and non-streaming responses
 
-- [ ] **Task 1.1.6: Essential Utilities Bridge**
-  - [ ] Create test file `/pkg/bridge/util_test.go`
-  - [ ] Test JSON utilities and helpers
-  - [ ] Test environment variable access
-  - [ ] Test auth utilities
-  - [ ] Test error handling
-  - [ ] Create `/pkg/bridge/util.go`
-  - [ ] Bridge core pkg/util functions
-  - [ ] Expose JSON utilities and helpers
-  - [ ] Add environment variable access
-  - [ ] Include basic auth utilities
+- ✅ **Task 1.1.6: Essential Utilities Bridge** (Completed with tests)
+  - ✅ Create test file `/pkg/bridge/util_test.go`
+  - ✅ Test JSON utilities and helpers
+  - ✅ Test environment variable access
+  - ✅ Test auth utilities
+  - ✅ Test error handling
+  - ✅ Create `/pkg/bridge/util.go`
+  - ✅ Bridge core pkg/util functions
+  - ✅ Expose JSON utilities and helpers
+  - ✅ Add environment variable access
+  - ✅ Include basic auth utilities
 
 - [ ] **Task 1.1.7: Model Info Bridge**
   - [ ] Create test file `/pkg/bridge/modelinfo_test.go`

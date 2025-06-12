@@ -73,11 +73,12 @@ func (m *mockScriptEngine) Shutdown() error {
 	return nil
 }
 
-func (m *mockScriptEngine) RegisterBridge(name string, bridge Bridge) error {
-	if _, exists := m.bridges[name]; exists {
+func (m *mockScriptEngine) RegisterBridge(bridge Bridge) error {
+	id := bridge.GetID()
+	if _, exists := m.bridges[id]; exists {
 		return errors.New("bridge already registered")
 	}
-	m.bridges[name] = bridge
+	m.bridges[id] = bridge
 	return nil
 }
 
@@ -154,10 +155,18 @@ func (m *mockScriptEngine) GetMetrics() EngineMetrics {
 	return m.metrics
 }
 
-func (m *mockScriptEngine) CreateContext() (ScriptContext, error) {
+func (m *mockScriptEngine) CreateContext(options ContextOptions) (ScriptContext, error) {
+	id := options.ID
+	if id == "" {
+		id = "ctx-" + time.Now().Format("20060102150405")
+	}
 	ctx := &mockScriptContext{
-		id:        "ctx-" + time.Now().Format("20060102150405"),
+		id:        id,
 		variables: make(map[string]interface{}),
+	}
+	// Initialize with provided variables
+	for k, v := range options.Variables {
+		ctx.variables[k] = v
 	}
 	m.contexts[ctx.ID()] = ctx
 	return ctx, nil
@@ -166,6 +175,16 @@ func (m *mockScriptEngine) CreateContext() (ScriptContext, error) {
 func (m *mockScriptEngine) DestroyContext(ctx ScriptContext) error {
 	delete(m.contexts, ctx.ID())
 	return nil
+}
+
+func (m *mockScriptEngine) ExecuteScript(ctx context.Context, script string, options ExecutionOptions) (*ExecutionResult, error) {
+	start := time.Now()
+	result := &ExecutionResult{
+		Value:    "executed: " + script,
+		Duration: time.Since(start),
+		Metadata: make(map[string]interface{}),
+	}
+	return result, nil
 }
 
 // Mock implementation of Bridge for testing
@@ -196,32 +215,44 @@ func newMockBridge(name string) *mockBridge {
 	}
 }
 
-func (m *mockBridge) Register(engine ScriptEngine) error {
+func (m *mockBridge) GetID() string {
+	return m.name
+}
+
+func (m *mockBridge) GetMetadata() BridgeMetadata {
+	return BridgeMetadata{
+		Name:        m.name,
+		Version:     "1.0.0",
+		Description: "Mock bridge for testing",
+	}
+}
+
+func (m *mockBridge) Initialize(ctx context.Context) error {
 	if m.initialized {
-		return errors.New("already registered")
+		return errors.New("already initialized")
 	}
 	m.initialized = true
 	return nil
 }
 
-func (m *mockBridge) Unregister() error {
+func (m *mockBridge) Cleanup(ctx context.Context) error {
 	if !m.initialized {
-		return errors.New("not registered")
+		return errors.New("not initialized")
 	}
 	m.initialized = false
 	return nil
 }
 
-func (m *mockBridge) Name() string {
-	return m.name
+func (m *mockBridge) IsInitialized() bool {
+	return m.initialized
+}
+
+func (m *mockBridge) RegisterWithEngine(engine ScriptEngine) error {
+	return engine.RegisterBridge(m)
 }
 
 func (m *mockBridge) Methods() []MethodInfo {
 	return m.methods
-}
-
-func (m *mockBridge) Version() string {
-	return "1.0.0"
 }
 
 func (m *mockBridge) TypeMappings() map[string]TypeMapping {
@@ -395,7 +426,7 @@ func TestScriptEngine(t *testing.T) {
 
 	t.Run("Execute", func(t *testing.T) {
 		engine := newMockScriptEngine("test")
-		
+
 		// Test execution before initialization
 		_, err := engine.Execute(context.Background(), "test", nil)
 		assert.Error(t, err)
@@ -411,7 +442,7 @@ func TestScriptEngine(t *testing.T) {
 		// Test error case
 		_, err = engine.Execute(context.Background(), "error", nil)
 		assert.Error(t, err)
-		
+
 		var engineErr *EngineError
 		assert.True(t, errors.As(err, &engineErr))
 		assert.Equal(t, ErrorTypeRuntime, engineErr.Type)
@@ -422,28 +453,28 @@ func TestScriptEngine(t *testing.T) {
 		bridge := newMockBridge("testBridge")
 
 		// Register bridge
-		err := engine.RegisterBridge("test", bridge)
+		err := engine.RegisterBridge(bridge)
 		assert.NoError(t, err)
 
 		// Test duplicate registration
-		err = engine.RegisterBridge("test", bridge)
+		err = engine.RegisterBridge(bridge)
 		assert.Error(t, err)
 
 		// Get bridge
-		retrievedBridge, err := engine.GetBridge("test")
+		retrievedBridge, err := engine.GetBridge("testBridge")
 		assert.NoError(t, err)
 		assert.Equal(t, bridge, retrievedBridge)
 
 		// List bridges
 		bridges := engine.ListBridges()
-		assert.Contains(t, bridges, "test")
+		assert.Contains(t, bridges, "testBridge")
 
 		// Unregister bridge
-		err = engine.UnregisterBridge("test")
+		err = engine.UnregisterBridge("testBridge")
 		assert.NoError(t, err)
 
 		// Test getting non-existent bridge
-		_, err = engine.GetBridge("test")
+		_, err = engine.GetBridge("testBridge")
 		assert.Error(t, err)
 	})
 
@@ -506,7 +537,7 @@ func TestScriptEngine(t *testing.T) {
 		engine := newMockScriptEngine("test")
 
 		// Create context
-		ctx, err := engine.CreateContext()
+		ctx, err := engine.CreateContext(ContextOptions{})
 		assert.NoError(t, err)
 		assert.NotNil(t, ctx)
 		assert.NotEmpty(t, ctx.ID())
@@ -536,30 +567,38 @@ func TestBridge(t *testing.T) {
 		bridge := newMockBridge("test")
 		engine := newMockScriptEngine("engine")
 
-		// Register bridge
-		err := bridge.Register(engine)
+		// Initialize bridge
+		ctx := context.Background()
+		err := bridge.Initialize(ctx)
 		assert.NoError(t, err)
 		assert.True(t, bridge.initialized)
 
-		// Test double registration
-		err = bridge.Register(engine)
+		// Test double initialization
+		err = bridge.Initialize(ctx)
 		assert.Error(t, err)
 
-		// Unregister bridge
-		err = bridge.Unregister()
+		// Register with engine
+		err = bridge.RegisterWithEngine(engine)
+		assert.NoError(t, err)
+
+		// Cleanup bridge
+		err = bridge.Cleanup(ctx)
 		assert.NoError(t, err)
 		assert.False(t, bridge.initialized)
 
-		// Test unregister when not registered
-		err = bridge.Unregister()
+		// Test cleanup when not initialized
+		err = bridge.Cleanup(ctx)
 		assert.Error(t, err)
 	})
 
 	t.Run("Bridge Metadata", func(t *testing.T) {
 		bridge := newMockBridge("test")
 
-		assert.Equal(t, "test", bridge.Name())
-		assert.Equal(t, "1.0.0", bridge.Version())
+		assert.Equal(t, "test", bridge.GetID())
+		metadata := bridge.GetMetadata()
+		assert.Equal(t, "test", metadata.Name)
+		assert.Equal(t, "1.0.0", metadata.Version)
+		assert.Equal(t, "Mock bridge for testing", metadata.Description)
 
 		methods := bridge.Methods()
 		assert.Len(t, methods, 1)
