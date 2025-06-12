@@ -27,56 +27,9 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 1.1 Script Engine Interface ✅ **[COMPLETED - 2025-06-12]**
 
-#### 1.2 Core Agent System (Engine-Agnostic)
-- [x] **Task 1.2.1: Agent Interface** ✅ **[COMPLETED - 2025-06-12]**
-  - [x] Create test file `/pkg/core/agent/interface_test.go`
-  - [x] Test lifecycle methods (init, run, cleanup)
-  - [x] Test metadata and capability declaration
-  - [x] Test extension points for custom agents
-  - [x] Test engine independence
-  - [x] Create `/pkg/core/agent/interface.go`
-  - [x] Define lifecycle methods (init, run, cleanup)
-  - [x] Add metadata and capability declaration
-  - [x] Design extension points for custom agents
-  - [x] Ensure engine independence
+#### 1.2 Core Agent System (Engine-Agnostic) ✅ **[COMPLETED - 2025-06-12]**
 
-- [x] **Task 1.2.2: Base Agent Implementation** ✅ **[COMPLETED - 2025-06-12]**
-  - [x] Create test file `/pkg/core/agent/base_test.go`
-  - [x] Test state management methods
-  - [x] Test event emission capabilities
-  - [x] Test error handling and recovery
-  - [x] Test agent metrics collection
-  - [x] Create `/pkg/core/agent/base.go`
-  - [x] Implement state management methods
-  - [x] Add event emission capabilities
-  - [x] Implement error handling and recovery
-  - [x] Create agent metrics collection
-
-- [x] **Task 1.2.3: Agent Registry** ✅ **[COMPLETED - 2025-06-12]**
-  - [x] Create test file `/pkg/core/agent/registry_test.go`
-  - [x] Test thread-safe agent registration
-  - [x] Test capability-based agent discovery
-  - [x] Test dynamic agent lifecycle management
-  - [x] Test agent templating system
-  - [x] Create `/pkg/core/agent/registry.go`
-  - [x] Implement thread-safe agent registration
-  - [x] Add capability-based agent discovery
-  - [x] Support dynamic agent lifecycle management
-  - [x] Create agent templating system
-
-- [ ] **Task 1.2.4: Agent Context**
-  - [ ] Create test file `/pkg/core/agent/context_test.go`
-  - [ ] Test execution context with resource limits
-  - [ ] Test cancellation and timeout support
-  - [ ] Test distributed tracing integration
-  - [ ] Test multi-engine execution support
-  - [ ] Create `/pkg/core/agent/context.go`
-  - [ ] Design execution context with resource limits
-  - [ ] Add cancellation and timeout support
-  - [ ] Integrate distributed tracing
-  - [ ] Support multi-engine execution
-
-#### 1.3 State Management System
+#### 1.3 State Management System **do we need this - is it implemented in go-llms?**
 - [ ] **Task 1.3.1: State Object Design**
   - [ ] Create test file `/pkg/core/state/state_test.go`
   - [ ] Test immutable state operations

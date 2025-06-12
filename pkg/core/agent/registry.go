@@ -366,9 +366,10 @@ func (r *Registry) HealthCheck(ctx context.Context) HealthCheckReport {
 		// Check if agent implements ExtendedAgent interface
 		if ea, ok := agent.(ExtendedAgent); ok {
 			status := ea.Status()
-			if status == StatusReady || status == StatusRunning {
+			switch status {
+			case StatusReady, StatusRunning:
 				report.HealthyAgents = append(report.HealthyAgents, id)
-			} else if status == StatusError {
+			case StatusError:
 				report.UnhealthyAgents = append(report.UnhealthyAgents, id)
 				report.Healthy = false
 			}

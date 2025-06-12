@@ -9,7 +9,8 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 ## Current Status (June 2025)
 
 ✅ **Phase 1.1 Complete**: Script Engine Interface foundation
-🚧 **Phase 1.2 Next**: Core Agent System implementation
+✅ **Phase 1.2 Complete**: Core Agent System implementation
+🚧 **Phase 1.3 Next**: State Management System (evaluating need)
 🎯 **Target**: Full multi-engine support with go-llms v0.3.3 features
 
 ### Completed Components
@@ -18,6 +19,7 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 - Type System with cross-engine conversions
 - Bridge Manager with lifecycle management
 - Core bridges: LLM (streaming), Utilities, Model Info
+- Agent System (interface, base, registry, context)
 
 ## Development Workflow
 
@@ -41,7 +43,8 @@ make build      # Build binary
 ```
 /pkg/engine/     # Core interfaces & registry
 /pkg/bridge/     # Go-script bridges (LLM, utils, etc.)
-/pkg/core/       # Engine-agnostic systems (coming)
+/pkg/core/       # Engine-agnostic systems
+  /agent/        # Agent interface, base, registry, context
 ```
 
 ### Design Principles

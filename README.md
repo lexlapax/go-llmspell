@@ -48,6 +48,7 @@ This project is under active development. See our [TODO](TODO.md) for current ta
 - ✅ go-llms v0.3.3 integration in progress
 - ✅ Basic project structure
 - ✅ Phase 1.1: Script Engine Interface complete
+- ✅ Phase 1.2: Core Agent System complete
   - Core interfaces (ScriptEngine, Bridge, TypeConverter)
   - Engine registry and type system
   - Bridge manager with lifecycle support
