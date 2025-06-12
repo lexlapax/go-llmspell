@@ -6,41 +6,10 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
 ## Historical Progress (Legacy Implementation)
 ### Completed Phases (Prior to v0.3.3 Migration)
 - ✅ **Phase 1: Core Infrastructure** (Completed)
-  - ✅ Engine interface system with comprehensive API
-  - ✅ Thread-safe engine registry with factory pattern
-  - ✅ Bridge infrastructure with lifecycle management
-  - ✅ Security context with resource limits and monitoring
-  - ✅ Complete test coverage using TDD approach
-
 - ✅ **Phase 2: LLM Bridge Enhancement** (Completed)
-  - ✅ Multi-provider support (OpenAI, Anthropic, Gemini)
-  - ✅ Dynamic provider switching at runtime
-  - ✅ Model listing integration with go-llms inventory
-  - ✅ Streaming support with proper error handling
-  - ✅ Type conversion utilities for Go<->Script bridging
-
 - ✅ **Phase 3: Lua Engine Integration** (Completed)
-  - ✅ GopherLua integration with full Engine interface
-  - ✅ Comprehensive Lua<->Go type conversions
-  - ✅ LLM bridge adapter for Lua scripts
-  - ✅ Complete standard library (JSON, HTTP, Storage, Log, Promise)
-  - ✅ Security sandbox with disabled dangerous functions
-  - ✅ Example spells: async-llm, provider-compare, chat-assistant
-
 - ✅ **Phase 4: Tool System** (Completed)
-  - ✅ Tool interface and registry implementation
-  - ✅ Thread-safe tool registration and execution
-  - ✅ Parameter validation with JSON schemas
-  - ✅ Lua bridge for tool system (tools module)
-  - ✅ Example tools: calculator, string tools, JSON processor
-
 - ✅ **Phase 5: Agent System** (Completed)
-  - ✅ Agent interface with comprehensive API
-  - ✅ Thread-safe agent registry with factory pattern
-  - ✅ Default agent implementation wrapping go-llms agents
-  - ✅ Tool integration with existing tool registry
-  - ✅ Agent bridge for script access
-  - ✅ Full Lua integration with comprehensive examples
 
 ### Migration Status
 - ✅ Updated go-llms submodule from v0.2.6 to v0.3.0
@@ -52,33 +21,21 @@ This TODO tracks the implementation of go-llmspell's multi-engine architecture s
 ---
 
 ## New Multi-Engine Architecture Implementation
-No need for backward compatibility. clean room implementation. overwrite existing code. Delete duplicate old code after implementation. Always TDD , tests first and then code.
+No need for backward compatibility. clean room implementation. overwrite existing code. Delete duplicate old code after implementation. Always TDD , tests first and then code. after implementation need to run build, run tests, run lint, vet and fmt.
 
 ### Phase 1: Engine-Agnostic Foundation (Weeks 1-2)
 
 #### 1.1 Script Engine Interface
-- ✅ **Task 1.1.1: Define Core Interfaces**
-  - ✅ Create `/pkg/engine/interface.go`
-  - ✅ Define ScriptEngine interface
-  - ✅ Define Bridge interface
-  - ✅ Define TypeConverter interface
-  - ✅ Create EngineConfig structure
-
-- ✅ **Task 1.1.2: Engine Registry**
-  - ✅ Create `/pkg/engine/registry.go`
-  - ✅ Implement engine registration system
-  - ✅ Add engine discovery mechanism
-  - ✅ Support runtime engine switching
-  - ✅ Create engine factory pattern
-
-- ✅ **Task 1.1.3: Type System Foundation**
-  - ✅ Create `/pkg/engine/types.go`
-  - ✅ Define common type representations
-  - ✅ Create type mapping system
-  - ✅ Implement type validation
-  - ✅ Design error handling for type mismatches
+- ✅ **Task 1.1.1: Define Core Interfaces** (Completed with tests)
+- ✅ **Task 1.1.2: Engine Registry** (Completed with tests)
+- ✅ **Task 1.1.3: Type System Foundation** (Completed with tests)
 
 - [ ] **Task 1.1.4: Bridge Manager**
+  - [ ] Create test file `/pkg/bridge/manager_test.go`
+  - [ ] Test bridge lifecycle management
+  - [ ] Test thread-safe bridge registration
+  - [ ] Test bridge dependency resolution
+  - [ ] Test hot-reloading functionality
   - [ ] Create `/pkg/bridge/manager.go`
   - [ ] Implement bridge lifecycle management
   - [ ] Create bridge registration system
@@ -86,6 +43,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Support hot-reloading of bridges
 
 - [ ] **Task 1.1.5: Core LLM Bridge**
+  - [ ] Create test file `/pkg/bridge/llm_test.go`
+  - [ ] Test provider interface bridging
+  - [ ] Test message handling and options
+  - [ ] Test provider switching and pooling
+  - [ ] Test streaming and non-streaming responses
   - [ ] Create `/pkg/bridge/llm.go`
   - [ ] Bridge pkg/llm provider interfaces
   - [ ] Expose message handling and options
@@ -93,6 +55,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Add streaming and non-streaming responses
 
 - [ ] **Task 1.1.6: Essential Utilities Bridge**
+  - [ ] Create test file `/pkg/bridge/util_test.go`
+  - [ ] Test JSON utilities and helpers
+  - [ ] Test environment variable access
+  - [ ] Test auth utilities
+  - [ ] Test error handling
   - [ ] Create `/pkg/bridge/util.go`
   - [ ] Bridge core pkg/util functions
   - [ ] Expose JSON utilities and helpers
@@ -100,6 +67,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Include basic auth utilities
 
 - [ ] **Task 1.1.7: Model Info Bridge**
+  - [ ] Create test file `/pkg/bridge/modelinfo_test.go`
+  - [ ] Test model inventory and discovery
+  - [ ] Test provider-specific model fetchers
+  - [ ] Test caching functionality
+  - [ ] Test service interfaces
   - [ ] Create `/pkg/bridge/modelinfo.go`
   - [ ] Bridge pkg/util/llmutil/modelinfo
   - [ ] Expose model inventory and discovery
@@ -108,6 +80,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 1.2 Core Agent System (Engine-Agnostic)
 - [ ] **Task 1.2.1: Agent Interface**
+  - [ ] Create test file `/pkg/core/agent/interface_test.go`
+  - [ ] Test lifecycle methods (init, run, cleanup)
+  - [ ] Test metadata and capability declaration
+  - [ ] Test extension points for custom agents
+  - [ ] Test engine independence
   - [ ] Create `/pkg/core/agent/interface.go`
   - [ ] Define lifecycle methods (init, run, cleanup)
   - [ ] Add metadata and capability declaration
@@ -115,6 +92,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Ensure engine independence
 
 - [ ] **Task 1.2.2: Base Agent Implementation**
+  - [ ] Create test file `/pkg/core/agent/base_test.go`
+  - [ ] Test state management methods
+  - [ ] Test event emission capabilities
+  - [ ] Test error handling and recovery
+  - [ ] Test agent metrics collection
   - [ ] Create `/pkg/core/agent/base.go`
   - [ ] Implement state management methods
   - [ ] Add event emission capabilities
@@ -122,6 +104,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Create agent metrics collection
 
 - [ ] **Task 1.2.3: Agent Registry**
+  - [ ] Create test file `/pkg/core/agent/registry_test.go`
+  - [ ] Test thread-safe agent registration
+  - [ ] Test capability-based agent discovery
+  - [ ] Test dynamic agent lifecycle management
+  - [ ] Test agent templating system
   - [ ] Create `/pkg/core/agent/registry.go`
   - [ ] Implement thread-safe agent registration
   - [ ] Add capability-based agent discovery
@@ -129,6 +116,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Create agent templating system
 
 - [ ] **Task 1.2.4: Agent Context**
+  - [ ] Create test file `/pkg/core/agent/context_test.go`
+  - [ ] Test execution context with resource limits
+  - [ ] Test cancellation and timeout support
+  - [ ] Test distributed tracing integration
+  - [ ] Test multi-engine execution support
   - [ ] Create `/pkg/core/agent/context.go`
   - [ ] Design execution context with resource limits
   - [ ] Add cancellation and timeout support
@@ -137,6 +129,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 1.3 State Management System
 - [ ] **Task 1.3.1: State Object Design**
+  - [ ] Create test file `/pkg/core/state/state_test.go`
+  - [ ] Test immutable state operations
+  - [ ] Test metadata layer support
+  - [ ] Test artifact management system
+  - [ ] Test state history tracking
   - [ ] Create `/pkg/core/state/state.go`
   - [ ] Implement immutable state operations
   - [ ] Add metadata layer support
@@ -144,6 +141,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Implement state history tracking
 
 - [ ] **Task 1.3.2: State Operations**
+  - [ ] Create test file `/pkg/core/state/operations_test.go`
+  - [ ] Test transformation methods
+  - [ ] Test state validation framework
+  - [ ] Test merge strategies
+  - [ ] Test serialization for all engines
   - [ ] Create `/pkg/core/state/operations.go`
   - [ ] Implement transformation methods
   - [ ] Add state validation framework
@@ -151,6 +153,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Add serialization for all engines
 
 - [ ] **Task 1.3.3: State Persistence**
+  - [ ] Create test file `/pkg/core/state/persistence_test.go`
+  - [ ] Test persistence interface
+  - [ ] Test memory store implementation
+  - [ ] Test file-based store
+  - [ ] Test cloud storage adapters
   - [ ] Create `/pkg/core/state/persistence.go`
   - [ ] Define persistence interface
   - [ ] Implement memory store
@@ -158,6 +165,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Design cloud storage adapters
 
 - [ ] **Task 1.3.4: State Sharing**
+  - [ ] Create test file `/pkg/core/state/sharing_test.go`
+  - [ ] Test inter-agent state sharing
+  - [ ] Test state isolation mechanisms
+  - [ ] Test access control system
+  - [ ] Test concurrent state access
   - [ ] Create `/pkg/core/state/sharing.go`
   - [ ] Implement inter-agent state sharing
   - [ ] Add state isolation mechanisms
@@ -166,13 +178,22 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 1.4 Universal Bridge System
 - [ ] **Task 1.4.1: Agent Bridge**
+  - [ ] Create test file `/pkg/bridge/agent_test.go`
+  - [ ] Test engine-agnostic agent bridge
+  - [ ] Test type conversion layer
+  - [ ] Test all agent operations
+  - [ ] Test error handling and edge cases
   - [ ] Create `/pkg/bridge/agent.go`
   - [ ] Implement engine-agnostic agent bridge
   - [ ] Add type conversion layer
   - [ ] Support all agent operations
-  - [ ] Create comprehensive tests
 
 - [ ] **Task 1.4.2: State Bridge**
+  - [ ] Create test file `/pkg/bridge/state_test.go`
+  - [ ] Test engine-agnostic state bridge
+  - [ ] Test complex type conversions
+  - [ ] Test metadata operations
+  - [ ] Test performance optimizations
   - [ ] Create `/pkg/bridge/state.go`
   - [ ] Implement engine-agnostic state bridge
   - [ ] Handle complex type conversions
@@ -180,6 +201,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Add performance optimizations
 
 - [ ] **Task 1.4.3: Event Bridge**
+  - [ ] Create test file `/pkg/bridge/event_test.go`
+  - [ ] Test engine-agnostic event bridge
+  - [ ] Test async event handling
+  - [ ] Test event filtering
+  - [ ] Test event batching
   - [ ] Create `/pkg/bridge/event.go`
   - [ ] Implement engine-agnostic event bridge
   - [ ] Support async event handling
@@ -187,6 +213,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Create event batching
 
 - [ ] **Task 1.4.4: Workflow Bridge**
+  - [ ] Create test file `/pkg/bridge/workflow_test.go`
+  - [ ] Test workflow operations
+  - [ ] Test all workflow types
+  - [ ] Test workflow composition
+  - [ ] Test workflow state handling
   - [ ] Create `/pkg/bridge/workflow.go`
   - [ ] Implement workflow operations
   - [ ] Support all workflow types
@@ -194,6 +225,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Handle workflow state
 
 - [ ] **Task 1.4.5: Tool Bridge**
+  - [ ] Create test file `/pkg/bridge/tool_test.go`
+  - [ ] Test tool interface bridging
+  - [ ] Test tool registration and execution
+  - [ ] Test parameter validation and conversion
+  - [ ] Test tool composition and chaining
   - [ ] Create `/pkg/bridge/tool.go`
   - [ ] Bridge pkg/agent/tools interfaces
   - [ ] Support tool registration and execution
@@ -201,6 +237,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Enable tool composition and chaining
 
 - [ ] **Task 1.4.6: Built-in Tools Bridge**
+  - [ ] Create test file `/pkg/bridge/builtins_test.go`
+  - [ ] Test built-in tools exposure
+  - [ ] Test file, web, data, datetime tools
+  - [ ] Test math, system, and feed tools
+  - [ ] Test tool discovery and registration
   - [ ] Create `/pkg/bridge/builtins.go`
   - [ ] Expose pkg/agent/builtins/tools
   - [ ] Bridge file, web, data, datetime tools
@@ -208,6 +249,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Support tool discovery and registration
 
 - [ ] **Task 1.4.7: Schema Bridge**
+  - [ ] Create test file `/pkg/bridge/schema_test.go`
+  - [ ] Test schema validation system
+  - [ ] Test reflection-based generation
+  - [ ] Test coercion and validation utilities
+  - [ ] Test custom validator registration
   - [ ] Create `/pkg/bridge/schema.go`
   - [ ] Bridge pkg/schema validation system
   - [ ] Expose reflection-based generation
@@ -215,6 +261,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Support custom validator registration
 
 - [ ] **Task 1.4.8: Structured Output Bridge**
+  - [ ] Create test file `/pkg/bridge/structured_test.go`
+  - [ ] Test structured output processing
+  - [ ] Test JSON extraction utilities
+  - [ ] Test prompt enhancement features
+  - [ ] Test schema caching
   - [ ] Create `/pkg/bridge/structured.go`
   - [ ] Bridge pkg/structured processing
   - [ ] Expose JSON extraction utilities
@@ -222,6 +273,12 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Support schema caching
 
 - [ ] **Task 1.4.9: Logging Bridge**
+  - [ ] Create test file `/pkg/bridge/logging_test.go`
+  - [ ] Test logging system bridging
+  - [ ] Test all log levels (info, warn, error, debug)
+  - [ ] Test component-based debug filtering
+  - [ ] Test structured logging with metadata
+  - [ ] Test thread-safety across engines
   - [ ] Create `/pkg/bridge/logging.go`
   - [ ] Bridge pkg/internal/debug logging system
   - [ ] Support script-agnostic logging (info, warn, error, debug)
@@ -230,6 +287,17 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Ensure thread-safety across engines
 
 - [ ] **Task 1.4.10: Hook Bridge**
+  - [ ] Create test file `/pkg/bridge/hooks_test.go`
+  - [ ] Test Hook interface bridging
+  - [ ] Test BeforeGenerate and AfterGenerate hooks
+  - [ ] Test BeforeToolCall and AfterToolCall hooks
+  - [ ] Test agent lifecycle hooks (OnStart, OnStop)
+  - [ ] Test multiple hooks with priority ordering
+  - [ ] Test LoggingHook and MetricsHook integration
+  - [ ] Test context propagation and metadata passing
+  - [ ] Test conditional hook execution
+  - [ ] Test hook registry operations
+  - [ ] Test async hooks with error handling
   - [ ] Create `/pkg/bridge/hooks.go`
   - [ ] Bridge pkg/agent/domain Hook interface with full method support
   - [ ] Support BeforeGenerate(ctx, request) and AfterGenerate(ctx, request, response) hooks
@@ -278,6 +346,13 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Include state debugging and inspection tools
 
 - [ ] **Task 1.4.15: Artifact Bridge**
+  - [ ] Create test file `/pkg/bridge/artifact_test.go`
+  - [ ] Test artifact management bridging
+  - [ ] Test file and data artifact creation
+  - [ ] Test artifact sharing between agents
+  - [ ] Test artifact versioning and metadata
+  - [ ] Test artifact storage backends
+  - [ ] Test artifact lifecycle management
   - [ ] Create `/pkg/bridge/artifact.go`
   - [ ] Bridge artifact.go agent artifact management
   - [ ] Support file and data artifact creation
@@ -287,6 +362,13 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Include artifact lifecycle management
 
 - [ ] **Task 1.4.16: Tool Context Bridge**
+  - [ ] Create test file `/pkg/bridge/tool_context_test.go`
+  - [ ] Test tool execution context system
+  - [ ] Test context propagation to tools
+  - [ ] Test tool metadata and configuration access
+  - [ ] Test tool resource limits and monitoring
+  - [ ] Test tool cancellation and timeout
+  - [ ] Test tool error handling and recovery
   - [ ] Create `/pkg/bridge/tool_context.go`
   - [ ] Bridge tool execution context system
   - [ ] Support context propagation to tools
@@ -305,6 +387,13 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Include handoff monitoring and debugging
 
 - [ ] **Task 1.4.18: Guardrails Bridge**
+  - [ ] Create test file `/pkg/bridge/guardrails_test.go`
+  - [ ] Test agent safety system bridging
+  - [ ] Test content filtering and validation
+  - [ ] Test behavioral constraint enforcement
+  - [ ] Test safety policy configuration
+  - [ ] Test custom guardrail implementation
+  - [ ] Test guardrail violation reporting
   - [ ] Create `/pkg/bridge/guardrails.go`
   - [ ] Bridge guardrails.go agent safety system
   - [ ] Support content filtering and validation
@@ -399,6 +488,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 2.1 Lua Engine Core
 - [ ] **Task 2.1.1: Engine Implementation**
+  - [ ] Create test file `/pkg/engine/lua/engine_test.go`
+  - [ ] Test ScriptEngine interface implementation
+  - [ ] Test GopherLua integration
+  - [ ] Test Lua-specific optimizations
+  - [ ] Test resource limits enforcement
   - [ ] Create `/pkg/engine/lua/engine.go`
   - [ ] Implement ScriptEngine interface for Lua
   - [ ] Integrate GopherLua
@@ -406,6 +500,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Implement resource limits
 
 - [ ] **Task 2.1.2: Type Converter**
+  - [ ] Create test file `/pkg/engine/lua/converter_test.go`
+  - [ ] Test Lua ↔ Go type conversions
+  - [ ] Test Lua tables → Go maps/arrays
+  - [ ] Test userdata conversions
+  - [ ] Test performance optimizations
   - [ ] Create `/pkg/engine/lua/converter.go`
   - [ ] Implement Lua ↔ Go type conversions
   - [ ] Handle Lua tables → Go maps/arrays
@@ -413,6 +512,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Optimize for performance
 
 - [ ] **Task 2.1.3: Security Sandbox**
+  - [ ] Create test file `/pkg/engine/lua/sandbox_test.go`
+  - [ ] Test dangerous Lua functions are disabled
+  - [ ] Test file system restrictions
+  - [ ] Test network access control
+  - [ ] Test resource quota enforcement
   - [ ] Create `/pkg/engine/lua/sandbox.go`
   - [ ] Disable dangerous Lua functions
   - [ ] Implement file system restrictions
@@ -420,6 +524,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Create resource quotas
 
 - [ ] **Task 2.1.4: Lua Adapter**
+  - [ ] Create test file `/pkg/engine/lua/adapter_test.go`
+  - [ ] Test GopherLua to ScriptEngine adaptation
+  - [ ] Test Lua-specific features handling
+  - [ ] Test error mapping
+  - [ ] Test performance monitoring
   - [ ] Create `/pkg/engine/lua/adapter.go`
   - [ ] Adapt GopherLua to ScriptEngine interface
   - [ ] Handle Lua-specific features
@@ -542,6 +651,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 3.1 Engine-Agnostic Workflow Engine
 - [ ] **Task 3.1.1: Workflow Interface**
+  - [ ] Create test file `/pkg/core/workflow/interface_test.go`
+  - [ ] Test workflow step interface
+  - [ ] Test multiple execution strategies
+  - [ ] Test workflow metadata
+  - [ ] Test extension points
   - [ ] Create `/pkg/core/workflow/interface.go`
   - [ ] Define workflow step interface
   - [ ] Support multiple execution strategies
@@ -549,6 +663,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Design extension points
 
 - [ ] **Task 3.1.2: Sequential Workflow**
+  - [ ] Create test file `/pkg/core/workflow/sequential_test.go`
+  - [ ] Test ordered execution
+  - [ ] Test state passing between steps
+  - [ ] Test error handling
+  - [ ] Test retry logic
   - [ ] Create `/pkg/core/workflow/sequential.go`
   - [ ] Implement ordered execution
   - [ ] Add state passing
@@ -556,6 +675,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Include retry logic
 
 - [ ] **Task 3.1.3: Parallel Workflow**
+  - [ ] Create test file `/pkg/core/workflow/parallel_test.go`
+  - [ ] Test concurrent execution
+  - [ ] Test synchronization mechanisms
+  - [ ] Test merge strategies
+  - [ ] Test partial failure handling
   - [ ] Create `/pkg/core/workflow/parallel.go`
   - [ ] Implement concurrent execution
   - [ ] Add synchronization
@@ -578,6 +702,8 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 3.2 Workflow Runtime
 - [ ] **Task 3.2.1: Execution Engine**
+  - [ ] Create test file `/pkg/runtime/executor/engine_test.go`
+  - [ ] Test workflow scheduler
   - [ ] Create `/pkg/runtime/executor/engine.go`
   - [ ] Implement workflow scheduler
   - [ ] Add resource management
@@ -602,6 +728,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
 
 #### 4.1 JavaScript Engine Core
 - [ ] **Task 4.1.1: Engine Implementation**
+  - [ ] Create test file `/pkg/engine/javascript/engine_test.go`
+  - [ ] Test ScriptEngine interface implementation
+  - [ ] Test Goja integration
+  - [ ] Test ES6+ support
+  - [ ] Test module system
   - [ ] Create `/pkg/engine/javascript/engine.go`
   - [ ] Implement ScriptEngine interface for JS
   - [ ] Integrate Goja
@@ -609,6 +740,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Implement module system
 
 - [ ] **Task 4.1.2: Type Converter**
+  - [ ] Create test file `/pkg/engine/javascript/converter_test.go`
+  - [ ] Test JS ↔ Go type conversions
+  - [ ] Test JS objects → Go structs
+  - [ ] Test Promise conversions
+  - [ ] Test Goja optimizations
   - [ ] Create `/pkg/engine/javascript/converter.go`
   - [ ] Implement JS ↔ Go type conversions
   - [ ] Handle JS objects → Go structs
@@ -616,6 +752,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Optimize for Goja
 
 - [ ] **Task 4.1.3: Security Sandbox**
+  - [ ] Create test file `/pkg/engine/javascript/sandbox_test.go`
+  - [ ] Test global access restrictions
+  - [ ] Test CSP-like policies
+  - [ ] Test resource limits
+  - [ ] Test prototype access control
   - [ ] Create `/pkg/engine/javascript/sandbox.go`
   - [ ] Restrict global access
   - [ ] Implement CSP-like policies
@@ -623,6 +764,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Control prototype access
 
 - [ ] **Task 4.1.4: Module System**
+  - [ ] Create test file `/pkg/engine/javascript/modules_test.go`
+  - [ ] Test CommonJS support
+  - [ ] Test ES6 module support
+  - [ ] Test module loader
+  - [ ] Test npm-like package support
   - [ ] Create `/pkg/engine/javascript/modules.go`
   - [ ] Implement CommonJS support
   - [ ] Add ES6 module support
@@ -937,6 +1083,12 @@ No need for backward compatibility. clean room implementation. overwrite existin
 ---
 
 ## Testing Strategy
+
+**IMPORTANT: All tasks follow Test-Driven Development (TDD)**
+- Write test file first (test file creation step)
+- Write tests for the functionality (test steps)
+- Then implement the functionality (implementation steps)
+- Run `make all` after implementation to ensure code quality
 
 ### Unit Tests (Per Component)
 - [ ] Engine interface tests

@@ -264,6 +264,7 @@ func (r *Registry) GetEngine(name string, config EngineConfig) (ScriptEngine, er
 	if instance, exists := r.instances[name]; exists {
 		stats := r.metrics[name]
 		stats.LastUsed = time.Now()
+		stats.SuccessCount++
 		return instance, nil
 	}
 	

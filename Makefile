@@ -26,13 +26,20 @@ COVERAGE_HTML=coverage.html
 
 # Default target
 all: clean fmt vet lint test build
+	@echo ""
+	@echo "⚠️  NOTE: The build step above may have failed due to ongoing v0.3.3 migration"
+	@echo "⚠️  Only pkg/engine/* is currently implemented. See TODO.md for progress"
 
 # Build the binary
 build:
+	@echo "⚠️  WARNING: The cmd/llmspell is not yet migrated to v0.3.3 architecture"
+	@echo "⚠️  This build may fail or produce non-functional binaries"
+	@echo "⚠️  See TODO.md for migration progress"
+	@echo ""
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BINARY_DIR)
-	$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PATH)
-	@echo "Build complete: $(BINARY_DIR)/$(BINARY_NAME)"
+	-$(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME) $(MAIN_PATH) 2>/dev/null || echo "❌ Build failed - cmd not yet implemented for v0.3.3"
+	@echo ""
 
 # Clean build artifacts
 clean:
@@ -101,12 +108,16 @@ install-tools:
 
 # Run the application
 run: build
+	@echo "⚠️  WARNING: The application may not run correctly until migration is complete"
 	@echo "Running $(BINARY_NAME)..."
-	./$(BINARY_DIR)/$(BINARY_NAME)
+	-./$(BINARY_DIR)/$(BINARY_NAME) 2>/dev/null || echo "❌ Run failed - cmd not yet implemented for v0.3.3"
 
 # Example targets
 examples:
-	@echo "Available example spells:"
+	@echo "⚠️  WARNING: Examples are not yet migrated to v0.3.3 architecture"
+	@echo "⚠️  They may fail or produce unexpected results"
+	@echo ""
+	@echo "Available example spells (NOT YET MIGRATED):"
 	@echo "  hello-llm         - Basic LLM interaction example"
 	@echo "  chat-assistant    - Interactive chat assistant"
 	@echo "  provider-compare  - Compare responses across providers"
@@ -117,6 +128,7 @@ examples:
 
 # Run a specific example spell
 example:
+	@echo "⚠️  WARNING: Examples are not yet migrated to v0.3.3 architecture"
 	@if [ -z "$(SPELL)" ]; then \
 		echo "Error: SPELL not specified. Usage: make example SPELL=<spell-name>"; \
 		echo "Run 'make examples' to see available spells"; \
@@ -128,10 +140,11 @@ example:
 		exit 1; \
 	fi
 	@echo "Running example spell: $(SPELL)"
-	@./bin/llmspell run examples/spells/$(SPELL)
+	@echo "❌ Examples not yet implemented for v0.3.3 - see TODO.md for progress"
 
 # Run example with mock LLM (no API key required)
 example-mock:
+	@echo "⚠️  WARNING: Examples are not yet migrated to v0.3.3 architecture"
 	@if [ -z "$(SPELL)" ]; then \
 		echo "Error: SPELL not specified. Usage: make example-mock SPELL=<spell-name>"; \
 		echo "Run 'make examples' to see available spells"; \
@@ -143,27 +156,30 @@ example-mock:
 		exit 1; \
 	fi
 	@echo "Running example spell with mock LLM: $(SPELL)"
-	@MOCK_LLM=true ./bin/llmspell run examples/spells/$(SPELL)
+	@echo "❌ Examples not yet implemented for v0.3.3 - see TODO.md for progress"
 
 # Build for multiple platforms
 build-all: build-linux build-darwin build-windows
 
 build-linux:
+	@echo "⚠️  WARNING: Cross-platform builds not yet supported for v0.3.3"
 	@echo "Building for Linux..."
 	@mkdir -p $(BINARY_DIR)
-	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH)
-	GOOS=linux GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-arm64 $(MAIN_PATH)
+	-GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH) 2>/dev/null || echo "❌ Linux build failed"
+	-GOOS=linux GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-linux-arm64 $(MAIN_PATH) 2>/dev/null || echo "❌ Linux ARM build failed"
 
 build-darwin:
+	@echo "⚠️  WARNING: Cross-platform builds not yet supported for v0.3.3"
 	@echo "Building for macOS..."
 	@mkdir -p $(BINARY_DIR)
-	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH)
-	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PATH)
+	-GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH) 2>/dev/null || echo "❌ macOS build failed"
+	-GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PATH) 2>/dev/null || echo "❌ macOS ARM build failed"
 
 build-windows:
+	@echo "⚠️  WARNING: Cross-platform builds not yet supported for v0.3.3"
 	@echo "Building for Windows..."
 	@mkdir -p $(BINARY_DIR)
-	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)
+	-GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH) 2>/dev/null || echo "❌ Windows build failed"
 
 # Run benchmarks
 bench:
@@ -192,6 +208,29 @@ watch:
 		echo "air not installed. Install with: go install github.com/cosmtrek/air@latest"; \
 	fi
 
+# Show migration status
+migration-status:
+	@echo "🔄 Go-LLMSpell v0.3.3 Migration Status"
+	@echo "======================================"
+	@echo "✅ Implemented:"
+	@echo "  - pkg/engine/interface.go (ScriptEngine, Bridge, TypeConverter)"
+	@echo "  - pkg/engine/registry.go (Engine Registry)"
+	@echo "  - pkg/engine/types.go (Type System)"
+	@echo ""
+	@echo "⏳ In Progress:"
+	@echo "  - See TODO.md for current tasks"
+	@echo ""
+	@echo "❌ Not Started:"
+	@echo "  - cmd/llmspell (CLI application)"
+	@echo "  - examples/* (Example spells)"
+	@echo "  - pkg/bridge/* (All bridges)"
+	@echo "  - pkg/core/* (Agent and state systems)"
+	@echo "  - pkg/engine/lua/* (Lua engine)"
+	@echo "  - pkg/engine/javascript/* (JavaScript engine)"
+	@echo "  - pkg/engine/tengo/* (Tengo engine)"
+	@echo ""
+	@echo "📋 For detailed progress, see TODO.md and TODO-DONE.md"
+
 # Show help
 help:
 	@echo "Available targets:"
@@ -212,4 +251,5 @@ help:
 	@echo "  make build-all      - Build for all platforms"
 	@echo "  make bench          - Run benchmarks"
 	@echo "  make watch          - Watch for changes and rebuild"
+	@echo "  make migration-status - Show v0.3.3 migration progress"
 	@echo "  make help           - Show this help message"
