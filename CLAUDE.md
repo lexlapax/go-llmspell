@@ -70,3 +70,6 @@ make build      # Build binary
 - Legacy Lua-only code exists but being replaced
 - Memory subsystem deferred (not in go-llms yet)
 - Always run `make all` before committing
+
+## Memories
+- Do not ever modify the git sub-modules like go-llms

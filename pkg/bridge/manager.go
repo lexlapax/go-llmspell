@@ -77,16 +77,19 @@ func (m *BridgeManager) InitializeBridge(ctx context.Context, bridgeID string) e
 		m.mu.Unlock()
 		return nil
 	}
-	m.mu.Unlock()
 
-	// Initialize the bridge
-	if err := bridge.Initialize(ctx); err != nil {
-		return fmt.Errorf("failed to initialize bridge %s: %w", bridgeID, err)
-	}
-
-	m.mu.Lock()
+	// Mark as initializing to prevent concurrent initialization
 	m.initialized[bridgeID] = true
 	m.mu.Unlock()
+
+	// Initialize the bridge outside the lock
+	if err := bridge.Initialize(ctx); err != nil {
+		// On error, mark as not initialized
+		m.mu.Lock()
+		m.initialized[bridgeID] = false
+		m.mu.Unlock()
+		return fmt.Errorf("failed to initialize bridge %s: %w", bridgeID, err)
+	}
 
 	return nil
 }

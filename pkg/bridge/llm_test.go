@@ -319,6 +319,9 @@ func TestLLMStreamingCompletion(t *testing.T) {
 		case <-chunkChan:
 			t.Fatal("Expected error, got chunk")
 		case err := <-errorChan:
+			if err == nil {
+				t.Fatal("Expected error but got nil")
+			}
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "stream error")
 		case <-time.After(time.Second):

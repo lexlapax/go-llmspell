@@ -332,6 +332,14 @@ func (b *LLMBridge) CompleteStream(ctx context.Context, messages []LLMMessage, o
 			select {
 			case chunk, ok := <-providerChunks:
 				if !ok {
+					// Channel closed, check for any pending errors
+					select {
+					case err := <-providerErrors:
+						if err != nil {
+							errorChan <- err
+						}
+					default:
+					}
 					return
 				}
 				select {
@@ -340,8 +348,8 @@ func (b *LLMBridge) CompleteStream(ctx context.Context, messages []LLMMessage, o
 					errorChan <- ctx.Err()
 					return
 				}
-			case err := <-providerErrors:
-				if err != nil {
+			case err, ok := <-providerErrors:
+				if ok && err != nil {
 					errorChan <- err
 					return
 				}
