@@ -74,9 +74,13 @@ Welcome to the comprehensive go-llmspell documentation. This directory contains 
 ### Utility Examples
 ## 📖 Documentation Versions
 
-This documentation corresponds to **Go-llmspell XXX June 2025).
+This documentation corresponds to **Go-llmspell v0.3.3 Migration (June 2025)**.
 
 ### Version Highlights
+- Multi-engine architecture (Lua, JavaScript, Tengo)
+- Engine-agnostic core with common interfaces
+- Comprehensive bridge system for go-llms v0.3.3
+- Phase 1.1 Script Engine Interface complete
 
 For release details, see the [Changelog](../CHANGELOG.md).
 

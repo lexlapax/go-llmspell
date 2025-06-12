@@ -43,36 +43,17 @@ log.info("Story created!", {topic = topic})
 
 This project is under active development. See our [TODO](TODO.md) for current tasks and [TODO-DONE](TODO-DONE.md) for completed work.
 
-### Current Status
+### Current Status (June 2025)
 - ✅ Architecture designed and documented
-- ✅ go-llms integration complete
+- ✅ go-llms v0.3.3 integration in progress
 - ✅ Basic project structure
-- ✅ Core infrastructure implementation (Phase 1 complete)
-  - ✅ Engine interface and registry system
-  - ✅ Bridge infrastructure with lifecycle management
-  - ✅ Security context with resource limits
-- ✅ LLM Bridge enhancement (Phase 2 complete)
-  - ✅ Multi-provider support (OpenAI, Anthropic, Gemini)
-  - ✅ Provider switching and model discovery
-  - ✅ Type conversion utilities
-  - ✅ Comprehensive test coverage
-- ✅ Lua engine implementation (Phase 3 complete)
-  - ✅ Full Lua VM integration with security sandbox
-  - ✅ Complete standard library (JSON, HTTP, Storage, Log, Promise)
-  - ✅ LLM bridge for Lua scripts
-  - ✅ Example spells demonstrating capabilities
-- ✅ Tool System implementation (Phase 4 complete)
-  - ✅ Tool interface and registry for managing tools
-  - ✅ Script-based tool creation with parameter validation
-  - ✅ Lua bridge for tool system (tools module)
-  - ✅ Example tools demonstrating the system
-- ✅ Agent System implementation (Phase 5 complete)
-  - ✅ Agent interface and registry system
-  - ✅ Default agent implementation with go-llms integration
-  - ✅ Tool integration for agent capabilities
-  - ✅ Agent bridge for script access
-  - ✅ Lua integration with comprehensive examples
-  - ✅ Research, Code Analysis, and Planning agent examples
+- ✅ Phase 1.1: Script Engine Interface complete
+  - Core interfaces (ScriptEngine, Bridge, TypeConverter)
+  - Engine registry and type system
+  - Bridge manager with lifecycle support
+  - Core bridges: LLM, Utilities, Model Info
+- 🚧 Phase 1.2: Core Agent System (next)
+- 🚧 Multi-engine support (Lua, JavaScript, Tengo)
 
 ## 🛠️ Installation
 
@@ -215,7 +196,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📦 Dependencies
 
-- [go-llms](https://github.com/lexlapax/go-llms) v0.2.6 - LLM provider abstraction
+- [go-llms](https://github.com/lexlapax/go-llms) v0.2.6 - LLM provider, tool, agents and workflow abstraction
 - [gopher-lua](https://github.com/yuin/gopher-lua) v1.1.1 - Lua 5.1 VM (integrated)
 - [goja](https://github.com/dop251/goja) - JavaScript engine (planned)
 - [tengo](https://github.com/d5/tengo) - Embeddable script language (planned)
