@@ -673,170 +673,7 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Support circuit breakers
   - [ ] Create error analytics
 
-### Phase 4: JavaScript Engine Implementation (Weeks 7-8)
-
-#### 4.1 JavaScript Engine Core
-- [ ] **Task 4.1.1: Engine Implementation**
-  - [ ] Create test file `/pkg/engine/javascript/engine_test.go`
-  - [ ] Test ScriptEngine interface implementation
-  - [ ] Test Goja integration
-  - [ ] Test ES6+ support
-  - [ ] Test module system
-  - [ ] Create `/pkg/engine/javascript/engine.go`
-  - [ ] Implement ScriptEngine interface for JS
-  - [ ] Integrate Goja
-  - [ ] Add ES6+ support
-  - [ ] Implement module system
-
-- [ ] **Task 4.1.2: Type Converter**
-  - [ ] Create test file `/pkg/engine/javascript/converter_test.go`
-  - [ ] Test JS ↔ Go type conversions
-  - [ ] Test JS objects → Go structs
-  - [ ] Test Promise conversions
-  - [ ] Test Goja optimizations
-  - [ ] Create `/pkg/engine/javascript/converter.go`
-  - [ ] Implement JS ↔ Go type conversions
-  - [ ] Handle JS objects → Go structs
-  - [ ] Support Promise conversions
-  - [ ] Optimize for Goja
-
-- [ ] **Task 4.1.3: Security Sandbox**
-  - [ ] Create test file `/pkg/engine/javascript/sandbox_test.go`
-  - [ ] Test global access restrictions
-  - [ ] Test CSP-like policies
-  - [ ] Test resource limits
-  - [ ] Test prototype access control
-  - [ ] Create `/pkg/engine/javascript/sandbox.go`
-  - [ ] Restrict global access
-  - [ ] Implement CSP-like policies
-  - [ ] Add resource limits
-  - [ ] Control prototype access
-
-- [ ] **Task 4.1.4: Module System**
-  - [ ] Create test file `/pkg/engine/javascript/modules_test.go`
-  - [ ] Test CommonJS support
-  - [ ] Test ES6 module support
-  - [ ] Test module loader
-  - [ ] Test npm-like package support
-  - [ ] Create `/pkg/engine/javascript/modules.go`
-  - [ ] Implement CommonJS support
-  - [ ] Add ES6 module support
-  - [ ] Create module loader
-  - [ ] Support npm-like packages
-
-#### 4.2 JavaScript Standard Library
-- [ ] **Task 4.2.1: Core Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/core.js`
-  - [ ] Implement utilities
-  - [ ] Add polyfills
-  - [ ] Create type helpers
-  - [ ] Include debugging tools
-
-- [ ] **Task 4.2.2: LLM Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/llm.js`
-  - [ ] Wrap LLM bridge for JavaScript
-  - [ ] Expose provider switching
-  - [ ] Add streaming with async/await
-  - [ ] Include message handling
-
-- [ ] **Task 4.2.3: Tools Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/tools.js`
-  - [ ] Wrap tool bridge for JavaScript
-  - [ ] Expose built-in tools
-  - [ ] Add custom tool registration
-  - [ ] Support tool composition
-
-- [ ] **Task 4.2.4: Agent Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/agent.js`
-  - [ ] Implement JS-idiomatic API
-  - [ ] Support class-based agents
-  - [ ] Add decorators
-  - [ ] Include TypeScript definitions
-
-- [ ] **Task 4.2.5: Schema Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/schema.js`
-  - [ ] Wrap schema bridge for JavaScript
-  - [ ] Add validation utilities
-  - [ ] Support custom validators
-  - [ ] Include reflection helpers
-
-- [ ] **Task 4.2.6: Structured Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/structured.js`
-  - [ ] Wrap structured output bridge
-  - [ ] Add JSON extraction utilities
-  - [ ] Support prompt enhancement
-  - [ ] Include schema caching
-
-- [ ] **Task 4.2.7: Utils Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/utils.js`
-  - [ ] Wrap utility bridge for JavaScript
-  - [ ] Add JSON helpers
-  - [ ] Include auth utilities
-  - [ ] Support metrics access
-
-- [ ] **Task 4.2.8: ModelInfo Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/modelinfo.js`
-  - [ ] Wrap modelinfo bridge for JavaScript
-  - [ ] Expose model discovery and inventory
-  - [ ] Add provider-specific fetchers
-  - [ ] Include caching utilities
-
-- [ ] **Task 4.2.9: Logging Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/log.js`
-  - [ ] Wrap logging bridge for JavaScript
-  - [ ] Expose log.info, log.warn, log.error, log.debug
-  - [ ] Support component-based debug logging
-  - [ ] Enable structured logging with metadata
-  - [ ] Include thread-safe logging utilities
-
-- [ ] **Task 4.2.10: Hooks Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/hooks.js`
-  - [ ] Wrap hook bridge for JavaScript
-  - [ ] Expose beforeGenerate/afterGenerate hooks
-  - [ ] Add beforeTool/afterTool hook registration
-  - [ ] Support agent lifecycle hooks
-  - [ ] Enable multiple hook registration
-
-- [ ] **Task 4.2.11: Events Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/events.js`
-  - [ ] Wrap event bridge for JavaScript
-  - [ ] Support event subscription and filtering
-  - [ ] Enable real-time event streaming
-  - [ ] Handle all event types (lifecycle, tool, workflow)
-  - [ ] Support event metadata access
-
-- [ ] **Task 4.2.12: Async Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/async.js`
-  - [ ] Leverage native Promises
-  - [ ] Add async/await support
-  - [ ] Implement observables
-  - [ ] Create reactive patterns
-
-- [ ] **Task 4.2.13: Workflow Module**
-  - [ ] Create `/pkg/engine/javascript/stdlib/workflow.js`
-  - [ ] Implement fluent API
-  - [ ] Add JSX-like syntax
-  - [ ] Support functional composition
-  - [ ] Create visual debugger
-
-- [ ] **Task 4.2.14: Advanced JavaScript Standard Library Modules**
-  - [ ] Create `/pkg/engine/javascript/stdlib/tracing.js` - Distributed tracing with modern API
-  - [ ] Create `/pkg/engine/javascript/stdlib/eventUtils.js` - Event transformation with Promise chains
-  - [ ] Create `/pkg/engine/javascript/stdlib/stateUtils.js` - State validation with Promise-based API
-  - [ ] Create `/pkg/engine/javascript/stdlib/artifacts.js` - Agent artifact management with async/await
-  - [ ] Create `/pkg/engine/javascript/stdlib/toolContext.js` - Tool execution context with AbortController
-  - [ ] Create `/pkg/engine/javascript/stdlib/handoff.js` - Agent handoff system with Promise API
-  - [ ] Create `/pkg/engine/javascript/stdlib/guardrails.js` - Content filtering and safety constraints
-  - [ ] Create `/pkg/engine/javascript/stdlib/memory.js` - Agent memory management with Promise-based API ⏸️ **[DEFERRED]**
-  - [ ] Create `/pkg/engine/javascript/stdlib/conversation.js` - Multi-turn conversation with async/await
-  - [ ] Create `/pkg/engine/javascript/stdlib/modelMgmt.js` - Dynamic model management
-  - [ ] Create `/pkg/engine/javascript/stdlib/providerPool.js` - Provider connection pooling
-  - [ ] Create `/pkg/engine/javascript/stdlib/resilience.js` - Retry and circuit breaker patterns
-  - [ ] Create `/pkg/engine/javascript/stdlib/collaboration.js` - Multi-agent collaboration
-  - [ ] Create `/pkg/engine/javascript/stdlib/security.js` - Authentication and authorization
-  - [ ] Create `/pkg/engine/javascript/stdlib/metrics.js` - Performance and usage metrics
-
-### Phase 5: Agent Built-ins Integration (Weeks 9-10)
+### Phase 4: Agent Built-ins Integration (Weeks 7-8)
 
 #### 5.1 Built-in Tool Categories (via pkg/agent/builtins/tools/)
 - [ ] **Task 5.1.1: File System Tools**
@@ -912,122 +749,285 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Include benchmarks
   - [ ] Add migration guides
 
-### Phase 6: Tengo Engine Implementation (Weeks 11-12)
+### Phase 5: Production Features (Week 9-10)
 
-#### 6.1 Tengo Engine Core
-- [ ] **Task 6.1.1: Engine Implementation**
-  - [ ] Create `/pkg/engine/tengo/engine.go`
-  - [ ] Implement ScriptEngine interface for Tengo
-  - [ ] Integrate Tengo VM
-  - [ ] Add Tengo-specific features
-  - [ ] Optimize for performance
-
-- [ ] **Task 6.1.2: Type Converter**
-  - [ ] Create `/pkg/engine/tengo/converter.go`
-  - [ ] Implement Tengo ↔ Go conversions
-  - [ ] Handle Tengo objects
-  - [ ] Support compiled scripts
-  - [ ] Add type validation
-
-- [ ] **Task 6.1.3: Security Sandbox**
-  - [ ] Create `/pkg/engine/tengo/sandbox.go`
-  - [ ] Implement Tengo restrictions
-  - [ ] Add import controls
-  - [ ] Limit built-ins
-  - [ ] Control execution time
-
-- [ ] **Task 6.1.4: Tengo Adapter**
-  - [ ] Create `/pkg/engine/tengo/adapter.go`
-  - [ ] Adapt Tengo to interface
-  - [ ] Handle compilation
-  - [ ] Support hot reload
-  - [ ] Add debugging support
-
-#### 6.2 Cross-Engine Testing
-- [ ] **Task 6.2.1: Conformance Suite**
-  - [ ] Create `/pkg/test/conformance/`
-  - [ ] Test all engines equally
-  - [ ] Verify API compatibility
-  - [ ] Check performance
-  - [ ] Validate behavior
-
-- [ ] **Task 6.2.2: Integration Tests**
-  - [ ] Test cross-engine workflows
-  - [ ] Verify type conversions
-  - [ ] Check error handling
-  - [ ] Test resource limits
-  - [ ] Validate security
-
-### Phase 7: Production Features (Week 13-14)
-
-#### 7.1 Multi-Engine Runtime
-- [ ] **Task 7.1.1: Engine Manager**
+#### 5.1 Multi-Engine Runtime
+- [ ] **Task 5.1.1: Engine Manager**
   - [ ] Create `/pkg/runtime/manager.go`
   - [ ] Implement engine pooling
   - [ ] Add load balancing
   - [ ] Support hot swapping
   - [ ] Enable A/B testing
 
-- [ ] **Task 7.1.2: Script Router**
+- [ ] **Task 5.1.2: Script Router**
   - [ ] Create `/pkg/runtime/router.go`
   - [ ] Route by file extension
   - [ ] Support shebang detection
   - [ ] Add performance routing
   - [ ] Enable feature routing
 
-- [ ] **Task 7.1.3: Cross-Engine State**
+- [ ] **Task 5.1.3: Cross-Engine State**
   - [ ] Implement state sharing
   - [ ] Add type preservation
   - [ ] Support state migration
   - [ ] Handle engine failures
   - [ ] Enable debugging
 
-#### 7.2 Observability
-- [ ] **Task 7.2.1: Unified Metrics**
+#### 5.2 Observability
+- [ ] **Task 5.2.1: Unified Metrics**
   - [ ] Create engine metrics
   - [ ] Add performance tracking
   - [ ] Support custom metrics
   - [ ] Enable comparison
   - [ ] Build dashboards
 
-- [ ] **Task 7.2.2: Distributed Tracing**
+- [ ] **Task 5.2.2: Distributed Tracing**
   - [ ] Trace across engines
   - [ ] Add engine metadata
   - [ ] Support correlation
   - [ ] Enable sampling
   - [ ] Create analysis tools
 
-### Phase 8: Advanced Features (Week 15-16)
+### Phase 6: Advanced Features (Week 11-12)
 
-#### 8.1 Advanced Patterns
-- [ ] **Task 8.1.1: Polyglot Workflows**
+#### 6.1 Advanced Patterns
+- [ ] **Task 6.1.1: Polyglot Workflows**
   - [ ] Mix engines in workflows
   - [ ] Optimize engine selection
   - [ ] Support transitions
   - [ ] Handle failures
   - [ ] Enable debugging
 
-- [ ] **Task 8.1.2: Engine Plugins**
+- [ ] **Task 6.1.2: Engine Plugins**
   - [ ] Create plugin system
   - [ ] Support custom engines
   - [ ] Add engine marketplace
   - [ ] Enable community engines
   - [ ] Create certification
 
-#### 8.2 Developer Experience
-- [ ] **Task 8.2.1: Unified CLI**
+#### 6.2 Developer Experience
+- [ ] **Task 6.2.1: Unified CLI**
   - [ ] Support all engines
   - [ ] Add engine management
   - [ ] Include migration tools
   - [ ] Support debugging
   - [ ] Enable profiling
 
-- [ ] **Task 8.2.2: IDE Support**
+- [ ] **Task 6.2.2: IDE Support**
   - [ ] Multi-language highlighting
   - [ ] Cross-engine navigation
   - [ ] Unified debugging
   - [ ] Performance profiling
   - [ ] Integrated testing
+
+### Phase 7: JavaScript Engine Implementation (Weeks 13-14)
+
+#### 7.1 JavaScript Engine Core
+- [ ] **Task 7.1.1: Engine Implementation**
+  - [ ] Create test file `/pkg/engine/javascript/engine_test.go`
+  - [ ] Test ScriptEngine interface implementation
+  - [ ] Test Goja integration
+  - [ ] Test ES6+ support
+  - [ ] Test module system
+  - [ ] Create `/pkg/engine/javascript/engine.go`
+  - [ ] Implement ScriptEngine interface for JS
+  - [ ] Integrate Goja
+  - [ ] Add ES6+ support
+  - [ ] Implement module system
+
+- [ ] **Task 7.1.2: Type Converter**
+  - [ ] Create test file `/pkg/engine/javascript/converter_test.go`
+  - [ ] Test JS ↔ Go type conversions
+  - [ ] Test JS objects → Go structs
+  - [ ] Test Promise conversions
+  - [ ] Test Goja optimizations
+  - [ ] Create `/pkg/engine/javascript/converter.go`
+  - [ ] Implement JS ↔ Go type conversions
+  - [ ] Handle JS objects → Go structs
+  - [ ] Support Promise conversions
+  - [ ] Optimize for Goja
+
+- [ ] **Task 7.1.3: Security Sandbox**
+  - [ ] Create test file `/pkg/engine/javascript/sandbox_test.go`
+  - [ ] Test global access restrictions
+  - [ ] Test CSP-like policies
+  - [ ] Test resource limits
+  - [ ] Test prototype access control
+  - [ ] Create `/pkg/engine/javascript/sandbox.go`
+  - [ ] Restrict global access
+  - [ ] Implement CSP-like policies
+  - [ ] Add resource limits
+  - [ ] Control prototype access
+
+- [ ] **Task 7.1.4: Module System**
+  - [ ] Create test file `/pkg/engine/javascript/modules_test.go`
+  - [ ] Test CommonJS support
+  - [ ] Test ES6 module support
+  - [ ] Test module loader
+  - [ ] Test npm-like package support
+  - [ ] Create `/pkg/engine/javascript/modules.go`
+  - [ ] Implement CommonJS support
+  - [ ] Add ES6 module support
+  - [ ] Create module loader
+  - [ ] Support npm-like packages
+
+#### 7.2 JavaScript Standard Library
+- [ ] **Task 7.2.1: Core Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/core.js`
+  - [ ] Implement utilities
+  - [ ] Add polyfills
+  - [ ] Create type helpers
+  - [ ] Include debugging tools
+
+- [ ] **Task 7.2.2: LLM Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/llm.js`
+  - [ ] Wrap LLM bridge for JavaScript
+  - [ ] Expose provider switching
+  - [ ] Add streaming with async/await
+  - [ ] Include message handling
+
+- [ ] **Task 7.2.3: Tools Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/tools.js`
+  - [ ] Wrap tool bridge for JavaScript
+  - [ ] Expose built-in tools
+  - [ ] Add custom tool registration
+  - [ ] Support tool composition
+
+- [ ] **Task 7.2.4: Agent Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/agent.js`
+  - [ ] Implement JS-idiomatic API
+  - [ ] Support class-based agents
+  - [ ] Add decorators
+  - [ ] Include TypeScript definitions
+
+- [ ] **Task 7.2.5: Schema Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/schema.js`
+  - [ ] Wrap schema bridge for JavaScript
+  - [ ] Add validation utilities
+  - [ ] Support custom validators
+  - [ ] Include reflection helpers
+
+- [ ] **Task 7.2.6: Structured Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/structured.js`
+  - [ ] Wrap structured output bridge
+  - [ ] Add JSON extraction utilities
+  - [ ] Support prompt enhancement
+  - [ ] Include schema caching
+
+- [ ] **Task 7.2.7: Utils Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/utils.js`
+  - [ ] Wrap utility bridge for JavaScript
+  - [ ] Add JSON helpers
+  - [ ] Include auth utilities
+  - [ ] Support metrics access
+
+- [ ] **Task 7.2.8: ModelInfo Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/modelinfo.js`
+  - [ ] Wrap modelinfo bridge for JavaScript
+  - [ ] Expose model discovery and inventory
+  - [ ] Add provider-specific fetchers
+  - [ ] Include caching utilities
+
+- [ ] **Task 7.2.9: Logging Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/log.js`
+  - [ ] Wrap logging bridge for JavaScript
+  - [ ] Expose log.info, log.warn, log.error, log.debug
+  - [ ] Support component-based debug logging
+  - [ ] Enable structured logging with metadata
+  - [ ] Include thread-safe logging utilities
+
+- [ ] **Task 7.2.10: Hooks Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/hooks.js`
+  - [ ] Wrap hook bridge for JavaScript
+  - [ ] Expose beforeGenerate/afterGenerate hooks
+  - [ ] Add beforeTool/afterTool hook registration
+  - [ ] Support agent lifecycle hooks
+  - [ ] Enable multiple hook registration
+
+- [ ] **Task 7.2.11: Events Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/events.js`
+  - [ ] Wrap event bridge for JavaScript
+  - [ ] Support event subscription and filtering
+  - [ ] Enable real-time event streaming
+  - [ ] Handle all event types (lifecycle, tool, workflow)
+  - [ ] Support event metadata access
+
+- [ ] **Task 7.2.12: Async Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/async.js`
+  - [ ] Leverage native Promises
+  - [ ] Add async/await support
+  - [ ] Implement observables
+  - [ ] Create reactive patterns
+
+- [ ] **Task 7.2.13: Workflow Module**
+  - [ ] Create `/pkg/engine/javascript/stdlib/workflow.js`
+  - [ ] Implement fluent API
+  - [ ] Add JSX-like syntax
+  - [ ] Support functional composition
+  - [ ] Create visual debugger
+
+- [ ] **Task 7.2.14: Advanced JavaScript Standard Library Modules**
+  - [ ] Create `/pkg/engine/javascript/stdlib/tracing.js` - Distributed tracing with modern API
+  - [ ] Create `/pkg/engine/javascript/stdlib/eventUtils.js` - Event transformation with Promise chains
+  - [ ] Create `/pkg/engine/javascript/stdlib/stateUtils.js` - State validation with Promise-based API
+  - [ ] Create `/pkg/engine/javascript/stdlib/artifacts.js` - Agent artifact management with async/await
+  - [ ] Create `/pkg/engine/javascript/stdlib/toolContext.js` - Tool execution context with AbortController
+  - [ ] Create `/pkg/engine/javascript/stdlib/handoff.js` - Agent handoff system with Promise API
+  - [ ] Create `/pkg/engine/javascript/stdlib/guardrails.js` - Content filtering and safety constraints
+  - [ ] Create `/pkg/engine/javascript/stdlib/memory.js` - Agent memory management with Promise-based API ⏸️ **[DEFERRED]**
+  - [ ] Create `/pkg/engine/javascript/stdlib/conversation.js` - Multi-turn conversation with async/await
+  - [ ] Create `/pkg/engine/javascript/stdlib/modelMgmt.js` - Dynamic model management
+  - [ ] Create `/pkg/engine/javascript/stdlib/providerPool.js` - Provider connection pooling
+  - [ ] Create `/pkg/engine/javascript/stdlib/resilience.js` - Retry and circuit breaker patterns
+  - [ ] Create `/pkg/engine/javascript/stdlib/collaboration.js` - Multi-agent collaboration
+  - [ ] Create `/pkg/engine/javascript/stdlib/security.js` - Authentication and authorization
+  - [ ] Create `/pkg/engine/javascript/stdlib/metrics.js` - Performance and usage metrics
+
+### Phase 8: Tengo Engine Implementation (Weeks 15-16)
+
+#### 8.1 Tengo Engine Core
+- [ ] **Task 8.1.1: Engine Implementation**
+  - [ ] Create `/pkg/engine/tengo/engine.go`
+  - [ ] Implement ScriptEngine interface for Tengo
+  - [ ] Integrate Tengo VM
+  - [ ] Add Tengo-specific features
+  - [ ] Optimize for performance
+
+- [ ] **Task 8.1.2: Type Converter**
+  - [ ] Create `/pkg/engine/tengo/converter.go`
+  - [ ] Implement Tengo ↔ Go conversions
+  - [ ] Handle Tengo objects
+  - [ ] Support compiled scripts
+  - [ ] Add type validation
+
+- [ ] **Task 8.1.3: Security Sandbox**
+  - [ ] Create `/pkg/engine/tengo/sandbox.go`
+  - [ ] Implement Tengo restrictions
+  - [ ] Add import controls
+  - [ ] Limit built-ins
+  - [ ] Control execution time
+
+- [ ] **Task 8.1.4: Tengo Adapter**
+  - [ ] Create `/pkg/engine/tengo/adapter.go`
+  - [ ] Adapt Tengo to interface
+  - [ ] Handle compilation
+  - [ ] Support hot reload
+  - [ ] Add debugging support
+
+#### 8.2 Cross-Engine Testing
+- [ ] **Task 8.2.1: Conformance Suite**
+  - [ ] Create `/pkg/test/conformance/`
+  - [ ] Test all engines equally
+  - [ ] Verify API compatibility
+  - [ ] Check performance
+  - [ ] Validate behavior
+
+- [ ] **Task 8.2.2: Integration Tests**
+  - [ ] Test cross-engine workflows
+  - [ ] Verify type conversions
+  - [ ] Check error handling
+  - [ ] Test resource limits
+  - [ ] Validate security
 
 ---
 
@@ -1114,11 +1114,11 @@ No need for backward compatibility. clean room implementation. overwrite existin
 1. ⭐ Engine-agnostic foundation
 2. ⭐ Lua engine (building on existing work)
 3. ⭐ Core workflow system
-4. ⭐ JavaScript engine
-5. Built-in components
-6. Tengo engine
-7. Production features
-8. Advanced patterns
+4. Built-in components
+5. Production features
+6. Advanced patterns
+7. ⭐ JavaScript engine
+8. Tengo engine
 
 ### Development Principles
 - Engine-agnostic core design
