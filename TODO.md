@@ -40,29 +40,29 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [x] Design extension points for custom agents
   - [x] Ensure engine independence
 
-- [ ] **Task 1.2.2: Base Agent Implementation**
-  - [ ] Create test file `/pkg/core/agent/base_test.go`
-  - [ ] Test state management methods
-  - [ ] Test event emission capabilities
-  - [ ] Test error handling and recovery
-  - [ ] Test agent metrics collection
-  - [ ] Create `/pkg/core/agent/base.go`
-  - [ ] Implement state management methods
-  - [ ] Add event emission capabilities
-  - [ ] Implement error handling and recovery
-  - [ ] Create agent metrics collection
+- [x] **Task 1.2.2: Base Agent Implementation** ✅ **[COMPLETED - 2025-06-12]**
+  - [x] Create test file `/pkg/core/agent/base_test.go`
+  - [x] Test state management methods
+  - [x] Test event emission capabilities
+  - [x] Test error handling and recovery
+  - [x] Test agent metrics collection
+  - [x] Create `/pkg/core/agent/base.go`
+  - [x] Implement state management methods
+  - [x] Add event emission capabilities
+  - [x] Implement error handling and recovery
+  - [x] Create agent metrics collection
 
-- [ ] **Task 1.2.3: Agent Registry**
-  - [ ] Create test file `/pkg/core/agent/registry_test.go`
-  - [ ] Test thread-safe agent registration
-  - [ ] Test capability-based agent discovery
-  - [ ] Test dynamic agent lifecycle management
-  - [ ] Test agent templating system
-  - [ ] Create `/pkg/core/agent/registry.go`
-  - [ ] Implement thread-safe agent registration
-  - [ ] Add capability-based agent discovery
-  - [ ] Support dynamic agent lifecycle management
-  - [ ] Create agent templating system
+- [x] **Task 1.2.3: Agent Registry** ✅ **[COMPLETED - 2025-06-12]**
+  - [x] Create test file `/pkg/core/agent/registry_test.go`
+  - [x] Test thread-safe agent registration
+  - [x] Test capability-based agent discovery
+  - [x] Test dynamic agent lifecycle management
+  - [x] Test agent templating system
+  - [x] Create `/pkg/core/agent/registry.go`
+  - [x] Implement thread-safe agent registration
+  - [x] Add capability-based agent discovery
+  - [x] Support dynamic agent lifecycle management
+  - [x] Create agent templating system
 
 - [ ] **Task 1.2.4: Agent Context**
   - [ ] Create test file `/pkg/core/agent/context_test.go`
@@ -89,7 +89,7 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Design artifact management system
   - [ ] Implement state history tracking
 
-- [ ] **Task 1.3.2: State Operations**
+- [ ] **Task 1.3.2: State Operations** **do we need this - is it implemented in go-llms?**
   - [ ] Create test file `/pkg/core/state/operations_test.go`
   - [ ] Test transformation methods
   - [ ] Test state validation framework
@@ -101,7 +101,7 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Design merge strategies
   - [ ] Add serialization for all engines
 
-- [ ] **Task 1.3.3: State Persistence**
+- [ ] **Task 1.3.3: State Persistence** **[DEFERRED - Awaiting go-llms implementation]**
   - [ ] Create test file `/pkg/core/state/persistence_test.go`
   - [ ] Test persistence interface
   - [ ] Test memory store implementation
@@ -370,7 +370,7 @@ No need for backward compatibility. clean room implementation. overwrite existin
   - [ ] Include memory debugging and inspection
   - [ ] **NOTE: Memory subsystem not yet implemented in go-llms v0.3.3**
 
-- [ ] **Task 1.4.21: Conversation Bridge**
+- [ ] **Task 1.4.21: Conversation Bridge** **[DEFERRED - Awaiting go-llms implementation]**
   - [ ] Create `/pkg/bridge/conversation.go`
   - [ ] Bridge conversation management system
   - [ ] Support multi-turn conversation handling
