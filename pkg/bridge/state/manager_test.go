@@ -1,7 +1,7 @@
 // ABOUTME: Test suite for State Manager Bridge that bridges go-llms StateManager to script engines
 // ABOUTME: Comprehensive tests covering state lifecycle, transforms, merging, validation, and script integration
 
-package bridge
+package state
 
 import (
 	"context"
@@ -12,11 +12,12 @@ import (
 
 	"github.com/lexlapax/go-llms/pkg/agent/core"
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
 // Use go-llms StateManager directly for testing
-func createTestStateManager() StateManager {
+func createTestStateManager() bridge.StateManager {
 	return core.NewStateManager()
 }
 
@@ -24,7 +25,7 @@ func createTestStateManager() StateManager {
 func TestNewStateManagerBridge(t *testing.T) {
 	tests := []struct {
 		name    string
-		manager StateManager
+		manager bridge.StateManager
 		wantErr bool
 	}{
 		{
@@ -292,7 +293,7 @@ func TestStateManagerBridge_StateTransforms(t *testing.T) {
 	// Register a test transform
 	_, err = engine.CallFunction("state.registerTransform", ctx, map[string]interface{}{
 		"name": "test_transform",
-		"transform": func(ctx context.Context, state State) (State, error) {
+		"transform": func(ctx context.Context, state *domain.State) (*domain.State, error) {
 			newState := state.Clone()
 			newState.Set("transformed", true)
 			return newState, nil
@@ -376,7 +377,7 @@ func TestStateManagerBridge_StateValidation(t *testing.T) {
 	// Register a test validator
 	_, err = engine.CallFunction("state.registerValidator", ctx, map[string]interface{}{
 		"name": "test_validator",
-		"validator": func(state State) error {
+		"validator": func(state *domain.State) error {
 			if !state.Has("required_key") {
 				return fmt.Errorf("validation failed: required key missing")
 			}

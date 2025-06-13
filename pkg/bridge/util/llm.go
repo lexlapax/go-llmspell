@@ -1,7 +1,7 @@
 // ABOUTME: LLM utilities bridge provides access to go-llms LLM utility functions.
 // ABOUTME: Wraps provider creation, typed generation, pooling, and model inventory utilities.
 
-package bridge
+package util
 
 import (
 	"context"

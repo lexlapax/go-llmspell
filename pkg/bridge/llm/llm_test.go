@@ -1,7 +1,7 @@
 // ABOUTME: Test suite for the LLM bridge that wraps go-llms Provider functionality.
 // ABOUTME: Tests bridge interface compliance and basic operations without mocking go-llms types.
 
-package bridge
+package llm
 
 import (
 	"context"

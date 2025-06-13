@@ -1,7 +1,7 @@
 // ABOUTME: Test suite for the auth utilities bridge that wraps go-llms authentication functions.
 // ABOUTME: Tests bridge interface compliance and method definitions.
 
-package bridge
+package util
 
 import (
 	"context"

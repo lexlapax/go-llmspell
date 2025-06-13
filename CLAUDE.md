@@ -29,6 +29,11 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 ```
 /pkg/engine/     # Script engine interfaces (our code)
 /pkg/bridge/     # Thin wrappers around go-llms (no business logic)
+    /agent/      # Agent-related bridges
+    /llm/        # LLM provider bridges  
+    /state/      # State management bridges
+    /util/       # Utility bridges
+    ...          # Organized to mirror go-llms structure
 ```
 
 ## Development Workflow

@@ -1,20 +1,21 @@
 // ABOUTME: LLM bridge provides access to language model providers through go-llms interfaces.
 // ABOUTME: Wraps go-llms Provider interface for script engine access without reimplementation.
 
-package bridge
+package llm
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.
 type LLMBridge struct {
 	mu             sync.RWMutex
-	providers      map[string]Provider
+	providers      map[string]bridge.Provider
 	activeProvider string
 	initialized    bool
 }
@@ -22,7 +23,7 @@ type LLMBridge struct {
 // NewLLMBridge creates a new LLM bridge.
 func NewLLMBridge() *LLMBridge {
 	return &LLMBridge{
-		providers: make(map[string]Provider),
+		providers: make(map[string]bridge.Provider),
 	}
 }
 
@@ -188,7 +189,7 @@ func (b *LLMBridge) RequiredPermissions() []engine.Permission {
 }
 
 // RegisterProvider registers an LLM provider.
-func (b *LLMBridge) RegisterProvider(name string, provider Provider) error {
+func (b *LLMBridge) RegisterProvider(name string, provider bridge.Provider) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -210,7 +211,7 @@ func (b *LLMBridge) SetActiveProvider(name string) error {
 }
 
 // GetActiveProvider returns the active provider.
-func (b *LLMBridge) GetActiveProvider() Provider {
+func (b *LLMBridge) GetActiveProvider() bridge.Provider {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

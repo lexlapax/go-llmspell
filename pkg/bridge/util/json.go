@@ -1,7 +1,7 @@
 // ABOUTME: JSON utilities bridge provides access to go-llms optimized JSON functions.
 // ABOUTME: Wraps high-performance JSON marshaling, streaming, and schema operations.
 
-package bridge
+package util
 
 import (
 	"context"

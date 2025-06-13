@@ -37,12 +37,16 @@ go-llmspell/
 │   │   └── tengo/      # Tengo engine implementation
 │   │
 │   └── bridge/         # Bridges to go-llms functionality
+│       ├── interfaces.go    # Shared type aliases
 │       ├── manager.go       # Bridge lifecycle management
-│       ├── llm_agent.go     # LLM agent orchestration bridge
-│       ├── state.go         # State management bridge
-│       ├── workflow.go      # Workflow engine bridge
-│       ├── tools.go         # Tool system bridge
-│       └── ... (other bridges)
+│       ├── modelinfo.go     # Model information bridge
+│       ├── agent/           # Agent-related bridges
+│       ├── llm/             # LLM provider bridges
+│       ├── state/           # State management bridges
+│       ├── structured/      # Structured output bridges
+│       ├── observability/   # Monitoring bridges
+│       ├── util/            # Utility bridges
+│       └── guardrails.go    # Safety system bridge
 ```
 
 ## 🎯 Key Principles

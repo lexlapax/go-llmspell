@@ -1,7 +1,7 @@
 // ABOUTME: Test suite for the JSON utilities bridge that wraps go-llms JSON functions.
 // ABOUTME: Tests bridge interface compliance and method definitions.
 
-package bridge
+package util
 
 import (
 	"context"

@@ -1,7 +1,7 @@
 // ABOUTME: General utilities bridge provides access to miscellaneous go-llms utility functions.
 // ABOUTME: Wraps utilities that don't fit into specific categories like error handling and misc helpers.
 
-package bridge
+package util
 
 import (
 	"context"

@@ -1,7 +1,7 @@
 // ABOUTME: Auth utilities bridge provides access to go-llms authentication functions.
 // ABOUTME: Wraps auth configuration, scheme detection, and HTTP request authentication.
 
-package bridge
+package util
 
 import (
 	"context"

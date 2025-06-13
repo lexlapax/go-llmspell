@@ -139,13 +139,37 @@ go-llmspell/
 │   │   └── tengo/      # Tengo engine implementation
 │   │
 │   └── bridge/         # Bridges to go-llms functionality
+│       ├── interfaces.go    # Shared type aliases
 │       ├── manager.go       # Bridge lifecycle management
-│       ├── llm_agent.go     # LLM agent orchestration bridge
-│       ├── state.go         # State management bridge
-│       ├── workflow.go      # Workflow engine bridge
-│       ├── tools.go         # Tool system bridge
-│       ├── events.go        # Event system bridge
-│       └── ... (other bridges)
+│       ├── modelinfo.go     # Model information bridge
+│       ├── agent/           # Agent-related bridges
+│       │   ├── agent.go     # LLM agent orchestration
+│       │   ├── workflow.go  # Workflow engine
+│       │   ├── events.go    # Event system
+│       │   ├── hooks.go     # Hook system
+│       │   └── tools/       # Tool bridges
+│       │       ├── tools.go # Tool system
+│       │       └── registry.go # Tool registry
+│       ├── llm/             # LLM provider bridges
+│       │   ├── llm.go       # Core LLM functionality
+│       │   ├── providers.go # Provider implementations
+│       │   └── pool.go      # Provider pooling
+│       ├── state/           # State management bridges
+│       │   ├── manager.go   # State manager
+│       │   └── context.go   # Shared state context
+│       ├── structured/      # Structured output bridges
+│       │   ├── structured.go # Structured processing
+│       │   └── schema.go    # Schema validation
+│       ├── observability/   # Monitoring bridges
+│       │   ├── metrics.go   # Metrics collection
+│       │   ├── tracing.go   # Distributed tracing
+│       │   └── profiling.go # Performance profiling
+│       ├── util/            # Utility bridges
+│       │   ├── util.go      # General utilities
+│       │   ├── auth.go      # Authentication
+│       │   ├── json.go      # JSON operations
+│       │   └── llm.go       # LLM utilities
+│       └── guardrails.go    # Safety system bridge
 ```
 
 ### Data Flow
@@ -302,31 +326,31 @@ type Bridge interface {
 
 #### Core Bridges
 
-1. **LLM Agent Bridge** (`llm_agent.go`)
+1. **LLM Agent Bridge** (`agent/agent.go`)
    - Agent creation and configuration
    - Tool registration and execution
    - Sub-agent orchestration
    - Lifecycle hooks and events
 
-2. **State Management Bridge** (`state.go`)
+2. **State Management Bridge** (`state/manager.go`, `state/context.go`)
    - State lifecycle operations
    - Transforms (filter, flatten, sanitize)
    - Merge strategies
    - Persistence interface
 
-3. **Workflow Bridge** (`workflow.go`)
+3. **Workflow Bridge** (`agent/workflow.go`)
    - All workflow types (sequential, parallel, conditional, loop)
    - Workflow composition
    - State passing between steps
    - Error handling and recovery
 
-4. **Event System Bridge** (`events.go`)
+4. **Event System Bridge** (`agent/events.go`)
    - Real-time event streaming
    - Event filtering and subscriptions
    - Event metadata and correlation
    - All event types (lifecycle, tool, workflow)
 
-5. **Tool System Bridge** (`tools.go`)
+5. **Tool System Bridge** (`agent/tools/tools.go`)
    - Built-in tool access
    - Custom tool registration
    - Tool composition and chaining

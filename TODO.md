@@ -32,12 +32,12 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ### 1.3 Core Bridge System
 
 - [ ] **Task 1.3.1: LLM Agent Bridge** (CRITICAL - Replaces our agent duplication)
-  - [ ] Create test file `/pkg/bridge/llm_agent_test.go`
+  - [ ] Create test file `/pkg/bridge/agent/agent_test.go`
   - [ ] Test go-llms agent creation and configuration
   - [ ] Test tool registration and execution
   - [ ] Test sub-agent orchestration
   - [ ] Test agent lifecycle hooks and events
-  - [ ] Create `/pkg/bridge/llm_agent.go`
+  - [ ] Create `/pkg/bridge/agent/agent.go`
   - [ ] Bridge complete go-llms agent system from `/pkg/agent/`
   - [ ] Expose agent creation, configuration, and execution to scripts
   - [ ] Support tool registration and execution
@@ -45,32 +45,32 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Bridge agent lifecycle hooks and events
 
 - [ ] **Task 1.3.2: Workflow Engine Bridge**
-  - [ ] Create test file `/pkg/bridge/workflow_engine_test.go`
+  - [ ] Create test file `/pkg/bridge/agent/workflow_test.go`
   - [ ] Test workflow lifecycle bridging
   - [ ] Test all workflow types (sequential, parallel, conditional, loop)
   - [ ] Test workflow state and error handling
-  - [ ] Create `/pkg/bridge/workflow_engine.go`
+  - [ ] Create `/pkg/bridge/agent/workflow.go`
   - [ ] Bridge workflow system from `/pkg/agent/workflow/`
   - [ ] Expose workflow creation and execution
   - [ ] Support workflow composition from scripts
 
 - [ ] **Task 1.3.3: Event System Bridge**
-  - [ ] Create test file `/pkg/bridge/events_test.go`
+  - [ ] Create test file `/pkg/bridge/agent/events_test.go`
   - [ ] Test event streaming to scripts
   - [ ] Test event filtering and subscription
   - [ ] Test all event types
-  - [ ] Create `/pkg/bridge/events.go`
+  - [ ] Create `/pkg/bridge/agent/events.go`
   - [ ] Bridge pkg/agent/domain event system
   - [ ] Support real-time event streaming to scripts
   - [ ] Enable event filtering and subscription by type
   - [ ] Handle lifecycle, execution, tool, and workflow events
 
 - [ ] **Task 1.3.4: Tool System Bridge**
-  - [ ] Create test file `/pkg/bridge/tools_test.go`
+  - [ ] Create test file `/pkg/bridge/agent/tools/tools_test.go`
   - [ ] Test tool interface bridging
   - [ ] Test built-in tools exposure (all categories)
   - [ ] Test tool registration and execution
-  - [ ] Create `/pkg/bridge/tools.go`
+  - [ ] Create `/pkg/bridge/agent/tools/tools.go`
   - [ ] Bridge pkg/agent/tools interfaces
   - [ ] Expose ALL built-in tools from pkg/agent/builtins/tools:
     - [ ] Data tools (CSV, JSON, XML processing)
@@ -84,11 +84,11 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Enable tool composition and chaining
 
 - [ ] **Task 1.3.5: Hook System Bridge**
-  - [ ] Create test file `/pkg/bridge/hooks_test.go`
+  - [ ] Create test file `/pkg/bridge/agent/hooks_test.go`
   - [ ] Test Hook interface bridging
   - [ ] Test all hook types (BeforeGenerate, AfterGenerate, etc.)
   - [ ] Test hook priority and chaining
-  - [ ] Create `/pkg/bridge/hooks.go`
+  - [ ] Create `/pkg/bridge/agent/hooks.go`
   - [ ] Bridge pkg/agent/domain Hook interface
   - [ ] Support all hook types with priority ordering
   - [ ] Enable script-based hook implementations
@@ -97,19 +97,19 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ### 1.4 Additional Bridges
 
 - [ ] **Task 1.4.1: Schema Bridge**
-  - [ ] Create `/pkg/bridge/schema.go`
+  - [ ] Create `/pkg/bridge/structured/schema.go`
   - [ ] Bridge pkg/schema validation system
   - [ ] Expose reflection-based generation
   - [ ] Support custom validator registration
 
 - [ ] **Task 1.4.2: Structured Output Bridge**
-  - [ ] Create `/pkg/bridge/structured.go`
+  - [ ] Create `/pkg/bridge/structured/structured.go`
   - [ ] Bridge pkg/structured processing
   - [ ] Expose JSON extraction utilities
   - [ ] Support schema caching
 
 - [ ] **Task 1.4.3: Tracing Bridge**
-  - [ ] Create `/pkg/bridge/tracing.go`
+  - [ ] Create `/pkg/bridge/observability/tracing.go`
   - [ ] Bridge core/tracing.go distributed tracing
   - [ ] Support OpenTelemetry integration
   - [ ] Enable trace correlation
@@ -121,33 +121,33 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Enable behavioral constraints
 
 - [ ] **Task 1.4.5: Metrics Bridge**
-  - [ ] Create `/pkg/bridge/metrics.go`
+  - [ ] Create `/pkg/bridge/observability/metrics.go`
   - [ ] Bridge performance metrics system
   - [ ] Support custom metric collection
   - [ ] Enable metric aggregation
 
 - [ ] **Task 1.4.6: Provider System Bridge**
-  - [ ] Create `/pkg/bridge/providers.go`
+  - [ ] Create `/pkg/bridge/llm/providers.go`
   - [ ] Bridge all provider implementations (Anthropic, OpenAI, etc.)
   - [ ] Bridge consensus provider for multi-LLM voting
   - [ ] Bridge multi-provider with strategies (primary/fallback, sequential)
   - [ ] Expose provider configuration and options
 
 - [ ] **Task 1.4.7: Provider Pool Bridge**
-  - [ ] Create `/pkg/bridge/provider_pool.go`
+  - [ ] Create `/pkg/bridge/llm/pool.go`
   - [ ] Bridge connection pooling from go-llms
   - [ ] Expose pool metrics and management
   - [ ] Support connection limits and timeouts
 
 - [ ] **Task 1.4.8: Built-in Tools Registry Bridge**
-  - [ ] Create `/pkg/bridge/tools_registry.go`
+  - [ ] Create `/pkg/bridge/agent/tools/registry.go`
   - [ ] Bridge the tool registry system
   - [ ] Expose tool discovery and metadata
   - [ ] Support dynamic tool loading
 
 
 - [ ] **Task 1.4.9: Profiling Bridge**
-  - [ ] Create `/pkg/bridge/profiling.go`
+  - [ ] Create `/pkg/bridge/observability/profiling.go`
   - [ ] Bridge performance profiling utilities
   - [ ] Support integration test profiling
   - [ ] Enable performance monitoring from scripts

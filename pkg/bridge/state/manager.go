@@ -1,7 +1,7 @@
 // ABOUTME: State Manager Bridge implementation that exposes go-llms StateManager to script engines
 // ABOUTME: Provides comprehensive state lifecycle, transforms, validation, and merging operations
 
-package bridge
+package state
 
 import (
 	"context"
@@ -10,16 +10,17 @@ import (
 	"time"
 
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
 // StateManagerBridge bridges go-llms StateManager to script engines
 type StateManagerBridge struct {
-	manager StateManager
+	manager bridge.StateManager
 }
 
 // NewStateManagerBridge creates a new state manager bridge
-func NewStateManagerBridge(manager StateManager) (*StateManagerBridge, error) {
+func NewStateManagerBridge(manager bridge.StateManager) (*StateManagerBridge, error) {
 	if manager == nil {
 		return nil, fmt.Errorf("state manager cannot be nil")
 	}
@@ -222,7 +223,7 @@ func (b *StateManagerBridge) registerTransform(ctx context.Context, params map[s
 		return nil, fmt.Errorf("name parameter is required and must be a string")
 	}
 
-	transformFunc, ok := params["transform"].(func(context.Context, State) (State, error))
+	transformFunc, ok := params["transform"].(func(context.Context, *domain.State) (*domain.State, error))
 	if !ok {
 		return nil, fmt.Errorf("transform parameter is required and must be a function")
 	}
@@ -264,7 +265,7 @@ func (b *StateManagerBridge) registerValidator(ctx context.Context, params map[s
 		return nil, fmt.Errorf("name parameter is required and must be a string")
 	}
 
-	validatorFunc, ok := params["validator"].(func(State) error)
+	validatorFunc, ok := params["validator"].(func(*domain.State) error)
 	if !ok {
 		return nil, fmt.Errorf("validator parameter is required and must be a function")
 	}
@@ -312,20 +313,20 @@ func (b *StateManagerBridge) mergeStates(ctx context.Context, params map[string]
 	}
 
 	// Convert strategy string to enum
-	var strategy MergeStrategy
+	var strategy bridge.MergeStrategy
 	switch strings.ToLower(strategyStr) {
 	case "last":
-		strategy = MergeStrategyLast
+		strategy = bridge.MergeStrategyLast
 	case "merge_all":
-		strategy = MergeStrategyMergeAll
+		strategy = bridge.MergeStrategyMergeAll
 	case "union":
-		strategy = MergeStrategyUnion
+		strategy = bridge.MergeStrategyUnion
 	default:
 		return nil, fmt.Errorf("invalid merge strategy: %s", strategyStr)
 	}
 
 	// Convert script states to Go states
-	states := make([]State, len(statesParam))
+	states := make([]bridge.State, len(statesParam))
 	for i, stateParam := range statesParam {
 		stateObj, ok := stateParam.(map[string]interface{})
 		if !ok {
@@ -686,7 +687,7 @@ func (b *StateManagerBridge) messages(ctx context.Context, params map[string]int
 
 // Helper functions for type conversion
 
-func (b *StateManagerBridge) stateToScript(state State) map[string]interface{} {
+func (b *StateManagerBridge) stateToScript(state bridge.State) map[string]interface{} {
 	return map[string]interface{}{
 		"id":       state.ID(),
 		"created":  state.Created().Format(time.RFC3339),
@@ -699,9 +700,9 @@ func (b *StateManagerBridge) stateToScript(state State) map[string]interface{} {
 	}
 }
 
-func (b *StateManagerBridge) scriptToState(scriptObj map[string]interface{}) (State, error) {
+func (b *StateManagerBridge) scriptToState(scriptObj map[string]interface{}) (bridge.State, error) {
 	// First check if we have the actual state object stored
-	if state, ok := scriptObj["__state"].(State); ok {
+	if state, ok := scriptObj["__state"].(bridge.State); ok {
 		return state, nil
 	}
 
@@ -713,7 +714,7 @@ func (b *StateManagerBridge) scriptToState(scriptObj map[string]interface{}) (St
 }
 
 //nolint:unused // Will be used by script engines
-func (b *StateManagerBridge) updateScriptState(scriptObj map[string]interface{}, state State) {
+func (b *StateManagerBridge) updateScriptState(scriptObj map[string]interface{}, state bridge.State) {
 	// Update the script object to reflect state changes
 	scriptObj["data"] = state.Values()
 	scriptObj["metadata"] = state.GetAllMetadata()
@@ -812,21 +813,21 @@ func (b *StateManagerBridge) scriptToMessage(scriptObj map[string]interface{}) (
 
 func (b *StateManagerBridge) registerBuiltinTransforms() {
 	// Register built-in filter transform
-	b.manager.RegisterTransform("filter", func(ctx context.Context, state State) (State, error) {
+	b.manager.RegisterTransform("filter", func(ctx context.Context, state *domain.State) (*domain.State, error) {
 		newState := state.Clone()
 		// Filter implementation would go here
 		return newState, nil
 	})
 
 	// Register built-in flatten transform
-	b.manager.RegisterTransform("flatten", func(ctx context.Context, state State) (State, error) {
+	b.manager.RegisterTransform("flatten", func(ctx context.Context, state *domain.State) (*domain.State, error) {
 		newState := state.Clone()
 		// Flatten implementation would go here
 		return newState, nil
 	})
 
 	// Register built-in sanitize transform
-	b.manager.RegisterTransform("sanitize", func(ctx context.Context, state State) (State, error) {
+	b.manager.RegisterTransform("sanitize", func(ctx context.Context, state *domain.State) (*domain.State, error) {
 		newState := state.Clone()
 		// Sanitize implementation would go here
 		return newState, nil

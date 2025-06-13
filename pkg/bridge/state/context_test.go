@@ -1,7 +1,7 @@
 // ABOUTME: Test suite for State Context Bridge that bridges go-llms SharedStateContext to script engines
 // ABOUTME: Comprehensive tests covering parent-child state relationships, inheritance configuration, and state isolation
 
-package bridge
+package state
 
 import (
 	"context"

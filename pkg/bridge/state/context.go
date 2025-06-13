@@ -1,7 +1,7 @@
 // ABOUTME: State Context Bridge implementation that exposes go-llms SharedStateContext to script engines
 // ABOUTME: Provides parent-child state sharing with configurable inheritance for multi-agent systems
 
-package bridge
+package state
 
 import (
 	"context"

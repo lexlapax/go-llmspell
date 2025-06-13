@@ -1,7 +1,7 @@
 // ABOUTME: Simplified tests for State Context Bridge focused on bridge interface compliance
 // ABOUTME: Tests core bridge functionality without complex script engine integration
 
-package bridge
+package state
 
 import (
 	"context"
