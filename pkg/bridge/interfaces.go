@@ -25,11 +25,26 @@ type (
 	Tool               = domain.Tool
 	AgentError         = *domain.AgentError
 	ToolError          = *domain.ToolError
+	BaseAgent          = domain.BaseAgent
+	Agent              = domain.Agent
+	AgentType          = domain.AgentType
+	AgentConfig        = domain.AgentConfig
+	LLMConfig          = domain.LLMConfig
+	Event              = domain.Event
+	EventType          = domain.EventType
+	Hook               = domain.Hook
+	ToolContext        = domain.ToolContext
+	ToolExample        = domain.ToolExample
+	MCPToolDefinition  = domain.MCPToolDefinition
+	Handoff            = domain.Handoff
+	RetryStrategy      = domain.RetryStrategy
 
 	// Agent core types
 	StateManager   = *core.StateManager
 	StateTransform = core.StateTransform
 	StateValidator = core.StateValidator
+	AgentRegistry  = *core.AgentRegistry
+	LLMAgent       = *core.LLMAgent
 
 	// LLM domain types
 	Provider        = llmdomain.Provider
@@ -62,4 +77,33 @@ const (
 	MergeStrategyLast     = domain.MergeStrategyLast
 	MergeStrategyMergeAll = domain.MergeStrategyMergeAll
 	MergeStrategyUnion    = domain.MergeStrategyUnion
+
+	// Agent types
+	AgentTypeLLM         = domain.AgentTypeLLM
+	AgentTypeSequential  = domain.AgentTypeSequential
+	AgentTypeParallel    = domain.AgentTypeParallel
+	AgentTypeConditional = domain.AgentTypeConditional
+	AgentTypeLoop        = domain.AgentTypeLoop
+	AgentTypeCustom      = domain.AgentTypeCustom
+
+	// Event types - Lifecycle
+	EventAgentStart    = domain.EventAgentStart
+	EventAgentComplete = domain.EventAgentComplete
+	EventAgentError    = domain.EventAgentError
+
+	// Event types - Execution
+	EventStateUpdate = domain.EventStateUpdate
+	EventProgress    = domain.EventProgress
+	EventMessage     = domain.EventMessage
+
+	// Event types - Tool
+	EventToolCall   = domain.EventToolCall
+	EventToolResult = domain.EventToolResult
+	EventToolError  = domain.EventToolError
+
+	// Event types - Workflow
+	EventSubAgentStart = domain.EventSubAgentStart
+	EventSubAgentEnd   = domain.EventSubAgentEnd
+	EventWorkflowStep  = domain.EventWorkflowStep
+	EventWorkflowStart = domain.EventWorkflowStart
 )
