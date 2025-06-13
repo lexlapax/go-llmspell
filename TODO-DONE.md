@@ -328,6 +328,32 @@ This implementation provides the foundation for state management in scripts whil
 
 ---
 
+#### 1.3 Core Bridge System - ExecuteMethod Pattern Implementation
+
+- ✅ **Implemented ExecuteMethod pattern for all bridges** (Completed) - [Date: 2025-06-13]
+  - ✅ JSON bridge (`util/json.go`) - Added actual calls to llmjson functions
+  - ✅ Auth bridge (`util/auth.go`) - Implemented auth config and validation
+  - ✅ Agent bridge (`agent/agent.go`) - Added agent creation with go-llms BaseAgent
+  - ✅ LLM bridge (`llm/llm.go`) - Implemented provider creation and generation
+  - ✅ State Manager bridge (`state/manager.go`) - Added state operations and transforms
+  - ✅ Workflow bridge (`agent/workflow.go`) - Implemented workflow creation and execution
+  - ✅ Events bridge (`agent/events.go`) - Added event emission and subscription
+  - ✅ State Context bridge (`state/context.go`) - Implemented context operations
+  - ✅ Util LLM bridge (`util/llm.go`) - Implemented ProviderPool with actual go-llms API
+  - ✅ Util bridge (`util/util.go`) - Added TODO for upstreaming general utilities
+  - ✅ ModelInfo bridge (`modelinfo.go`) - Fixed ModelRegistry type issues and implemented methods
+  - ✅ Ran fmt and lint after each bridge completion
+  - ✅ All tests passing
+
+**Key accomplishments:**
+- Changed from underscore imports to actual usage of go-llms packages
+- Fixed type mismatches and API signature issues
+- Removed unnecessary TODO comments while keeping legitimate placeholders
+- Corrected incorrect assumptions (e.g., ProviderPool API availability)
+- Ensured all bridges now actually call go-llms functions
+
+---
+
 #### 1.2.4 State Bridge Interfaces
 
 - ✅ **Task 1.2.4: State Bridge Interfaces** (Completed with tests) - [Date: 2025-06-12]

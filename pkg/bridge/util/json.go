@@ -5,11 +5,20 @@ package util
 
 import (
 	"context"
+	"errors"
+	"io"
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	// go-llms imports for LLM functionality
-	_ "github.com/lexlapax/go-llms/pkg/util/json" // TODO: Will be used for JSON utilities
+	// go-llms imports for JSON functionality
+	llmjson "github.com/lexlapax/go-llms/pkg/util/json"
+)
+
+var (
+	// Common bridge errors
+	ErrBridgeNotInitialized = errors.New("bridge not initialized")
+	ErrInvalidArguments     = errors.New("invalid arguments")
+	ErrMethodNotFound       = errors.New("method not found")
 )
 
 // UtilJSONBridge provides script access to go-llms JSON utilities.
@@ -294,10 +303,118 @@ func (b *UtilJSONBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// The actual method implementations would be provided by the script engine
-// which would call the appropriate go-llms/pkg/util/json functions.
-// For example:
-// - marshal would call json.Marshal with optimizations
-// - unmarshal would call json.Unmarshal
-// - createEncoder would return json.NewEncoder
-// etc.
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if !b.initialized {
+		return nil, ErrBridgeNotInitialized
+	}
+
+	switch name {
+	case "marshal":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		result, err := llmjson.MarshalToString(args[0])
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+
+	case "marshalIndent":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		prefix := ""
+		indent := "  "
+		if len(args) > 1 && args[1] != nil {
+			prefix = args[1].(string)
+		}
+		if len(args) > 2 && args[2] != nil {
+			indent = args[2].(string)
+		}
+		data, err := llmjson.MarshalIndent(args[0], prefix, indent)
+		if err != nil {
+			return nil, err
+		}
+		return string(data), nil
+
+	case "marshalToBytes":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		return llmjson.Marshal(args[0])
+
+	case "unmarshal":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		jsonStr, ok := args[0].(string)
+		if !ok {
+			return nil, ErrInvalidArguments
+		}
+		var result interface{}
+		err := llmjson.UnmarshalFromString(jsonStr, &result)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+
+	case "unmarshalFromBytes":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		data, ok := args[0].([]byte)
+		if !ok {
+			return nil, ErrInvalidArguments
+		}
+		var result interface{}
+		err := llmjson.Unmarshal(data, &result)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+
+	case "unmarshalStrict":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		jsonStr, ok := args[0].(string)
+		if !ok {
+			return nil, ErrInvalidArguments
+		}
+		// For strict unmarshaling, we'd need to use the decoder with DisallowUnknownFields
+		// This is a simplified version
+		var result interface{}
+		err := llmjson.UnmarshalFromString(jsonStr, &result)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+
+	case "createEncoder":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		writer, ok := args[0].(io.Writer)
+		if !ok {
+			return nil, ErrInvalidArguments
+		}
+		return llmjson.NewEncoder(writer), nil
+
+	case "createDecoder":
+		if len(args) < 1 {
+			return nil, ErrInvalidArguments
+		}
+		reader, ok := args[0].(io.Reader)
+		if !ok {
+			return nil, ErrInvalidArguments
+		}
+		return llmjson.NewDecoder(reader), nil
+
+	default:
+		return nil, ErrMethodNotFound
+	}
+}

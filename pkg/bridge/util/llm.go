@@ -5,12 +5,15 @@ package util
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 
 	// go-llms imports for LLM utilities
-	_ "github.com/lexlapax/go-llms/pkg/util/llmutil" // TODO: Will be used for LLM utilities
+	"github.com/lexlapax/go-llms/pkg/util/llmutil"
 )
 
 // UtilLLMBridge provides script access to go-llms LLM utilities.
@@ -240,10 +243,105 @@ func (b *UtilLLMBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// The actual method implementations would be provided by the script engine
-// which would call the appropriate go-llms/pkg/util/llmutil functions.
-// For example:
-// - createProvider would call llmutil.CreateProvider
-// - generateTyped would call llmutil.GenerateTyped
-// - createProviderPool would create a new llmutil.ProviderPool
-// etc.
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if !b.initialized {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+
+	switch name {
+	case "createProviderPool":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("createProviderPool requires providers and strategy parameters")
+		}
+
+		// Get providers array
+		providersArg, ok := args[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("providers must be an array")
+		}
+
+		// Convert to domain.Provider slice
+		providers := make([]bridge.Provider, 0, len(providersArg))
+		for i, p := range providersArg {
+			provider, ok := p.(bridge.Provider)
+			if !ok {
+				return nil, fmt.Errorf("provider at index %d must be a Provider", i)
+			}
+			providers = append(providers, provider)
+		}
+
+		// Get strategy
+		strategyStr, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("strategy must be string")
+		}
+
+		// Convert strategy string to enum
+		var strategy llmutil.PoolStrategy
+		switch strings.ToLower(strategyStr) {
+		case "roundrobin":
+			strategy = llmutil.StrategyRoundRobin
+		case "failover":
+			strategy = llmutil.StrategyFailover
+		case "fastest":
+			strategy = llmutil.StrategyFastest
+		default:
+			return nil, fmt.Errorf("invalid strategy: %s", strategyStr)
+		}
+
+		// Create the provider pool
+		pool := llmutil.NewProviderPool(providers, strategy)
+
+		return pool, nil
+
+	case "createModelInventory":
+		// Create model info service to fetch model inventory
+		// Using the modelinfo package's service to aggregate models
+		// Note: The actual model inventory is returned by the service's AggregateModels method
+		// For now, return a placeholder as the service requires provider-specific fetchers
+		return map[string]interface{}{
+			"type": "ModelInventory",
+			"id":   "inventory_1",
+			"note": "Use fetchModelInfo to retrieve actual model data",
+		}, nil
+
+	case "createModelConfig":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("createModelConfig requires provider and model parameters")
+		}
+		provider, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider must be string")
+		}
+		model, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("model must be string")
+		}
+
+		// Create model config
+		config := llmutil.ModelConfig{
+			Provider: provider,
+			Model:    model,
+		}
+
+		// Add options if provided
+		if len(args) > 2 && args[2] != nil {
+			if options, ok := args[2].(map[string]interface{}); ok {
+				// Options will be applied when go-llms ModelConfig supports additional fields
+				_ = options
+			}
+		}
+
+		return map[string]interface{}{
+			"provider": config.Provider,
+			"model":    config.Model,
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
+}

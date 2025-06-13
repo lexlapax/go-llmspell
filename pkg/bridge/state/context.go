@@ -618,3 +618,87 @@ func (b *StateContextBridge) messageToScript(message domain.Message) map[string]
 		"content": message.Content,
 	}
 }
+
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	switch name {
+	case "createSharedContext":
+		var parentState *domain.State
+		if len(args) > 0 && args[0] != nil {
+			if parentObj, ok := args[0].(map[string]interface{}); ok {
+				var err error
+				parentState, err = b.scriptToState(parentObj)
+				if err != nil {
+					return nil, fmt.Errorf("failed to convert parent state: %w", err)
+				}
+			}
+		}
+
+		// Create shared context
+		sharedContext := domain.NewSharedStateContext(parentState)
+
+		// Generate ID and store context
+		b.mu.Lock()
+		contextID := fmt.Sprintf("context_%d", b.nextID)
+		b.nextID++
+		b.contexts[contextID] = sharedContext
+		b.configs[contextID] = &inheritanceConfig{
+			inheritMessages:  true,
+			inheritArtifacts: true,
+			inheritMetadata:  true,
+		}
+		b.mu.Unlock()
+
+		return b.sharedContextToScript(contextID, sharedContext), nil
+
+	case "get":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("get requires context and key parameters")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+		key, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("key must be string")
+		}
+
+		sharedContext, err := b.scriptToSharedContext(contextObj)
+		if err != nil {
+			return nil, err
+		}
+
+		value, exists := sharedContext.Get(key)
+		return map[string]interface{}{
+			"value":  value,
+			"exists": exists,
+		}, nil
+
+	case "set":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("set requires context, key, and value parameters")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+		key, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("key must be string")
+		}
+
+		sharedContext, err := b.scriptToSharedContext(contextObj)
+		if err != nil {
+			return nil, err
+		}
+
+		sharedContext.Set(key, args[2])
+		b.updateScriptSharedContext(contextObj, sharedContext)
+
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
+}

@@ -12,8 +12,8 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 
 	// go-llms imports for LLM functionality
-	_ "github.com/lexlapax/go-llms/pkg/llm/domain"   // TODO: Will be used for LLM types
-	_ "github.com/lexlapax/go-llms/pkg/llm/provider" // TODO: Will be used for provider creation
+	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
+	"github.com/lexlapax/go-llms/pkg/llm/provider"
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.
@@ -236,4 +236,167 @@ func (b *LLMBridge) ListProviders() []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if !b.initialized {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+
+	switch name {
+	case "createProvider":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("createProvider requires name and config parameters")
+		}
+		providerName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider name must be string")
+		}
+		config, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("config must be object")
+		}
+
+		// Extract provider type
+		providerType, ok := config["type"].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider type required in config")
+		}
+
+		// Create provider based on type
+		var llmProvider bridge.Provider
+
+		// Get API key and model
+		apiKey, _ := config["apiKey"].(string)
+		model, _ := config["model"].(string)
+		if model == "" {
+			model = "gpt-4" // default
+		}
+
+		switch providerType {
+		case "openai":
+			// Create OpenAI provider
+			llmProvider = provider.NewOpenAIProvider(apiKey, model)
+		case "anthropic":
+			// Create Anthropic provider
+			llmProvider = provider.NewAnthropicProvider(apiKey, model)
+		default:
+			return nil, fmt.Errorf("unsupported provider type: %s", providerType)
+		}
+
+		// Store provider
+		b.providers[providerName] = llmProvider
+		if b.activeProvider == "" {
+			b.activeProvider = providerName
+		}
+
+		return map[string]interface{}{
+			"name": providerName,
+			"type": providerType,
+		}, nil
+
+	case "generate":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("generate requires prompt parameter")
+		}
+
+		// Get active provider
+		if b.activeProvider == "" {
+			return nil, fmt.Errorf("no active provider set")
+		}
+		provider, exists := b.providers[b.activeProvider]
+		if !exists {
+			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
+		}
+
+		// Get prompt
+		prompt, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("prompt must be string")
+		}
+
+		// Generate response
+		response, err := provider.Generate(ctx, prompt, nil)
+		if err != nil {
+			return nil, fmt.Errorf("generation failed: %w", err)
+		}
+
+		// Return response
+		return map[string]interface{}{
+			"content": response,
+		}, nil
+
+	case "generateMessage":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("generateMessage requires messages parameter")
+		}
+
+		// Get active provider
+		if b.activeProvider == "" {
+			return nil, fmt.Errorf("no active provider set")
+		}
+		provider, exists := b.providers[b.activeProvider]
+		if !exists {
+			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
+		}
+
+		// Convert messages
+		var messages []llmdomain.Message
+		if msgList, ok := args[0].([]interface{}); ok {
+			for _, msg := range msgList {
+				if msgMap, ok := msg.(map[string]interface{}); ok {
+					role, _ := msgMap["role"].(string)
+					content, _ := msgMap["content"].(string)
+					messages = append(messages, llmdomain.NewTextMessage(llmdomain.Role(role), content))
+				}
+			}
+		}
+
+		// Generate response
+		response, err := provider.GenerateMessage(ctx, messages, nil)
+		if err != nil {
+			return nil, fmt.Errorf("generation failed: %w", err)
+		}
+
+		// Return response
+		return map[string]interface{}{
+			"content": response.Content,
+		}, nil
+
+	case "setActiveProvider":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("setActiveProvider requires name parameter")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		if _, exists := b.providers[name]; !exists {
+			return nil, fmt.Errorf("provider %s not found", name)
+		}
+
+		b.activeProvider = name
+		return nil, nil
+
+	case "getActiveProvider":
+		return b.activeProvider, nil
+
+	case "listProviders":
+		providers := make([]map[string]interface{}, 0, len(b.providers))
+		for name := range b.providers {
+			providers = append(providers, map[string]interface{}{
+				"name":   name,
+				"active": name == b.activeProvider,
+			})
+		}
+		return providers, nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
 }

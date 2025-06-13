@@ -1,15 +1,31 @@
 // ABOUTME: General utilities bridge provides access to miscellaneous go-llms utility functions.
 // ABOUTME: Wraps utilities that don't fit into specific categories like error handling and misc helpers.
 
+// TODO: Consider upstreaming general-purpose utilities to go-llms that aren't specific to bridges/scripts:
+// - String manipulation (truncate, sanitize)
+// - UUID generation wrapper
+// - Hash utilities (consistent hashing interface)
+// - Time/duration parsing and formatting
+// - Retry/backoff utilities
+// - Common validation functions (URL, email)
+// These could be useful for go-llms internals and other consumers of the library.
+
 package util
 
 import (
 	"context"
+	"crypto/md5"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
+	"fmt"
+	"hash"
+	"strings"
 	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	// go-llms imports for general utilities
-	// TODO: Add specific utility imports as needed
 )
 
 // UtilBridge provides script access to general go-llms utilities.
@@ -247,5 +263,105 @@ func (b *UtilBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// The actual method implementations would be provided by the script engine
-// which would call the appropriate go-llms utility functions or standard library functions.
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if !b.initialized {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+
+	switch name {
+	case "generateUUID":
+		return uuid.New().String(), nil
+
+	case "truncateString":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("truncateString requires text and maxLength parameters")
+		}
+		text, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("text must be string")
+		}
+		maxLength, ok := args[1].(float64) // JSON numbers come as float64
+		if !ok {
+			return nil, fmt.Errorf("maxLength must be number")
+		}
+
+		suffix := "..."
+		if len(args) > 2 && args[2] != nil {
+			if s, ok := args[2].(string); ok {
+				suffix = s
+			}
+		}
+
+		if len(text) <= int(maxLength) {
+			return text, nil
+		}
+
+		if int(maxLength) <= len(suffix) {
+			return suffix, nil
+		}
+
+		return text[:int(maxLength)-len(suffix)] + suffix, nil
+
+	case "hashString":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("hashString requires text parameter")
+		}
+		text, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("text must be string")
+		}
+
+		algorithm := "sha256"
+		if len(args) > 1 && args[1] != nil {
+			if alg, ok := args[1].(string); ok {
+				algorithm = alg
+			}
+		}
+
+		var h hash.Hash
+		switch strings.ToLower(algorithm) {
+		case "sha256":
+			h = sha256.New()
+		case "sha512":
+			h = sha512.New()
+		case "md5":
+			h = md5.New()
+		default:
+			return nil, fmt.Errorf("unsupported hash algorithm: %s", algorithm)
+		}
+
+		h.Write([]byte(text))
+		return hex.EncodeToString(h.Sum(nil)), nil
+
+	case "sleep":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sleep requires milliseconds parameter")
+		}
+		ms, ok := args[0].(float64)
+		if !ok {
+			return nil, fmt.Errorf("milliseconds must be number")
+		}
+
+		time.Sleep(time.Duration(ms) * time.Millisecond)
+		return nil, nil
+
+	case "formatDuration":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("formatDuration requires milliseconds parameter")
+		}
+		ms, ok := args[0].(float64)
+		if !ok {
+			return nil, fmt.Errorf("milliseconds must be number")
+		}
+
+		d := time.Duration(ms) * time.Millisecond
+		return d.String(), nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
+}

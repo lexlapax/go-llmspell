@@ -10,20 +10,24 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 
 	// go-llms imports for model info functionality
-	_ "github.com/lexlapax/go-llms/pkg/util/llmutil/modelinfo" // TODO: Will be used for model registry
+	"fmt"
+
+	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
+	"github.com/lexlapax/go-llms/pkg/util/llmutil/modelinfo"
+	"github.com/lexlapax/go-llms/pkg/util/llmutil/modelinfo/domain"
 )
 
 // ModelInfoBridge provides access to LLM model information via go-llms ModelRegistry
 type ModelInfoBridge struct {
 	mu          sync.RWMutex
-	registries  map[string]ModelRegistry
+	registries  map[string]llmdomain.ModelRegistry
 	initialized bool
 }
 
 // NewModelInfoBridge creates a new model info bridge
 func NewModelInfoBridge() *ModelInfoBridge {
 	return &ModelInfoBridge{
-		registries: make(map[string]ModelRegistry),
+		registries: make(map[string]llmdomain.ModelRegistry),
 	}
 }
 
@@ -153,7 +157,7 @@ func (b *ModelInfoBridge) RequiredPermissions() []engine.Permission {
 }
 
 // RegisterModelRegistry registers a model registry
-func (b *ModelInfoBridge) RegisterModelRegistry(name string, registry ModelRegistry) error {
+func (b *ModelInfoBridge) RegisterModelRegistry(name string, registry llmdomain.ModelRegistry) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -174,9 +178,197 @@ func (b *ModelInfoBridge) ListRegistries() []string {
 }
 
 // GetRegistry returns a specific registry
-func (b *ModelInfoBridge) GetRegistry(name string) ModelRegistry {
+func (b *ModelInfoBridge) GetRegistry(name string) llmdomain.ModelRegistry {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	return b.registries[name]
+}
+
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if !b.initialized {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+
+	switch name {
+	case "fetchModelInventory":
+		// Create model info service and fetch inventory
+		service := modelinfo.NewModelInfoServiceFunc()
+		inventory, err := service.AggregateModels()
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch model inventory: %w", err)
+		}
+
+		// Convert to script-friendly format
+		return map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"version":       inventory.Metadata.Version,
+				"lastUpdated":   inventory.Metadata.LastUpdated,
+				"description":   inventory.Metadata.Description,
+				"schemaVersion": inventory.Metadata.SchemaVersion,
+			},
+			"models": convertModelsToScript(inventory.Models),
+		}, nil
+
+	case "fetchProviderModels":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("fetchProviderModels requires provider parameter")
+		}
+		provider, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider must be string")
+		}
+
+		// Create service and fetch models for specific provider
+		service := modelinfo.NewModelInfoServiceFunc()
+		inventory, err := service.AggregateModels()
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch models: %w", err)
+		}
+
+		// Filter models by provider
+		var providerModels []domain.Model
+		for _, m := range inventory.Models {
+			if m.Provider == provider {
+				providerModels = append(providerModels, m)
+			}
+		}
+
+		if len(providerModels) == 0 {
+			return nil, fmt.Errorf("provider %s not found", provider)
+		}
+
+		return convertModelsToScript(providerModels), nil
+
+	case "listRegistries":
+		return b.ListRegistries(), nil
+
+	case "registerModelRegistry":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerModelRegistry requires name and registry parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		registry, ok := args[1].(llmdomain.ModelRegistry)
+		if !ok {
+			return nil, fmt.Errorf("registry must be ModelRegistry")
+		}
+		return nil, b.RegisterModelRegistry(name, registry)
+
+	case "listModels":
+		// List all models from all registries
+		var allModels []string
+		for _, registry := range b.registries {
+			models := registry.ListModels()
+			allModels = append(allModels, models...)
+		}
+		return allModels, nil
+
+	case "listModelsByRegistry":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("listModelsByRegistry requires registryName parameter")
+		}
+		registryName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("registryName must be string")
+		}
+		registry := b.GetRegistry(registryName)
+		if registry == nil {
+			return nil, fmt.Errorf("registry not found: %s", registryName)
+		}
+		return registry.ListModels(), nil
+
+	case "getModel":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("getModel requires registryName and modelID parameters")
+		}
+		registryName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("registryName must be string")
+		}
+		modelID, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("modelID must be string")
+		}
+		registry := b.GetRegistry(registryName)
+		if registry == nil {
+			return nil, fmt.Errorf("registry not found: %s", registryName)
+		}
+		provider, err := registry.GetModel(modelID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get model: %w", err)
+		}
+		// Return provider as a map for script compatibility
+		return map[string]interface{}{
+			"provider": provider,
+			"modelID":  modelID,
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
+}
+
+// Helper function to convert models to script format
+func convertModelsToScript(models []domain.Model) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(models))
+	for i, m := range models {
+		result[i] = convertModelToScript(m)
+	}
+	return result
+}
+
+// Helper function to convert a single model to script format
+func convertModelToScript(m domain.Model) map[string]interface{} {
+	return map[string]interface{}{
+		"provider":         m.Provider,
+		"name":             m.Name,
+		"displayName":      m.DisplayName,
+		"description":      m.Description,
+		"documentationURL": m.DocumentationURL,
+		"contextWindow":    m.ContextWindow,
+		"maxOutputTokens":  m.MaxOutputTokens,
+		"trainingCutoff":   m.TrainingCutoff,
+		"modelFamily":      m.ModelFamily,
+		"lastUpdated":      m.LastUpdated,
+		"pricing": map[string]interface{}{
+			"inputPer1kTokens":  m.Pricing.InputPer1kTokens,
+			"outputPer1kTokens": m.Pricing.OutputPer1kTokens,
+		},
+		"capabilities": convertCapabilitiesToScript(m.Capabilities),
+	}
+}
+
+// Helper function to convert capabilities to script format
+func convertCapabilitiesToScript(c domain.Capabilities) map[string]interface{} {
+	return map[string]interface{}{
+		"text": map[string]interface{}{
+			"read":  c.Text.Read,
+			"write": c.Text.Write,
+		},
+		"image": map[string]interface{}{
+			"read":  c.Image.Read,
+			"write": c.Image.Write,
+		},
+		"audio": map[string]interface{}{
+			"read":  c.Audio.Read,
+			"write": c.Audio.Write,
+		},
+		"video": map[string]interface{}{
+			"read":  c.Video.Read,
+			"write": c.Video.Write,
+		},
+		"file": map[string]interface{}{
+			"read":  c.File.Read,
+			"write": c.File.Write,
+		},
+		"functionCalling": c.FunctionCalling,
+		"streaming":       c.Streaming,
+	}
 }

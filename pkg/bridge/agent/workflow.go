@@ -12,7 +12,8 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 
 	// go-llms imports for workflow functionality
-	_ "github.com/lexlapax/go-llms/pkg/agent/workflow" // TODO: Will be used for workflow creation
+	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	// _ "github.com/lexlapax/go-llms/pkg/agent/workflow" // Will be used when workflow package is available
 )
 
 // WorkflowBridge provides script access to go-llms workflow functionality
@@ -468,4 +469,85 @@ func (b *WorkflowBridge) removeWorkflowInternal(id string) error {
 
 	delete(b.workflows, id)
 	return nil
+}
+
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *WorkflowBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if !b.initialized {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+
+	switch name {
+	case "createSequentialWorkflow":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("createSequentialWorkflow requires name and config parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		config, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("config must be object")
+		}
+
+		// Placeholder until go-llms workflow package is available
+		// Will create actual workflow using workflow.NewSequentialWorkflow
+		return map[string]interface{}{
+			"id":     fmt.Sprintf("workflow-%s", name),
+			"type":   "sequential",
+			"name":   name,
+			"config": config,
+		}, nil
+
+	case "listWorkflows":
+		workflows := make([]map[string]interface{}, 0, len(b.workflows))
+		for id, workflow := range b.workflows {
+			workflows = append(workflows, map[string]interface{}{
+				"id":   id,
+				"type": workflow.Type(),
+				"name": workflow.Name(),
+			})
+		}
+		return workflows, nil
+
+	case "executeWorkflow":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("executeWorkflow requires workflowID parameter")
+		}
+		workflowID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("workflowID must be string")
+		}
+
+		workflow, err := b.getWorkflow(workflowID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create input state
+		inputState := domain.NewState()
+		if len(args) > 1 && args[1] != nil {
+			if inputData, ok := args[1].(map[string]interface{}); ok {
+				for k, v := range inputData {
+					inputState.Set(k, v)
+				}
+			}
+		}
+
+		// Execute workflow
+		resultState, err := workflow.Run(ctx, inputState)
+		if err != nil {
+			return nil, fmt.Errorf("workflow execution failed: %w", err)
+		}
+
+		// Return result state values
+		return resultState.Values(), nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
 }

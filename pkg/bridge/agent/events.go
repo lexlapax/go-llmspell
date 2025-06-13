@@ -10,9 +10,7 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-
 	// go-llms imports for event functionality
-	_ "github.com/lexlapax/go-llms/pkg/agent/domain" // TODO: Will be used for event handling
 )
 
 // EventBridge provides script access to go-llms event functionality
@@ -568,5 +566,76 @@ func (b *EventBridge) notifySubscribers(event bridge.Event) {
 
 		// Notify subscriber (would invoke script handler in real implementation)
 		// This is where we'd bridge to the script engine's function call mechanism
+	}
+}
+
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if !b.initialized {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+
+	switch name {
+	case "subscribeToEventType":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("subscribeToEventType requires eventType and handler parameters")
+		}
+		eventType, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("eventType must be string")
+		}
+
+		// Create subscription
+		subID := b.generateSubscriptionID()
+		sub := &EventSubscription{
+			ID:        subID,
+			EventType: bridge.EventType(eventType),
+			Handler:   args[1], // Store the handler function
+			Active:    true,
+		}
+
+		b.subscriptions[subID] = sub
+		return subID, nil
+
+	case "unsubscribe":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("unsubscribe requires subscriptionID parameter")
+		}
+		subID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("subscriptionID must be string")
+		}
+
+		if sub, exists := b.subscriptions[subID]; exists {
+			sub.Active = false
+			delete(b.subscriptions, subID)
+		}
+		return nil, nil
+
+	case "getEventHistory":
+		// Return copy of event history
+		history := make([]map[string]interface{}, len(b.eventHistory))
+		for i, event := range b.eventHistory {
+			history[i] = map[string]interface{}{
+				"id":        event.ID,
+				"type":      string(event.Type),
+				"timestamp": event.Timestamp,
+				"agentID":   event.AgentID,
+				"agentName": event.AgentName,
+				"data":      event.Data,
+				"metadata":  event.Metadata,
+			}
+		}
+		return history, nil
+
+	case "clearEventHistory":
+		b.eventHistory = b.eventHistory[:0]
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
 	}
 }

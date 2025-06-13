@@ -12,8 +12,8 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 
 	// go-llms imports for agent functionality
-	_ "github.com/lexlapax/go-llms/pkg/agent/core"   // TODO: Will be used for agent creation
-	_ "github.com/lexlapax/go-llms/pkg/agent/domain" // TODO: Will be used for agent types
+	agentcore "github.com/lexlapax/go-llms/pkg/agent/core"
+	"github.com/lexlapax/go-llms/pkg/agent/domain"
 )
 
 // AgentBridge provides script access to go-llms agent functionality
@@ -404,4 +404,111 @@ func (b *AgentBridge) removeAgentInternal(id string) error {
 
 	delete(b.agents, id)
 	return nil
+}
+
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if !b.initialized {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+
+	switch name {
+	case "createAgent":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("createAgent requires type and config parameters")
+		}
+		agentType, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("agent type must be string")
+		}
+		config, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("config must be object")
+		}
+
+		// Extract name and description
+		name, _ := config["name"].(string)
+		if name == "" {
+			name = "agent"
+		}
+		description, _ := config["description"].(string)
+		if description == "" {
+			description = "Script-created agent"
+		}
+
+		// Create agent based on type
+		var agent bridge.BaseAgent
+
+		switch domain.AgentType(agentType) {
+		case domain.AgentTypeLLM:
+			// For LLM agent, we need a provider
+			// This is simplified - in real implementation, would get provider from bridge
+			// For now, return error indicating provider needed
+			return nil, fmt.Errorf("LLM agent creation requires provider setup")
+
+		default:
+			// For other types, we can create a base agent
+			agent = agentcore.NewBaseAgent(name, description, domain.AgentType(agentType))
+		}
+
+		// Store agent
+		b.agents[agent.ID()] = agent
+
+		// Return agent info
+		return map[string]interface{}{
+			"id":   agent.ID(),
+			"type": agent.Type(),
+			"name": agent.Name(),
+		}, nil
+
+	case "executeAgent":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("executeAgent requires agentID and input parameters")
+		}
+		agentID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("agentID must be string")
+		}
+
+		agent, err := b.getAgent(agentID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create state from input
+		inputState := domain.NewState()
+		if inputData, ok := args[1].(map[string]interface{}); ok {
+			for k, v := range inputData {
+				inputState.Set(k, v)
+			}
+		}
+
+		// Run agent
+		resultState, err := agent.Run(ctx, inputState)
+		if err != nil {
+			return nil, fmt.Errorf("agent execution failed: %w", err)
+		}
+
+		// Convert result state to map
+		result := resultState.Values()
+
+		return result, nil
+
+	case "listAgents":
+		agents := make([]map[string]interface{}, 0, len(b.agents))
+		for _, agent := range b.agents {
+			agents = append(agents, map[string]interface{}{
+				"id":   agent.ID(),
+				"type": agent.Type(),
+				"name": agent.Name(),
+			})
+		}
+		return agents, nil
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
 }

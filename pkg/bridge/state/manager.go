@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lexlapax/go-llms/pkg/agent/core" // TODO: Will be used for StateManager creation
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -810,6 +809,78 @@ func (b *StateManagerBridge) scriptToMessage(scriptObj map[string]interface{}) (
 		Role:    domain.Role(role),
 		Content: content,
 	}, nil
+}
+
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+	switch name {
+	case "createState":
+		return b.createState(ctx, nil)
+
+	case "saveState":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("saveState requires state parameter")
+		}
+		stateObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("state must be an object")
+		}
+		return b.saveState(ctx, map[string]interface{}{"state": stateObj})
+
+	case "loadState":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("loadState requires id parameter")
+		}
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+		return b.loadState(ctx, map[string]interface{}{"id": id})
+
+	case "deleteState":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("deleteState requires id parameter")
+		}
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+		return b.deleteState(ctx, map[string]interface{}{"id": id})
+
+	case "listStates":
+		return b.listStates(ctx, nil)
+
+	case "applyTransform":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("applyTransform requires name and state parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		stateObj, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("state must be an object")
+		}
+		return b.applyTransform(ctx, map[string]interface{}{"name": name, "state": stateObj})
+
+	case "mergeStates":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("mergeStates requires states and strategy parameters")
+		}
+		states, ok := args[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("states must be an array")
+		}
+		strategy, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("strategy must be string")
+		}
+		return b.mergeStates(ctx, map[string]interface{}{"states": states, "strategy": strategy})
+
+	default:
+		return nil, fmt.Errorf("method not found: %s", name)
+	}
 }
 
 func (b *StateManagerBridge) registerBuiltinTransforms() {
