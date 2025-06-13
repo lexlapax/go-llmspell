@@ -4,28 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-go-llmspell is a Go library providing **scriptable LLM interactions** using embedded scripting languages (Lua, JavaScript, Tengo). It wraps go-llms v0.3.3 with multi-engine scripting for AI agent orchestration.
+go-llmspell is a Go library providing **scriptable LLM interactions** using embedded scripting languages (Lua, JavaScript, Tengo). It bridges go-llms v0.3.3 functionality to scripts without reimplementing features.
 
 ## Current Status (June 2025)
 
-✅ **Phase 1.1 Complete**: Script Engine Interface foundation
-✅ **Phase 1.2 Complete**: Core Agent System implementation
-🚧 **Phase 1.3 Next**: State Management System (evaluating need)
-🎯 **Target**: Full multi-engine support with go-llms v0.3.3 features
+✅ **Phase 1.1 Complete**: Script Engine Interface foundation  
+✅ **Phase 1.2 Complete**: Core Bridge Foundation (state, utilities)  
+🚧 **Phase 1.3 Active**: Core Bridge System (agents, workflows, events, tools)  
+🎯 **Target**: Pure bridge architecture exposing go-llms to scripts
 
 ### Completed Components
 - Core interfaces (ScriptEngine, Bridge, TypeConverter)
 - Engine Registry with thread-safe operations
 - Type System with cross-engine conversions
 - Bridge Manager with lifecycle management
-- Core bridges: LLM (streaming), Utilities, Model Info
-- Agent System (interface, base, registry, context)
+- State bridges: Manager, Context, Persistence
+- Utility bridges: Auth, JSON, LLM, General
+- Bridge type system with go-llms aliases
+
+## Architecture Principle
+
+**Fundamental Rule**: If it's not in go-llms, we don't implement it in go-llmspell.
+
+```
+/pkg/engine/     # Script engine interfaces (our code)
+/pkg/bridge/     # Thin wrappers around go-llms (no business logic)
+```
 
 ## Development Workflow
 
 1. **Read TODO.md** for current tasks
 2. **Write tests first** (TDD mandatory)
-3. **Implement feature**
+3. **Implement feature** (bridge only, no business logic)
 4. **Run `make all`** (fmt, vet, lint, test, build)
 5. **Update TODO-DONE.md** when complete
 
@@ -38,41 +48,23 @@ make lint       # Check code quality
 make build      # Build binary
 ```
 
-## Architecture
-
-```
-/pkg/engine/     # Core interfaces & registry
-/pkg/bridge/     # Go-script bridges (LLM, utils, etc.)
-/pkg/core/       # Engine-agnostic systems
-  /agent/        # Agent interface, base, registry, context
-```
-
-### Design Principles
-- **Engine-agnostic** core functionality
-- **Test-driven** development (tests before code)
-- **Thread-safe** implementations
-- **Security-first** with sandboxed execution
-
 ## Implementation Guidelines
 
-- Follow existing patterns in completed components
-- Ensure thread-safety with proper locking
-- Write comprehensive table-driven tests
-- Document public APIs with godoc comments
-- Handle errors explicitly, never panic
-- Use contexts for cancellation/timeouts
+- **Bridge, don't build** - Only wrap go-llms functionality
+- **No business logic** - All intelligence lives in go-llms
+- **Type conversions only** - Convert between script and Go types
+- **Test everything** - Comprehensive table-driven tests
+- **Thread-safe** - Proper locking where needed
+- **No mocks in production** - Only in test files
 
 ## Important Files
 
 - **TODO.md** - Current implementation tasks
 - **TODO-DONE.md** - Completed work tracking
-- **docs/MIGRATION_PLAN_V0.3.3.md** - Architecture design
+- **docs/technical/architecture.md** - Bridge-first design
 
 ## Notes
 
-- Legacy Lua-only code exists but being replaced
-- Memory subsystem deferred (not in go-llms yet)
+- Bridge pattern strictly enforced
 - Always run `make all` before committing
-
-## Memories
-- Do not ever modify the git sub-modules like go-llms
+- Never modify go-llms submodule

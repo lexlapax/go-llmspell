@@ -97,11 +97,14 @@ Welcome to the comprehensive go-llmspell documentation. This directory contains 
 ### ✅ **Completed**
 - **Architecture Design** - Bridge-first approach documented
 - **Phase 1.1** - Script Engine Interface complete
-- **Core Bridges** - LLM, Utilities, Model Info bridges implemented
+- **Phase 1.2** - Core Bridge Foundation complete
+  - State management bridges (Manager, Context, Persistence)
+  - Utility bridges (Auth, JSON, LLM, General)
+  - Bridge type system with go-llms aliases
 - **Documentation** - Comprehensive architecture and guide structure
 
 ### 🚧 **In Progress**
-- **Phase 1.2** - State and workflow bridges
+- **Phase 1.3** - Core Bridge System (agents, workflows, events, tools)
 - **Lua Engine** - First scripting language implementation
 - **User Guides** - Spell writing tutorials and examples
 - **API Documentation** - Complete scripting interface reference

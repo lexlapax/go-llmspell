@@ -4,62 +4,30 @@
 Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this TODO focuses on **bridging existing go-llms functionality** rather than reimplementing features. Our value is making go-llms scriptable through Lua, JavaScript, and Tengo.
 
 ## Key Principles
-1. **Bridge, Don't Build**: If it exists in go-llms, we bridge it
-2. **Clean Architecture**: Just `pkg/engine/` and `pkg/bridge/` - no agents, no core
-3. **Script Engines Execute**: Engines handle script execution directly
-4. **Type Safety**: Maintain type conversions at bridge boundaries
+1. **Fundamental Rule**: If it's not in go-llms, we don't implement it in go-llmspell
+2. **Bridge, Don't Build**: We ONLY bridge existing go-llms functionality
+3. **Clean Architecture**: Just `pkg/engine/` and `pkg/bridge/` - no business logic
+4. **Script Infrastructure Only**: We only build what's needed for scripting (engines, type conversion, sandboxing)
+5. **Type Safety**: Maintain type conversions at bridge boundaries
 
 ## Migration Status
 - ✅ Updated go-llms submodule to v0.3.3
 - ✅ Phase 1.1: Script Engine Interface [COMPLETED]
-- ❌ Phase 1.2: ~~Script Execution Agent System~~ [DELETE - Architectural mismatch]
-- 🚧 Migration to bridge-first architecture in progress
+- ✅ Phase 1.2: Core Bridge Foundation [COMPLETED]
+  - State management bridges
+  - Bridge type system with go-llms aliases
+  - Utility bridges (auth, json, llm, general)
+  - Applied "If not in go-llms, don't implement" principle
+- 🚧 Phase 1.3: Core Bridge System - IN PROGRESS
+- 🚧 Migration to pure bridge architecture in progress
 
 ---
-
 
 ## Phase 1: Engine and Bridge Foundation
 
 ### ✅ 1.1 Script Engine Interface [COMPLETED]
-- ✅ Core interfaces (ScriptEngine, Bridge, TypeConverter)
-- ✅ Engine registry and discovery
-- ✅ Type system foundation
-- ✅ Bridge manager
 
-### 1.2 State Bridge System
-Bridge the comprehensive state management already in go-llms `/pkg/agent/core/state_manager.go`
-
-- [ ] **Task 1.2.1: State Manager Bridge**
-  - [ ] Create test file `/pkg/bridge/state_manager_test.go`
-  - [ ] Test state lifecycle operations bridging
-  - [ ] Test state transforms (filter, flatten, sanitize)
-  - [ ] Test merge strategies (Last, MergeAll, Union)
-  - [ ] Test snapshot and history operations
-  - [ ] Create `/pkg/bridge/state_manager.go`
-  - [ ] Bridge StateManager from go-llms
-  - [ ] Expose state operations to scripts
-  - [ ] Handle type conversions for state data
-  - [ ] Support all merge strategies
-
-- [ ] **Task 1.2.2: State Context Bridge**
-  - [ ] Create test file `/pkg/bridge/state_context_test.go`
-  - [ ] Test SharedStateContext bridging
-  - [ ] Test parent-child state relationships
-  - [ ] Test state isolation and sharing
-  - [ ] Create `/pkg/bridge/state_context.go`
-  - [ ] Bridge SharedStateContext from go-llms
-  - [ ] Enable parent-child state sharing
-  - [ ] Support state scoping for sub-agents
-
-- [ ] **Task 1.2.3: State Persistence Bridge**
-  - [ ] Create test file `/pkg/bridge/state_persistence_test.go`
-  - [ ] Test persistence interface bridging
-  - [ ] Test save/load operations
-  - [ ] Test custom persistence implementations
-  - [ ] Create `/pkg/bridge/state_persistence.go`
-  - [ ] Bridge state persistence interface
-  - [ ] Allow script-based persistence implementations
-  - [ ] Support various storage backends from scripts
+### ✅ 1.2 Core Bridge Foundation [COMPLETED]
 
 ### 1.3 Core Bridge System
 
@@ -100,11 +68,18 @@ Bridge the comprehensive state management already in go-llms `/pkg/agent/core/st
 - [ ] **Task 1.3.4: Tool System Bridge**
   - [ ] Create test file `/pkg/bridge/tools_test.go`
   - [ ] Test tool interface bridging
-  - [ ] Test built-in tools exposure
+  - [ ] Test built-in tools exposure (all categories)
   - [ ] Test tool registration and execution
   - [ ] Create `/pkg/bridge/tools.go`
   - [ ] Bridge pkg/agent/tools interfaces
-  - [ ] Expose built-in tools from pkg/agent/builtins/tools
+  - [ ] Expose ALL built-in tools from pkg/agent/builtins/tools:
+    - [ ] Data tools (CSV, JSON, XML processing)
+    - [ ] DateTime tools (calculations, formatting, parsing)
+    - [ ] Feed tools (RSS/Atom aggregation)
+    - [ ] File tools (read, write, list, search)
+    - [ ] Math tools (calculator)
+    - [ ] System tools (env vars, process execution)
+    - [ ] Web tools (HTTP, GraphQL, scraping)
   - [ ] Support tool registration and execution
   - [ ] Enable tool composition and chaining
 
@@ -151,10 +126,36 @@ Bridge the comprehensive state management already in go-llms `/pkg/agent/core/st
   - [ ] Support custom metric collection
   - [ ] Enable metric aggregation
 
-- [ ] **Task 1.4.6: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
+- [ ] **Task 1.4.6: Provider System Bridge**
+  - [ ] Create `/pkg/bridge/providers.go`
+  - [ ] Bridge all provider implementations (Anthropic, OpenAI, etc.)
+  - [ ] Bridge consensus provider for multi-LLM voting
+  - [ ] Bridge multi-provider with strategies (primary/fallback, sequential)
+  - [ ] Expose provider configuration and options
+
+- [ ] **Task 1.4.7: Provider Pool Bridge**
+  - [ ] Create `/pkg/bridge/provider_pool.go`
+  - [ ] Bridge connection pooling from go-llms
+  - [ ] Expose pool metrics and management
+  - [ ] Support connection limits and timeouts
+
+- [ ] **Task 1.4.8: Built-in Tools Registry Bridge**
+  - [ ] Create `/pkg/bridge/tools_registry.go`
+  - [ ] Bridge the tool registry system
+  - [ ] Expose tool discovery and metadata
+  - [ ] Support dynamic tool loading
+
+
+- [ ] **Task 1.4.9: Profiling Bridge**
+  - [ ] Create `/pkg/bridge/profiling.go`
+  - [ ] Bridge performance profiling utilities
+  - [ ] Support integration test profiling
+  - [ ] Enable performance monitoring from scripts
+
+- [ ] **Task 1.4.10: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms
 
-- [ ] **Task 1.4.7: Conversation Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
+- [ ] **Task 1.4.11: Conversation Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms
 
 ---
@@ -331,8 +332,8 @@ Bridge the comprehensive state management already in go-llms `/pkg/agent/core/st
 ## Notes
 
 ### Development Order
-1. Delete `/pkg/core/agent/` immediately
-2. Implement core bridges (state, llm_agent, workflow)
+1. Complete core bridges (llm_agent, workflow, events, tools)
+2. Implement provider and pool bridges
 3. Complete Lua engine and stdlib
 4. Add JavaScript engine
 5. Add Tengo engine
@@ -344,19 +345,28 @@ Bridge the comprehensive state management already in go-llms `/pkg/agent/core/st
 - Cross-engine conformance tests
 - Performance benchmarks
 
-### What We DON'T Build
-- ❌ Any agent abstractions (scripts execute directly)
-- ❌ State management (bridge to go-llms)
-- ❌ Workflow engine (bridge to go-llms)
-- ❌ Event system (bridge to go-llms)
-- ❌ Complex abstractions (keep it simple)
+### What We DON'T Build (CRITICAL)
+- ❌ **NO LLM Logic**: No provider implementations, no API calls, no response parsing
+- ❌ **NO Agent Logic**: No agent orchestration, no tool execution logic
+- ❌ **NO State Management**: No state storage, transforms, or merging logic
+- ❌ **NO Workflow Engine**: No workflow execution or state passing
+- ❌ **NO Event System**: No event dispatching or subscription logic
+- ❌ **NO Tools Implementation**: No tool logic, only bridging to go-llms tools
+- ❌ **NO Business Features**: If it should be in go-llms, contribute it there first
+- ❌ **NO Custom Abstractions**: No "improved" versions of go-llms features
 
-### What We DO Build
-- ✅ Script engines (Lua, JS, Tengo)
-- ✅ Type converters
-- ✅ Bridges to go-llms
-- ✅ Language-specific stdlib
-- ✅ Examples and documentation
+### What We DO Build (Our ONLY Value-Add)
+- ✅ **Script Engines**: Lua, JavaScript, Tengo execution environments
+- ✅ **Type Converters**: Script ↔ Go type conversion infrastructure
+- ✅ **Bridge Interfaces**: Thin wrappers that expose go-llms to scripts
+- ✅ **Security Sandboxes**: Script execution isolation and resource limits
+- ✅ **Language Bindings**: Idiomatic script APIs for each language
+- ✅ **Examples/Documentation**: How to use go-llms from scripts
+
+### If You're Tempted to Implement Something...
+1. **STOP**: Does it exist in go-llms? → Bridge it
+2. **STOP**: Should it exist in go-llms? → Contribute upstream first
+3. **STOP**: Is it script-specific? → Only then implement it here
 
 ---
 

@@ -75,10 +75,21 @@ Go-LLMSpell provides a **bridge-first architecture** that:
 
 ### 1. Bridge, Don't Build
 
-We don't reimplement features that exist in go-llms. Instead, we create thin bridges that expose go-llms functionality to scripts. This ensures:
+**Fundamental Rule: If it's not in go-llms, we don't implement it in go-llmspell.**
+
+We exclusively provide bridging interfaces to expose existing go-llms functionality to scripts. We never reimplement features that exist in go-llms. This strict adherence ensures:
 - Automatic compatibility with go-llms updates
 - Minimal maintenance burden
 - Consistent behavior with direct go-llms usage
+- No feature drift or divergent implementations
+
+**What This Means in Practice:**
+- ✅ Create script bindings for go-llms types and functions
+- ✅ Build type converters between script and Go types
+- ✅ Implement script engine infrastructure
+- ❌ Never implement LLM logic, agents, tools, or workflows ourselves
+- ❌ Never add features that should belong in go-llms
+- ❌ Never maintain custom versions of go-llms functionality
 
 ### 2. Engine-Agnostic Design
 
@@ -157,22 +168,32 @@ LLM Providers (OpenAI, Anthropic, etc.)
 
 #### We Build (Our Value-Add)
 1. **Script Engine System** - Multi-language execution environments
-2. **Type Conversion Layer** - Seamless script ↔ Go type conversions
-3. **Bridge Interfaces** - Clean APIs to go-llms functionality
+2. **Type Conversion Layer** - Seamless script ↔ Go type conversions  
+3. **Bridge Interfaces** - Thin wrappers exposing go-llms to scripts
 4. **Language Bindings** - Idiomatic APIs for each scripting language
-5. **Developer Experience** - Hot reload, debugging, examples
+5. **Script Infrastructure** - Sandboxing, resource limits, hot reload
+
+**Important**: We ONLY create implementations, structs, and interfaces that are necessary to support scripting and bridging. No business logic, no LLM functionality, no duplicating go-llms features.
 
 #### We Bridge (From go-llms)
-1. **LLM Agents** - Full agent system with tools and orchestration
-2. **State Management** - StateManager, transforms, persistence
-3. **Workflows** - Sequential, parallel, conditional, loop workflows
-4. **Event System** - Real-time event streaming and subscriptions
-5. **Tools** - File, web, data, datetime, math, system tools
-6. **Infrastructure** - Tracing, metrics, hooks, guardrails
+Everything else comes from go-llms:
+1. **LLM Providers** - All provider interfaces and implementations
+2. **Agents** - Complete agent system with tools and orchestration
+3. **State Management** - StateManager, SharedContext, transforms
+4. **Workflows** - All workflow types and execution logic
+5. **Tools** - All built-in and custom tool functionality
+6. **Event System** - Event streaming and subscriptions
+7. **Infrastructure** - Tracing, metrics, hooks, guardrails
+8. **Utilities** - JSON, auth, LLM utilities from go-llms/pkg/util
 
-#### We Defer (Not Yet in go-llms)
-1. **Memory System** - Await go-llms implementation
-2. **Conversation Management** - Await go-llms implementation
+#### We Never Implement
+These belong in go-llms, not go-llmspell:
+1. **New LLM Features** - Submit upstream to go-llms first
+2. **Custom Agents** - Use go-llms agent system
+3. **New Tools** - Contribute to go-llms tool library
+4. **Workflow Types** - Extend go-llms workflow engine
+5. **Memory System** - Wait for go-llms implementation
+6. **Any Core Logic** - All intelligence lives in go-llms
 
 ### Bridge Implementation Strategy
 
@@ -181,33 +202,41 @@ Each bridge follows these principles:
 1. **Thin Wrappers**: Minimal code between scripts and go-llms
 2. **Type Safety**: Handle all conversions at bridge boundaries
 3. **Error Mapping**: Convert Go errors to script-friendly formats
-4. **Performance**: Cache conversions, optimize hot paths
+4. **No Business Logic**: Bridges only translate, never implement features
+5. **Direct Delegation**: All functionality comes from go-llms
 
 Example bridge structure:
 
 ```go
-// Bridge to go-llms StateManager
+// Bridge to go-llms StateManager - ONLY wrapping, no implementation
 type StateBridge struct {
-    manager *golms.StateManager
+    manager *core.StateManager  // From go-llms
 }
 
-func (b *StateBridge) Register(engine ScriptEngine) error {
-    // Expose methods to scripts
-    engine.RegisterFunction("state.create", b.wrapCreate)
-    engine.RegisterFunction("state.get", b.wrapGet)
-    engine.RegisterFunction("state.set", b.wrapSet)
-    return nil
-}
-
-func (b *StateBridge) wrapGet(key string) (interface{}, error) {
-    // Get from go-llms
-    value, err := b.manager.Get(key)
-    if err != nil {
-        return nil, b.mapError(err)
+func (b *StateBridge) Methods() []MethodInfo {
+    // Define script-accessible methods that map to go-llms
+    return []MethodInfo{
+        {Name: "createState", Description: "Create new state", ...},
+        {Name: "saveState", Description: "Save state", ...},
+        // etc - all delegating to go-llms StateManager
     }
-    // Convert to script-friendly type
-    return b.toScriptType(value), nil
 }
+
+// Example method - just type conversion and delegation
+func (b *StateBridge) saveState(args []interface{}) (interface{}, error) {
+    // 1. Convert script types to Go types
+    state := convertToGoState(args[0])
+    
+    // 2. Call go-llms directly
+    id, err := b.manager.SaveState(state)
+    
+    // 3. Convert result back to script types
+    return convertToScriptType(id), err
+}
+
+// NEVER implement features like this:
+// ❌ func (b *StateBridge) customMergeLogic(...) { ... }
+// ❌ func (b *StateBridge) myOwnStateFeature(...) { ... }
 ```
 
 ## Component Architecture
@@ -244,22 +273,32 @@ type ScriptEngine interface {
 
 ![Bridge Layer Architecture](../images/bridge-architecture.svg)
 
-Bridges connect script engines to go-llms functionality:
+**Critical Design Principle**: Bridges are ONLY thin wrappers around go-llms functionality. They translate between script calls and go-llms APIs but never implement any business logic, LLM features, or custom functionality.
 
 ```go
 type Bridge interface {
-    // Registration
-    Register(engine ScriptEngine) error
-    Unregister() error
-    
-    // Metadata
-    Name() string
+    // Metadata - what go-llms functionality this exposes
+    GetID() string
+    GetMetadata() BridgeMetadata
     Methods() []MethodInfo
+    
+    // Lifecycle - setup/teardown only
+    Initialize(ctx context.Context) error
+    Cleanup(ctx context.Context) error
     
     // Type conversion hints
     TypeMappings() map[string]TypeMapping
+    
+    // Registration with script engine
+    RegisterWithEngine(engine ScriptEngine) error
 }
 ```
+
+**Bridge Implementation Rules:**
+1. **Never implement features** - Only wrap go-llms APIs
+2. **Never store business state** - Only hold references to go-llms objects
+3. **Never add logic** - Only type conversion and method delegation
+4. **Never extend functionality** - Submit enhancements to go-llms instead
 
 #### Core Bridges
 
@@ -619,6 +658,12 @@ This collaborative model ensures go-llmspell remains a first-class citizen in th
 
 ## Conclusion
 
-Go-LLMSpell's bridge-first architecture provides a powerful, flexible, and secure way to script LLM interactions. By bridging to go-llms rather than reimplementing features, we ensure compatibility, reduce maintenance burden, and focus on our core value: making LLM orchestration accessible through simple scripts.
+Go-LLMSpell's bridge-first architecture provides a powerful, flexible, and secure way to script LLM interactions. Our fundamental principle - **"If it's not in go-llms, we don't implement it"** - ensures we remain a pure bridging layer that adds scripting capabilities without duplicating or diverging from go-llms functionality.
 
-The clean separation between script engines and bridges, combined with comprehensive type conversion and security features, creates a robust platform for building AI-powered applications in any scripting language.
+By strictly adhering to this principle:
+- We ensure 100% compatibility with go-llms
+- We eliminate maintenance burden of custom features
+- We focus exclusively on our core value: making go-llms accessible through scripts
+- We strengthen the go-llms ecosystem by contributing improvements upstream
+
+The clean separation between script engines and bridges, combined with comprehensive type conversion and security features, creates a robust platform for building AI-powered applications in any scripting language - all while maintaining go-llms as the single source of truth for LLM functionality.

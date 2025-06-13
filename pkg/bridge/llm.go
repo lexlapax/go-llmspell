@@ -1,5 +1,5 @@
-// ABOUTME: Core LLM bridge provides access to language model providers through a unified interface.
-// ABOUTME: Supports multiple providers, streaming responses, message handling, and provider switching.
+// ABOUTME: LLM bridge provides access to language model providers through go-llms interfaces.
+// ABOUTME: Wraps go-llms Provider interface for script engine access without reimplementation.
 
 package bridge
 
@@ -11,36 +11,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// LLMMessage represents a message in an LLM conversation.
-type LLMMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-// LLMProvider defines the interface for language model providers.
-type LLMProvider interface {
-	Complete(ctx context.Context, messages []LLMMessage, options map[string]interface{}) (string, error)
-	CompleteStream(ctx context.Context, messages []LLMMessage, options map[string]interface{}) (<-chan string, <-chan error)
-	GetName() string
-	GetModel() string
-	IsAvailable() bool
-}
-
-// LLMBridge provides script access to language model functionality.
+// LLMBridge provides script access to language model functionality via go-llms.
 type LLMBridge struct {
 	mu             sync.RWMutex
-	providers      map[string]LLMProvider
+	providers      map[string]Provider
 	activeProvider string
 	initialized    bool
-	messageHistory []LLMMessage
-	maxHistorySize int
 }
 
 // NewLLMBridge creates a new LLM bridge.
 func NewLLMBridge() *LLMBridge {
 	return &LLMBridge{
-		providers:      make(map[string]LLMProvider),
-		maxHistorySize: 100,
+		providers: make(map[string]Provider),
 	}
 }
 
@@ -54,7 +36,7 @@ func (b *LLMBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "llm",
 		Version:     "1.0.0",
-		Description: "Core LLM provider access bridge for language model interactions",
+		Description: "LLM provider access bridge wrapping go-llms functionality",
 		Author:      "go-llmspell",
 		License:     "MIT",
 	}
@@ -79,7 +61,6 @@ func (b *LLMBridge) Cleanup(ctx context.Context) error {
 	defer b.mu.Unlock()
 
 	b.initialized = false
-	b.messageHistory = nil
 	return nil
 }
 
@@ -99,86 +80,99 @@ func (b *LLMBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 func (b *LLMBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{
-			Name:        "complete",
-			Description: "Complete a conversation with the LLM",
+			Name:        "registerProvider",
+			Description: "Register an LLM provider",
 			Parameters: []engine.ParameterInfo{
-				{Name: "messages", Type: "array", Required: true, Description: "Array of message objects"},
-				{Name: "options", Type: "object", Required: false, Description: "Completion options"},
-			},
-			ReturnType: "string",
-		},
-		{
-			Name:        "completeStream",
-			Description: "Complete a conversation with streaming response",
-			Parameters: []engine.ParameterInfo{
-				{Name: "messages", Type: "array", Required: true, Description: "Array of message objects"},
-				{Name: "options", Type: "object", Required: false, Description: "Completion options"},
-			},
-			ReturnType: "stream",
-		},
-		{
-			Name:        "setProvider",
-			Description: "Set the active LLM provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
+				{Name: "name", Type: "string", Description: "Provider name", Required: true},
+				{Name: "provider", Type: "Provider", Description: "Provider instance", Required: true},
 			},
 			ReturnType: "void",
 		},
 		{
+			Name:        "setActiveProvider",
+			Description: "Set the active LLM provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Provider name", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "generate",
+			Description: "Generate text using the active provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "generateMessage",
+			Description: "Generate response from messages using the active provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "messages", Type: "array", Description: "Input messages", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "stream",
+			Description: "Stream text generation using the active provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			},
+			ReturnType: "channel",
+		},
+		{
+			Name:        "streamMessage",
+			Description: "Stream response from messages using the active provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "messages", Type: "array", Description: "Input messages", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			},
+			ReturnType: "channel",
+		},
+		{
 			Name:        "listProviders",
-			Description: "List available LLM providers",
+			Description: "List all registered providers",
 			Parameters:  []engine.ParameterInfo{},
 			ReturnType:  "array",
 		},
 		{
-			Name:        "createMessage",
-			Description: "Create a new message object",
-			Parameters: []engine.ParameterInfo{
-				{Name: "role", Type: "string", Required: true, Description: "Message role (system/user/assistant)"},
-				{Name: "content", Type: "string", Required: true, Description: "Message content"},
-			},
-			ReturnType: "object",
+			Name:        "getActiveProvider",
+			Description: "Get the name of the active provider",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "string",
 		},
 	}
-}
-
-// ValidateMethod validates method parameters.
-func (b *LLMBridge) ValidateMethod(name string, args []interface{}) error {
-	switch name {
-	case "complete", "completeStream":
-		if len(args) < 1 {
-			return fmt.Errorf("missing messages argument")
-		}
-		// TODO: Validate message structure
-		return nil
-	case "setProvider":
-		if len(args) < 1 {
-			return fmt.Errorf("missing provider argument")
-		}
-		return nil
-	case "createMessage":
-		if len(args) < 2 {
-			return fmt.Errorf("missing role or content argument")
-		}
-		return nil
-	}
-	return nil
 }
 
 // TypeMappings returns type conversion mappings.
 func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
-		"LLMMessage": {
-			GoType:     "bridge.LLMMessage",
+		"Provider": {
+			GoType:     "Provider",
 			ScriptType: "object",
-			Converter:  "standard",
 		},
-		"CompletionOptions": {
-			GoType:     "map[string]interface{}",
+		"Message": {
+			GoType:     "Message",
 			ScriptType: "object",
-			Converter:  "standard",
+		},
+		"Response": {
+			GoType:     "Response",
+			ScriptType: "object",
+		},
+		"ProviderOptions": {
+			GoType:     "ProviderOptions",
+			ScriptType: "object",
 		},
 	}
+}
+
+// ValidateMethod validates method calls.
+func (b *LLMBridge) ValidateMethod(name string, args []interface{}) error {
+	// Method validation handled by engine based on Methods() metadata
+	return nil
 }
 
 // RequiredPermissions returns required permissions.
@@ -186,50 +180,20 @@ func (b *LLMBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
 			Type:        engine.PermissionNetwork,
-			Resource:    "llm-api",
-			Actions:     []string{"connect", "send", "receive"},
-			Description: "Network access for LLM API calls",
+			Resource:    "llm",
+			Actions:     []string{"access"},
+			Description: "Access to LLM providers",
 		},
 	}
 }
 
 // RegisterProvider registers an LLM provider.
-func (b *LLMBridge) RegisterProvider(name string, provider LLMProvider) error {
+func (b *LLMBridge) RegisterProvider(name string, provider Provider) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if _, exists := b.providers[name]; exists {
-		return fmt.Errorf("provider %s already registered", name)
-	}
-
 	b.providers[name] = provider
 	return nil
-}
-
-// GetProvider retrieves a provider by name.
-func (b *LLMBridge) GetProvider(name string) (LLMProvider, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	provider, exists := b.providers[name]
-	if !exists {
-		return nil, fmt.Errorf("provider %s not found", name)
-	}
-
-	return provider, nil
-}
-
-// ListProviders returns a list of registered provider names.
-func (b *LLMBridge) ListProviders() []string {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	names := make([]string, 0, len(b.providers))
-	for name := range b.providers {
-		names = append(names, name)
-	}
-
-	return names
 }
 
 // SetActiveProvider sets the active provider.
@@ -245,177 +209,26 @@ func (b *LLMBridge) SetActiveProvider(name string) error {
 	return nil
 }
 
-// GetActiveProvider returns the active provider name.
-func (b *LLMBridge) GetActiveProvider() string {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	return b.activeProvider
-}
-
-// Complete performs LLM completion.
-func (b *LLMBridge) Complete(ctx context.Context, messages []LLMMessage, options map[string]interface{}) (string, error) {
-	if len(messages) == 0 {
-		return "", fmt.Errorf("no messages provided")
-	}
-
-	b.mu.RLock()
-	providerName := b.activeProvider
-	provider := b.providers[providerName]
-	b.mu.RUnlock()
-
-	if provider == nil {
-		return "", fmt.Errorf("no active provider set")
-	}
-
-	// Validate messages
-	for _, msg := range messages {
-		if err := b.ValidateMessage(msg); err != nil {
-			return "", err
-		}
-	}
-
-	// Call provider
-	response, err := provider.Complete(ctx, messages, options)
-	if err != nil {
-		return "", fmt.Errorf("provider error: %w", err)
-	}
-
-	// Update message history
-	b.updateHistory(messages)
-
-	return response, nil
-}
-
-// CompleteStream performs streaming LLM completion.
-func (b *LLMBridge) CompleteStream(ctx context.Context, messages []LLMMessage, options map[string]interface{}) (<-chan string, <-chan error) {
-	chunkChan := make(chan string)
-	errorChan := make(chan error, 1)
-
-	if len(messages) == 0 {
-		errorChan <- fmt.Errorf("no messages provided")
-		close(chunkChan)
-		close(errorChan)
-		return chunkChan, errorChan
-	}
-
-	b.mu.RLock()
-	providerName := b.activeProvider
-	provider := b.providers[providerName]
-	b.mu.RUnlock()
-
-	if provider == nil {
-		errorChan <- fmt.Errorf("no active provider set")
-		close(chunkChan)
-		close(errorChan)
-		return chunkChan, errorChan
-	}
-
-	// Validate messages
-	for _, msg := range messages {
-		if err := b.ValidateMessage(msg); err != nil {
-			errorChan <- err
-			close(chunkChan)
-			close(errorChan)
-			return chunkChan, errorChan
-		}
-	}
-
-	// Call provider
-	providerChunks, providerErrors := provider.CompleteStream(ctx, messages, options)
-
-	// Forward chunks and errors
-	go func() {
-		defer close(chunkChan)
-		defer close(errorChan)
-
-		for {
-			select {
-			case chunk, ok := <-providerChunks:
-				if !ok {
-					// Channel closed, check for any pending errors
-					select {
-					case err := <-providerErrors:
-						if err != nil {
-							errorChan <- err
-						}
-					default:
-					}
-					return
-				}
-				select {
-				case chunkChan <- chunk:
-				case <-ctx.Done():
-					errorChan <- ctx.Err()
-					return
-				}
-			case err, ok := <-providerErrors:
-				if ok && err != nil {
-					errorChan <- err
-					return
-				}
-			case <-ctx.Done():
-				errorChan <- ctx.Err()
-				return
-			}
-		}
-	}()
-
-	// Update message history
-	b.updateHistory(messages)
-
-	return chunkChan, errorChan
-}
-
-// CreateMessage creates a new message.
-func (b *LLMBridge) CreateMessage(role, content string) LLMMessage {
-	return LLMMessage{
-		Role:    role,
-		Content: content,
-	}
-}
-
-// ValidateMessage validates a message.
-func (b *LLMBridge) ValidateMessage(msg LLMMessage) error {
-	validRoles := map[string]bool{
-		"system":    true,
-		"user":      true,
-		"assistant": true,
-	}
-
-	if !validRoles[msg.Role] {
-		return fmt.Errorf("invalid role: %s", msg.Role)
-	}
-
-	if msg.Content == "" {
-		return fmt.Errorf("empty content for role %s", msg.Role)
-	}
-
-	return nil
-}
-
-// IsProviderAvailable checks if a provider is available.
-func (b *LLMBridge) IsProviderAvailable(name string) bool {
+// GetActiveProvider returns the active provider.
+func (b *LLMBridge) GetActiveProvider() Provider {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	provider, exists := b.providers[name]
-	if !exists {
-		return false
+	if b.activeProvider == "" {
+		return nil
 	}
 
-	return provider.IsAvailable()
+	return b.providers[b.activeProvider]
 }
 
-// updateHistory updates the message history.
-func (b *LLMBridge) updateHistory(messages []LLMMessage) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+// ListProviders returns all registered provider names.
+func (b *LLMBridge) ListProviders() []string {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 
-	b.messageHistory = append(b.messageHistory, messages...)
-
-	// Trim history if it exceeds max size
-	if len(b.messageHistory) > b.maxHistorySize {
-		start := len(b.messageHistory) - b.maxHistorySize
-		b.messageHistory = b.messageHistory[start:]
+	names := make([]string, 0, len(b.providers))
+	for name := range b.providers {
+		names = append(names, name)
 	}
+	return names
 }

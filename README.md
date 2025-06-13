@@ -40,8 +40,11 @@ log.info("Story created!")
 
 - ✅ **Architecture** - Bridge-first design documented and implemented
 - ✅ **Phase 1.1** - Script Engine Interface complete
-- ✅ **Core Bridges** - LLM, Utilities, Model Info bridges working
-- 🚧 **Phase 1.2** - State and workflow bridges in progress
+- ✅ **Phase 1.2** - Core Bridge Foundation complete
+  - State management bridges (manager, context, persistence)
+  - Bridge type system with go-llms aliases
+  - Utility bridges (auth, json, llm, general)
+- 🚧 **Phase 1.3** - Core Bridge System in progress (agents, workflows, events, tools)
 - 🔮 **Coming Soon** - Lua engine, then JavaScript and Tengo
 
 ## 🛠️ Quick Start

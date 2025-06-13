@@ -305,6 +305,7 @@ const (
 	PermissionMemory     PermissionType = "memory"
 	PermissionTime       PermissionType = "time"
 	PermissionCrypto     PermissionType = "crypto"
+	PermissionStorage    PermissionType = "storage"
 )
 
 // Errors that engines can return
