@@ -8,6 +8,9 @@ import (
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+
+	// go-llms imports for LLM utilities
+	_ "github.com/lexlapax/go-llms/pkg/util/llmutil" // TODO: Will be used for LLM utilities
 )
 
 // UtilLLMBridge provides script access to go-llms LLM utilities.

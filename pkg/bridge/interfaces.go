@@ -6,6 +6,7 @@ package bridge
 import (
 	"github.com/lexlapax/go-llms/pkg/agent/core"
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	"github.com/lexlapax/go-llms/pkg/agent/workflow"
 	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
 	"github.com/lexlapax/go-llms/pkg/util/auth"
 	"github.com/lexlapax/go-llms/pkg/util/llmutil"
@@ -45,6 +46,23 @@ type (
 	StateValidator = core.StateValidator
 	AgentRegistry  = *core.AgentRegistry
 	LLMAgent       = *core.LLMAgent
+
+	// Workflow types
+	WorkflowAgent          = workflow.WorkflowAgent
+	WorkflowStep           = workflow.WorkflowStep
+	WorkflowState          = *workflow.WorkflowState
+	WorkflowStatus         = workflow.WorkflowStatus
+	WorkflowDefinition     = *workflow.WorkflowDefinition
+	WorkflowStateType      = workflow.WorkflowStateType
+	StepStateType          = workflow.StepStateType
+	StepStatus             = workflow.StepStatus
+	ErrorAction            = workflow.ErrorAction
+	ErrorHandler           = workflow.ErrorHandler
+	DefaultErrorHandler    = *workflow.DefaultErrorHandler
+	AgentStep              = *workflow.AgentStep
+	BranchingWorkflowAgent = workflow.BranchingWorkflowAgent
+	WorkflowOrchestrator   = workflow.WorkflowOrchestrator
+	CoordinationStrategy   = workflow.CoordinationStrategy
 
 	// LLM domain types
 	Provider        = llmdomain.Provider
@@ -106,4 +124,25 @@ const (
 	EventSubAgentEnd   = domain.EventSubAgentEnd
 	EventWorkflowStep  = domain.EventWorkflowStep
 	EventWorkflowStart = domain.EventWorkflowStart
+
+	// Workflow states
+	WorkflowStatePending   = workflow.WorkflowStatePending
+	WorkflowStateRunning   = workflow.WorkflowStateRunning
+	WorkflowStatePaused    = workflow.WorkflowStatePaused
+	WorkflowStateCompleted = workflow.WorkflowStateCompleted
+	WorkflowStateFailed    = workflow.WorkflowStateFailed
+	WorkflowStateCanceled  = workflow.WorkflowStateCanceled
+
+	// Step states
+	StepStatePending   = workflow.StepStatePending
+	StepStateRunning   = workflow.StepStateRunning
+	StepStateCompleted = workflow.StepStateCompleted
+	StepStateFailed    = workflow.StepStateFailed
+	StepStateSkipped   = workflow.StepStateSkipped
+
+	// Error actions
+	ErrorActionRetry    = workflow.ErrorActionRetry
+	ErrorActionSkip     = workflow.ErrorActionSkip
+	ErrorActionAbort    = workflow.ErrorActionAbort
+	ErrorActionContinue = workflow.ErrorActionContinue
 )

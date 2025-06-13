@@ -10,6 +10,10 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+
+	// go-llms imports for LLM functionality
+	_ "github.com/lexlapax/go-llms/pkg/llm/domain"   // TODO: Will be used for LLM types
+	_ "github.com/lexlapax/go-llms/pkg/llm/provider" // TODO: Will be used for provider creation
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.

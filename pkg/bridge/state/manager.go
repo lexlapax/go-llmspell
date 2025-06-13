@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/lexlapax/go-llms/pkg/agent/core" // TODO: Will be used for StateManager creation
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"

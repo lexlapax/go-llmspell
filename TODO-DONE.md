@@ -402,3 +402,77 @@ All components follow TDD principles with comprehensive test coverage. The imple
   - ✅ All tests passing successfully
 
 The bridge package now strictly follows the principle: "If go-llms doesn't have it, we don't have it." Only bridge-specific code for script engine integration remains.
+
+---
+
+### ✅ Task 1.3.2: Workflow Engine Bridge (Completed) - [Date: 2025-06-12]
+
+- ✅ Created test file `/pkg/bridge/agent/workflow_test.go`
+  - ✅ Tested workflow lifecycle bridging with all operations
+  - ✅ Tested all workflow types (sequential, parallel, conditional, loop)
+  - ✅ Tested workflow state and error handling
+  - ✅ Tested step management (add, remove, update, reorder)
+  - ✅ Tested execution control (pause, resume, cancel, retry)
+  - ✅ 100% test coverage with all tests passing
+
+- ✅ Created `/pkg/bridge/agent/workflow.go`
+  - ✅ Bridged workflow system from `/pkg/agent/workflow/`
+  - ✅ Exposed workflow creation methods for all types
+  - ✅ Supported workflow composition from scripts
+  - ✅ Enabled step management and reordering
+  - ✅ Provided execution control and state management
+  - ✅ Added error handling and hooks/events support
+
+- ✅ Updated `/pkg/bridge/interfaces.go`
+  - ✅ Added workflow-related type aliases from go-llms
+  - ✅ Added WorkflowAgent, WorkflowStep, WorkflowState, etc.
+  - ✅ Added workflow status and error handling types
+  - ✅ Added all workflow constants (states, error actions)
+
+**Key Features Bridged:**
+- All workflow types: Sequential, Parallel, Conditional, Loop
+- Complete step management with reordering
+- Workflow execution (sync and async)
+- State and status management
+- Error handling with retry strategies
+- Lifecycle hooks and event subscriptions
+- Workflow configuration and metadata
+
+All tests pass with `make all` - the workflow bridge provides comprehensive access to go-llms workflow functionality.
+
+---
+
+### ✅ Task 1.3.3: Event System Bridge (Completed) - [Date: 2025-06-12]
+
+- ✅ Created test file `/pkg/bridge/agent/events_test.go`
+  - ✅ Tested event streaming to scripts with real-time support
+  - ✅ Tested event filtering and subscription management
+  - ✅ Tested all event types (Agent, Tool, Workflow, State)
+  - ✅ Tested event history and querying capabilities
+  - ✅ Tested concurrent access and timeout handling
+  - ✅ 100% test coverage with all tests passing
+
+- ✅ Created `/pkg/bridge/agent/events.go`
+  - ✅ Bridged pkg/agent/domain event system
+  - ✅ Supported real-time event streaming to scripts
+  - ✅ Enabled event filtering and subscription by type
+  - ✅ Handled lifecycle, execution, tool, and workflow events
+  - ✅ Added event history with configurable buffer size
+  - ✅ Provided event utilities (create, format, parse)
+  - ✅ Implemented streaming support with statistics
+
+- ✅ Type system already complete
+  - ✅ Event types were already added to interfaces.go in Task 1.3.1
+  - ✅ All EventType constants properly aliased
+  - ✅ Event, EventType, and related types available
+
+**Key Features Bridged:**
+- Event emission for all categories (agent, tool, workflow, state)
+- Flexible subscription system with filtering
+- Event history with querying capabilities
+- Real-time streaming support
+- Event validation and type checking
+- Pause/resume subscription management
+- Custom filter creation and testing
+
+All tests pass with `make all` - the event bridge provides comprehensive access to go-llms event functionality without reimplementation.

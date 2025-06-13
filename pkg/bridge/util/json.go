@@ -8,6 +8,8 @@ import (
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	// go-llms imports for LLM functionality
+	_ "github.com/lexlapax/go-llms/pkg/util/json" // TODO: Will be used for JSON utilities
 )
 
 // UtilJSONBridge provides script access to go-llms JSON utilities.

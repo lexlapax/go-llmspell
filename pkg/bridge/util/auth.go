@@ -8,6 +8,9 @@ import (
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+
+	// go-llms imports for auth functionality
+	_ "github.com/lexlapax/go-llms/pkg/util/auth" // TODO: Will be used for auth operations
 )
 
 // UtilAuthBridge provides script access to go-llms auth utilities.

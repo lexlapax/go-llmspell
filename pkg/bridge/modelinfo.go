@@ -8,6 +8,9 @@ import (
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+
+	// go-llms imports for model info functionality
+	_ "github.com/lexlapax/go-llms/pkg/util/llmutil/modelinfo" // TODO: Will be used for model registry
 )
 
 // ModelInfoBridge provides access to LLM model information via go-llms ModelRegistry

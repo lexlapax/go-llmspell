@@ -31,39 +31,39 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### 1.3 Core Bridge System
 
-- [ ] **Task 1.3.1: LLM Agent Bridge** (CRITICAL - Replaces our agent duplication)
-  - [ ] Create test file `/pkg/bridge/agent/agent_test.go`
-  - [ ] Test go-llms agent creation and configuration
-  - [ ] Test tool registration and execution
-  - [ ] Test sub-agent orchestration
-  - [ ] Test agent lifecycle hooks and events
-  - [ ] Create `/pkg/bridge/agent/agent.go`
-  - [ ] Bridge complete go-llms agent system from `/pkg/agent/`
-  - [ ] Expose agent creation, configuration, and execution to scripts
-  - [ ] Support tool registration and execution
-  - [ ] Enable sub-agent orchestration
-  - [ ] Bridge agent lifecycle hooks and events
+- [x] **Task 1.3.1: LLM Agent Bridge** ✅ COMPLETED
+  - [x] Create test file `/pkg/bridge/agent/agent_test.go`
+  - [x] Test go-llms agent creation and configuration
+  - [x] Test tool registration and execution
+  - [x] Test sub-agent orchestration
+  - [x] Test agent lifecycle hooks and events
+  - [x] Create `/pkg/bridge/agent/agent.go`
+  - [x] Bridge complete go-llms agent system from `/pkg/agent/`
+  - [x] Expose agent creation, configuration, and execution to scripts
+  - [x] Support tool registration and execution
+  - [x] Enable sub-agent orchestration
+  - [x] Bridge agent lifecycle hooks and events
 
-- [ ] **Task 1.3.2: Workflow Engine Bridge**
-  - [ ] Create test file `/pkg/bridge/agent/workflow_test.go`
-  - [ ] Test workflow lifecycle bridging
-  - [ ] Test all workflow types (sequential, parallel, conditional, loop)
-  - [ ] Test workflow state and error handling
-  - [ ] Create `/pkg/bridge/agent/workflow.go`
-  - [ ] Bridge workflow system from `/pkg/agent/workflow/`
-  - [ ] Expose workflow creation and execution
-  - [ ] Support workflow composition from scripts
+- [x] **Task 1.3.2: Workflow Engine Bridge** ✅ COMPLETED
+  - [x] Create test file `/pkg/bridge/agent/workflow_test.go`
+  - [x] Test workflow lifecycle bridging
+  - [x] Test all workflow types (sequential, parallel, conditional, loop)
+  - [x] Test workflow state and error handling
+  - [x] Create `/pkg/bridge/agent/workflow.go`
+  - [x] Bridge workflow system from `/pkg/agent/workflow/`
+  - [x] Expose workflow creation and execution
+  - [x] Support workflow composition from scripts
 
-- [ ] **Task 1.3.3: Event System Bridge**
-  - [ ] Create test file `/pkg/bridge/agent/events_test.go`
-  - [ ] Test event streaming to scripts
-  - [ ] Test event filtering and subscription
-  - [ ] Test all event types
-  - [ ] Create `/pkg/bridge/agent/events.go`
-  - [ ] Bridge pkg/agent/domain event system
-  - [ ] Support real-time event streaming to scripts
-  - [ ] Enable event filtering and subscription by type
-  - [ ] Handle lifecycle, execution, tool, and workflow events
+- [x] **Task 1.3.3: Event System Bridge** ✅ COMPLETED
+  - [x] Create test file `/pkg/bridge/agent/events_test.go`
+  - [x] Test event streaming to scripts
+  - [x] Test event filtering and subscription
+  - [x] Test all event types
+  - [x] Create `/pkg/bridge/agent/events.go`
+  - [x] Bridge pkg/agent/domain event system
+  - [x] Support real-time event streaming to scripts
+  - [x] Enable event filtering and subscription by type
+  - [x] Handle lifecycle, execution, tool, and workflow events
 
 - [ ] **Task 1.3.4: Tool System Bridge**
   - [ ] Create test file `/pkg/bridge/agent/tools/tools_test.go`

@@ -10,6 +10,10 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+
+	// go-llms imports for agent functionality
+	_ "github.com/lexlapax/go-llms/pkg/agent/core"   // TODO: Will be used for agent creation
+	_ "github.com/lexlapax/go-llms/pkg/agent/domain" // TODO: Will be used for agent types
 )
 
 // AgentBridge provides script access to go-llms agent functionality
