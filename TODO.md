@@ -5,7 +5,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ## Key Principles
 1. **Fundamental Rule**: If it's not in go-llms, we don't implement it in go-llmspell
-2. **Bridge, Don't Build**: We ONLY bridge existing go-llms functionality
+2. **Bridge, Don't Build**: We ONLY bridge existing go-llms functionality. Bridging also means imports from go-llms and implementing the bridge function calls in the bridge.
 3. **Clean Architecture**: Just `pkg/engine/` and `pkg/bridge/` - no business logic
 4. **Script Infrastructure Only**: We only build what's needed for scripting (engines, type conversion, sandboxing)
 5. **Type Safety**: Maintain type conversions at bridge boundaries
@@ -65,23 +65,58 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Enable event filtering and subscription by type
   - [x] Handle lifecycle, execution, tool, and workflow events
 
-- [ ] **Task 1.3.4: Tool System Bridge**
-  - [ ] Create test file `/pkg/bridge/agent/tools/tools_test.go`
-  - [ ] Test tool interface bridging
-  - [ ] Test built-in tools exposure (all categories)
-  - [ ] Test tool registration and execution
-  - [ ] Create `/pkg/bridge/agent/tools/tools.go`
-  - [ ] Bridge pkg/agent/tools interfaces
-  - [ ] Expose ALL built-in tools from pkg/agent/builtins/tools:
-    - [ ] Data tools (CSV, JSON, XML processing)
-    - [ ] DateTime tools (calculations, formatting, parsing)
-    - [ ] Feed tools (RSS/Atom aggregation)
-    - [ ] File tools (read, write, list, search)
-    - [ ] Math tools (calculator)
-    - [ ] System tools (env vars, process execution)
-    - [ ] Web tools (HTTP, GraphQL, scraping)
-  - [ ] Support tool registration and execution
-  - [ ] Enable tool composition and chaining
+- [x] **Task 1.3.4: Tool System Bridge** ✅ COMPLETED
+  - [x] Create test file `/pkg/bridge/agent/tools_test.go`
+  - [x] Test tool interface bridging
+  - [x] Test built-in tools exposure (all categories)
+  - [x] Test tool registration and execution
+  - [x] Create `/pkg/bridge/agent/tools.go`
+  - [x] Bridge pkg/agent/tools interfaces
+  - [x] Expose ALL built-in tools from pkg/agent/builtins/tools:
+    - [x] Data tools (CSV, JSON, XML processing)
+    - [x] DateTime tools (calculations, formatting, parsing)
+    - [x] Feed tools (RSS/Atom aggregation)
+    - [x] File tools (read, write, list, search)
+    - [x] Math tools (calculator)
+    - [x] System tools (env vars, process execution)
+    - [x] Web tools (HTTP, GraphQL, scraping)
+  - [x] Support tool registration and execution
+  - [x] Enable tool composition and chaining
+  - [x] Implement Tool Discovery API bridging (v0.3.4)
+  - [x] Support basic custom tool registration from scripts
+  
+  **Subtasks for Enhanced Custom Tool Support:**
+  - [ ] **Task 1.3.4.1: Schema Support for Custom Tools**
+    - [ ] Add schema conversion helpers (script JSON Schema → domain.Schema)
+    - [ ] Support parameter schema definition from scripts
+    - [ ] Support output schema definition from scripts
+    - [ ] Add schema validation for custom tool inputs/outputs
+  
+  - [ ] **Task 1.3.4.2: Use go-llms ToolBuilder Pattern**
+    - [ ] Replace simple customToolWrapper with ToolBuilder-based implementation
+    - [ ] Use atools.NewToolBuilder for custom tool creation
+    - [ ] Support all ToolBuilder configuration options from scripts
+    - [ ] Maintain compatibility with existing custom tool API
+  
+  - [ ] **Task 1.3.4.3: Enhanced Tool Metadata**
+    - [ ] Support usage instructions from scripts
+    - [ ] Support examples definition from scripts
+    - [ ] Support constraints and error guidance
+    - [ ] Support resource usage hints
+    - [ ] Support behavioral flags (deterministic, destructive, etc.)
+  
+  - [ ] **Task 1.3.4.4: Improved Function Execution**
+    - [ ] Type-safe parameter extraction and validation
+    - [ ] Proper error propagation from script functions
+    - [ ] Support for async/promise-based tool execution
+    - [ ] Context propagation to script functions
+  
+  - [ ] **Task 1.3.4.5: Testing Enhanced Custom Tools**
+    - [ ] Test schema validation for custom tools
+    - [ ] Test complex parameter types (nested objects, arrays)
+    - [ ] Test error handling and guidance
+    - [ ] Test custom tool discovery and metadata
+    - [ ] Test cross-engine compatibility (Lua, JS, Tengo)
 
 - [ ] **Task 1.3.5: Hook System Bridge**
   - [ ] Create test file `/pkg/bridge/agent/hooks_test.go`

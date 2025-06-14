@@ -6,6 +6,7 @@ package bridge
 import (
 	"github.com/lexlapax/go-llms/pkg/agent/core"
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	"github.com/lexlapax/go-llms/pkg/agent/tools"
 	"github.com/lexlapax/go-llms/pkg/agent/workflow"
 	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
 	"github.com/lexlapax/go-llms/pkg/util/auth"
@@ -81,6 +82,12 @@ type (
 	ModelConfig    = llmutil.ModelConfig
 	ProviderPool   = *llmutil.ProviderPool
 	ModelInventory = *modelinfodomain.ModelInventory
+
+	// Tool discovery types
+	ToolDiscovery = tools.ToolDiscovery
+	ToolInfo      = tools.ToolInfo
+	ToolSchema    = tools.ToolSchema
+	ToolFactory   = tools.ToolFactory
 )
 
 // Re-export constants from go-llms

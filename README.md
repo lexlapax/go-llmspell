@@ -141,7 +141,7 @@ make all  # Must pass before submitting
 
 ## 📦 Core Dependencies
 
-- [**go-llms**](https://github.com/lexlapax/go-llms) v0.3.3 - LLM providers and agent framework
+- [**go-llms**](https://github.com/lexlapax/go-llms) v0.3.4 - LLM providers and agent framework
 - [**gopher-lua**](https://github.com/yuin/gopher-lua) - Lua 5.1 VM
 - [**goja**](https://github.com/dop251/goja) - JavaScript engine *(planned)*
 - [**tengo**](https://github.com/d5/tengo) - Compiled script language *(planned)*
