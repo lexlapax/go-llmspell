@@ -1235,3 +1235,462 @@ func TestStateContextBridge_EventEmissionEdgeCases(t *testing.T) {
 		assert.Equal(t, 0, len(events), "Events should be blocked when SetBlockEvents(true)")
 	})
 }
+
+// Tests for state persistence functionality using go-llms testutils
+func TestStateContextBridge_StatePersistence(t *testing.T) {
+	// Create temporary directory for testing
+	tempDir := t.TempDir()
+
+	mockEmitter := mocks.NewMockEventEmitter("persist-context", "Persist Context")
+	bridge, err := NewStateContextBridgeWithOptions(mockEmitter, tempDir, true)
+	require.NoError(t, err)
+	require.NotNil(t, bridge)
+
+	ctx := context.Background()
+
+	// Create shared context for testing
+	result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+		map[string]interface{}{
+			"data": map[string]interface{}{
+				"initialKey": "initialValue",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	sharedContextObj := result.(map[string]interface{})
+	contextID := sharedContextObj["_id"].(string)
+
+	// Add test data
+	_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+		sharedContextObj,
+		"testKey",
+		"testValue",
+	})
+	require.NoError(t, err)
+
+	_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+		sharedContextObj,
+		"numberKey",
+		42,
+	})
+	require.NoError(t, err)
+
+	t.Run("PersistState", func(t *testing.T) {
+		mockEmitter.Reset()
+
+		result, err := bridge.ExecuteMethod(ctx, "persistState", []interface{}{
+			sharedContextObj,
+			1, // version
+		})
+		require.NoError(t, err)
+
+		persistResult := result.(map[string]interface{})
+		assert.Equal(t, contextID, persistResult["contextId"])
+		assert.Equal(t, 1, persistResult["version"])
+		assert.True(t, persistResult["compressed"].(bool))
+		assert.Contains(t, persistResult, "size")
+		assert.True(t, persistResult["success"].(bool))
+
+		// Verify persistence event was emitted
+		events := mockEmitter.GetEvents()
+		persistEvents := make([]domain.Event, 0)
+		for _, event := range events {
+			if event.Type == "custom.state.persisted" {
+				persistEvents = append(persistEvents, event)
+			}
+		}
+		assert.Len(t, persistEvents, 1, "Should emit state persisted event")
+	})
+
+	t.Run("ListPersistedStates", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "listPersistedStates", []interface{}{
+			contextID,
+		})
+		require.NoError(t, err)
+
+		listResult := result.(map[string]interface{})
+		assert.Equal(t, contextID, listResult["contextId"])
+		versions := listResult["versions"].([]interface{})
+		assert.GreaterOrEqual(t, len(versions), 1, "Should have at least one persisted version")
+
+		// Check version details
+		version := versions[0].(map[string]interface{})
+		assert.Equal(t, 1, version["version"])
+		assert.Contains(t, version, "size")
+		assert.Contains(t, version, "timestamp")
+		assert.Contains(t, version, "compressed")
+	})
+
+	t.Run("LoadState", func(t *testing.T) {
+		mockEmitter.Reset()
+
+		result, err := bridge.ExecuteMethod(ctx, "loadState", []interface{}{
+			contextID,
+			1, // version
+		})
+		require.NoError(t, err)
+
+		loadResult := result.(map[string]interface{})
+		assert.Equal(t, contextID, loadResult["originalContextId"])
+		assert.Equal(t, 1, loadResult["version"])
+		assert.True(t, loadResult["success"].(bool))
+		assert.Contains(t, loadResult, "loadedContext")
+
+		// Verify loaded context has expected data
+		loadedContext := loadResult["loadedContext"].(map[string]interface{})
+		assert.Equal(t, "SharedStateContext", loadedContext["type"])
+		assert.Contains(t, loadedContext, "_id")
+
+		// Verify load event was emitted
+		events := mockEmitter.GetEvents()
+		loadEvents := make([]domain.Event, 0)
+		for _, event := range events {
+			if event.Type == "custom.state.loaded" {
+				loadEvents = append(loadEvents, event)
+			}
+		}
+		assert.Len(t, loadEvents, 1, "Should emit state loaded event")
+	})
+
+	t.Run("GenerateStateDiff", func(t *testing.T) {
+		// Create another version with different data
+		_, err := bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"diffKey",
+			"diffValue",
+		})
+		require.NoError(t, err)
+
+		// Persist version 2
+		_, err = bridge.ExecuteMethod(ctx, "persistState", []interface{}{
+			sharedContextObj,
+			2,
+		})
+		require.NoError(t, err)
+
+		// Generate diff between versions
+		result, err := bridge.ExecuteMethod(ctx, "generateStateDiff", []interface{}{
+			contextID,
+			1, // from version
+			2, // to version
+		})
+		require.NoError(t, err)
+
+		diffResult := result.(map[string]interface{})
+		assert.Equal(t, contextID, diffResult["contextId"])
+		assert.Equal(t, 1, diffResult["fromVersion"])
+		assert.Equal(t, 2, diffResult["toVersion"])
+		assert.Contains(t, diffResult, "diff")
+
+		diff := diffResult["diff"].(map[string]interface{})
+		assert.Contains(t, diff, "added")
+		assert.Contains(t, diff, "removed")
+		assert.Contains(t, diff, "modified")
+
+		// Validate diff structure
+		added := diff["added"].(map[string]interface{})
+		// Should have added "diffKey" in the new version
+		assert.Greater(t, len(added), 0, "Should have at least one added key")
+	})
+
+	t.Run("MigrateState", func(t *testing.T) {
+		// Set up schema for migration testing
+		schema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"testKey": map[string]interface{}{
+					"type": "string",
+				},
+				"numberKey": map[string]interface{}{
+					"type": "number",
+				},
+				"diffKey": map[string]interface{}{
+					"type": "string",
+				},
+			},
+		}
+
+		_, err := bridge.ExecuteMethod(ctx, "setStateSchema", []interface{}{
+			sharedContextObj,
+			"migration-schema",
+			schema,
+		})
+		require.NoError(t, err)
+
+		// Migrate state from version 1 to schema
+		result, err := bridge.ExecuteMethod(ctx, "migrateState", []interface{}{
+			contextID,
+			1,                  // from version
+			"migration-schema", // to schema
+		})
+		require.NoError(t, err)
+
+		migrationResult := result.(map[string]interface{})
+		assert.Equal(t, contextID, migrationResult["originalContextId"])
+		assert.Equal(t, 1, migrationResult["fromVersion"])
+		assert.Contains(t, migrationResult, "toVersion") // Migration may assign new version
+		assert.Equal(t, "migration-schema", migrationResult["toSchemaId"])
+		assert.True(t, migrationResult["success"].(bool))
+		assert.Contains(t, migrationResult, "migratedContext")
+
+		migratedContext := migrationResult["migratedContext"].(map[string]interface{})
+		assert.Equal(t, "SharedStateContext", migratedContext["type"])
+	})
+
+	t.Run("DeletePersistedState", func(t *testing.T) {
+		// Delete version 1
+		result, err := bridge.ExecuteMethod(ctx, "deletePersistedState", []interface{}{
+			contextID,
+			1,
+		})
+		require.NoError(t, err)
+
+		deleteResult := result.(map[string]interface{})
+		assert.Equal(t, contextID, deleteResult["contextId"])
+		assert.Equal(t, 1, deleteResult["version"])
+		assert.True(t, deleteResult["deleted"].(bool))
+
+		// Verify version 1 is no longer listed
+		result, err = bridge.ExecuteMethod(ctx, "listPersistedStates", []interface{}{
+			contextID,
+		})
+		require.NoError(t, err)
+
+		listResult := result.(map[string]interface{})
+		versions := listResult["versions"].([]interface{})
+
+		// Should not contain version 1
+		for _, v := range versions {
+			version := v.(map[string]interface{})
+			assert.NotEqual(t, 1, version["version"], "Version 1 should be deleted")
+		}
+	})
+}
+
+func TestStateContextBridge_PersistenceErrorCases(t *testing.T) {
+	// Create bridge without persistence directory
+	bridge, err := NewStateContextBridge()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Run("PersistState_NoPersistenceDir", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "persistState", []interface{}{
+			map[string]interface{}{"_id": "test-context"},
+			1,
+		})
+		assert.Error(t, err)
+		// The error occurs during context conversion since it's not a proper shared context
+		assert.Contains(t, err.Error(), "invalid shared context object")
+	})
+
+	t.Run("LoadState_NoPersistenceDir", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "loadState", []interface{}{
+			"test-context",
+			1,
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no persistence directory configured")
+	})
+
+	t.Run("ListPersistedStates_NoPersistenceDir", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "listPersistedStates", []interface{}{
+			"test-context",
+		})
+		require.NoError(t, err) // listPersistedStates works without persistence - returns empty list
+
+		listResult := result.(map[string]interface{})
+		assert.Equal(t, "test-context", listResult["contextId"])
+		versions := listResult["versions"].([]interface{})
+		assert.Equal(t, 0, len(versions)) // No persisted versions
+	})
+
+	// Test with persistence directory but invalid parameters
+	tempDir := t.TempDir()
+	bridgeWithPersist, err := NewStateContextBridgeWithOptions(nil, tempDir, false)
+	require.NoError(t, err)
+
+	t.Run("PersistState_InvalidParameters", func(t *testing.T) {
+		_, err := bridgeWithPersist.ExecuteMethod(ctx, "persistState", []interface{}{
+			123, // Invalid context type
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "context must be object")
+	})
+
+	t.Run("LoadState_NonExistentVersion", func(t *testing.T) {
+		_, err := bridgeWithPersist.ExecuteMethod(ctx, "loadState", []interface{}{
+			"non-existent-context",
+			999,
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to load state")
+	})
+
+	t.Run("GenerateStateDiff_InvalidVersions", func(t *testing.T) {
+		_, err := bridgeWithPersist.ExecuteMethod(ctx, "generateStateDiff", []interface{}{
+			"test-context",
+			"invalid", // Should be number
+			2,
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "fromVersion must be integer")
+	})
+
+	t.Run("MigrateState_MissingSchema", func(t *testing.T) {
+		_, err := bridgeWithPersist.ExecuteMethod(ctx, "migrateState", []interface{}{
+			"test-context",
+			1,
+			123, // Should be string (schema ID)
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "toSchemaId must be string")
+	})
+}
+
+func TestStateContextBridge_PersistenceIntegration(t *testing.T) {
+	tempDir := t.TempDir()
+	mockEmitter := mocks.NewMockEventEmitter("integration-context", "Integration Context")
+
+	bridge, err := NewStateContextBridgeWithOptions(mockEmitter, tempDir, true)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Run("CompleteWorkflow", func(t *testing.T) {
+		// Create shared context with complex data
+		result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+			map[string]interface{}{
+				"data": map[string]interface{}{
+					"project": "go-llmspell",
+					"version": "1.4.2",
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		sharedContextObj := result.(map[string]interface{})
+		contextID := sharedContextObj["_id"].(string)
+
+		// Add complex state data
+		complexData := map[string]interface{}{
+			"config": map[string]interface{}{
+				"debug":   true,
+				"timeout": 30,
+				"hosts":   []string{"localhost", "127.0.0.1"},
+			},
+			"metrics": map[string]interface{}{
+				"requests": 100,
+				"errors":   5,
+				"uptime":   "2h30m",
+			},
+		}
+
+		_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"complex",
+			complexData,
+		})
+		require.NoError(t, err)
+
+		// Set up schema
+		schema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"project": map[string]interface{}{
+					"type": "string",
+				},
+				"version": map[string]interface{}{
+					"type": "string",
+				},
+				"complex": map[string]interface{}{
+					"type": "object",
+				},
+			},
+			"required": []interface{}{"project", "version"},
+		}
+
+		_, err = bridge.ExecuteMethod(ctx, "setStateSchema", []interface{}{
+			sharedContextObj,
+			"integration-schema",
+			schema,
+		})
+		require.NoError(t, err)
+
+		// Persist initial state
+		result, err = bridge.ExecuteMethod(ctx, "persistState", []interface{}{
+			sharedContextObj,
+			1,
+		})
+		require.NoError(t, err)
+
+		persistResult := result.(map[string]interface{})
+		assert.True(t, persistResult["compressed"].(bool))
+		assert.Greater(t, persistResult["size"].(int), 0)
+
+		// Modify state
+		_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"modified",
+			true,
+		})
+		require.NoError(t, err)
+
+		// Persist modified state
+		_, err = bridge.ExecuteMethod(ctx, "persistState", []interface{}{
+			sharedContextObj,
+			2,
+		})
+		require.NoError(t, err)
+
+		// Generate comprehensive diff
+		result, err = bridge.ExecuteMethod(ctx, "generateStateDiff", []interface{}{
+			contextID,
+			1,
+			2,
+		})
+		require.NoError(t, err)
+
+		diffResult := result.(map[string]interface{})
+		diff := diffResult["diff"].(map[string]interface{})
+		assert.Contains(t, diff, "added")
+		assert.Contains(t, diff, "removed")
+		assert.Contains(t, diff, "modified")
+
+		// Test migration with validation
+		result, err = bridge.ExecuteMethod(ctx, "migrateState", []interface{}{
+			contextID,
+			1,
+			"integration-schema",
+		})
+		require.NoError(t, err)
+
+		migrationResult := result.(map[string]interface{})
+		assert.True(t, migrationResult["success"].(bool))
+
+		// Load and verify final state
+		result, err = bridge.ExecuteMethod(ctx, "loadState", []interface{}{
+			contextID,
+			2,
+		})
+		require.NoError(t, err)
+
+		loadResult := result.(map[string]interface{})
+		assert.True(t, loadResult["success"].(bool))
+
+		// Verify events were emitted throughout the workflow
+		events := mockEmitter.GetEvents()
+		assert.GreaterOrEqual(t, len(events), 4, "Should have emitted multiple events during workflow")
+
+		// Verify different event types
+		eventTypes := make(map[string]int)
+		for _, event := range events {
+			eventTypes[string(event.Type)]++
+		}
+
+		assert.Contains(t, eventTypes, "state.update")
+		assert.Contains(t, eventTypes, "custom.state.persisted")
+		assert.Contains(t, eventTypes, "custom.state.loaded")
+	})
+}

@@ -4,16 +4,23 @@
 package state
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/lexlapax/go-llms/pkg/agent/core"
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llms/pkg/agent/events"
 	sdomain "github.com/lexlapax/go-llms/pkg/schema/domain"
 	"github.com/lexlapax/go-llms/pkg/schema/repository"
 	"github.com/lexlapax/go-llms/pkg/schema/validation"
+	"github.com/lexlapax/go-llms/pkg/util/json"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
@@ -36,6 +43,14 @@ type StateContextBridge struct {
 	eventFilters   map[string]events.EventFilter // pattern -> filter mapping
 	eventHistory   []domain.Event                // For event replay
 	eventHistoryMu sync.RWMutex                  // Separate mutex for event history
+
+	// State persistence fields from go-llms v0.3.5
+	stateManager   *core.StateManager
+	fileRepo       sdomain.SchemaRepository // File-based schema repository for versioned storage
+	persistDir     string                   // Directory for state persistence
+	stateVersions  map[string][]int         // contextID -> version numbers
+	enableCompress bool                     // Enable compression for large states
+	persistenceMu  sync.RWMutex             // Separate mutex for persistence operations
 }
 
 // inheritanceConfig tracks inheritance settings for a shared context
@@ -52,6 +67,11 @@ func NewStateContextBridge() (*StateContextBridge, error) {
 
 // NewStateContextBridgeWithEventEmitter creates a new state context bridge with event emission
 func NewStateContextBridgeWithEventEmitter(eventEmitter domain.EventEmitter) (*StateContextBridge, error) {
+	return NewStateContextBridgeWithOptions(eventEmitter, "", false)
+}
+
+// NewStateContextBridgeWithOptions creates a new state context bridge with full configuration
+func NewStateContextBridgeWithOptions(eventEmitter domain.EventEmitter, persistDir string, enableCompress bool) (*StateContextBridge, error) {
 	// Create schema repository using go-llms infrastructure
 	schemaRepo := repository.NewInMemorySchemaRepository()
 
@@ -66,6 +86,19 @@ func NewStateContextBridgeWithEventEmitter(eventEmitter domain.EventEmitter) (*S
 
 	// Create event bus for internal event handling
 	eventBus := events.NewEventBus()
+
+	// Create state manager using go-llms infrastructure
+	stateManager := core.NewStateManager()
+
+	// Create file-based repository for persistent storage if directory provided
+	var fileRepo sdomain.SchemaRepository
+	if persistDir != "" {
+		var err error
+		fileRepo, err = repository.NewFileSchemaRepository(persistDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create file schema repository: %w", err)
+		}
+	}
 
 	return &StateContextBridge{
 		contexts: make(map[string]*domain.SharedStateContext),
@@ -84,6 +117,14 @@ func NewStateContextBridgeWithEventEmitter(eventEmitter domain.EventEmitter) (*S
 		eventFilters:   make(map[string]events.EventFilter),
 		eventHistory:   make([]domain.Event, 0),
 		eventHistoryMu: sync.RWMutex{},
+
+		// State persistence system from go-llms
+		stateManager:   stateManager,
+		fileRepo:       fileRepo,
+		persistDir:     persistDir,
+		stateVersions:  make(map[string][]int),
+		enableCompress: enableCompress,
+		persistenceMu:  sync.RWMutex{},
 	}, nil
 }
 
@@ -159,6 +200,14 @@ func (b *StateContextBridge) Methods() []engine.MethodInfo {
 		{Name: "replayEvents", Description: "Replay events for state reconstruction"},
 		{Name: "getEventHistory", Description: "Get event history for a context"},
 		{Name: "clearEventHistory", Description: "Clear event history"},
+
+		// State persistence methods using go-llms
+		{Name: "persistState", Description: "Persist shared context state with schema validation"},
+		{Name: "loadState", Description: "Load persisted state with schema validation"},
+		{Name: "listPersistedStates", Description: "List all persisted state versions"},
+		{Name: "deletePersistedState", Description: "Delete a persisted state version"},
+		{Name: "generateStateDiff", Description: "Generate diff between two state versions"},
+		{Name: "migrateState", Description: "Migrate state between schema versions"},
 	}
 }
 
@@ -963,6 +1012,922 @@ func (b *StateContextBridge) clearEventHistory(ctx context.Context, params map[s
 		"scope":     "context",
 		"contextId": contextID,
 	}, nil
+}
+
+// State persistence methods using go-llms infrastructure
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) persistState(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextObj, ok := params["context"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("context parameter is required and must be a shared context object")
+	}
+
+	// Get context ID
+	contextID, ok := contextObj["_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("shared context object missing _id")
+	}
+
+	// Optional parameters
+	version := 0
+	if v, ok := params["version"].(int); ok {
+		version = v
+	} else if v, ok := params["version"].(float64); ok {
+		version = int(v)
+	}
+
+	description := ""
+	if desc, ok := params["description"].(string); ok {
+		description = desc
+	}
+
+	compress := b.enableCompress
+	if c, ok := params["compress"].(bool); ok {
+		compress = c
+	}
+
+	// Convert script object to shared context
+	sharedContext, err := b.scriptToSharedContext(contextObj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert shared context: %w", err)
+	}
+
+	// Generate state data for persistence
+	stateData := map[string]interface{}{
+		"contextId":   contextID,
+		"version":     version,
+		"timestamp":   time.Now(),
+		"description": description,
+		"state":       b.stateToScript(sharedContext.AsState()),
+		"localState":  b.stateToScript(sharedContext.LocalState()),
+		"inheritance": b.configs[contextID],
+		"compressed":  compress,
+	}
+
+	// Add artifacts and messages
+	artifacts := sharedContext.Artifacts()
+	stateArtifacts := make(map[string]interface{})
+	for id, artifact := range artifacts {
+		stateArtifacts[id] = b.artifactToScript(artifact)
+	}
+	stateData["artifacts"] = stateArtifacts
+
+	messages := sharedContext.Messages()
+	stateMessages := make([]interface{}, len(messages))
+	for i, message := range messages {
+		stateMessages[i] = b.messageToScript(message)
+	}
+	stateData["messages"] = stateMessages
+
+	// Serialize using go-llms optimized JSON
+	serializedData, err := json.MarshalIndent(stateData, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize state data: %w", err)
+	}
+
+	// Compress if enabled
+	var finalData []byte
+	if compress {
+		compressedData, err := b.compressData(serializedData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compress state data: %w", err)
+		}
+		finalData = compressedData
+	} else {
+		finalData = serializedData
+	}
+
+	// Persist to file if file repository is available
+	if b.fileRepo != nil && b.persistDir != "" {
+		err = b.persistToFile(contextID, version, finalData, compress)
+		if err != nil {
+			return nil, fmt.Errorf("failed to persist state to file: %w", err)
+		}
+	}
+
+	// Track version
+	b.persistenceMu.Lock()
+	if versions, exists := b.stateVersions[contextID]; exists {
+		// Check if version already exists
+		versionExists := false
+		for _, v := range versions {
+			if v == version {
+				versionExists = true
+				break
+			}
+		}
+		if !versionExists {
+			b.stateVersions[contextID] = append(versions, version)
+		}
+	} else {
+		b.stateVersions[contextID] = []int{version}
+	}
+	b.persistenceMu.Unlock()
+
+	// Emit persistence event if event emitter is available
+	if b.eventEmitter != nil {
+		persistenceEventData := map[string]interface{}{
+			"contextId":   contextID,
+			"version":     version,
+			"size":        len(finalData),
+			"compressed":  compress,
+			"description": description,
+			"timestamp":   time.Now(),
+		}
+		b.eventEmitter.EmitCustom("state.persisted", persistenceEventData)
+	}
+
+	return map[string]interface{}{
+		"contextId":   contextID,
+		"version":     version,
+		"size":        len(finalData),
+		"compressed":  compress,
+		"description": description,
+		"timestamp":   time.Now().Format(time.RFC3339),
+		"success":     true,
+	}, nil
+}
+
+// compressData compresses data using gzip
+func (b *StateContextBridge) compressData(data []byte) ([]byte, error) {
+	var compressed strings.Builder
+	gzipWriter := gzip.NewWriter(&compressed)
+
+	_, err := gzipWriter.Write(data)
+	if err != nil {
+		_ = gzipWriter.Close() // Ignore error on cleanup
+		return nil, err
+	}
+
+	err = gzipWriter.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte(compressed.String()), nil
+}
+
+// persistToFile persists state data to file using go-llms file patterns
+func (b *StateContextBridge) persistToFile(contextID string, version int, data []byte, compressed bool) error {
+	// Create context-specific directory
+	contextDir := filepath.Join(b.persistDir, "states", contextID)
+	err := os.MkdirAll(contextDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create context directory: %w", err)
+	}
+
+	// Generate filename
+	filename := fmt.Sprintf("state_v%d.json", version)
+	if compressed {
+		filename = fmt.Sprintf("state_v%d.json.gz", version)
+	}
+
+	filePath := filepath.Join(contextDir, filename)
+
+	// Write file
+	err = os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write state file: %w", err)
+	}
+
+	// Write metadata file
+	metadata := map[string]interface{}{
+		"contextId":  contextID,
+		"version":    version,
+		"timestamp":  time.Now().Format(time.RFC3339),
+		"filename":   filename,
+		"compressed": compressed,
+		"size":       len(data),
+	}
+
+	metadataBytes, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to serialize metadata: %w", err)
+	}
+
+	metadataPath := filepath.Join(contextDir, fmt.Sprintf("metadata_v%d.json", version))
+	err = os.WriteFile(metadataPath, metadataBytes, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write metadata file: %w", err)
+	}
+
+	return nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) loadState(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextID, ok := params["contextId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("contextId parameter is required and must be a string")
+	}
+
+	// Optional version parameter
+	version := 0
+	if v, ok := params["version"].(int); ok {
+		version = v
+	} else if v, ok := params["version"].(float64); ok {
+		version = int(v)
+	}
+
+	// Validate schema if enabled
+	validateSchema := true
+	if vs, ok := params["validateSchema"].(bool); ok {
+		validateSchema = vs
+	}
+
+	// Load from file if file repository is available
+	var stateData map[string]interface{}
+	var err error
+
+	if b.fileRepo != nil && b.persistDir != "" {
+		stateData, err = b.loadFromFile(contextID, version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load state from file: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("no persistence directory configured")
+	}
+
+	// Validate against schema if enabled
+	if validateSchema {
+		// Check if there's a schema for this context
+		b.mu.RLock()
+		schemaID, hasSchema := b.stateSchemas[contextID]
+		b.mu.RUnlock()
+
+		if hasSchema {
+			// Get schema from repository
+			schema, err := b.schemaRepo.Get(schemaID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get schema %s: %w", schemaID, err)
+			}
+
+			// Validate state data
+			if stateObj, ok := stateData["state"].(map[string]interface{}); ok {
+				if dataMap, ok := stateObj["data"].(map[string]interface{}); ok {
+					result, err := b.validator.ValidateStruct(schema, dataMap)
+					if err != nil {
+						return nil, fmt.Errorf("schema validation failed: %w", err)
+					}
+					if !result.Valid {
+						return nil, fmt.Errorf("state data does not conform to schema: %v", result.Errors)
+					}
+				}
+			}
+		}
+	}
+
+	// Reconstruct shared context from loaded data
+	reconstructedContext, err := b.reconstructSharedContext(stateData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reconstruct shared context: %w", err)
+	}
+
+	// Generate new ID for loaded context
+	b.mu.Lock()
+	loadedContextID := fmt.Sprintf("loaded_%s_%d_%d", contextID, version, time.Now().UnixNano())
+	b.contexts[loadedContextID] = reconstructedContext
+
+	// Restore inheritance config
+	if inheritanceData, ok := stateData["inheritance"]; ok {
+		if inheritanceMap, ok := inheritanceData.(map[string]interface{}); ok {
+			config := &inheritanceConfig{
+				inheritMessages:  true,
+				inheritArtifacts: true,
+				inheritMetadata:  true,
+			}
+			if messages, ok := inheritanceMap["inheritMessages"].(bool); ok {
+				config.inheritMessages = messages
+			}
+			if artifacts, ok := inheritanceMap["inheritArtifacts"].(bool); ok {
+				config.inheritArtifacts = artifacts
+			}
+			if metadata, ok := inheritanceMap["inheritMetadata"].(bool); ok {
+				config.inheritMetadata = metadata
+			}
+			b.configs[loadedContextID] = config
+		}
+	}
+	b.mu.Unlock()
+
+	// Emit load event if event emitter is available
+	if b.eventEmitter != nil {
+		loadEventData := map[string]interface{}{
+			"originalContextId": contextID,
+			"loadedContextId":   loadedContextID,
+			"version":           version,
+			"validateSchema":    validateSchema,
+			"timestamp":         time.Now(),
+		}
+		b.eventEmitter.EmitCustom("state.loaded", loadEventData)
+	}
+
+	return map[string]interface{}{
+		"originalContextId": contextID,
+		"loadedContextId":   loadedContextID,
+		"loadedContext":     b.sharedContextToScript(loadedContextID, reconstructedContext),
+		"version":           version,
+		"validateSchema":    validateSchema,
+		"timestamp":         time.Now().Format(time.RFC3339),
+		"success":           true,
+	}, nil
+}
+
+// loadFromFile loads state data from file
+func (b *StateContextBridge) loadFromFile(contextID string, version int) (map[string]interface{}, error) {
+	contextDir := filepath.Join(b.persistDir, "states", contextID)
+
+	// Check if version exists, if version is 0, load latest
+	if version == 0 {
+		// Find latest version
+		b.persistenceMu.RLock()
+		versions, exists := b.stateVersions[contextID]
+		b.persistenceMu.RUnlock()
+
+		if !exists || len(versions) == 0 {
+			return nil, fmt.Errorf("no versions found for context %s", contextID)
+		}
+
+		// Get the latest version
+		latestVersion := 0
+		for _, v := range versions {
+			if v > latestVersion {
+				latestVersion = v
+			}
+		}
+		version = latestVersion
+	}
+
+	// Try both compressed and uncompressed files
+	filename := fmt.Sprintf("state_v%d.json", version)
+	filePath := filepath.Join(contextDir, filename)
+
+	var data []byte
+	var err error
+	compressed := false
+
+	// Try uncompressed first
+	data, err = os.ReadFile(filePath)
+	if err != nil {
+		// Try compressed
+		compressedFilename := fmt.Sprintf("state_v%d.json.gz", version)
+		compressedPath := filepath.Join(contextDir, compressedFilename)
+		data, err = os.ReadFile(compressedPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read state file (tried both compressed and uncompressed): %w", err)
+		}
+		compressed = true
+	}
+
+	// Decompress if needed
+	if compressed {
+		decompressedData, err := b.decompressData(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decompress state data: %w", err)
+		}
+		data = decompressedData
+	}
+
+	// Parse JSON using go-llms JSON utilities
+	var stateData map[string]interface{}
+	err = json.Unmarshal(data, &stateData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse state JSON: %w", err)
+	}
+
+	return stateData, nil
+}
+
+// decompressData decompresses gzip data
+func (b *StateContextBridge) decompressData(data []byte) ([]byte, error) {
+	reader := strings.NewReader(string(data))
+	gzipReader, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = gzipReader.Close() // Ignore error on cleanup
+	}()
+
+	return io.ReadAll(gzipReader)
+}
+
+// reconstructSharedContext reconstructs a SharedStateContext from persisted data
+func (b *StateContextBridge) reconstructSharedContext(stateData map[string]interface{}) (*domain.SharedStateContext, error) {
+	// Create base state from parent state data
+	var parentState *domain.State
+	if stateObj, ok := stateData["state"].(map[string]interface{}); ok {
+		parentState = domain.NewState()
+		if dataMap, ok := stateObj["data"].(map[string]interface{}); ok {
+			for key, value := range dataMap {
+				parentState.Set(key, value)
+			}
+		}
+		if metadataMap, ok := stateObj["metadata"].(map[string]interface{}); ok {
+			for key, value := range metadataMap {
+				parentState.SetMetadata(key, value)
+			}
+		}
+	} else {
+		parentState = domain.NewState()
+	}
+
+	// Create shared context
+	sharedContext := domain.NewSharedStateContext(parentState)
+
+	// Restore local state
+	if localStateObj, ok := stateData["localState"].(map[string]interface{}); ok {
+		if dataMap, ok := localStateObj["data"].(map[string]interface{}); ok {
+			for key, value := range dataMap {
+				sharedContext.Set(key, value)
+			}
+		}
+	}
+
+	// Restore artifacts
+	if artifactsObj, ok := stateData["artifacts"].(map[string]interface{}); ok {
+		for _, artifactData := range artifactsObj {
+			if artifactMap, ok := artifactData.(map[string]interface{}); ok {
+				artifact := b.scriptToArtifact(artifactMap)
+				if artifact != nil {
+					// We can't directly add artifacts to SharedStateContext, but we can add to the parent state
+					parentState.AddArtifact(artifact)
+				}
+			}
+		}
+	}
+
+	// Restore messages
+	if messagesArray, ok := stateData["messages"].([]interface{}); ok {
+		for _, messageData := range messagesArray {
+			if messageMap, ok := messageData.(map[string]interface{}); ok {
+				message := b.scriptToMessage(messageMap)
+				// Add to parent state since SharedStateContext inherits messages
+				parentState.AddMessage(message)
+			}
+		}
+	}
+
+	return sharedContext, nil
+}
+
+// scriptToArtifact converts script representation to domain.Artifact
+func (b *StateContextBridge) scriptToArtifact(scriptObj map[string]interface{}) *domain.Artifact {
+	id, ok := scriptObj["id"].(string)
+	if !ok {
+		return nil
+	}
+
+	name, ok := scriptObj["name"].(string)
+	if !ok {
+		return nil
+	}
+
+	typeStr, ok := scriptObj["type"].(string)
+	if !ok {
+		return nil
+	}
+
+	data, ok := scriptObj["data"]
+	if !ok {
+		return nil
+	}
+
+	// Convert data to []byte if it's a string
+	var dataBytes []byte
+	switch v := data.(type) {
+	case string:
+		dataBytes = []byte(v)
+	case []byte:
+		dataBytes = v
+	default:
+		// Try to serialize as JSON
+		jsonData, err := json.Marshal(v)
+		if err != nil {
+			return nil
+		}
+		dataBytes = jsonData
+	}
+
+	artifact := domain.NewArtifact(name, domain.ArtifactType(typeStr), dataBytes)
+	artifact.ID = id
+
+	// Set optional fields
+	if size, ok := scriptObj["size"].(int); ok {
+		artifact.Size = int64(size)
+	} else if size, ok := scriptObj["size"].(float64); ok {
+		artifact.Size = int64(size)
+	}
+
+	if mimeType, ok := scriptObj["mimeType"].(string); ok {
+		artifact.MimeType = mimeType
+	}
+
+	if metadata, ok := scriptObj["metadata"].(map[string]interface{}); ok {
+		artifact.Metadata = metadata
+	}
+
+	return artifact
+}
+
+// scriptToMessage converts script representation to domain.Message
+func (b *StateContextBridge) scriptToMessage(scriptObj map[string]interface{}) domain.Message {
+	role, ok := scriptObj["role"].(string)
+	if !ok {
+		role = "user"
+	}
+
+	content, ok := scriptObj["content"].(string)
+	if !ok {
+		content = ""
+	}
+
+	return domain.Message{
+		Role:    domain.Role(role),
+		Content: content,
+	}
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) listPersistedStates(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextID := ""
+	if id, ok := params["contextId"].(string); ok {
+		contextID = id
+	}
+
+	b.persistenceMu.RLock()
+	defer b.persistenceMu.RUnlock()
+
+	if contextID == "" {
+		// List all contexts and their versions
+		allStates := make(map[string]interface{})
+		for ctxID, versions := range b.stateVersions {
+			allStates[ctxID] = versions
+		}
+		return map[string]interface{}{
+			"states": allStates,
+			"total":  len(allStates),
+		}, nil
+	}
+
+	// List versions for specific context
+	versions, exists := b.stateVersions[contextID]
+	if !exists {
+		return map[string]interface{}{
+			"contextId": contextID,
+			"versions":  []interface{}{},
+			"total":     0,
+		}, nil
+	}
+
+	// Convert []int to []interface{} for bridge compatibility
+	versionsList := make([]interface{}, len(versions))
+	for i, v := range versions {
+		versionsList[i] = map[string]interface{}{
+			"version":    v,
+			"timestamp":  time.Now().Format(time.RFC3339),
+			"size":       0, // Would need to be calculated from actual file
+			"compressed": b.enableCompress,
+		}
+	}
+
+	return map[string]interface{}{
+		"contextId": contextID,
+		"versions":  versionsList,
+		"total":     len(versions),
+	}, nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) deletePersistedState(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextID, ok := params["contextId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("contextId parameter is required and must be a string")
+	}
+
+	version := 0
+	if v, ok := params["version"].(int); ok {
+		version = v
+	} else if v, ok := params["version"].(float64); ok {
+		version = int(v)
+	}
+
+	if version == 0 {
+		return nil, fmt.Errorf("version parameter is required and must be greater than 0")
+	}
+
+	// Delete from file system if available
+	deleted := false
+	if b.persistDir != "" {
+		err := b.deleteStateFile(contextID, version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete state file: %w", err)
+		}
+		deleted = true
+	}
+
+	// Remove from version tracking
+	b.persistenceMu.Lock()
+	if versions, exists := b.stateVersions[contextID]; exists {
+		newVersions := make([]int, 0)
+		for _, v := range versions {
+			if v != version {
+				newVersions = append(newVersions, v)
+			}
+		}
+		if len(newVersions) == 0 {
+			delete(b.stateVersions, contextID)
+		} else {
+			b.stateVersions[contextID] = newVersions
+		}
+	}
+	b.persistenceMu.Unlock()
+
+	// Emit deletion event
+	if b.eventEmitter != nil {
+		deleteEventData := map[string]interface{}{
+			"contextId": contextID,
+			"version":   version,
+			"deleted":   deleted,
+			"timestamp": time.Now(),
+		}
+		b.eventEmitter.EmitCustom("state.deleted", deleteEventData)
+	}
+
+	return map[string]interface{}{
+		"contextId": contextID,
+		"version":   version,
+		"deleted":   deleted,
+		"timestamp": time.Now().Format(time.RFC3339),
+		"success":   true,
+	}, nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) generateStateDiff(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextID, ok := params["contextId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("contextId parameter is required and must be a string")
+	}
+
+	fromVersion := 0
+	if v, ok := params["fromVersion"].(int); ok {
+		fromVersion = v
+	} else if v, ok := params["fromVersion"].(float64); ok {
+		fromVersion = int(v)
+	}
+
+	toVersion := 0
+	if v, ok := params["toVersion"].(int); ok {
+		toVersion = v
+	} else if v, ok := params["toVersion"].(float64); ok {
+		toVersion = int(v)
+	}
+
+	if fromVersion == 0 || toVersion == 0 {
+		return nil, fmt.Errorf("both fromVersion and toVersion are required")
+	}
+
+	// Load both states
+	fromState, err := b.loadFromFile(contextID, fromVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load from version %d: %w", fromVersion, err)
+	}
+
+	toState, err := b.loadFromFile(contextID, toVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load to version %d: %w", toVersion, err)
+	}
+
+	// Generate diff using go-llms state manager
+	diff := b.generateDiff(fromState, toState)
+
+	return map[string]interface{}{
+		"contextId":   contextID,
+		"fromVersion": fromVersion,
+		"toVersion":   toVersion,
+		"diff":        diff,
+		"timestamp":   time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) migrateState(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextID, ok := params["contextId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("contextId parameter is required and must be a string")
+	}
+
+	fromVersion := 0
+	if v, ok := params["fromVersion"].(int); ok {
+		fromVersion = v
+	} else if v, ok := params["fromVersion"].(float64); ok {
+		fromVersion = int(v)
+	}
+
+	toSchemaID, ok := params["toSchemaId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("toSchemaId parameter is required and must be a string")
+	}
+
+	// Load state to migrate
+	stateData, err := b.loadFromFile(contextID, fromVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load state version %d: %w", fromVersion, err)
+	}
+
+	// Get target schema
+	targetSchema, err := b.schemaRepo.Get(toSchemaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get target schema %s: %w", toSchemaID, err)
+	}
+
+	// Attempt migration using state manager transformation
+	migratedData, err := b.applyMigrationTransforms(ctx, stateData, targetSchema)
+	if err != nil {
+		return nil, fmt.Errorf("migration failed: %w", err)
+	}
+
+	// Generate new version number
+	nextVersion := b.getNextVersion(contextID)
+
+	// Persist migrated state
+	reconstructedContext, err := b.reconstructSharedContext(migratedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reconstruct migrated context: %w", err)
+	}
+
+	// Create new context with migrated state and persist it
+	migratedContextID := fmt.Sprintf("migrated_%s_v%d", contextID, nextVersion)
+	b.mu.Lock()
+	b.contexts[migratedContextID] = reconstructedContext
+	b.configs[migratedContextID] = b.configs[contextID] // Copy inheritance config
+	b.mu.Unlock()
+
+	// Emit migration event
+	if b.eventEmitter != nil {
+		migrationEventData := map[string]interface{}{
+			"originalContextId": contextID,
+			"migratedContextId": migratedContextID,
+			"fromVersion":       fromVersion,
+			"toVersion":         nextVersion,
+			"toSchemaId":        toSchemaID,
+			"timestamp":         time.Now(),
+		}
+		b.eventEmitter.EmitCustom("state.migrated", migrationEventData)
+	}
+
+	return map[string]interface{}{
+		"originalContextId": contextID,
+		"migratedContextId": migratedContextID,
+		"fromVersion":       fromVersion,
+		"toVersion":         nextVersion,
+		"toSchemaId":        toSchemaID,
+		"migratedContext":   b.sharedContextToScript(migratedContextID, reconstructedContext),
+		"timestamp":         time.Now().Format(time.RFC3339),
+		"success":           true,
+	}, nil
+}
+
+// Helper methods for persistence operations
+
+func (b *StateContextBridge) deleteStateFile(contextID string, version int) error {
+	contextDir := filepath.Join(b.persistDir, "states", contextID)
+
+	// Delete both compressed and uncompressed versions
+	files := []string{
+		fmt.Sprintf("state_v%d.json", version),
+		fmt.Sprintf("state_v%d.json.gz", version),
+		fmt.Sprintf("metadata_v%d.json", version),
+	}
+
+	for _, filename := range files {
+		filePath := filepath.Join(contextDir, filename)
+		err := os.Remove(filePath)
+		if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to delete file %s: %w", filename, err)
+		}
+	}
+
+	return nil
+}
+
+func (b *StateContextBridge) generateDiff(fromState, toState map[string]interface{}) map[string]interface{} {
+	diff := map[string]interface{}{
+		"added":    make(map[string]interface{}),
+		"removed":  make(map[string]interface{}),
+		"modified": make(map[string]interface{}),
+	}
+
+	// Compare state data
+	fromData := b.extractStateData(fromState)
+	toData := b.extractStateData(toState)
+
+	// Find added keys
+	for key, value := range toData {
+		if _, exists := fromData[key]; !exists {
+			diff["added"].(map[string]interface{})[key] = value
+		}
+	}
+
+	// Find removed keys
+	for key, value := range fromData {
+		if _, exists := toData[key]; !exists {
+			diff["removed"].(map[string]interface{})[key] = value
+		}
+	}
+
+	// Find modified keys
+	for key, newValue := range toData {
+		if oldValue, exists := fromData[key]; exists {
+			if !b.deepEqual(oldValue, newValue) {
+				diff["modified"].(map[string]interface{})[key] = map[string]interface{}{
+					"old": oldValue,
+					"new": newValue,
+				}
+			}
+		}
+	}
+
+	return diff
+}
+
+func (b *StateContextBridge) extractStateData(stateData map[string]interface{}) map[string]interface{} {
+	if stateObj, ok := stateData["state"].(map[string]interface{}); ok {
+		if dataMap, ok := stateObj["data"].(map[string]interface{}); ok {
+			return dataMap
+		}
+	}
+	return make(map[string]interface{})
+}
+
+func (b *StateContextBridge) deepEqual(a, other interface{}) bool {
+	// Simple deep equality check - in production, use a more robust solution
+	aBytes, err1 := json.Marshal(a)
+	otherBytes, err2 := json.Marshal(other)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	return string(aBytes) == string(otherBytes)
+}
+
+func (b *StateContextBridge) applyMigrationTransforms(ctx context.Context, stateData map[string]interface{}, targetSchema *sdomain.Schema) (map[string]interface{}, error) {
+	// Apply state manager transforms to migrate data
+	// For now, we'll do a simple pass-through with basic validation
+
+	// Extract state data
+	extractedData := b.extractStateData(stateData)
+
+	// Validate against target schema
+	result, err := b.validator.ValidateStruct(targetSchema, extractedData)
+	if err != nil {
+		return nil, fmt.Errorf("migration validation failed: %w", err)
+	}
+
+	if !result.Valid {
+		// Try to apply basic transforms using state manager
+		if b.stateManager != nil {
+			// Create a temporary state for transformation
+			tempState := domain.NewState()
+			for k, v := range extractedData {
+				tempState.Set(k, v)
+			}
+
+			// Use built-in sanitize transform to clean up data
+			transformed, err := b.stateManager.ApplyTransform(ctx, "sanitize", tempState)
+			if err != nil {
+				return nil, fmt.Errorf("failed to apply sanitize transform: %w", err)
+			}
+
+			// Update state data with transformed data
+			extractedData = transformed.Values()
+			if stateObj, ok := stateData["state"].(map[string]interface{}); ok {
+				stateObj["data"] = extractedData
+			}
+		}
+	}
+
+	return stateData, nil
+}
+
+func (b *StateContextBridge) getNextVersion(contextID string) int {
+	b.persistenceMu.RLock()
+	versions, exists := b.stateVersions[contextID]
+	b.persistenceMu.RUnlock()
+
+	if !exists || len(versions) == 0 {
+		return 1
+	}
+
+	maxVersion := 0
+	for _, v := range versions {
+		if v > maxVersion {
+			maxVersion = v
+		}
+	}
+
+	return maxVersion + 1
 }
 
 // Event emission helper functions
@@ -1872,6 +2837,155 @@ func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, arg
 			}
 		}
 		return b.clearEventHistory(ctx, params)
+
+	case "persistState":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("persistState requires context parameter")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+
+		params := map[string]interface{}{
+			"context": contextObj,
+		}
+		if len(args) > 1 {
+			if version, ok := args[1].(int); ok {
+				params["version"] = version
+			} else if version, ok := args[1].(float64); ok {
+				params["version"] = int(version)
+			}
+		}
+		if len(args) > 2 {
+			if description, ok := args[2].(string); ok {
+				params["description"] = description
+			}
+		}
+		if len(args) > 3 {
+			if compress, ok := args[3].(bool); ok {
+				params["compress"] = compress
+			}
+		}
+		return b.persistState(ctx, params)
+
+	case "loadState":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("loadState requires contextId parameter")
+		}
+		contextID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("contextId must be string")
+		}
+
+		params := map[string]interface{}{
+			"contextId": contextID,
+		}
+		if len(args) > 1 {
+			if version, ok := args[1].(int); ok {
+				params["version"] = version
+			} else if version, ok := args[1].(float64); ok {
+				params["version"] = int(version)
+			}
+		}
+		if len(args) > 2 {
+			if validateSchema, ok := args[2].(bool); ok {
+				params["validateSchema"] = validateSchema
+			}
+		}
+		return b.loadState(ctx, params)
+
+	case "listPersistedStates":
+		params := map[string]interface{}{}
+		if len(args) > 0 {
+			if contextID, ok := args[0].(string); ok {
+				params["contextId"] = contextID
+			}
+		}
+		return b.listPersistedStates(ctx, params)
+
+	case "deletePersistedState":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("deletePersistedState requires contextId and version parameters")
+		}
+		contextID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("contextId must be string")
+		}
+		version, ok := args[1].(int)
+		if !ok {
+			if versionFloat, ok := args[1].(float64); ok {
+				version = int(versionFloat)
+			} else {
+				return nil, fmt.Errorf("version must be integer")
+			}
+		}
+
+		params := map[string]interface{}{
+			"contextId": contextID,
+			"version":   version,
+		}
+		return b.deletePersistedState(ctx, params)
+
+	case "generateStateDiff":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("generateStateDiff requires contextId, fromVersion, and toVersion parameters")
+		}
+		contextID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("contextId must be string")
+		}
+		fromVersion, ok := args[1].(int)
+		if !ok {
+			if versionFloat, ok := args[1].(float64); ok {
+				fromVersion = int(versionFloat)
+			} else {
+				return nil, fmt.Errorf("fromVersion must be integer")
+			}
+		}
+		toVersion, ok := args[2].(int)
+		if !ok {
+			if versionFloat, ok := args[2].(float64); ok {
+				toVersion = int(versionFloat)
+			} else {
+				return nil, fmt.Errorf("toVersion must be integer")
+			}
+		}
+
+		params := map[string]interface{}{
+			"contextId":   contextID,
+			"fromVersion": fromVersion,
+			"toVersion":   toVersion,
+		}
+		return b.generateStateDiff(ctx, params)
+
+	case "migrateState":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("migrateState requires contextId, fromVersion, and toSchemaId parameters")
+		}
+		contextID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("contextId must be string")
+		}
+		fromVersion, ok := args[1].(int)
+		if !ok {
+			if versionFloat, ok := args[1].(float64); ok {
+				fromVersion = int(versionFloat)
+			} else {
+				return nil, fmt.Errorf("fromVersion must be integer")
+			}
+		}
+		toSchemaID, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("toSchemaId must be string")
+		}
+
+		params := map[string]interface{}{
+			"contextId":   contextID,
+			"fromVersion": fromVersion,
+			"toSchemaId":  toSchemaID,
+		}
+		return b.migrateState(ctx, params)
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
