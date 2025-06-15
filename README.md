@@ -41,10 +41,14 @@ log.info("Story created!")
 - ✅ **Architecture** - Bridge-first design documented and implemented
 - ✅ **Phase 1.1** - Script Engine Interface complete
 - ✅ **Phase 1.2** - Core Bridge Foundation complete
-  - State management bridges (manager, context, persistence)
+  - State management bridges (manager, context)
   - Bridge type system with go-llms aliases
   - Utility bridges (auth, json, llm, general)
-- 🚧 **Phase 1.3** - Core Bridge System in progress (agents, workflows, events, tools)
+- ✅ **Phase 1.3** - Core Bridge System complete
+  - Agent, workflow, events, tools, and hooks bridges
+  - Enhanced custom tool support with go-llms v0.3.5
+  - Comprehensive test coverage with go-llms testutils
+- 🚧 **Phase 1.4** - v0.3.5 Feature Integration in progress
 - 🔮 **Coming Soon** - Lua engine, then JavaScript and Tengo
 
 ## 🛠️ Quick Start
@@ -141,7 +145,7 @@ make all  # Must pass before submitting
 
 ## 📦 Core Dependencies
 
-- [**go-llms**](https://github.com/lexlapax/go-llms) v0.3.4 - LLM providers and agent framework
+- [**go-llms**](https://github.com/lexlapax/go-llms) v0.3.5 - LLM providers and agent framework
 - [**gopher-lua**](https://github.com/yuin/gopher-lua) - Lua 5.1 VM
 - [**goja**](https://github.com/dop251/goja) - JavaScript engine *(planned)*
 - [**tengo**](https://github.com/d5/tengo) - Compiled script language *(planned)*

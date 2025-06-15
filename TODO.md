@@ -11,15 +11,12 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 5. **Type Safety**: Maintain type conversions at bridge boundaries
 
 ## Migration Status
-- ✅ Updated go-llms submodule to v0.3.3
+- ✅ Updated go-llms to v0.3.5
 - ✅ Phase 1.1: Script Engine Interface [COMPLETED]
 - ✅ Phase 1.2: Core Bridge Foundation [COMPLETED]
-  - State management bridges
-  - Bridge type system with go-llms aliases
-  - Utility bridges (auth, json, llm, general)
-  - Applied "If not in go-llms, don't implement" principle
-- 🚧 Phase 1.3: Core Bridge System - IN PROGRESS
-- 🚧 Migration to pure bridge architecture in progress
+- ✅ Phase 1.3: Core Bridge System [COMPLETED]
+- 🚧 Phase 1.4: Additional Bridges - NOT STARTED
+- 🚧 Phase 2-5: Engine Implementations - NOT STARTED
 
 ---
 
@@ -29,168 +26,401 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### ✅ 1.2 Core Bridge Foundation [COMPLETED]
 
-### 1.3 Core Bridge System
+### ✅ 1.3 Core Bridge System [COMPLETED]
+#### Items for revisit:
+  - [ ] Support for async/promise-based tool execution (deferred to script engine implementation)
+  - [ ] Test cross-engine compatibility (deferred to script engine implementation)
 
-- [x] **Task 1.3.1: LLM Agent Bridge** ✅ COMPLETED
-  - [x] Create test file `/pkg/bridge/agent/agent_test.go`
-  - [x] Test go-llms agent creation and configuration
-  - [x] Test tool registration and execution
-  - [x] Test sub-agent orchestration
-  - [x] Test agent lifecycle hooks and events
-  - [x] Create `/pkg/bridge/agent/agent.go`
-  - [x] Bridge complete go-llms agent system from `/pkg/agent/`
-  - [x] Expose agent creation, configuration, and execution to scripts
-  - [x] Support tool registration and execution
-  - [x] Enable sub-agent orchestration
-  - [x] Bridge agent lifecycle hooks and events
+### 1.4 v0.3.5 Feature Integration
 
-- [x] **Task 1.3.2: Workflow Engine Bridge** ✅ COMPLETED
-  - [x] Create test file `/pkg/bridge/agent/workflow_test.go`
-  - [x] Test workflow lifecycle bridging
-  - [x] Test all workflow types (sequential, parallel, conditional, loop)
-  - [x] Test workflow state and error handling
-  - [x] Create `/pkg/bridge/agent/workflow.go`
-  - [x] Bridge workflow system from `/pkg/agent/workflow/`
-  - [x] Expose workflow creation and execution
-  - [x] Support workflow composition from scripts
+#### 1.4.1 Foundation Updates
 
-- [x] **Task 1.3.3: Event System Bridge** ✅ COMPLETED
-  - [x] Create test file `/pkg/bridge/agent/events_test.go`
-  - [x] Test event streaming to scripts
-  - [x] Test event filtering and subscription
-  - [x] Test all event types
-  - [x] Create `/pkg/bridge/agent/events.go`
-  - [x] Bridge pkg/agent/domain event system
-  - [x] Support real-time event streaming to scripts
-  - [x] Enable event filtering and subscription by type
-  - [x] Handle lifecycle, execution, tool, and workflow events
+- [ ] **Task 1.4.1.1: Update Bridge Interfaces with v0.3.5 Types**
+  - [ ] Add schema system types (SchemaRepository, SchemaGenerator, SchemaVersion)
+  - [ ] Add structured output types (OutputParser, JSONParser, XMLParser, YAMLParser)
+  - [ ] Add event system types (EventStore, EventFilter, EventReplayer, EventSerializer)
+  - [ ] Add documentation types (DocGenerator, OpenAPIGenerator)
+  - [ ] Add error types (SerializableError, ErrorRecovery)
+  - [ ] Update tests to use new types
 
-- [x] **Task 1.3.4: Tool System Bridge** ✅ COMPLETED
-  - [x] Create test file `/pkg/bridge/agent/tools_test.go`
-  - [x] Test tool interface bridging
-  - [x] Test built-in tools exposure (all categories)
-  - [x] Test tool registration and execution
-  - [x] Create `/pkg/bridge/agent/tools.go`
-  - [x] Bridge pkg/agent/tools interfaces
-  - [x] Expose ALL built-in tools from pkg/agent/builtins/tools:
-    - [x] Data tools (CSV, JSON, XML processing)
-    - [x] DateTime tools (calculations, formatting, parsing)
-    - [x] Feed tools (RSS/Atom aggregation)
-    - [x] File tools (read, write, list, search)
-    - [x] Math tools (calculator)
-    - [x] System tools (env vars, process execution)
-    - [x] Web tools (HTTP, GraphQL, scraping)
-  - [x] Support tool registration and execution
-  - [x] Enable tool composition and chaining
-  - [x] Implement Tool Discovery API bridging (v0.3.4)
-  - [x] Support basic custom tool registration from scripts
-  
-  **Subtasks for Enhanced Custom Tool Support:**
-  - [ ] **Task 1.3.4.1: Schema Support for Custom Tools**
-    - [ ] Add schema conversion helpers (script JSON Schema → domain.Schema)
-    - [ ] Support parameter schema definition from scripts
-    - [ ] Support output schema definition from scripts
-    - [ ] Add schema validation for custom tool inputs/outputs
-  
-  - [ ] **Task 1.3.4.2: Use go-llms ToolBuilder Pattern**
-    - [ ] Replace simple customToolWrapper with ToolBuilder-based implementation
-    - [ ] Use atools.NewToolBuilder for custom tool creation
-    - [ ] Support all ToolBuilder configuration options from scripts
-    - [ ] Maintain compatibility with existing custom tool API
-  
-  - [ ] **Task 1.3.4.3: Enhanced Tool Metadata**
-    - [ ] Support usage instructions from scripts
-    - [ ] Support examples definition from scripts
-    - [ ] Support constraints and error guidance
-    - [ ] Support resource usage hints
-    - [ ] Support behavioral flags (deterministic, destructive, etc.)
-  
-  - [ ] **Task 1.3.4.4: Improved Function Execution**
-    - [ ] Type-safe parameter extraction and validation
-    - [ ] Proper error propagation from script functions
-    - [ ] Support for async/promise-based tool execution
-    - [ ] Context propagation to script functions
-  
-  - [ ] **Task 1.3.4.5: Testing Enhanced Custom Tools**
-    - [ ] Test schema validation for custom tools
-    - [ ] Test complex parameter types (nested objects, arrays)
-    - [ ] Test error handling and guidance
-    - [ ] Test custom tool discovery and metadata
-    - [ ] Test cross-engine compatibility (Lua, JS, Tengo)
+- [ ] **Task 1.4.1.2: Enhance Bridge Manager with Event System**
+  - [ ] Add EventEmitter field to BridgeManager
+  - [ ] Add EventStore for bridge event history
+  - [ ] Implement bridge lifecycle event emission (initializing, initialized, failed, cleanup)
+  - [ ] Add bridge metrics collection using events
+  - [ ] Implement event-based monitoring and debugging
+  - [ ] Add performance profiling through events
 
-- [ ] **Task 1.3.5: Hook System Bridge**
-  - [ ] Create test file `/pkg/bridge/agent/hooks_test.go`
-  - [ ] Test Hook interface bridging
-  - [ ] Test all hook types (BeforeGenerate, AfterGenerate, etc.)
-  - [ ] Test hook priority and chaining
-  - [ ] Create `/pkg/bridge/agent/hooks.go`
-  - [ ] Bridge pkg/agent/domain Hook interface
-  - [ ] Support all hook types with priority ordering
-  - [ ] Enable script-based hook implementations
-  - [ ] Integrate with built-in hooks
+- [ ] **Task 1.4.1.3: Add Bridge Documentation Generation**
+  - [ ] Implement GenerateDocumentation method on BridgeManager
+  - [ ] Support OpenAPI, Markdown, and JSON formats
+  - [ ] Generate bridge method documentation
+  - [ ] Include parameter schemas and examples
+  - [ ] Export type mappings and conversions
+  - [ ] Generate interactive API documentation
 
-### 1.4 Additional Bridges
+- [ ] **Task 1.4.1.4: Add Bridge State Serialization**
+  - [ ] Implement ExportState method on BridgeManager
+  - [ ] Implement ImportState for state restoration
+  - [ ] Add versioning support for state compatibility
+  - [ ] Support incremental state updates
+  - [ ] Add state validation before import
+  - [ ] Test state round-trip serialization
 
-- [ ] **Task 1.4.1: Schema Bridge**
-  - [ ] Create `/pkg/bridge/structured/schema.go`
-  - [ ] Bridge pkg/schema validation system
-  - [ ] Expose reflection-based generation
-  - [ ] Support custom validator registration
+#### 1.4.2 State Bridge Enhancements
 
-- [ ] **Task 1.4.2: Structured Output Bridge**
-  - [ ] Create `/pkg/bridge/structured/structured.go`
-  - [ ] Bridge pkg/structured processing
-  - [ ] Expose JSON extraction utilities
-  - [ ] Support schema caching
+- [ ] **Task 1.4.2.1: Add State Schema Validation**
+  - [ ] Add schemaRepo field to StateContextBridge
+  - [ ] Add stateSchema field for validation
+  - [ ] Implement ValidateState method
+  - [ ] Add schema versioning for states
+  - [ ] Support custom validation rules
+  - [ ] Add validation error details
 
-- [ ] **Task 1.4.3: Tracing Bridge**
+- [ ] **Task 1.4.2.2: Add State Event Emission**
+  - [ ] Add eventEmitter to StateContextBridge
+  - [ ] Emit StateChangeEvent on set operations
+  - [ ] Emit StateDeleteEvent on delete operations
+  - [ ] Add state snapshot events
+  - [ ] Support event filtering by key patterns
+  - [ ] Add event replay for state reconstruction
+
+- [ ] **Task 1.4.2.3: Add State Persistence with Schema Repository**
+  - [ ] Implement persistState method using schema repository
+  - [ ] Add loadState with schema validation
+  - [ ] Support versioned state snapshots
+  - [ ] Add state migration between versions
+  - [ ] Implement state diff generation
+  - [ ] Add compression for large states
+
+- [ ] **Task 1.4.2.4: Add State Transformation Pipeline**
+  - [ ] Integrate with go-llms transformation pipeline
+  - [ ] Add pipeline configuration from scripts
+  - [ ] Support chained transformations
+  - [ ] Add transformation validation
+  - [ ] Implement transformation caching
+  - [ ] Add transformation metrics
+
+#### 1.4.3 Utility Bridge Upgrades
+
+- [ ] **Task 1.4.3.1: Replace JSON Bridge with Structured Output Parser**
+  - [ ] Replace JSONBridge implementation with structured.JSONParser
+  - [ ] Add ParseWithRecovery for malformed JSON
+  - [ ] Add schema validation for parsed JSON
+  - [ ] Implement format conversion (JSON ↔ YAML ↔ XML)
+  - [ ] Add streaming JSON parsing support
+  - [ ] Update tests for new parser capabilities
+
+- [ ] **Task 1.4.3.2: Enhance Auth Bridge with OAuth2 Discovery**
+  - [ ] Add OAuth2 .well-known endpoint discovery
+  - [ ] Implement token validation with schema system
+  - [ ] Add auth event logging for security audit
+  - [ ] Implement credential serialization
+  - [ ] Add token refresh automation
+  - [ ] Support multiple auth schemes per endpoint
+
+- [ ] **Task 1.4.3.3: Enhance LLM Utility Bridge**
+  - [ ] Add provider capability metadata exposure
+  - [ ] Integrate model discovery API
+  - [ ] Add response parsing with recovery
+  - [ ] Implement streaming event emission
+  - [ ] Add cost tracking per request
+  - [ ] Support provider-specific options
+
+- [ ] **Task 1.4.3.4: Add Error Serialization Utilities**
+  - [ ] Implement SerializableError wrapper
+  - [ ] Add error recovery strategy support
+  - [ ] Create error event emission
+  - [ ] Add error categorization
+  - [ ] Implement error aggregation
+  - [ ] Support custom error handlers
+
+#### 1.4.4 LLM Bridge Advanced Features
+
+- [ ] **Task 1.4.4.1: Add Schema-Validated Generation**
+  - [ ] Add responseSchemas map to LLMBridge
+  - [ ] Implement generateWithSchema method
+  - [ ] Add schema validation for responses
+  - [ ] Support multiple schema versions
+  - [ ] Add schema inference from examples
+  - [ ] Implement schema caching
+
+- [ ] **Task 1.4.4.2: Add Provider Metadata Discovery**
+  - [ ] Implement getProviderCapabilities method
+  - [ ] Expose model-specific features
+  - [ ] Add capability-based routing
+  - [ ] Support dynamic provider selection
+  - [ ] Add provider health monitoring
+  - [ ] Implement fallback strategies
+
+- [ ] **Task 1.4.4.3: Add Streaming with Event Emission**
+  - [ ] Implement streaming response handling
+  - [ ] Emit events for each stream chunk
+  - [ ] Add stream aggregation support
+  - [ ] Implement stream error recovery
+  - [ ] Add stream performance metrics
+  - [ ] Support stream transformation
+
+#### 1.4.5 Schema Bridge Full Implementation
+
+- [ ] **Task 1.4.5.1: Add Schema Versioning and Migration**
+  - [ ] Add fileRepo for file-based persistence
+  - [ ] Implement saveSchemaVersion method
+  - [ ] Add schema migration support
+  - [ ] Create migration registry
+  - [ ] Implement automatic migration
+  - [ ] Add migration validation
+
+- [ ] **Task 1.4.5.2: Add Tag-Based Schema Generation**
+  - [ ] Add tagGenerator field
+  - [ ] Implement generateFromTags method
+  - [ ] Support struct tag parsing
+  - [ ] Add custom tag handlers
+  - [ ] Generate documentation from tags
+  - [ ] Support nested struct generation
+
+- [ ] **Task 1.4.5.3: Add Schema Import/Export**
+  - [ ] Implement schema export to JSON Schema
+  - [ ] Add OpenAPI schema export
+  - [ ] Support schema import from files
+  - [ ] Add schema format conversion
+  - [ ] Implement schema merging
+  - [ ] Add schema diff generation
+
+- [ ] **Task 1.4.5.4: Add Custom Validators**
+  - [ ] Extend validator registration
+  - [ ] Support script-based validators
+  - [ ] Add async validation support
+  - [ ] Implement validation caching
+  - [ ] Add validation performance metrics
+  - [ ] Support conditional validation
+
+#### 1.4.6 Model Info Bridge Intelligence
+
+- [ ] **Task 1.4.6.1: Add Model Performance Analytics**
+  - [ ] Add metricsStore field
+  - [ ] Implement getModelPerformance method
+  - [ ] Add performance report generation
+  - [ ] Track latency, token usage, costs
+  - [ ] Generate performance trends
+  - [ ] Add anomaly detection
+
+- [ ] **Task 1.4.6.2: Add Model Recommendation Engine**
+  - [ ] Implement findModelsWithCapabilities
+  - [ ] Add task-based model selection
+  - [ ] Consider cost/performance tradeoffs
+  - [ ] Support multi-criteria optimization
+  - [ ] Add recommendation explanations
+  - [ ] Implement A/B testing support
+
+- [ ] **Task 1.4.6.3: Add Model Catalog Export**
+  - [ ] Implement OpenAPI export for models
+  - [ ] Add interactive documentation
+  - [ ] Include pricing information
+  - [ ] Add capability matrices
+  - [ ] Generate comparison charts
+  - [ ] Support custom export formats
+
+#### 1.4.7 Agent Bridge Advanced Features
+
+- [ ] **Task 1.4.7.1: Add Agent State Serialization**
+  - [ ] Implement agent state export
+  - [ ] Add state compression
+  - [ ] Support incremental snapshots
+  - [ ] Add state encryption option
+  - [ ] Implement state versioning
+  - [ ] Test state portability
+
+- [ ] **Task 1.4.7.2: Add Agent Replay from Events**
+  - [ ] Implement event-based replay
+  - [ ] Add replay speed control
+  - [ ] Support partial replay
+  - [ ] Add replay debugging
+  - [ ] Implement deterministic replay
+  - [ ] Add replay visualization
+
+- [ ] **Task 1.4.7.3: Add Agent Performance Profiling**
+  - [ ] Add profiling hooks
+  - [ ] Track execution times
+  - [ ] Monitor resource usage
+  - [ ] Generate flame graphs
+  - [ ] Add bottleneck detection
+  - [ ] Support continuous profiling
+
+#### 1.4.8 Event Bridge Replacement
+
+- [ ] **Task 1.4.8.1: Replace with v0.3.5 Event System**
+  - [ ] Remove current event bridge implementation
+  - [ ] Integrate v0.3.5 EventEmitter
+  - [ ] Add EventStore support
+  - [ ] Implement event filtering
+  - [ ] Add event serialization
+  - [ ] Update all event tests
+
+- [ ] **Task 1.4.8.2: Add Event Aggregation**
+  - [ ] Implement event aggregation rules
+  - [ ] Add time-window aggregation
+  - [ ] Support custom aggregators
+  - [ ] Add aggregation caching
+  - [ ] Implement real-time dashboards
+  - [ ] Export aggregated metrics
+
+- [ ] **Task 1.4.8.3: Add Event Replay System**
+  - [ ] Implement EventReplayer
+  - [ ] Add replay filtering
+  - [ ] Support speed control
+  - [ ] Add checkpoint support
+  - [ ] Implement replay hooks
+  - [ ] Test replay accuracy
+
+#### 1.4.9 Tools Bridge Enhancement
+
+- [ ] **Task 1.4.9.1: Add Tool Schema Validation**
+  - [ ] Add schemaValidator field
+  - [ ] Implement executeToolValidated
+  - [ ] Validate input parameters
+  - [ ] Validate output format
+  - [ ] Add validation caching
+  - [ ] Generate validation reports
+
+- [ ] **Task 1.4.9.2: Add Tool Documentation Generation**
+  - [ ] Add docGenerator field
+  - [ ] Generate tool documentation
+  - [ ] Include examples and schemas
+  - [ ] Add interactive playground
+  - [ ] Generate SDK snippets
+  - [ ] Support multiple languages
+
+- [ ] **Task 1.4.9.3: Add Tool Execution Analytics**
+  - [ ] Track tool execution metrics
+  - [ ] Monitor success/failure rates
+  - [ ] Add performance profiling
+  - [ ] Generate usage reports
+  - [ ] Implement cost tracking
+  - [ ] Add anomaly alerts
+
+#### 1.4.10 Workflow Bridge Serialization
+
+- [ ] **Task 1.4.10.1: Add Workflow Import/Export**
+  - [ ] Implement exportWorkflow method
+  - [ ] Implement importWorkflow method
+  - [ ] Add format validation
+  - [ ] Support version compatibility
+  - [ ] Add migration support
+  - [ ] Test round-trip accuracy
+
+- [ ] **Task 1.4.10.2: Add Script Step Handlers**
+  - [ ] Support script-based workflow steps
+  - [ ] Add step validation
+  - [ ] Implement step debugging
+  - [ ] Add step composition
+  - [ ] Support async steps
+  - [ ] Add step visualization
+
+- [ ] **Task 1.4.10.3: Add Workflow Templates**
+  - [ ] Create template registry
+  - [ ] Add template validation
+  - [ ] Support parameterized templates
+  - [ ] Add template composition
+  - [ ] Generate template documentation
+  - [ ] Implement template versioning
+
+#### 1.4.11 Engine Integration
+
+- [ ] **Task 1.4.11.1: Add Engine Event Bus**
+  - [ ] Add GetEventBus to ScriptEngine interface
+  - [ ] Implement event bus per engine
+  - [ ] Support cross-engine events
+  - [ ] Add event routing
+  - [ ] Implement event priorities
+  - [ ] Test event isolation
+
+- [ ] **Task 1.4.11.2: Add Type Conversion Registry**
+  - [ ] Add RegisterTypeConverter method
+  - [ ] Implement conversion registry
+  - [ ] Support bidirectional conversions
+  - [ ] Add conversion caching
+  - [ ] Generate conversion docs
+  - [ ] Test conversion accuracy
+
+- [ ] **Task 1.4.11.3: Add Engine Profiling**
+  - [ ] Add EnableProfiling method
+  - [ ] Implement profiler interface
+  - [ ] Track script execution
+  - [ ] Monitor memory usage
+  - [ ] Generate performance reports
+  - [ ] Add optimization hints
+
+- [ ] **Task 1.4.11.4: Add Engine API Export**
+  - [ ] Add ExportAPI method
+  - [ ] Generate API specifications
+  - [ ] Include type information
+  - [ ] Add method signatures
+  - [ ] Generate client libraries
+  - [ ] Support API versioning
+
+### 1.5 Additional Original Bridges
+
+- [ ] **Task 1.5.1: Tracing Bridge**
   - [ ] Create `/pkg/bridge/observability/tracing.go`
   - [ ] Bridge core/tracing.go distributed tracing
   - [ ] Support OpenTelemetry integration
   - [ ] Enable trace correlation
+  - [ ] Add trace sampling configuration
+  - [ ] Support custom trace attributes
 
-- [ ] **Task 1.4.4: Guardrails Bridge**
+- [ ] **Task 1.5.2: Guardrails Bridge**
   - [ ] Create `/pkg/bridge/guardrails.go`
   - [ ] Bridge guardrails.go safety system
   - [ ] Support content filtering
   - [ ] Enable behavioral constraints
+  - [ ] Add custom guardrail rules
+  - [ ] Implement guardrail analytics
 
-- [ ] **Task 1.4.5: Metrics Bridge**
+- [ ] **Task 1.5.3: Metrics Bridge**
   - [ ] Create `/pkg/bridge/observability/metrics.go`
   - [ ] Bridge performance metrics system
   - [ ] Support custom metric collection
   - [ ] Enable metric aggregation
+  - [ ] Add metric export formats
+  - [ ] Implement alerting rules
 
-- [ ] **Task 1.4.6: Provider System Bridge**
+- [ ] **Task 1.5.4: Provider System Bridge**
   - [ ] Create `/pkg/bridge/llm/providers.go`
   - [ ] Bridge all provider implementations (Anthropic, OpenAI, etc.)
   - [ ] Bridge consensus provider for multi-LLM voting
   - [ ] Bridge multi-provider with strategies (primary/fallback, sequential)
   - [ ] Expose provider configuration and options
+  - [ ] Add provider-specific optimizations
 
-- [ ] **Task 1.4.7: Provider Pool Bridge**
+- [ ] **Task 1.5.5: Provider Pool Bridge**
   - [ ] Create `/pkg/bridge/llm/pool.go`
   - [ ] Bridge connection pooling from go-llms
   - [ ] Expose pool metrics and management
   - [ ] Support connection limits and timeouts
+  - [ ] Add pool health monitoring
+  - [ ] Implement adaptive pooling
 
-- [ ] **Task 1.4.8: Built-in Tools Registry Bridge**
+- [ ] **Task 1.5.6: Built-in Tools Registry Bridge**
   - [ ] Create `/pkg/bridge/agent/tools/registry.go`
   - [ ] Bridge the tool registry system
   - [ ] Expose tool discovery and metadata
   - [ ] Support dynamic tool loading
+  - [ ] Add tool versioning support
+  - [ ] Implement tool deprecation handling
 
-
-- [ ] **Task 1.4.9: Profiling Bridge**
+- [ ] **Task 1.5.7: Profiling Bridge**
   - [ ] Create `/pkg/bridge/observability/profiling.go`
   - [ ] Bridge performance profiling utilities
   - [ ] Support integration test profiling
   - [ ] Enable performance monitoring from scripts
+  - [ ] Add CPU and memory profiling
+  - [ ] Generate profiling reports
 
-- [ ] **Task 1.4.10: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
+- [ ] **Task 1.5.8: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms
 
-- [ ] **Task 1.4.11: Conversation Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
+- [ ] **Task 1.5.9: Conversation Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms
 
 ---

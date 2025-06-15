@@ -14,8 +14,10 @@ import (
 
 	// go-llms imports for tool functionality
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
-	discoveryTools "github.com/lexlapax/go-llms/pkg/agent/tools"
+	"github.com/lexlapax/go-llms/pkg/agent/tools"
 	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
+	"github.com/lexlapax/go-llms/pkg/schema/repository"
+	"github.com/lexlapax/go-llms/pkg/schema/validation"
 )
 
 // ToolsBridge provides access to go-llms tool discovery system
@@ -24,6 +26,8 @@ type ToolsBridge struct {
 	initialized bool
 	discovery   bridge.ToolDiscovery
 	customTools map[string]domain.Tool // For script-registered tools
+	schemaRepo  schemaDomain.SchemaRepository
+	validator   schemaDomain.Validator
 }
 
 // NewToolsBridge creates a new tools bridge
@@ -56,8 +60,12 @@ func (b *ToolsBridge) Initialize(ctx context.Context) error {
 	}
 
 	// Initialize discovery system
-	b.discovery = discoveryTools.NewDiscovery()
+	b.discovery = tools.NewDiscovery()
 	b.customTools = make(map[string]domain.Tool)
+
+	// Initialize schema repository and validator
+	b.schemaRepo = repository.NewInMemorySchemaRepository()
+	b.validator = validation.NewValidator()
 
 	b.initialized = true
 	return nil
@@ -312,6 +320,12 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 			return nil, fmt.Errorf("name must be string")
 		}
 
+		// Check custom tools first
+		if tool, exists := b.customTools[name]; exists {
+			return b.toolToSchemaMap(tool), nil
+		}
+
+		// Get from discovery
 		schema, err := b.discovery.GetToolSchema(name)
 		if err != nil {
 			return nil, err
@@ -328,6 +342,12 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 			return nil, fmt.Errorf("name must be string")
 		}
 
+		// Check custom tools first
+		if tool, exists := b.customTools[name]; exists {
+			return tool.UsageInstructions(), nil
+		}
+
+		// Get from discovery
 		help, err := b.discovery.GetToolHelp(name)
 		if err != nil {
 			return nil, err
@@ -344,9 +364,18 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 			return nil, fmt.Errorf("name must be string")
 		}
 
-		examples, err := b.discovery.GetToolExamples(name)
-		if err != nil {
-			return nil, err
+		var examples []domain.ToolExample
+
+		// Check custom tools first
+		if tool, exists := b.customTools[name]; exists {
+			examples = tool.Examples()
+		} else {
+			// Get from discovery
+			var err error
+			examples, err = b.discovery.GetToolExamples(name)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		result := make([]map[string]interface{}, 0, len(examples))
@@ -433,15 +462,13 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 			return nil, fmt.Errorf("tool must have name")
 		}
 
-		// Create a custom tool wrapper
-		customTool := &customToolWrapper{
-			name:        name,
-			description: getStringField(toolDef, "description"),
-			category:    getStringField(toolDef, "category"),
-			execute:     toolDef["execute"],
+		// Create enhanced custom tool using ToolBuilder
+		tool, err := b.createEnhancedCustomTool(toolDef)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create custom tool: %w", err)
 		}
 
-		b.customTools[name] = customTool
+		b.customTools[name] = tool
 		return nil, nil
 
 	default:
@@ -510,12 +537,19 @@ func toolToWrapper(name string, tool domain.Tool) map[string]interface{} {
 
 func customToolToInfo(name string, tool domain.Tool) map[string]interface{} {
 	return map[string]interface{}{
-		"name":        name,
-		"description": tool.Description(),
-		"category":    tool.Category(),
-		"tags":        tool.Tags(),
-		"version":     tool.Version(),
-		"custom":      true,
+		"name":                 name,
+		"description":          tool.Description(),
+		"category":             tool.Category(),
+		"tags":                 tool.Tags(),
+		"version":              tool.Version(),
+		"custom":               true,
+		"isDeterministic":      tool.IsDeterministic(),
+		"isDestructive":        tool.IsDestructive(),
+		"requiresConfirmation": tool.RequiresConfirmation(),
+		"estimatedLatency":     tool.EstimatedLatency(),
+		"usageInstructions":    tool.UsageInstructions(),
+		"constraints":          tool.Constraints(),
+		"errorGuidance":        tool.ErrorGuidance(),
 	}
 }
 
@@ -526,42 +560,266 @@ func getStringField(m map[string]interface{}, field string) string {
 	return ""
 }
 
-// customToolWrapper wraps a script-defined tool
-type customToolWrapper struct {
-	name        string
-	description string
-	category    string
-	execute     interface{}
+// createEnhancedCustomTool creates a custom tool with full schema support using ToolBuilder
+func (b *ToolsBridge) createEnhancedCustomTool(toolDef map[string]interface{}) (domain.Tool, error) {
+	name := getStringField(toolDef, "name")
+	description := getStringField(toolDef, "description")
+
+	// Create tool using ToolBuilder
+	builder := tools.NewToolBuilder(name, description)
+
+	// Convert and set parameter schema
+	if paramSchemaData, ok := toolDef["parameterSchema"]; ok {
+		paramSchema, err := b.convertToSchema(paramSchemaData)
+		if err != nil {
+			return nil, fmt.Errorf("invalid parameter schema: %w", err)
+		}
+		builder.WithParameterSchema(paramSchema)
+	}
+
+	// Convert and set output schema
+	if outputSchemaData, ok := toolDef["outputSchema"]; ok {
+		outputSchema, err := b.convertToSchema(outputSchemaData)
+		if err != nil {
+			return nil, fmt.Errorf("invalid output schema: %w", err)
+		}
+		builder.WithOutputSchema(outputSchema)
+	}
+
+	// Set metadata
+	if category := getStringField(toolDef, "category"); category != "" {
+		builder.WithCategory(category)
+	}
+
+	if usageInstructions := getStringField(toolDef, "usageInstructions"); usageInstructions != "" {
+		builder.WithUsageInstructions(usageInstructions)
+	}
+
+	// Convert and set examples
+	if examplesData, ok := toolDef["examples"]; ok {
+		var examples []domain.ToolExample
+		switch data := examplesData.(type) {
+		case []interface{}:
+			examples = b.convertToExamples(data)
+		case []map[string]interface{}:
+			// Convert []map[string]interface{} to []interface{}
+			interfaceSlice := make([]interface{}, len(data))
+			for i, m := range data {
+				interfaceSlice[i] = m
+			}
+			examples = b.convertToExamples(interfaceSlice)
+		}
+		if len(examples) > 0 {
+			builder.WithExamples(examples)
+		}
+	}
+
+	// Set constraints
+	if constraintsData, ok := toolDef["constraints"].([]interface{}); ok {
+		constraints := make([]string, 0, len(constraintsData))
+		for _, c := range constraintsData {
+			if str, ok := c.(string); ok {
+				constraints = append(constraints, str)
+			}
+		}
+		builder.WithConstraints(constraints)
+	}
+
+	// Set error guidance
+	if errorGuidanceData, ok := toolDef["errorGuidance"].(map[string]interface{}); ok {
+		errorGuidance := make(map[string]string)
+		for k, v := range errorGuidanceData {
+			if str, ok := v.(string); ok {
+				errorGuidance[k] = str
+			}
+		}
+		builder.WithErrorGuidance(errorGuidance)
+	}
+
+	// Set behavioral flags
+	isDeterministic := getBoolField(toolDef, "isDeterministic", true)
+	isDestructive := getBoolField(toolDef, "isDestructive", false)
+	requiresConfirmation := getBoolField(toolDef, "requiresConfirmation", false)
+	estimatedLatency := getStringField(toolDef, "estimatedLatency")
+	if estimatedLatency == "" {
+		estimatedLatency = "medium"
+	}
+
+	builder.WithBehavior(isDeterministic, isDestructive, requiresConfirmation, estimatedLatency)
+
+	// Set version
+	if version := getStringField(toolDef, "version"); version != "" {
+		builder.WithVersion(version)
+	}
+
+	// Set tags
+	if tagsData, ok := toolDef["tags"].([]interface{}); ok {
+		tags := make([]string, 0, len(tagsData))
+		for _, t := range tagsData {
+			if str, ok := t.(string); ok {
+				tags = append(tags, str)
+			}
+		}
+		builder.WithTags(tags)
+	}
+
+	// Store the parameter and output schemas for validation
+	var paramSchema *schemaDomain.Schema
+	var outputSchema *schemaDomain.Schema
+
+	if paramSchemaData, ok := toolDef["parameterSchema"]; ok {
+		paramSchema, _ = b.convertToSchema(paramSchemaData)
+	}
+
+	if outputSchemaData, ok := toolDef["outputSchema"]; ok {
+		outputSchema, _ = b.convertToSchema(outputSchemaData)
+	}
+
+	// Create wrapper function that validates inputs/outputs against schemas
+	scriptExecute := toolDef["execute"]
+	wrapperFunc := func(ctx *domain.ToolContext, params interface{}) (interface{}, error) {
+		// Validate input parameters if schema exists
+		if paramSchema != nil {
+			result, err := b.validator.ValidateStruct(paramSchema, params)
+			if err != nil {
+				return nil, fmt.Errorf("parameter validation error: %w", err)
+			}
+			if !result.Valid {
+				return nil, fmt.Errorf("parameter validation failed: %v", result.Errors)
+			}
+		}
+
+		// Execute the script function
+		var result interface{}
+		var err error
+
+		if execFn, ok := scriptExecute.(func(interface{}, interface{}) (interface{}, error)); ok {
+			result, err = execFn(ctx, params)
+		} else {
+			return nil, fmt.Errorf("custom tool execute function not valid")
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Validate output if schema exists
+		if outputSchema != nil {
+			validationResult, err := b.validator.ValidateStruct(outputSchema, result)
+			if err != nil {
+				return nil, fmt.Errorf("output validation error: %w", err)
+			}
+			if !validationResult.Valid {
+				return nil, fmt.Errorf("output validation failed: %v", validationResult.Errors)
+			}
+		}
+
+		return result, nil
+	}
+
+	builder.WithFunction(wrapperFunc)
+
+	return builder.Build(), nil
 }
 
-func (t *customToolWrapper) Name() string                          { return t.name }
-func (t *customToolWrapper) Description() string                   { return t.description }
-func (t *customToolWrapper) Category() string                      { return t.category }
-func (t *customToolWrapper) Tags() []string                        { return []string{"custom"} }
-func (t *customToolWrapper) Version() string                       { return "1.0.0" }
-func (t *customToolWrapper) IsDeterministic() bool                 { return false }
-func (t *customToolWrapper) IsDestructive() bool                   { return false }
-func (t *customToolWrapper) RequiresConfirmation() bool            { return false }
-func (t *customToolWrapper) EstimatedLatency() string              { return "variable" }
-func (t *customToolWrapper) UsageInstructions() string             { return "Custom tool" }
-func (t *customToolWrapper) Constraints() []string                 { return nil }
-func (t *customToolWrapper) ErrorGuidance() map[string]string      { return nil }
-func (t *customToolWrapper) ParameterSchema() *schemaDomain.Schema { return nil }
-func (t *customToolWrapper) OutputSchema() *schemaDomain.Schema    { return nil }
-func (t *customToolWrapper) Examples() []domain.ToolExample        { return nil }
-
-func (t *customToolWrapper) ToMCPDefinition() domain.MCPToolDefinition {
-	return domain.MCPToolDefinition{
-		Name:        t.name,
-		Description: t.description,
-		InputSchema: nil, // Custom tools don't have schemas
+// convertToSchema converts script JSON Schema to domain.Schema
+func (b *ToolsBridge) convertToSchema(schemaData interface{}) (*schemaDomain.Schema, error) {
+	schemaMap, ok := schemaData.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("schema must be an object")
 	}
+
+	// Convert the schema map to JSON
+	schemaJSON, err := json.Marshal(schemaMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
+	}
+
+	// Parse JSON schema
+	schema := &schemaDomain.Schema{}
+	if err := json.Unmarshal(schemaJSON, schema); err != nil {
+		return nil, fmt.Errorf("failed to parse schema: %w", err)
+	}
+
+	return schema, nil
 }
 
-func (t *customToolWrapper) Execute(ctx *domain.ToolContext, params interface{}) (interface{}, error) {
-	// Execute the custom function if provided
-	if execFn, ok := t.execute.(func(interface{}, interface{}) (interface{}, error)); ok {
-		return execFn(ctx, params)
+// convertToExamples converts script examples to domain.ToolExample
+func (b *ToolsBridge) convertToExamples(examplesData []interface{}) []domain.ToolExample {
+	examples := make([]domain.ToolExample, 0, len(examplesData))
+
+	for _, exData := range examplesData {
+		if exMap, ok := exData.(map[string]interface{}); ok {
+			example := domain.ToolExample{
+				Name:        getStringField(exMap, "name"),
+				Description: getStringField(exMap, "description"),
+				Input:       exMap["input"],
+				Output:      exMap["output"],
+			}
+			examples = append(examples, example)
+		}
 	}
-	return nil, fmt.Errorf("custom tool execute function not valid")
+
+	return examples
+}
+
+// getBoolField gets a boolean field from a map with a default value
+func getBoolField(m map[string]interface{}, field string, defaultValue bool) bool {
+	if v, ok := m[field].(bool); ok {
+		return v
+	}
+	return defaultValue
+}
+
+// toolToSchemaMap converts a tool's schemas to a map
+func (b *ToolsBridge) toolToSchemaMap(tool domain.Tool) map[string]interface{} {
+	result := map[string]interface{}{
+		"name":          tool.Name(),
+		"description":   tool.Description(),
+		"constraints":   tool.Constraints(),
+		"errorGuidance": tool.ErrorGuidance(),
+	}
+
+	// Convert parameter schema
+	if paramSchema := tool.ParameterSchema(); paramSchema != nil {
+		result["parameters"] = b.schemaToMap(paramSchema)
+	}
+
+	// Convert output schema
+	if outputSchema := tool.OutputSchema(); outputSchema != nil {
+		result["output"] = b.schemaToMap(outputSchema)
+	}
+
+	// Convert examples
+	examples := tool.Examples()
+	if len(examples) > 0 {
+		exampleMaps := make([]map[string]interface{}, 0, len(examples))
+		for _, ex := range examples {
+			exampleMaps = append(exampleMaps, map[string]interface{}{
+				"name":        ex.Name,
+				"description": ex.Description,
+				"input":       ex.Input,
+				"output":      ex.Output,
+			})
+		}
+		result["examples"] = exampleMaps
+	}
+
+	return result
+}
+
+// schemaToMap converts a domain.Schema to a map
+func (b *ToolsBridge) schemaToMap(schema *schemaDomain.Schema) map[string]interface{} {
+	// Marshal schema to JSON then unmarshal to map
+	schemaJSON, err := json.Marshal(schema)
+	if err != nil {
+		return nil
+	}
+
+	var schemaMap map[string]interface{}
+	if err := json.Unmarshal(schemaJSON, &schemaMap); err != nil {
+		return nil
+	}
+
+	return schemaMap
 }

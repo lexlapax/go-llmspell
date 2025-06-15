@@ -547,3 +547,181 @@ Added TODO comment suggesting go-llms could provide:
 - Reduce binary size by avoiding forced imports
 
 All tests pass with `make all` - the tools bridge provides comprehensive access to all 33 built-in go-llms tools plus custom tool support.
+
+---
+
+### Migration to go-llms v0.3.5 - [Date: 2025-06-15]
+
+- ✅ **Updated go-llms to v0.3.5**
+  - ✅ Updated go.mod to use go-llms v0.3.5
+  - ✅ Updated git submodule to v0.3.5 tag
+  - ✅ Ran go mod tidy to fetch new dependencies
+  
+- ✅ **Fixed API Changes**
+  - ✅ Updated schema bridge imports to use new package structure:
+    - `generator` package for `NewReflectionSchemaGenerator()`
+    - `repository` package for `NewInMemorySchemaRepository()`
+  - ✅ Fixed schema conversion to handle both `[]string` and `[]interface{}` for required fields
+  - ✅ Added `getNumericValue()` helper to handle `int`/`float64` conversions
+  - ✅ Fixed property-to-script conversion to return `float64` values as expected by tests
+  
+- ✅ **All Tests Passing**
+  - ✅ Fixed structured bridge test failures
+  - ✅ All core packages build successfully
+  - ✅ Full test suite passes (280+ tests)
+  - ✅ No compilation or vet issues
+
+- ✅ **Created Comprehensive Refactoring Plan**
+  - ✅ Analyzed all components for v0.3.5 opportunities
+  - ✅ Created REFACTORING-PLAN-v0.3.5.md with detailed implementation plan
+  - ✅ Identified opportunities to leverage:
+    - Schema System (repositories, generators, validation)
+    - Structured Output Support (parsers with recovery)
+    - Event System Enhancements (bridge events, serialization, storage)
+    - Workflow Serialization (JSON export/import)
+    - Testing Infrastructure (centralized mocks, fixtures)
+    - Documentation Generation (OpenAPI, Markdown, JSON)
+    - Bridge-Friendly Type System
+    - Runtime Tool Registration
+
+---
+
+### ✅ Task 1.3.4: Enhanced Custom Tool Support (Completed) - [Date: 2025-06-15]
+
+- ✅ **Task 1.3.4.1: Schema Support for Custom Tools**
+  - ✅ Added schema conversion helpers (script JSON Schema → domain.Schema)
+  - ✅ Supported parameter schema definition from scripts
+  - ✅ Supported output schema definition from scripts
+  - ✅ Added schema validation for custom tool inputs/outputs
+
+- ✅ **Task 1.3.4.2: Use go-llms ToolBuilder Pattern**
+  - ✅ Replaced simple customToolWrapper with ToolBuilder-based implementation
+  - ✅ Used tools.NewToolBuilder for custom tool creation
+  - ✅ Supported all ToolBuilder configuration options from scripts
+  - ✅ Maintained compatibility with existing custom tool API
+
+- ✅ **Task 1.3.4.3: Enhanced Tool Metadata**
+  - ✅ Supported usage instructions from scripts
+  - ✅ Supported examples definition from scripts
+  - ✅ Supported constraints and error guidance
+  - ✅ Supported resource usage hints (estimatedLatency)
+  - ✅ Supported behavioral flags (deterministic, destructive, requiresConfirmation)
+
+- ✅ **Task 1.3.4.4: Improved Function Execution**
+  - ✅ Type-safe parameter extraction and validation
+  - ✅ Proper error propagation from script functions
+  - ✅ Context propagation to script functions (ToolContext)
+  - Note: Async/promise support deferred to script engine implementation
+
+- ✅ **Task 1.3.4.5: Testing Enhanced Custom Tools**
+  - ✅ Test schema validation for custom tools
+  - ✅ Test complex parameter types (nested objects, arrays)
+  - ✅ Test error handling and guidance
+  - ✅ Test custom tool discovery and metadata
+  - Note: Cross-engine compatibility tests deferred to script engine implementation
+
+**Key Implementation Details:**
+- Used go-llms v0.3.5 ToolBuilder pattern for creating custom tools
+- Integrated schema validation using go-llms validation.Validator
+- Supported full JSON Schema conversion from script definitions
+- All tests passing with comprehensive coverage
+
+---
+
+### ✅ Test File Consolidation (Completed) - [Date: 2025-06-15]
+
+- ✅ **Merged tools_enhanced_test.go into tools_test.go**
+  - ✅ Consolidated all enhanced custom tool tests into main test file
+  - ✅ Renamed duplicate test functions to avoid conflicts
+  - ✅ Deleted tools_enhanced_test.go after successful merge
+  - ✅ All tests passing with consolidated test file
+
+---
+
+### ✅ Enhanced Custom Tool Support with go-llms testutils (Completed) - [Date: 2025-06-15]
+
+- ✅ **Task 1.3.4.1: Schema Support for Custom Tools**
+  - ✅ Added schema conversion helpers (script JSON Schema → domain.Schema)
+  - ✅ Supported parameter schema definition from scripts
+  - ✅ Supported output schema definition from scripts
+  - ✅ Added schema validation for custom tool inputs/outputs
+
+- ✅ **Task 1.3.4.2: Use go-llms ToolBuilder Pattern**
+  - ✅ Replaced simple customToolWrapper with ToolBuilder-based implementation
+  - ✅ Used tools.NewToolBuilder for custom tool creation
+  - ✅ Supported all ToolBuilder configuration options from scripts
+  - ✅ Maintained compatibility with existing custom tool API
+
+- ✅ **Task 1.3.4.3: Enhanced Tool Metadata**
+  - ✅ Supported usage instructions from scripts
+  - ✅ Supported examples definition from scripts
+  - ✅ Supported constraints and error guidance
+  - ✅ Supported resource usage hints
+  - ✅ Supported behavioral flags (deterministic, destructive, etc.)
+
+- ✅ **Task 1.3.4.4: Improved Function Execution**
+  - ✅ Type-safe parameter extraction and validation
+  - ✅ Proper error propagation from script functions
+  - ✅ Context propagation to script functions
+  - Note: Async/promise-based tool execution deferred to script engine implementation
+
+- ✅ **Task 1.3.4.5: Testing Enhanced Custom Tools**
+  - ✅ Test schema validation for custom tools
+  - ✅ Test complex parameter types (nested objects, arrays)
+  - ✅ Test error handling and guidance
+  - ✅ Test custom tool discovery and metadata
+  - ✅ Integrated go-llms testutils (mocks.MockTool, fixtures)
+  - ✅ Added tests demonstrating MockTool verification capabilities
+  - ✅ Added tests using fixtures for common tool scenarios
+  - ✅ Consolidated test files (merged tools_enhanced_test.go into tools_test.go)
+  - Note: Cross-engine compatibility tests deferred to script engine implementation
+
+**Key Implementation Details:**
+- Used go-llms v0.3.5 ToolBuilder pattern for creating custom tools
+- Integrated schema validation using go-llms validation.Validator
+- Supported full JSON Schema conversion from script definitions
+- Leveraged go-llms testutils for better mock tools and fixtures
+- All tests passing with comprehensive coverage
+
+---
+
+### ✅ Task 1.3.5: Hook System Bridge (Completed) - [Date: 2025-06-15]
+
+- ✅ **Task 1.3.5: Hook System Bridge**
+  - ✅ Created test file `/pkg/bridge/agent/hooks_test.go`
+  - ✅ Tested Hook interface bridging with comprehensive test coverage
+  - ✅ Tested all hook types (BeforeGenerate, AfterGenerate, BeforeToolCall, AfterToolCall)
+  - ✅ Tested hook priority and chaining with multiple hooks
+  - ✅ Created `/pkg/bridge/agent/hooks.go` with full implementation
+  - ✅ Bridged pkg/agent/domain Hook interface
+  - ✅ Supported all hook types with priority ordering (high to low)
+  - ✅ Enabled script-based hook implementations
+  - ✅ Integrated with go-llms testutils (helpers)
+
+**Key Implementation Details:**
+- Created scriptHook wrapper that implements domain.Hook interface
+- Supported priority-based execution order (high priority executes first)
+- Enabled/disable functionality for individual hooks
+- Thread-safe hook registration and management
+- Full ExecuteMethod pattern implementation with proper validation
+- Comprehensive test coverage including priority ordering and execution flow
+- All tests passing with lint compliance
+
+---
+
+## Phase 1.3: Core Bridge System [FULLY COMPLETED] - [Date: 2025-06-15]
+
+The Core Bridge System phase has been fully completed, providing comprehensive agent functionality for scripts:
+
+**Completed Components:**
+- ✅ Task 1.3.1: LLM Agent Bridge
+- ✅ Task 1.3.2: Workflow Engine Bridge  
+- ✅ Task 1.3.3: Event System Bridge
+- ✅ Task 1.3.4: Enhanced Custom Tool Support (with go-llms v0.3.5)
+- ✅ Task 1.3.5: Hook System Bridge
+
+**Deferred Items (for script engine implementation phase):**
+- Support for async/promise-based tool execution 
+- Cross-engine compatibility testing
+
+All core bridge functionality is now complete and ready for script engine integration.

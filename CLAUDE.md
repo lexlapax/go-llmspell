@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-go-llmspell is a Go library providing **scriptable LLM interactions** using embedded scripting languages (Lua, JavaScript, Tengo). It bridges go-llms v0.3.4 functionality to scripts without reimplementing features.
+go-llmspell is a Go library providing **scriptable LLM interactions** using embedded scripting languages (Lua, JavaScript, Tengo). It bridges go-llms v0.3.5 functionality to scripts without reimplementing features.
 
 ## Current Status (June 2025)
 
 ✅ **Phase 1.1 Complete**: Script Engine Interface foundation  
 ✅ **Phase 1.2 Complete**: Core Bridge Foundation (state, utilities)  
-🚧 **Phase 1.3 Active**: Core Bridge System (agents, workflows, events, tools)  
+✅ **Phase 1.3 Complete**: Core Bridge System (agents, workflows, events, tools, hooks)  
+🚧 **Phase 1.4 Active**: v0.3.5 Feature Integration  
 🎯 **Target**: Pure bridge architecture exposing go-llms to scripts
 
 ### Completed Components
@@ -18,9 +19,10 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 - Engine Registry with thread-safe operations
 - Type System with cross-engine conversions
 - Bridge Manager with lifecycle management
-- State bridges: Manager, Context, Persistence
+- State bridges: Manager, Context
 - Utility bridges: Auth, JSON, LLM, General
-- Bridge type system with go-llms aliases
+- Agent bridges: Agent, Workflow, Events, Tools, Hooks
+- Enhanced custom tool support with go-llms v0.3.5 features
 
 ## Architecture Principle
 
@@ -49,6 +51,8 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 ```bash
 make all        # Run complete development cycle
 make test       # Run tests with race detection
+make fmt        # Format code
+make vet        # Run go vet
 make lint       # Check code quality
 make build      # Build binary
 ```
@@ -61,6 +65,7 @@ make build      # Build binary
 - **Test everything** - Comprehensive table-driven tests
 - **Thread-safe** - Proper locking where needed
 - **No mocks in production** - Only in test files
+- **Leverage go-llms pkg/testutils** for tests as much as possible for reuse
 
 ## Important Files
 
