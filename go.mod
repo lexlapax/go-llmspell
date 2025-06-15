@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/lexlapax/go-llms v0.3.4
+	github.com/lexlapax/go-llms v0.3.5
 	github.com/stretchr/testify v1.10.0
 )
 

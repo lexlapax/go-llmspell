@@ -9,6 +9,7 @@ import (
 	"github.com/lexlapax/go-llms/pkg/agent/tools"
 	"github.com/lexlapax/go-llms/pkg/agent/workflow"
 	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
+	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
 	"github.com/lexlapax/go-llms/pkg/util/auth"
 	"github.com/lexlapax/go-llms/pkg/util/llmutil"
 	modelinfodomain "github.com/lexlapax/go-llms/pkg/util/llmutil/modelinfo/domain"
@@ -88,6 +89,11 @@ type (
 	ToolInfo      = tools.ToolInfo
 	ToolSchema    = tools.ToolSchema
 	ToolFactory   = tools.ToolFactory
+
+	// Schema types
+	Schema           = schemaDomain.Schema
+	Property         = schemaDomain.Property
+	ValidationResult = schemaDomain.ValidationResult
 )
 
 // Re-export constants from go-llms
