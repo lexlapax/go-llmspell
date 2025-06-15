@@ -725,3 +725,52 @@ The Core Bridge System phase has been fully completed, providing comprehensive a
 - Cross-engine compatibility testing
 
 All core bridge functionality is now complete and ready for script engine integration.
+
+---
+
+### ✅ Task 1.4.1.1: Update Bridge Interfaces with v0.3.5 Types (Completed) - [Date: 2025-06-15]
+
+- ✅ **Added schema system types (SchemaRepository, SchemaGenerator, SchemaVersion)**
+  - ✅ Added SchemaRepository = schemaDomain.SchemaRepository
+  - ✅ Added SchemaGenerator = schemaDomain.SchemaGenerator
+  - Note: SchemaVersion not found as specific interface - handled via versioning in repositories
+
+- ✅ **Added structured output types (OutputParser, JSONParser, XMLParser, YAMLParser)**
+  - ✅ Added OutputParser = outputs.Parser (aliased from Parser interface)
+  - ✅ Added JSONParser = *outputs.JSONParser (struct implementing Parser)
+  - ✅ Added XMLParser = *outputs.XMLParser (struct implementing Parser)
+  - ✅ Added YAMLParser = *outputs.YAMLParser (struct implementing Parser)
+
+- ✅ **Added event system types (EventStore, EventFilter, EventReplayer, EventSerializer)**
+  - ✅ Added EventStore = events.EventStorage (aliased from EventStorage interface)
+  - ✅ Added EventFilter = events.EventFilter (interface for event filtering)
+  - ✅ Added EventReplayer = *events.EventReplayer (struct for event replay)
+  - ✅ Added EventSerializer = events.EventSerializer (interface for event serialization)
+
+- ✅ **Added documentation types (DocGenerator, OpenAPIGenerator)**
+  - ✅ Added DocGenerator = docs.Generator (aliased from Generator interface)
+  - ✅ Added OpenAPIGenerator = *docs.OpenAPIGenerator (struct implementing Generator)
+
+- ✅ **Added error types (SerializableError, ErrorRecovery)**
+  - ✅ Added SerializableError = errors.SerializableError (interface for serializable errors)
+  - ✅ Added ErrorRecovery = errors.RecoveryStrategy (aliased from RecoveryStrategy interface)
+
+- ✅ **Updated imports with new packages**
+  - ✅ Added "github.com/lexlapax/go-llms/pkg/agent/events"
+  - ✅ Added "github.com/lexlapax/go-llms/pkg/docs"
+  - ✅ Added "github.com/lexlapax/go-llms/pkg/errors"
+  - ✅ Added "github.com/lexlapax/go-llms/pkg/llm/outputs"
+  - ✅ Updated go.sum dependencies
+
+- ✅ **Created comprehensive tests**
+  - ✅ Created `/pkg/bridge/interfaces_test.go` with type alias verification
+  - ✅ Tested all new v0.3.5 types can be instantiated
+  - ✅ Tested integration with existing bridge manager
+  - ✅ All tests passing with `make all`
+
+**Key Implementation Details:**
+- All new types follow the bridge-first architecture principle
+- Type aliases correctly map to actual go-llms v0.3.5 interfaces and structs
+- Compilation verified - all imports and types resolve correctly
+- Test coverage ensures types work with existing bridge infrastructure
+- Ready for use in upcoming Phase 1.4 enhancement tasks

@@ -6,9 +6,13 @@ package bridge
 import (
 	"github.com/lexlapax/go-llms/pkg/agent/core"
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	"github.com/lexlapax/go-llms/pkg/agent/events"
 	"github.com/lexlapax/go-llms/pkg/agent/tools"
 	"github.com/lexlapax/go-llms/pkg/agent/workflow"
+	"github.com/lexlapax/go-llms/pkg/docs"
+	"github.com/lexlapax/go-llms/pkg/errors"
 	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
+	"github.com/lexlapax/go-llms/pkg/llm/outputs"
 	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
 	"github.com/lexlapax/go-llms/pkg/util/auth"
 	"github.com/lexlapax/go-llms/pkg/util/llmutil"
@@ -94,6 +98,30 @@ type (
 	Schema           = schemaDomain.Schema
 	Property         = schemaDomain.Property
 	ValidationResult = schemaDomain.ValidationResult
+
+	// Schema system types (v0.3.5)
+	SchemaRepository = schemaDomain.SchemaRepository
+	SchemaGenerator  = schemaDomain.SchemaGenerator
+
+	// Structured output types (v0.3.5)
+	OutputParser = outputs.Parser
+	JSONParser   = *outputs.JSONParser
+	XMLParser    = *outputs.XMLParser
+	YAMLParser   = *outputs.YAMLParser
+
+	// Event system types (v0.3.5)
+	EventStore      = events.EventStorage
+	EventFilter     = events.EventFilter
+	EventReplayer   = *events.EventReplayer
+	EventSerializer = events.EventSerializer
+
+	// Documentation types (v0.3.5)
+	DocGenerator     = docs.Generator
+	OpenAPIGenerator = *docs.OpenAPIGenerator
+
+	// Error types (v0.3.5)
+	SerializableError = errors.SerializableError
+	ErrorRecovery     = errors.RecoveryStrategy
 )
 
 // Re-export constants from go-llms

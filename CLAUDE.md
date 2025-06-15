@@ -66,6 +66,7 @@ make build      # Build binary
 - **Thread-safe** - Proper locking where needed
 - **No mocks in production** - Only in test files
 - **Leverage go-llms pkg/testutils** for tests as much as possible for reuse
+- **Update TODO.md** as tasks complete
 
 ## Important Files
 
