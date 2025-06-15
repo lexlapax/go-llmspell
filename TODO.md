@@ -15,7 +15,8 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1.1: Script Engine Interface [COMPLETED]
 - ✅ Phase 1.2: Core Bridge Foundation [COMPLETED]
 - ✅ Phase 1.3: Core Bridge System [COMPLETED]
-- 🚧 Phase 1.4: Additional Bridges - NOT STARTED
+- ✅ Phase 1.4.1: Foundation Updates [COMPLETED - 2025-06-15]
+- 🚧 Phase 1.4.2+: State Bridge Enhancements - NEXT
 - 🚧 Phase 2-5: Engine Implementations - NOT STARTED
 
 ---
@@ -33,47 +34,14 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### 1.4 v0.3.5 Feature Integration
 
-#### 1.4.1 Foundation Updates
+#### ✅ 1.4.1 Foundation Updates [COMPLETED - 2025-06-15]
 
-- [x] **Task 1.4.1.1: Update Bridge Interfaces with v0.3.5 Types** ✅ [2025-06-15]
-  - [x] Add schema system types (SchemaRepository, SchemaGenerator, SchemaVersion)
-  - [x] Add structured output types (OutputParser, JSONParser, XMLParser, YAMLParser)
-  - [x] Add event system types (EventStore, EventFilter, EventReplayer, EventSerializer)
-  - [x] Add documentation types (DocGenerator, OpenAPIGenerator)
-  - [x] Add error types (SerializableError, ErrorRecovery)
-  - [x] Update tests to use new types
-  - [x] Check tests to use go-llms pkg/testutils
-
-- [x] **Task 1.4.1.2: Enhance Bridge Manager with Event System** ✅ [2025-06-15]
-  - [x] Add EventEmitter field to BridgeManager
-  - [x] Add EventStore for bridge event history
-  - [x] Implement bridge lifecycle event emission (initializing, initialized, failed, cleanup)
-  - [x] Add bridge metrics collection using events
-  - [x] Implement event-based monitoring and debugging
-  - [x] Add performance profiling through events
-  - [x] Check tests to use go-llms pkg/testutils
-
-- [x] **Task 1.4.1.3: Add Bridge Documentation Generation** ✅ [2025-06-15]
-  - [x] Implement GenerateDocumentation method on BridgeManager
-  - [x] Support OpenAPI, Markdown, and JSON formats
-  - [x] Generate bridge method documentation
-  - [x] Include parameter schemas and examples
-  - [x] Export type mappings and conversions
-  - [x] Generate interactive API documentation
-  - [x] Check tests to use go-llms pkg/testutils
-
-- [ ] **Task 1.4.1.4: Add Bridge State Serialization**
-  - [ ] Implement ExportState method on BridgeManager
-  - [ ] Implement ImportState for state restoration
-  - [ ] Add versioning support for state compatibility
-  - [ ] Support incremental state updates
-  - [ ] Add state validation before import
-  - [ ] Test state round-trip serialization
-  - [ ] Check tests to use go-llms pkg/testutils
+All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.md for detailed completion summary.
 
 #### 1.4.2 State Bridge Enhancements
 
 - [ ] **Task 1.4.2.1: Add State Schema Validation**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add schemaRepo field to StateContextBridge
   - [ ] Add stateSchema field for validation
   - [ ] Implement ValidateState method
@@ -83,6 +51,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.2.2: Add State Event Emission**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add eventEmitter to StateContextBridge
   - [ ] Emit StateChangeEvent on set operations
   - [ ] Emit StateDeleteEvent on delete operations
@@ -93,6 +62,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 
 - [ ] **Task 1.4.2.3: Add State Persistence with Schema Repository**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement persistState method using schema repository
   - [ ] Add loadState with schema validation
   - [ ] Support versioned state snapshots
@@ -102,6 +72,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.2.4: Add State Transformation Pipeline**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Integrate with go-llms transformation pipeline
   - [ ] Add pipeline configuration from scripts
   - [ ] Support chained transformations
@@ -113,6 +84,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 #### 1.4.3 Utility Bridge Upgrades
 
 - [ ] **Task 1.4.3.1: Replace JSON Bridge with Structured Output Parser**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Replace JSONBridge implementation with structured.JSONParser
   - [ ] Add ParseWithRecovery for malformed JSON
   - [ ] Add schema validation for parsed JSON
@@ -122,6 +94,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.3.2: Enhance Auth Bridge with OAuth2 Discovery**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add OAuth2 .well-known endpoint discovery
   - [ ] Implement token validation with schema system
   - [ ] Add auth event logging for security audit
@@ -131,6 +104,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.3.3: Enhance LLM Utility Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add provider capability metadata exposure
   - [ ] Integrate model discovery API
   - [ ] Add response parsing with recovery
@@ -140,6 +114,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.3.4: Add Error Serialization Utilities**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement SerializableError wrapper
   - [ ] Add error recovery strategy support
   - [ ] Create error event emission

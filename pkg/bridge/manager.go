@@ -5,6 +5,7 @@ package bridge
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -892,6 +893,290 @@ func (m *BridgeManager) ExportAPISchema() map[string]interface{} {
 	schema["types"] = allTypes
 
 	return schema
+}
+
+// Bridge State Serialization
+
+// SerializableBridgeState represents the state of the bridge manager in serializable format
+type SerializableBridgeState struct {
+	Version      string                               `json:"version"`
+	SessionID    string                               `json:"session_id"`
+	Timestamp    time.Time                            `json:"timestamp"`
+	Bridges      map[string]SerializableBridgeInfo    `json:"bridges"`
+	Initialized  map[string]bool                      `json:"initialized"`
+	Dependencies map[string][]string                  `json:"dependencies"`
+	Metrics      map[string]SerializableBridgeMetrics `json:"metrics"`
+	Metadata     map[string]interface{}               `json:"metadata,omitempty"`
+}
+
+// SerializableBridgeInfo represents bridge information in serializable format
+type SerializableBridgeInfo struct {
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	Version      string                 `json:"version"`
+	Description  string                 `json:"description"`
+	Dependencies []string               `json:"dependencies"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// SerializableBridgeMetrics represents bridge metrics in serializable format
+type SerializableBridgeMetrics struct {
+	InitializationTime  string    `json:"initialization_time"`
+	InitializationCount int64     `json:"initialization_count"`
+	FailureCount        int64     `json:"failure_count"`
+	LastError           string    `json:"last_error,omitempty"`
+	LastInitialized     time.Time `json:"last_initialized"`
+	LastFailure         time.Time `json:"last_failure"`
+}
+
+// ExportState exports the current state of the bridge manager
+func (m *BridgeManager) ExportState() (*SerializableBridgeState, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	state := &SerializableBridgeState{
+		Version:      "1.0",
+		SessionID:    m.sessionID,
+		Timestamp:    time.Now().UTC(),
+		Bridges:      make(map[string]SerializableBridgeInfo),
+		Initialized:  make(map[string]bool),
+		Dependencies: make(map[string][]string),
+		Metrics:      make(map[string]SerializableBridgeMetrics),
+		Metadata:     make(map[string]interface{}),
+	}
+
+	// Export bridge information (metadata only, not the actual bridge instances)
+	for bridgeID, bridge := range m.bridges {
+		metadata := bridge.GetMetadata()
+		state.Bridges[bridgeID] = SerializableBridgeInfo{
+			ID:           bridgeID,
+			Name:         metadata.Name,
+			Version:      metadata.Version,
+			Description:  metadata.Description,
+			Dependencies: metadata.Dependencies,
+			Metadata:     map[string]interface{}{"type": fmt.Sprintf("%T", bridge)},
+		}
+	}
+
+	// Export initialization state
+	for bridgeID, initialized := range m.initialized {
+		state.Initialized[bridgeID] = initialized
+	}
+
+	// Export dependencies
+	for bridgeID, deps := range m.dependencies {
+		state.Dependencies[bridgeID] = make([]string, len(deps))
+		copy(state.Dependencies[bridgeID], deps)
+	}
+
+	// Export metrics
+	for bridgeID, metrics := range m.metrics {
+		serMetrics := SerializableBridgeMetrics{
+			InitializationTime:  metrics.InitializationTime.String(),
+			InitializationCount: metrics.InitializationCount,
+			FailureCount:        metrics.FailureCount,
+			LastInitialized:     metrics.LastInitialized,
+			LastFailure:         metrics.LastFailure,
+		}
+		if metrics.LastError != nil {
+			serMetrics.LastError = metrics.LastError.Error()
+		}
+		state.Metrics[bridgeID] = serMetrics
+	}
+
+	// Add additional metadata
+	state.Metadata["total_bridges"] = len(m.bridges)
+	state.Metadata["initialized_count"] = len(m.initialized)
+	state.Metadata["export_time"] = time.Now().UTC()
+
+	return state, nil
+}
+
+// ImportState imports bridge manager state from serializable format
+func (m *BridgeManager) ImportState(state *SerializableBridgeState) error {
+	if state == nil {
+		return fmt.Errorf("state cannot be nil")
+	}
+
+	// Validate state version compatibility
+	if err := m.validateStateVersion(state.Version); err != nil {
+		return fmt.Errorf("state version validation failed: %w", err)
+	}
+
+	// Validate state integrity
+	if err := m.validateStateIntegrity(state); err != nil {
+		return fmt.Errorf("state integrity validation failed: %w", err)
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Import initialization state
+	m.initialized = make(map[string]bool)
+	for bridgeID, initialized := range state.Initialized {
+		m.initialized[bridgeID] = initialized
+	}
+
+	// Import dependencies
+	m.dependencies = make(map[string][]string)
+	for bridgeID, deps := range state.Dependencies {
+		m.dependencies[bridgeID] = make([]string, len(deps))
+		copy(m.dependencies[bridgeID], deps)
+	}
+
+	// Import metrics
+	m.metrics = make(map[string]*BridgeMetrics)
+	for bridgeID, serMetrics := range state.Metrics {
+		metrics := &BridgeMetrics{
+			InitializationCount: serMetrics.InitializationCount,
+			FailureCount:        serMetrics.FailureCount,
+			LastInitialized:     serMetrics.LastInitialized,
+			LastFailure:         serMetrics.LastFailure,
+		}
+
+		// Parse initialization time
+		if serMetrics.InitializationTime != "" {
+			if duration, err := time.ParseDuration(serMetrics.InitializationTime); err == nil {
+				metrics.InitializationTime = duration
+			}
+		}
+
+		// Parse last error
+		if serMetrics.LastError != "" {
+			metrics.LastError = fmt.Errorf("%s", serMetrics.LastError)
+		}
+
+		m.metrics[bridgeID] = metrics
+	}
+
+	// Note: We don't import actual bridge instances as they need to be re-registered
+	// This is intentional as bridges contain runtime state and functions that can't be serialized
+
+	return nil
+}
+
+// ExportStateToJSON exports state as JSON bytes
+func (m *BridgeManager) ExportStateToJSON(pretty bool) ([]byte, error) {
+	state, err := m.ExportState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to export state: %w", err)
+	}
+
+	if pretty {
+		return json.MarshalIndent(state, "", "  ")
+	}
+	return json.Marshal(state)
+}
+
+// ImportStateFromJSON imports state from JSON bytes
+func (m *BridgeManager) ImportStateFromJSON(data []byte) error {
+	var state SerializableBridgeState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+
+	return m.ImportState(&state)
+}
+
+// UpdateStateIncremental performs an incremental state update
+func (m *BridgeManager) UpdateStateIncremental(bridgeID string, updates map[string]interface{}) error {
+	if bridgeID == "" {
+		return fmt.Errorf("bridge ID cannot be empty")
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check if bridge exists
+	if _, exists := m.bridges[bridgeID]; !exists {
+		return fmt.Errorf("bridge %s not found", bridgeID)
+	}
+
+	// Apply updates to metrics if provided
+	if metricsUpdate, ok := updates["metrics"]; ok {
+		if metricsMap, ok := metricsUpdate.(map[string]interface{}); ok {
+			metrics, exists := m.metrics[bridgeID]
+			if !exists {
+				metrics = &BridgeMetrics{}
+				m.metrics[bridgeID] = metrics
+			}
+
+			// Update individual metrics fields
+			if initCount, ok := metricsMap["initialization_count"].(int64); ok {
+				metrics.InitializationCount = initCount
+			}
+			if failCount, ok := metricsMap["failure_count"].(int64); ok {
+				metrics.FailureCount = failCount
+			}
+			if lastInit, ok := metricsMap["last_initialized"].(time.Time); ok {
+				metrics.LastInitialized = lastInit
+			}
+			if lastFail, ok := metricsMap["last_failure"].(time.Time); ok {
+				metrics.LastFailure = lastFail
+			}
+		}
+	}
+
+	// Apply initialization state update
+	if initialized, ok := updates["initialized"].(bool); ok {
+		m.initialized[bridgeID] = initialized
+	}
+
+	return nil
+}
+
+// validateStateVersion checks if the state version is compatible
+func (m *BridgeManager) validateStateVersion(version string) error {
+	switch version {
+	case "1.0":
+		return nil
+	default:
+		return fmt.Errorf("unsupported state version: %s", version)
+	}
+}
+
+// validateStateIntegrity performs basic integrity checks on the state
+func (m *BridgeManager) validateStateIntegrity(state *SerializableBridgeState) error {
+	if state.SessionID == "" {
+		return fmt.Errorf("session ID cannot be empty")
+	}
+
+	if state.Timestamp.IsZero() {
+		return fmt.Errorf("timestamp cannot be zero")
+	}
+
+	// Validate that all bridges referenced in initialized map exist in bridges map
+	for bridgeID := range state.Initialized {
+		if _, exists := state.Bridges[bridgeID]; !exists {
+			return fmt.Errorf("bridge %s is in initialized map but not in bridges map", bridgeID)
+		}
+	}
+
+	// Validate that all bridges referenced in metrics exist in bridges map
+	for bridgeID := range state.Metrics {
+		if _, exists := state.Bridges[bridgeID]; !exists {
+			return fmt.Errorf("bridge %s is in metrics map but not in bridges map", bridgeID)
+		}
+	}
+
+	// Validate dependencies reference existing bridges
+	for bridgeID, deps := range state.Dependencies {
+		if _, exists := state.Bridges[bridgeID]; !exists {
+			return fmt.Errorf("bridge %s has dependencies but is not in bridges map", bridgeID)
+		}
+		for _, dep := range deps {
+			if _, exists := state.Bridges[dep]; !exists {
+				return fmt.Errorf("bridge %s depends on %s but dependency not found in bridges map", bridgeID, dep)
+			}
+		}
+	}
+
+	return nil
+}
+
+// GetStateVersion returns the current state format version
+func (m *BridgeManager) GetStateVersion() string {
+	return "1.0"
 }
 
 // Cleanup method to properly close event system resources

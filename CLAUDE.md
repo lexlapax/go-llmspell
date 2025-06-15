@@ -11,18 +11,22 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 ✅ **Phase 1.1 Complete**: Script Engine Interface foundation  
 ✅ **Phase 1.2 Complete**: Core Bridge Foundation (state, utilities)  
 ✅ **Phase 1.3 Complete**: Core Bridge System (agents, workflows, events, tools, hooks)  
-🚧 **Phase 1.4 Active**: v0.3.5 Feature Integration  
+✅ **Phase 1.4.1 Complete**: Foundation Updates [2025-06-15]
+🚧 **Phase 1.4.2 Active**: State Bridge Enhancements - NEXT
 🎯 **Target**: Pure bridge architecture exposing go-llms to scripts
 
 ### Completed Components
 - Core interfaces (ScriptEngine, Bridge, TypeConverter)
 - Engine Registry with thread-safe operations
-- Type System with cross-engine conversions
-- Bridge Manager with lifecycle management
+- Type System with cross-engine conversions and v0.3.5 integration
+- Bridge Manager with lifecycle management, events, documentation, and state serialization
 - State bridges: Manager, Context
 - Utility bridges: Auth, JSON, LLM, General
 - Agent bridges: Agent, Workflow, Events, Tools, Hooks
-- Enhanced custom tool support with go-llms v0.3.5 features
+- v0.3.5 type system integration (schemas, structured outputs, events, docs, errors)
+- Event-driven bridge lifecycle with metrics and monitoring
+- Multi-format documentation generation (OpenAPI, Markdown, JSON)
+- Bridge state serialization with versioning and validation
 
 ## Architecture Principle
 
