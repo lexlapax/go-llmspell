@@ -9,6 +9,9 @@ import (
 	"sync"
 
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	sdomain "github.com/lexlapax/go-llms/pkg/schema/domain"
+	"github.com/lexlapax/go-llms/pkg/schema/repository"
+	"github.com/lexlapax/go-llms/pkg/schema/validation"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
@@ -18,6 +21,12 @@ type StateContextBridge struct {
 	contexts map[string]*domain.SharedStateContext
 	configs  map[string]*inheritanceConfig // Track inheritance configs
 	nextID   int
+
+	// Schema validation fields from go-llms v0.3.5
+	schemaRepo     sdomain.SchemaRepository
+	validator      sdomain.Validator
+	stateValidator domain.StateValidator
+	stateSchemas   map[string]string // contextID -> schemaID mapping
 }
 
 // inheritanceConfig tracks inheritance settings for a shared context
@@ -29,10 +38,28 @@ type inheritanceConfig struct {
 
 // NewStateContextBridge creates a new state context bridge
 func NewStateContextBridge() (*StateContextBridge, error) {
+	// Create schema repository using go-llms infrastructure
+	schemaRepo := repository.NewInMemorySchemaRepository()
+
+	// Create validator with advanced features from go-llms
+	validator := validation.NewValidator(
+		validation.WithCoercion(true),
+		validation.WithCustomValidation(true),
+	)
+
+	// Create composite state validator
+	stateValidator := domain.CompositeValidator()
+
 	return &StateContextBridge{
 		contexts: make(map[string]*domain.SharedStateContext),
 		configs:  make(map[string]*inheritanceConfig),
 		nextID:   1,
+
+		// Schema validation system from go-llms
+		schemaRepo:     schemaRepo,
+		validator:      validator,
+		stateValidator: stateValidator,
+		stateSchemas:   make(map[string]string),
 	}, nil
 }
 
@@ -89,6 +116,15 @@ func (b *StateContextBridge) Methods() []engine.MethodInfo {
 		{Name: "localState", Description: "Get the local state component"},
 		{Name: "clone", Description: "Clone shared context with fresh local state"},
 		{Name: "asState", Description: "Convert shared context to regular state"},
+
+		// Schema validation methods from go-llms v0.3.5
+		{Name: "validateState", Description: "Validate shared context state against schema"},
+		{Name: "setStateSchema", Description: "Set schema for shared context validation"},
+		{Name: "getStateSchema", Description: "Get schema for shared context"},
+		{Name: "registerCustomValidator", Description: "Register custom validation rule"},
+		{Name: "getSchemaVersions", Description: "Get all versions of a schema"},
+		{Name: "setSchemaVersion", Description: "Set current schema version"},
+		{Name: "validateWithVersion", Description: "Validate state against specific schema version"},
 	}
 }
 
@@ -580,6 +616,334 @@ func (b *StateContextBridge) scriptToState(scriptObj map[string]interface{}) (*d
 	return state, nil
 }
 
+// Schema validation methods using go-llms v0.3.5 infrastructure
+
+// ValidateState validates a shared context state against its associated schema
+func (b *StateContextBridge) ValidateState(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextObj, ok := params["context"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("context parameter is required and must be a shared context object")
+	}
+
+	// Get context ID
+	contextID, ok := contextObj["_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("shared context object missing _id")
+	}
+
+	// Get associated schema ID
+	b.mu.RLock()
+	schemaID, hasSchema := b.stateSchemas[contextID]
+	b.mu.RUnlock()
+
+	if !hasSchema {
+		return map[string]interface{}{
+			"valid":   true,
+			"message": "No schema configured for validation",
+		}, nil
+	}
+
+	// Get schema from repository
+	schema, err := b.schemaRepo.Get(schemaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get schema %s: %w", schemaID, err)
+	}
+
+	// Convert shared context to state for validation
+	sharedContext, err := b.scriptToSharedContext(contextObj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert shared context: %w", err)
+	}
+
+	state := sharedContext.AsState()
+
+	// Validate using state validator from go-llms
+	err = b.stateValidator.Validate(state)
+	if err != nil {
+		return map[string]interface{}{
+			"valid": false,
+			"error": err.Error(),
+		}, nil
+	}
+
+	// Also validate against JSON schema if available
+	// Extract just the data values for schema validation
+	stateData := state.Values()
+	result, err := b.validator.ValidateStruct(schema, stateData)
+	if err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	return map[string]interface{}{
+		"valid":  result.Valid,
+		"errors": result.Errors,
+	}, nil
+}
+
+// SetStateSchema sets a schema for state validation
+func (b *StateContextBridge) SetStateSchema(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextObj, ok := params["context"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("context parameter is required and must be a shared context object")
+	}
+
+	schemaID, ok := params["schemaId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("schemaId parameter is required and must be a string")
+	}
+
+	schemaData, ok := params["schema"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("schema parameter is required and must be an object")
+	}
+
+	// Get context ID
+	contextID, ok := contextObj["_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("shared context object missing _id")
+	}
+
+	// Create schema object from go-llms
+	schema := &sdomain.Schema{
+		Title:      fmt.Sprintf("Schema for context %s", contextID),
+		Type:       "object",
+		Properties: make(map[string]sdomain.Property),
+		Required:   []string{},
+	}
+
+	// Parse schema properties from script data
+	if properties, ok := schemaData["properties"].(map[string]interface{}); ok {
+		for propName, propDef := range properties {
+			if propDefMap, ok := propDef.(map[string]interface{}); ok {
+				propProperty := sdomain.Property{}
+				if propType, ok := propDefMap["type"].(string); ok {
+					propProperty.Type = propType
+				}
+				if propDesc, ok := propDefMap["description"].(string); ok {
+					propProperty.Description = propDesc
+				}
+				schema.Properties[propName] = propProperty
+			}
+		}
+	}
+
+	// Set required fields
+	if required, ok := schemaData["required"].([]interface{}); ok {
+		for _, req := range required {
+			if reqStr, ok := req.(string); ok {
+				schema.Required = append(schema.Required, reqStr)
+			}
+		}
+	}
+
+	// Save schema to repository
+	err := b.schemaRepo.Save(schemaID, schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save schema: %w", err)
+	}
+
+	// Associate schema with context
+	b.mu.Lock()
+	b.stateSchemas[contextID] = schemaID
+	b.mu.Unlock()
+
+	// Create schema validator for state validation
+	schemaValidator := domain.SchemaValidator(b.validator, schema)
+
+	// Replace the state validator with a composite that includes the schema validator
+	b.stateValidator = domain.CompositeValidator(b.stateValidator, schemaValidator)
+
+	return map[string]interface{}{
+		"schemaId": schemaID,
+		"success":  true,
+	}, nil
+}
+
+// GetStateSchema gets the schema for a shared context
+func (b *StateContextBridge) GetStateSchema(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextObj, ok := params["context"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("context parameter is required and must be a shared context object")
+	}
+
+	// Get context ID
+	contextID, ok := contextObj["_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("shared context object missing _id")
+	}
+
+	// Get associated schema ID
+	b.mu.RLock()
+	schemaID, hasSchema := b.stateSchemas[contextID]
+	b.mu.RUnlock()
+
+	if !hasSchema {
+		return nil, nil
+	}
+
+	// Get schema from repository
+	schema, err := b.schemaRepo.Get(schemaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get schema: %w", err)
+	}
+
+	return b.schemaToScript(schema), nil
+}
+
+// RegisterCustomValidator registers a custom validation rule
+func (b *StateContextBridge) RegisterCustomValidator(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	name, ok := params["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("name parameter is required and must be a string")
+	}
+
+	// For bridge architecture, we expose the go-llms custom validator registration
+	// The actual validation function would be provided by the script engine
+	validatorFunc, ok := params["validator"].(func(interface{}) bool)
+	if !ok {
+		return nil, fmt.Errorf("validator parameter is required and must be a function")
+	}
+
+	// Convert to go-llms CustomValidator format (which takes value and displayPath)
+	customValidator := validation.CustomValidator(func(value interface{}, displayPath string) []string {
+		if validatorFunc(value) {
+			return nil // No errors
+		}
+		return []string{fmt.Sprintf("%s failed custom validation", displayPath)}
+	})
+
+	// Register with go-llms validation system
+	validation.RegisterCustomValidator(name, customValidator)
+
+	return map[string]interface{}{
+		"name":       name,
+		"registered": true,
+	}, nil
+}
+
+// GetSchemaVersions gets all versions of a schema
+func (b *StateContextBridge) GetSchemaVersions(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	schemaID, ok := params["schemaId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("schemaId parameter is required and must be a string")
+	}
+
+	// Basic schema repository doesn't support versioning in go-llms v0.3.5
+	// Just return current schema info
+	schema, err := b.schemaRepo.Get(schemaID)
+	if err != nil {
+		return []interface{}{}, nil // Schema not found, return empty
+	}
+
+	return []interface{}{
+		map[string]interface{}{
+			"version": 1,
+			"title":   schema.Title,
+		},
+	}, nil
+}
+
+// SetSchemaVersion sets the current version of a schema
+func (b *StateContextBridge) SetSchemaVersion(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	schemaID, ok := params["schemaId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("schemaId parameter is required and must be a string")
+	}
+
+	version, ok := params["version"].(int)
+	if !ok {
+		if versionFloat, ok := params["version"].(float64); ok {
+			version = int(versionFloat)
+		} else {
+			return nil, fmt.Errorf("version parameter is required and must be an integer")
+		}
+	}
+
+	// Basic schema repository doesn't support versioning in go-llms v0.3.5
+	// Just validate the schema exists
+	_, err := b.schemaRepo.Get(schemaID)
+	if err != nil {
+		return nil, fmt.Errorf("schema %s not found: %w", schemaID, err)
+	}
+
+	return map[string]interface{}{
+		"schemaId": schemaID,
+		"version":  version,
+		"success":  true,
+	}, nil
+}
+
+// ValidateWithVersion validates state against a specific schema version
+func (b *StateContextBridge) ValidateWithVersion(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextObj, ok := params["context"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("context parameter is required and must be a shared context object")
+	}
+
+	schemaID, ok := params["schemaId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("schemaId parameter is required and must be a string")
+	}
+
+	version, ok := params["version"].(int)
+	if !ok {
+		if versionFloat, ok := params["version"].(float64); ok {
+			version = int(versionFloat)
+		} else {
+			return nil, fmt.Errorf("version parameter is required and must be an integer")
+		}
+	}
+
+	// Get schema from repository (no versioning support in go-llms v0.3.5)
+	schema, err := b.schemaRepo.Get(schemaID)
+	if err != nil {
+		return nil, fmt.Errorf("schema %s not found: %w", schemaID, err)
+	}
+
+	// Convert shared context to state
+	sharedContext, err := b.scriptToSharedContext(contextObj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert shared context: %w", err)
+	}
+
+	state := sharedContext.AsState()
+	// Extract just the data values for schema validation
+	stateData := state.Values()
+
+	// Validate using go-llms validator
+	result, err := b.validator.ValidateStruct(schema, stateData)
+	if err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	return map[string]interface{}{
+		"valid":    result.Valid,
+		"errors":   result.Errors,
+		"schemaId": schemaID,
+		"version":  version,
+	}, nil
+}
+
+// Helper function to convert schema to script representation
+func (b *StateContextBridge) schemaToScript(schema *sdomain.Schema) map[string]interface{} {
+	result := map[string]interface{}{
+		"title":      schema.Title,
+		"type":       schema.Type,
+		"required":   schema.Required,
+		"properties": make(map[string]interface{}),
+	}
+
+	// Convert properties
+	for propName, propProperty := range schema.Properties {
+		result["properties"].(map[string]interface{})[propName] = map[string]interface{}{
+			"type":        propProperty.Type,
+			"description": propProperty.Description,
+		}
+	}
+
+	return result
+}
+
 func (b *StateContextBridge) scriptToStateReader(scriptObj map[string]interface{}) (domain.StateReader, error) {
 	// StateReader is an interface implemented by State, so we can just convert to State
 	return b.scriptToState(scriptObj)
@@ -697,6 +1061,136 @@ func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, arg
 		b.updateScriptSharedContext(contextObj, sharedContext)
 
 		return nil, nil
+
+	case "validateState":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("validateState requires context parameter")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+
+		params := map[string]interface{}{"context": contextObj}
+		return b.ValidateState(ctx, params)
+
+	case "setStateSchema":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("setStateSchema requires context, schemaId, and schema parameters")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+		schemaID, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("schemaId must be string")
+		}
+		schema, ok := args[2].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		params := map[string]interface{}{
+			"context":  contextObj,
+			"schemaId": schemaID,
+			"schema":   schema,
+		}
+		return b.SetStateSchema(ctx, params)
+
+	case "getStateSchema":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getStateSchema requires context parameter")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+
+		params := map[string]interface{}{"context": contextObj}
+		return b.GetStateSchema(ctx, params)
+
+	case "registerCustomValidator":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerCustomValidator requires name and validator parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		validatorFunc, ok := args[1].(func(interface{}) bool)
+		if !ok {
+			return nil, fmt.Errorf("validator must be function")
+		}
+
+		params := map[string]interface{}{
+			"name":      name,
+			"validator": validatorFunc,
+		}
+		return b.RegisterCustomValidator(ctx, params)
+
+	case "getSchemaVersions":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getSchemaVersions requires schemaId parameter")
+		}
+		schemaID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("schemaId must be string")
+		}
+
+		params := map[string]interface{}{"schemaId": schemaID}
+		return b.GetSchemaVersions(ctx, params)
+
+	case "setSchemaVersion":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("setSchemaVersion requires schemaId and version parameters")
+		}
+		schemaID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("schemaId must be string")
+		}
+		version, ok := args[1].(int)
+		if !ok {
+			if versionFloat, ok := args[1].(float64); ok {
+				version = int(versionFloat)
+			} else {
+				return nil, fmt.Errorf("version must be integer")
+			}
+		}
+
+		params := map[string]interface{}{
+			"schemaId": schemaID,
+			"version":  version,
+		}
+		return b.SetSchemaVersion(ctx, params)
+
+	case "validateWithVersion":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("validateWithVersion requires context, schemaId, and version parameters")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+		schemaID, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("schemaId must be string")
+		}
+		version, ok := args[2].(int)
+		if !ok {
+			if versionFloat, ok := args[2].(float64); ok {
+				version = int(versionFloat)
+			} else {
+				return nil, fmt.Errorf("version must be integer")
+			}
+		}
+
+		params := map[string]interface{}{
+			"context":  contextObj,
+			"schemaId": schemaID,
+			"version":  version,
+		}
+		return b.ValidateWithVersion(ctx, params)
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)

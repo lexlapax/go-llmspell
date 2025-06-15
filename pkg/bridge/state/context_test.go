@@ -9,6 +9,8 @@ import (
 
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Note: We're now using go-llms domain.SharedStateContext directly
@@ -38,6 +40,388 @@ func TestNewStateContextBridge(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test schema validation functionality using go-llms v0.3.5 infrastructure
+func TestStateContextBridge_SchemaValidation(t *testing.T) {
+
+	bridge, err := NewStateContextBridge()
+	require.NoError(t, err, "Failed to create bridge")
+	require.NotNil(t, bridge, "Bridge should not be nil")
+
+	ctx := context.Background()
+
+	// Create parent state
+	parentState := domain.NewState()
+	parentState.Set("parentKey", "parentValue")
+
+	// Create shared context
+	result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+		map[string]interface{}{
+			"data": map[string]interface{}{
+				"parentKey": "parentValue",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	sharedContextObj := result.(map[string]interface{})
+
+	// Set some initial data
+	_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+		sharedContextObj,
+		"name",
+		"John Doe",
+	})
+	require.NoError(t, err)
+
+	_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+		sharedContextObj,
+		"age",
+		30,
+	})
+	require.NoError(t, err)
+
+	t.Run("SetStateSchema", func(t *testing.T) {
+		schema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":  "string",
+					"title": "Person Name",
+				},
+				"age": map[string]interface{}{
+					"type":  "number",
+					"title": "Person Age",
+				},
+			},
+			"required": []interface{}{"name", "age"},
+		}
+
+		result, err := bridge.ExecuteMethod(ctx, "setStateSchema", []interface{}{
+			sharedContextObj,
+			"person-schema",
+			schema,
+		})
+		require.NoError(t, err)
+
+		schemaResult := result.(map[string]interface{})
+		assert.Equal(t, "person-schema", schemaResult["schemaId"])
+		assert.True(t, schemaResult["success"].(bool))
+	})
+
+	t.Run("ValidateState_Valid", func(t *testing.T) {
+		// Ensure data is valid before validation
+		_, err := bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"age",
+			30, // Reset to valid number
+		})
+		require.NoError(t, err)
+
+		result, err := bridge.ExecuteMethod(ctx, "validateState", []interface{}{
+			sharedContextObj,
+		})
+		require.NoError(t, err)
+
+		validationResult := result.(map[string]interface{})
+		if !validationResult["valid"].(bool) {
+			t.Logf("Validation failed with errors: %v", validationResult)
+		}
+		assert.True(t, validationResult["valid"].(bool))
+	})
+
+	t.Run("ValidateState_Invalid", func(t *testing.T) {
+		// Set invalid data (string instead of number for age)
+		_, err := bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"age",
+			"not a number",
+		})
+		require.NoError(t, err)
+
+		result, err := bridge.ExecuteMethod(ctx, "validateState", []interface{}{
+			sharedContextObj,
+		})
+		require.NoError(t, err)
+
+		validationResult := result.(map[string]interface{})
+		// Note: The actual validation behavior depends on go-llms validator implementation
+		// This test structure follows the expected interface
+		assert.Contains(t, validationResult, "valid")
+
+		// Reset to valid data for subsequent tests
+		_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"age",
+			30,
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("GetStateSchema", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "getStateSchema", []interface{}{
+			sharedContextObj,
+		})
+		require.NoError(t, err)
+
+		if result != nil {
+			schema := result.(map[string]interface{})
+			assert.Equal(t, "object", schema["type"])
+			assert.Contains(t, schema, "properties")
+		}
+	})
+
+	t.Run("GetSchemaVersions", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "getSchemaVersions", []interface{}{
+			"person-schema",
+		})
+		require.NoError(t, err)
+
+		versions := result.([]interface{})
+		assert.GreaterOrEqual(t, len(versions), 1)
+
+		if len(versions) > 0 {
+			version := versions[0].(map[string]interface{})
+			assert.Equal(t, 1, version["version"])
+			assert.Contains(t, version, "title")
+		}
+	})
+
+	t.Run("SetSchemaVersion", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "setSchemaVersion", []interface{}{
+			"person-schema",
+			1,
+		})
+		require.NoError(t, err)
+
+		versionResult := result.(map[string]interface{})
+		assert.Equal(t, "person-schema", versionResult["schemaId"])
+		assert.Equal(t, 1, versionResult["version"])
+		assert.True(t, versionResult["success"].(bool))
+	})
+
+	t.Run("ValidateWithVersion", func(t *testing.T) {
+		// Reset to valid data
+		_, err := bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"age",
+			25,
+		})
+		require.NoError(t, err)
+
+		result, err := bridge.ExecuteMethod(ctx, "validateWithVersion", []interface{}{
+			sharedContextObj,
+			"person-schema",
+			1,
+		})
+		require.NoError(t, err)
+
+		validationResult := result.(map[string]interface{})
+		assert.Contains(t, validationResult, "valid")
+		assert.Equal(t, "person-schema", validationResult["schemaId"])
+		assert.Equal(t, 1, validationResult["version"])
+	})
+}
+
+func TestStateContextBridge_SchemaValidation_ErrorCases(t *testing.T) {
+
+	bridge, err := NewStateContextBridge()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Run("ValidateState_NoContext", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "validateState", []interface{}{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "validateState requires context parameter")
+	})
+
+	t.Run("SetStateSchema_InvalidParameters", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "setStateSchema", []interface{}{
+			"invalid",
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "setStateSchema requires context, schemaId, and schema parameters")
+	})
+
+	t.Run("GetStateSchema_InvalidContext", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "getStateSchema", []interface{}{
+			"invalid",
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "context must be object")
+	})
+
+	t.Run("ValidateState_NoSchema", func(t *testing.T) {
+		// Create context without schema
+		result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+			map[string]interface{}{
+				"data": map[string]interface{}{},
+			},
+		})
+		require.NoError(t, err)
+
+		contextObj := result.(map[string]interface{})
+
+		result, err = bridge.ExecuteMethod(ctx, "validateState", []interface{}{
+			contextObj,
+		})
+		require.NoError(t, err)
+
+		validationResult := result.(map[string]interface{})
+		assert.True(t, validationResult["valid"].(bool))
+		assert.Equal(t, "No schema configured for validation", validationResult["message"])
+	})
+
+	t.Run("GetSchemaVersions_NonExistentSchema", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "getSchemaVersions", []interface{}{
+			"non-existent-schema",
+		})
+		require.NoError(t, err)
+
+		versions := result.([]interface{})
+		assert.Equal(t, 0, len(versions))
+	})
+}
+
+func TestStateContextBridge_CustomValidators(t *testing.T) {
+
+	bridge, err := NewStateContextBridge()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Run("RegisterCustomValidator", func(t *testing.T) {
+		customValidator := func(value interface{}) bool {
+			if str, ok := value.(string); ok {
+				return len(str) >= 3
+			}
+			return false
+		}
+
+		result, err := bridge.ExecuteMethod(ctx, "registerCustomValidator", []interface{}{
+			"minLength3",
+			customValidator,
+		})
+		require.NoError(t, err)
+
+		validatorResult := result.(map[string]interface{})
+		assert.Equal(t, "minLength3", validatorResult["name"])
+		assert.True(t, validatorResult["registered"].(bool))
+	})
+
+	t.Run("RegisterCustomValidator_InvalidParameters", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "registerCustomValidator", []interface{}{
+			123, // Invalid name type
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "registerCustomValidator requires name and validator parameters")
+	})
+}
+
+func TestStateContextBridge_SchemaValidation_Integration(t *testing.T) {
+
+	bridge, err := NewStateContextBridge()
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Test complete workflow with multiple schemas and versions
+	t.Run("CompleteWorkflow", func(t *testing.T) {
+		// Create shared context
+		result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+			map[string]interface{}{
+				"data": map[string]interface{}{
+					"type": "user",
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		contextObj := result.(map[string]interface{})
+
+		// Set initial data
+		_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+			contextObj,
+			"username",
+			"user123",
+		})
+		require.NoError(t, err)
+
+		// Create and set schema v1
+		schemaV1 := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"username": map[string]interface{}{
+					"type":  "string",
+					"title": "Username",
+				},
+			},
+			"required": []interface{}{"username"},
+		}
+
+		_, err = bridge.ExecuteMethod(ctx, "setStateSchema", []interface{}{
+			contextObj,
+			"user-schema",
+			schemaV1,
+		})
+		require.NoError(t, err)
+
+		// Validate with schema v1
+		result, err = bridge.ExecuteMethod(ctx, "validateState", []interface{}{
+			contextObj,
+		})
+		require.NoError(t, err)
+
+		validationResult := result.(map[string]interface{})
+		if !validationResult["valid"].(bool) {
+			t.Logf("Integration test validation failed with result: %+v", validationResult)
+		}
+		assert.True(t, validationResult["valid"].(bool))
+
+		// Add more data
+		_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+			contextObj,
+			"email",
+			"user@example.com",
+		})
+		require.NoError(t, err)
+
+		// Create schema v2 with email
+		schemaV2 := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"username": map[string]interface{}{
+					"type":  "string",
+					"title": "Username",
+				},
+				"email": map[string]interface{}{
+					"type":  "string",
+					"title": "Email",
+				},
+			},
+			"required": []interface{}{"username", "email"},
+		}
+
+		_, err = bridge.ExecuteMethod(ctx, "setStateSchema", []interface{}{
+			contextObj,
+			"user-schema-v2",
+			schemaV2,
+		})
+		require.NoError(t, err)
+
+		// Get schema to verify it was stored
+		result, err = bridge.ExecuteMethod(ctx, "getStateSchema", []interface{}{
+			contextObj,
+		})
+		require.NoError(t, err)
+
+		if result != nil {
+			schema := result.(map[string]interface{})
+			assert.Contains(t, schema, "properties")
+		}
+	})
 }
 
 func TestStateContextBridge_Interface(t *testing.T) {

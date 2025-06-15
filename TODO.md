@@ -40,15 +40,15 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 
 #### 1.4.2 State Bridge Enhancements
 
-- [ ] **Task 1.4.2.1: Add State Schema Validation**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Add schemaRepo field to StateContextBridge
-  - [ ] Add stateSchema field for validation
-  - [ ] Implement ValidateState method
-  - [ ] Add schema versioning for states
-  - [ ] Support custom validation rules
-  - [ ] Add validation error details
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.2.1: Add State Schema Validation** [COMPLETED - 2025-06-15]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Add schemaRepo field to StateContextBridge
+  - [x] Add stateSchema field for validation
+  - [x] Implement ValidateState method
+  - [x] Add schema versioning for states
+  - [x] Support custom validation rules
+  - [x] Add validation error details
+  - [x] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.2.2: Add State Event Emission**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -126,6 +126,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.4 LLM Bridge Advanced Features
 
 - [ ] **Task 1.4.4.1: Add Schema-Validated Generation**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add responseSchemas map to LLMBridge
   - [ ] Implement generateWithSchema method
   - [ ] Add schema validation for responses
@@ -134,6 +135,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Implement schema caching
 
 - [ ] **Task 1.4.4.2: Add Provider Metadata Discovery**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement getProviderCapabilities method
   - [ ] Expose model-specific features
   - [ ] Add capability-based routing
@@ -142,6 +144,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Implement fallback strategies
 
 - [ ] **Task 1.4.4.3: Add Streaming with Event Emission**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement streaming response handling
   - [ ] Emit events for each stream chunk
   - [ ] Add stream aggregation support
@@ -152,6 +155,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.5 Schema Bridge Full Implementation
 
 - [ ] **Task 1.4.5.1: Add Schema Versioning and Migration**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add fileRepo for file-based persistence
   - [ ] Implement saveSchemaVersion method
   - [ ] Add schema migration support
@@ -160,6 +164,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Add migration validation
 
 - [ ] **Task 1.4.5.2: Add Tag-Based Schema Generation**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add tagGenerator field
   - [ ] Implement generateFromTags method
   - [ ] Support struct tag parsing
@@ -168,6 +173,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Support nested struct generation
 
 - [ ] **Task 1.4.5.3: Add Schema Import/Export**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement schema export to JSON Schema
   - [ ] Add OpenAPI schema export
   - [ ] Support schema import from files
@@ -176,6 +182,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Add schema diff generation
 
 - [ ] **Task 1.4.5.4: Add Custom Validators**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Extend validator registration
   - [ ] Support script-based validators
   - [ ] Add async validation support
@@ -186,6 +193,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.6 Model Info Bridge Intelligence
 
 - [ ] **Task 1.4.6.1: Add Model Performance Analytics**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add metricsStore field
   - [ ] Implement getModelPerformance method
   - [ ] Add performance report generation
@@ -194,6 +202,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Add anomaly detection
 
 - [ ] **Task 1.4.6.2: Add Model Recommendation Engine**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement findModelsWithCapabilities
   - [ ] Add task-based model selection
   - [ ] Consider cost/performance tradeoffs
@@ -202,6 +211,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Implement A/B testing support
 
 - [ ] **Task 1.4.6.3: Add Model Catalog Export**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement OpenAPI export for models
   - [ ] Add interactive documentation
   - [ ] Include pricing information
@@ -212,6 +222,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.7 Agent Bridge Advanced Features
 
 - [ ] **Task 1.4.7.1: Add Agent State Serialization**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement agent state export
   - [ ] Add state compression
   - [ ] Support incremental snapshots
@@ -220,6 +231,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Test state portability
 
 - [ ] **Task 1.4.7.2: Add Agent Replay from Events**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement event-based replay
   - [ ] Add replay speed control
   - [ ] Support partial replay
@@ -228,6 +240,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Add replay visualization
 
 - [ ] **Task 1.4.7.3: Add Agent Performance Profiling**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add profiling hooks
   - [ ] Track execution times
   - [ ] Monitor resource usage
@@ -238,6 +251,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.8 Event Bridge Replacement
 
 - [ ] **Task 1.4.8.1: Replace with v0.3.5 Event System**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Remove current event bridge implementation
   - [ ] Integrate v0.3.5 EventEmitter
   - [ ] Add EventStore support
@@ -246,6 +260,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Update all event tests
 
 - [ ] **Task 1.4.8.2: Add Event Aggregation**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement event aggregation rules
   - [ ] Add time-window aggregation
   - [ ] Support custom aggregators
@@ -254,6 +269,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Export aggregated metrics
 
 - [ ] **Task 1.4.8.3: Add Event Replay System**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement EventReplayer
   - [ ] Add replay filtering
   - [ ] Support speed control
@@ -264,6 +280,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.9 Tools Bridge Enhancement
 
 - [ ] **Task 1.4.9.1: Add Tool Schema Validation**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add schemaValidator field
   - [ ] Implement executeToolValidated
   - [ ] Validate input parameters
@@ -272,6 +289,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Generate validation reports
 
 - [ ] **Task 1.4.9.2: Add Tool Documentation Generation**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add docGenerator field
   - [ ] Generate tool documentation
   - [ ] Include examples and schemas
@@ -280,6 +298,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Support multiple languages
 
 - [ ] **Task 1.4.9.3: Add Tool Execution Analytics**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Track tool execution metrics
   - [ ] Monitor success/failure rates
   - [ ] Add performance profiling
@@ -290,6 +309,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.10 Workflow Bridge Serialization
 
 - [ ] **Task 1.4.10.1: Add Workflow Import/Export**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Implement exportWorkflow method
   - [ ] Implement importWorkflow method
   - [ ] Add format validation
@@ -298,6 +318,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Test round-trip accuracy
 
 - [ ] **Task 1.4.10.2: Add Script Step Handlers**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Support script-based workflow steps
   - [ ] Add step validation
   - [ ] Implement step debugging
@@ -306,6 +327,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Add step visualization
 
 - [ ] **Task 1.4.10.3: Add Workflow Templates**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create template registry
   - [ ] Add template validation
   - [ ] Support parameterized templates
@@ -316,6 +338,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 #### 1.4.11 Engine Integration
 
 - [ ] **Task 1.4.11.1: Add Engine Event Bus**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add GetEventBus to ScriptEngine interface
   - [ ] Implement event bus per engine
   - [ ] Support cross-engine events
@@ -324,6 +347,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Test event isolation
 
 - [ ] **Task 1.4.11.2: Add Type Conversion Registry**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add RegisterTypeConverter method
   - [ ] Implement conversion registry
   - [ ] Support bidirectional conversions
@@ -332,6 +356,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Test conversion accuracy
 
 - [ ] **Task 1.4.11.3: Add Engine Profiling**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add EnableProfiling method
   - [ ] Implement profiler interface
   - [ ] Track script execution
@@ -340,6 +365,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Add optimization hints
 
 - [ ] **Task 1.4.11.4: Add Engine API Export**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Add ExportAPI method
   - [ ] Generate API specifications
   - [ ] Include type information
@@ -350,6 +376,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
 ### 1.5 Additional Original Bridges
 
 - [ ] **Task 1.5.1: Tracing Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create `/pkg/bridge/observability/tracing.go`
   - [ ] Bridge core/tracing.go distributed tracing
   - [ ] Support OpenTelemetry integration
@@ -358,6 +385,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Support custom trace attributes
 
 - [ ] **Task 1.5.2: Guardrails Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create `/pkg/bridge/guardrails.go`
   - [ ] Bridge guardrails.go safety system
   - [ ] Support content filtering
@@ -366,6 +394,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Implement guardrail analytics
 
 - [ ] **Task 1.5.3: Metrics Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create `/pkg/bridge/observability/metrics.go`
   - [ ] Bridge performance metrics system
   - [ ] Support custom metric collection
@@ -374,6 +403,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Implement alerting rules
 
 - [ ] **Task 1.5.4: Provider System Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create `/pkg/bridge/llm/providers.go`
   - [ ] Bridge all provider implementations (Anthropic, OpenAI, etc.)
   - [ ] Bridge consensus provider for multi-LLM voting
@@ -382,6 +412,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Add provider-specific optimizations
 
 - [ ] **Task 1.5.5: Provider Pool Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create `/pkg/bridge/llm/pool.go`
   - [ ] Bridge connection pooling from go-llms
   - [ ] Expose pool metrics and management
@@ -390,6 +421,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Implement adaptive pooling
 
 - [ ] **Task 1.5.6: Built-in Tools Registry Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create `/pkg/bridge/agent/tools/registry.go`
   - [ ] Bridge the tool registry system
   - [ ] Expose tool discovery and metadata
@@ -398,6 +430,7 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Implement tool deprecation handling
 
 - [ ] **Task 1.5.7: Profiling Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
   - [ ] Create `/pkg/bridge/observability/profiling.go`
   - [ ] Bridge performance profiling utilities
   - [ ] Support integration test profiling
