@@ -6,8 +6,12 @@ package state
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
+	"github.com/lexlapax/go-llms/pkg/testutils/helpers"
+	"github.com/lexlapax/go-llms/pkg/testutils/mocks"
+	"github.com/lexlapax/go-llms/pkg/testutils/scenario"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -885,5 +889,349 @@ func TestStateContextBridge_ErrorHandling(t *testing.T) {
 		if err == nil {
 			t.Error("withInheritanceConfig should fail with invalid boolean parameter")
 		}
+	})
+}
+
+// Tests for event emission functionality using go-llms testutils
+func TestStateContextBridge_EventEmission(t *testing.T) {
+	// Create mock event emitter from go-llms testutils
+	mockEmitter := mocks.NewMockEventEmitter("test-context", "Test Context")
+
+	// Create bridge with event emitter
+	bridge, err := NewStateContextBridgeWithEventEmitter(mockEmitter)
+	require.NoError(t, err)
+	require.NotNil(t, bridge)
+
+	ctx := context.Background()
+
+	// Create shared context for testing
+	parentState := domain.NewState()
+	parentState.Set("parentKey", "parentValue")
+
+	result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+		map[string]interface{}{
+			"data": map[string]interface{}{
+				"parentKey": "parentValue",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	sharedContextObj := result.(map[string]interface{})
+
+	t.Run("StateChangeEvent_Set", func(t *testing.T) {
+		// Reset the mock emitter
+		mockEmitter.Reset()
+
+		// Perform a set operation
+		_, err := bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"testKey",
+			"testValue",
+		})
+		require.NoError(t, err)
+
+		// Verify event was emitted using go-llms testutils
+		err = mockEmitter.AssertEventEmitted(domain.EventStateUpdate)
+		assert.NoError(t, err, "StateUpdate event should have been emitted")
+
+		// Get events for detailed validation
+		events := mockEmitter.GetEvents()
+		assertion := helpers.AssertEvents(events)
+		assertion.HasCount(1).
+			HasType(domain.EventStateUpdate)
+
+		if !assertion.IsValid() {
+			t.Error(assertion.String())
+		}
+
+		// Validate event data using scenario matchers
+		stateUpdateEvents := mockEmitter.GetEventsByType(domain.EventStateUpdate)
+		require.Len(t, stateUpdateEvents, 1)
+
+		event := stateUpdateEvents[0]
+		matcher := scenario.AllOf(
+			scenario.HasField("Type", scenario.Equals(domain.EventStateUpdate)),
+			scenario.HasField("Data", scenario.IsNotNil()),
+		)
+
+		if ok, msg := matcher.Match(event); !ok {
+			t.Errorf("Event validation failed: %s", msg)
+		}
+
+		// Validate event data structure
+		if eventData, ok := event.Data.(domain.StateUpdateEventData); ok {
+			assert.Equal(t, "testKey", eventData.Key)
+			assert.Equal(t, "testValue", eventData.NewValue)
+			assert.Equal(t, "set", eventData.Action)
+		} else {
+			t.Error("Event data should be StateUpdateEventData")
+		}
+	})
+
+	t.Run("StateDeleteEvent", func(t *testing.T) {
+		// Reset the mock emitter
+		mockEmitter.Reset()
+
+		// First set a value
+		_, err := bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"deleteKey",
+			"deleteValue",
+		})
+		require.NoError(t, err)
+
+		// Reset again to focus on delete event
+		mockEmitter.Reset()
+
+		// Perform a delete operation
+		_, err = bridge.ExecuteMethod(ctx, "delete", []interface{}{
+			sharedContextObj,
+			"deleteKey",
+		})
+		require.NoError(t, err)
+
+		// Verify delete event was emitted
+		err = mockEmitter.AssertEventEmitted(domain.EventStateUpdate)
+		assert.NoError(t, err, "StateUpdate event should have been emitted for delete")
+
+		// Validate delete event data
+		stateUpdateEvents := mockEmitter.GetEventsByType(domain.EventStateUpdate)
+		require.Len(t, stateUpdateEvents, 1)
+
+		event := stateUpdateEvents[0]
+		if eventData, ok := event.Data.(domain.StateUpdateEventData); ok {
+			assert.Equal(t, "deleteKey", eventData.Key)
+			assert.Equal(t, "deleteValue", eventData.OldValue)
+			assert.Nil(t, eventData.NewValue)
+			assert.Equal(t, "delete", eventData.Action)
+		} else {
+			t.Error("Event data should be StateUpdateEventData for delete")
+		}
+	})
+
+	t.Run("StateSnapshotEvent", func(t *testing.T) {
+		// Reset the mock emitter
+		mockEmitter.Reset()
+
+		// Create a snapshot
+		_, err := bridge.ExecuteMethod(ctx, "createSnapshot", []interface{}{
+			sharedContextObj,
+		})
+		require.NoError(t, err)
+
+		// Verify snapshot event was emitted
+		events := mockEmitter.GetEvents()
+		require.GreaterOrEqual(t, len(events), 1, "At least one event should have been emitted")
+
+		// Look for custom snapshot event (mock emitter prefixes with "custom.")
+		customEvents := make([]domain.Event, 0)
+		for _, event := range events {
+			if event.Type == "custom.state.snapshot" {
+				customEvents = append(customEvents, event)
+			}
+		}
+
+		require.Len(t, customEvents, 1, "One snapshot event should have been emitted")
+
+		snapshotEvent := customEvents[0]
+		assert.Equal(t, "custom.state.snapshot", string(snapshotEvent.Type))
+		assert.NotNil(t, snapshotEvent.Data)
+	})
+}
+
+func TestStateContextBridge_EventFiltering(t *testing.T) {
+	mockEmitter := mocks.NewMockEventEmitter("test-context", "Test Context")
+	bridge, err := NewStateContextBridgeWithEventEmitter(mockEmitter)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	t.Run("AddEventFilter", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "addEventFilter", []interface{}{
+			"state.*",
+			"state-filter",
+		})
+		require.NoError(t, err)
+
+		filterResult := result.(map[string]interface{})
+		assert.Equal(t, "state-filter", filterResult["name"])
+		assert.Equal(t, "state.*", filterResult["pattern"])
+		assert.True(t, filterResult["active"].(bool))
+	})
+
+	t.Run("ListEventFilters", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "listEventFilters", []interface{}{})
+		require.NoError(t, err)
+
+		filtersList := result.(map[string]interface{})
+		filters := filtersList["filters"].([]interface{})
+		assert.GreaterOrEqual(t, len(filters), 1)
+		assert.Equal(t, len(filters), filtersList["total"])
+	})
+
+	t.Run("RemoveEventFilter", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "removeEventFilter", []interface{}{
+			"state-filter",
+		})
+		require.NoError(t, err)
+
+		removeResult := result.(map[string]interface{})
+		assert.True(t, removeResult["removed"].(bool))
+		assert.Equal(t, "state-filter", removeResult["name"])
+	})
+}
+
+func TestStateContextBridge_EventReplay(t *testing.T) {
+	mockEmitter := mocks.NewMockEventEmitter("replay-context", "Replay Context")
+	bridge, err := NewStateContextBridgeWithEventEmitter(mockEmitter)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Create shared context for testing
+	result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+		map[string]interface{}{
+			"data": map[string]interface{}{},
+		},
+	})
+	require.NoError(t, err)
+
+	sharedContextObj := result.(map[string]interface{})
+	contextID := sharedContextObj["_id"].(string)
+
+	// Create some state changes to generate events
+	_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+		sharedContextObj,
+		"key1",
+		"value1",
+	})
+	require.NoError(t, err)
+
+	_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+		sharedContextObj,
+		"key2",
+		"value2",
+	})
+	require.NoError(t, err)
+
+	// Small delay to ensure timestamp ordering
+	time.Sleep(10 * time.Millisecond)
+
+	t.Run("GetEventHistory", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "getEventHistory", []interface{}{
+			contextID,
+			10,
+		})
+		require.NoError(t, err)
+
+		historyResult := result.(map[string]interface{})
+		events := historyResult["events"].([]interface{})
+		assert.GreaterOrEqual(t, len(events), 2, "Should have at least 2 events from set operations")
+		assert.Equal(t, contextID, historyResult["contextId"])
+		assert.Equal(t, 10, historyResult["limit"])
+	})
+
+	t.Run("ReplayEvents", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "replayEvents", []interface{}{
+			contextID,
+		})
+		require.NoError(t, err)
+
+		replayResult := result.(map[string]interface{})
+		assert.Contains(t, replayResult, "replayContextId")
+		assert.Contains(t, replayResult, "eventsReplayed")
+		assert.Contains(t, replayResult, "replayedContext")
+
+		eventsReplayed := replayResult["eventsReplayed"].(int)
+		assert.GreaterOrEqual(t, eventsReplayed, 2, "Should have replayed at least 2 events")
+
+		replayedContext := replayResult["replayedContext"].(map[string]interface{})
+		assert.Contains(t, replayedContext, "_id")
+		assert.Contains(t, replayedContext, "type")
+		assert.Equal(t, "SharedStateContext", replayedContext["type"])
+	})
+
+	t.Run("ClearEventHistory", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "clearEventHistory", []interface{}{
+			contextID,
+		})
+		require.NoError(t, err)
+
+		clearResult := result.(map[string]interface{})
+		assert.True(t, clearResult["cleared"].(int) >= 0)
+		assert.Equal(t, "context", clearResult["scope"])
+		assert.Equal(t, contextID, clearResult["contextId"])
+
+		// Verify events were cleared
+		result, err = bridge.ExecuteMethod(ctx, "getEventHistory", []interface{}{
+			contextID,
+			10,
+		})
+		require.NoError(t, err)
+
+		historyResult := result.(map[string]interface{})
+		events := historyResult["events"].([]interface{})
+		assert.Equal(t, 0, len(events), "Event history should be empty after clearing")
+	})
+}
+
+func TestStateContextBridge_EventEmissionEdgeCases(t *testing.T) {
+	t.Run("NoEventEmitter", func(t *testing.T) {
+		// Test bridge without event emitter
+		bridge, err := NewStateContextBridge()
+		require.NoError(t, err)
+
+		ctx := context.Background()
+
+		// Create shared context
+		result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+			map[string]interface{}{
+				"data": map[string]interface{}{},
+			},
+		})
+		require.NoError(t, err)
+
+		sharedContextObj := result.(map[string]interface{})
+
+		// Set operation should succeed even without event emitter
+		_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"testKey",
+			"testValue",
+		})
+		assert.NoError(t, err, "Set operation should succeed without event emitter")
+	})
+
+	t.Run("EventEmissionWithBlockedEvents", func(t *testing.T) {
+		mockEmitter := mocks.NewMockEventEmitter("blocked-context", "Blocked Context")
+		mockEmitter.SetBlockEvents(true)
+
+		bridge, err := NewStateContextBridgeWithEventEmitter(mockEmitter)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+
+		// Create shared context
+		result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []interface{}{
+			map[string]interface{}{
+				"data": map[string]interface{}{},
+			},
+		})
+		require.NoError(t, err)
+
+		sharedContextObj := result.(map[string]interface{})
+
+		// Perform set operation
+		_, err = bridge.ExecuteMethod(ctx, "set", []interface{}{
+			sharedContextObj,
+			"blockedKey",
+			"blockedValue",
+		})
+		require.NoError(t, err)
+
+		// Events should be blocked
+		events := mockEmitter.GetEvents()
+		assert.Equal(t, 0, len(events), "Events should be blocked when SetBlockEvents(true)")
 	})
 }

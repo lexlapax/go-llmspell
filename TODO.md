@@ -50,15 +50,15 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [x] Add validation error details
   - [x] Check tests to use go-llms pkg/testutils
 
-- [ ] **Task 1.4.2.2: Add State Event Emission**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Add eventEmitter to StateContextBridge
-  - [ ] Emit StateChangeEvent on set operations
-  - [ ] Emit StateDeleteEvent on delete operations
-  - [ ] Add state snapshot events
-  - [ ] Support event filtering by key patterns
-  - [ ] Add event replay for state reconstruction
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.2.2: Add State Event Emission** [COMPLETED - 2025-06-15]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Add eventEmitter to StateContextBridge
+  - [x] Emit StateChangeEvent on set operations
+  - [x] Emit StateDeleteEvent on delete operations
+  - [x] Add state snapshot events
+  - [x] Support event filtering by key patterns
+  - [x] Add event replay for state reconstruction
+  - [x] Check tests to use go-llms pkg/testutils
 
 
 - [ ] **Task 1.4.2.3: Add State Persistence with Schema Repository**
