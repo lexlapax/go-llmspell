@@ -13,6 +13,8 @@ import (
 
 	// go-llms imports for schema functionality
 	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
+	"github.com/lexlapax/go-llms/pkg/schema/generator"
+	"github.com/lexlapax/go-llms/pkg/schema/repository"
 	"github.com/lexlapax/go-llms/pkg/schema/validation"
 )
 
@@ -21,6 +23,7 @@ type SchemaBridge struct {
 	mu          sync.RWMutex
 	initialized bool
 	validator   schemaDomain.Validator
+	generator   schemaDomain.SchemaGenerator
 	repository  schemaDomain.SchemaRepository
 	schemas     map[string]*schemaDomain.Schema // Simple in-memory storage
 }
@@ -56,8 +59,8 @@ func (b *SchemaBridge) Initialize(ctx context.Context) error {
 
 	// Initialize schema components from go-llms
 	b.validator = validation.NewValidator()
-	b.generator = adapter.NewSchemaGenerator()
-	b.repository = adapter.NewInMemoryRepository()
+	b.generator = generator.NewReflectionSchemaGenerator()
+	b.repository = repository.NewInMemorySchemaRepository()
 
 	b.initialized = true
 	return nil
@@ -72,6 +75,7 @@ func (b *SchemaBridge) Cleanup(ctx context.Context) error {
 	b.validator = nil
 	b.generator = nil
 	b.repository = nil
+	b.schemas = nil
 	return nil
 }
 
@@ -427,12 +431,18 @@ func scriptToSchema(def map[string]interface{}) (*schemaDomain.Schema, error) {
 		schema.Title = title
 	}
 
-	if required, ok := def["required"].([]interface{}); ok {
-		schema.Required = make([]string, 0, len(required))
-		for _, r := range required {
-			if s, ok := r.(string); ok {
-				schema.Required = append(schema.Required, s)
+	// Handle required field - could be []interface{} or []string
+	if required := def["required"]; required != nil {
+		switch req := required.(type) {
+		case []interface{}:
+			schema.Required = make([]string, 0, len(req))
+			for _, r := range req {
+				if s, ok := r.(string); ok {
+					schema.Required = append(schema.Required, s)
+				}
 			}
+		case []string:
+			schema.Required = req
 		}
 	}
 
@@ -482,33 +492,33 @@ func applyPropertyOptions(prop *schemaDomain.Property, options map[string]interf
 	}
 
 	// Numeric constraints
-	if min, ok := options["minimum"].(float64); ok {
-		prop.Minimum = &min
+	if min := getNumericValue(options["minimum"]); min != nil {
+		prop.Minimum = min
 	}
 
-	if max, ok := options["maximum"].(float64); ok {
-		prop.Maximum = &max
+	if max := getNumericValue(options["maximum"]); max != nil {
+		prop.Maximum = max
 	}
 
 	// String constraints
-	if minLen, ok := options["minLength"].(float64); ok {
-		intVal := int(minLen)
+	if minLen := getNumericValue(options["minLength"]); minLen != nil {
+		intVal := int(*minLen)
 		prop.MinLength = &intVal
 	}
 
-	if maxLen, ok := options["maxLength"].(float64); ok {
-		intVal := int(maxLen)
+	if maxLen := getNumericValue(options["maxLength"]); maxLen != nil {
+		intVal := int(*maxLen)
 		prop.MaxLength = &intVal
 	}
 
 	// Array constraints
-	if minItems, ok := options["minItems"].(float64); ok {
-		intVal := int(minItems)
+	if minItems := getNumericValue(options["minItems"]); minItems != nil {
+		intVal := int(*minItems)
 		prop.MinItems = &intVal
 	}
 
-	if maxItems, ok := options["maxItems"].(float64); ok {
-		intVal := int(maxItems)
+	if maxItems := getNumericValue(options["maxItems"]); maxItems != nil {
+		intVal := int(*maxItems)
 		prop.MaxItems = &intVal
 	}
 
@@ -585,19 +595,19 @@ func propertyToScript(prop *schemaDomain.Property) map[string]interface{} {
 	}
 
 	if prop.MinLength != nil {
-		result["minLength"] = *prop.MinLength
+		result["minLength"] = float64(*prop.MinLength)
 	}
 
 	if prop.MaxLength != nil {
-		result["maxLength"] = *prop.MaxLength
+		result["maxLength"] = float64(*prop.MaxLength)
 	}
 
 	if prop.MinItems != nil {
-		result["minItems"] = *prop.MinItems
+		result["minItems"] = float64(*prop.MinItems)
 	}
 
 	if prop.MaxItems != nil {
-		result["maxItems"] = *prop.MaxItems
+		result["maxItems"] = float64(*prop.MaxItems)
 	}
 
 	if prop.UniqueItems != nil {
@@ -639,5 +649,27 @@ func ConvertJSONSchemaToSchema(jsonSchema interface{}) (*schemaDomain.Schema, er
 
 	default:
 		return nil, fmt.Errorf("jsonSchema must be string or object, got %T", jsonSchema)
+	}
+}
+
+// getNumericValue extracts a numeric value that could be int, float64, or other numeric types
+func getNumericValue(val interface{}) *float64 {
+	switch v := val.(type) {
+	case int:
+		f := float64(v)
+		return &f
+	case int32:
+		f := float64(v)
+		return &f
+	case int64:
+		f := float64(v)
+		return &f
+	case float32:
+		f := float64(v)
+		return &f
+	case float64:
+		return &v
+	default:
+		return nil
 	}
 }
