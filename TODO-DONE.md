@@ -774,3 +774,32 @@ All core bridge functionality is now complete and ready for script engine integr
 - Compilation verified - all imports and types resolve correctly
 - Test coverage ensures types work with existing bridge infrastructure
 - Ready for use in upcoming Phase 1.4 enhancement tasks
+
+#### Task 1.4.1.3: Add Bridge Documentation Generation ✅ [2025-06-15]
+
+**Overview**: Successfully implemented comprehensive documentation generation for bridges using go-llms docs package with support for multiple output formats.
+
+**Key Achievements**:
+- Implemented GenerateDocumentation method on BridgeManager supporting OpenAPI, Markdown, and JSON formats
+- Created BridgeDocumentable struct implementing docs.Documentable interface
+- Added format-specific generators (OpenAPIGenerator for OpenAPI, MarkdownGenerator for Markdown/JSON)
+- Implemented ExportAPISchema method for comprehensive bridge API schema export
+- Added bridge-specific documentation generation with custom config per bridge
+- Created specific documentation methods (GenerateOpenAPIDocumentation, GenerateMarkdownDocumentation, GenerateJSONDocumentation)
+- Generated complete documentation including bridge methods, type mappings, permissions, and dependencies
+
+**Files Modified**:
+- `/pkg/bridge/manager.go`: Added comprehensive documentation generation system
+- `/pkg/bridge/manager_test.go`: Added extensive documentation generation tests
+
+**Tests**: All passing - comprehensive documentation generation tests including format validation and API schema export
+
+**Bridge Pattern**: Correctly leverages go-llms docs package without reimplementing documentation logic - creates appropriate generators per format
+
+**Technical Details**:
+- Uses docs.NewOpenAPIGenerator for OpenAPI documentation
+- Uses docs.NewMarkdownGenerator for Markdown and JSON documentation  
+- BridgeDocumentable properly implements docs.Documentable interface
+- GenerateDocumentation creates appropriate generator instances per format request
+- ExportAPISchema provides comprehensive bridge metadata and type information
+- All documentation generation leverages go-llms v0.3.5 infrastructure without duplication

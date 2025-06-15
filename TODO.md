@@ -44,23 +44,23 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Update tests to use new types
   - [x] Check tests to use go-llms pkg/testutils
 
-- [ ] **Task 1.4.1.2: Enhance Bridge Manager with Event System**
-  - [ ] Add EventEmitter field to BridgeManager
-  - [ ] Add EventStore for bridge event history
-  - [ ] Implement bridge lifecycle event emission (initializing, initialized, failed, cleanup)
-  - [ ] Add bridge metrics collection using events
-  - [ ] Implement event-based monitoring and debugging
-  - [ ] Add performance profiling through events
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.1.2: Enhance Bridge Manager with Event System** ✅ [2025-06-15]
+  - [x] Add EventEmitter field to BridgeManager
+  - [x] Add EventStore for bridge event history
+  - [x] Implement bridge lifecycle event emission (initializing, initialized, failed, cleanup)
+  - [x] Add bridge metrics collection using events
+  - [x] Implement event-based monitoring and debugging
+  - [x] Add performance profiling through events
+  - [x] Check tests to use go-llms pkg/testutils
 
-- [ ] **Task 1.4.1.3: Add Bridge Documentation Generation**
-  - [ ] Implement GenerateDocumentation method on BridgeManager
-  - [ ] Support OpenAPI, Markdown, and JSON formats
-  - [ ] Generate bridge method documentation
-  - [ ] Include parameter schemas and examples
-  - [ ] Export type mappings and conversions
-  - [ ] Generate interactive API documentation
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.1.3: Add Bridge Documentation Generation** ✅ [2025-06-15]
+  - [x] Implement GenerateDocumentation method on BridgeManager
+  - [x] Support OpenAPI, Markdown, and JSON formats
+  - [x] Generate bridge method documentation
+  - [x] Include parameter schemas and examples
+  - [x] Export type mappings and conversions
+  - [x] Generate interactive API documentation
+  - [x] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.1.4: Add Bridge State Serialization**
   - [ ] Implement ExportState method on BridgeManager

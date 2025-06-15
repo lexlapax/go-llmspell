@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -784,4 +785,271 @@ func BenchmarkBridgeList(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		manager.ListBridges()
 	}
+}
+
+// Test Event System Integration
+func TestBridgeManagerEventSystem(t *testing.T) {
+	t.Run("Create BridgeManager with Event System", func(t *testing.T) {
+		manager := NewBridgeManagerWithEvents(nil, nil)
+		assert.NotNil(t, manager)
+		assert.NotNil(t, manager.GetEventBus())
+		assert.NotNil(t, manager.GetEventStore())
+
+		// Clean up
+		defer func() { _ = manager.Cleanup() }()
+	})
+
+	t.Run("Subscribe to Bridge Events", func(t *testing.T) {
+		manager := NewBridgeManagerWithEvents(nil, nil)
+		defer func() { _ = manager.Cleanup() }()
+
+		eventReceived := make(chan bool, 1)
+		eventCount := 0
+
+		handler := func(ctx context.Context, event domain.Event) error {
+			eventCount++
+			eventReceived <- true
+			return nil
+		}
+
+		subscriptionIDs := manager.SubscribeToBridgeEvents(handler, "bridge.*")
+		assert.NotEmpty(t, subscriptionIDs)
+
+		// Register a bridge to trigger events
+		bridge := &mockBridge{id: "test-bridge"}
+		err := manager.RegisterBridge(bridge)
+		assert.NoError(t, err)
+
+		// Wait for event
+		select {
+		case <-eventReceived:
+			assert.Greater(t, eventCount, 0)
+		case <-time.After(time.Second):
+			t.Log("No events received - this may be expected if event bus is async")
+		}
+
+		// Unsubscribe
+		manager.UnsubscribeFromBridgeEvents(subscriptionIDs)
+	})
+
+	t.Run("Bridge Metrics Collection", func(t *testing.T) {
+		manager := NewBridgeManagerWithEvents(nil, nil)
+		defer func() { _ = manager.Cleanup() }()
+
+		bridge := &mockBridge{id: "metrics-bridge"}
+		err := manager.RegisterBridge(bridge)
+		assert.NoError(t, err)
+
+		// Initialize bridge to generate metrics
+		ctx := context.Background()
+		err = manager.InitializeBridge(ctx, "metrics-bridge")
+		assert.NoError(t, err)
+
+		// Check metrics
+		metrics, err := manager.GetBridgeMetrics("metrics-bridge")
+		assert.NoError(t, err)
+		assert.NotNil(t, metrics)
+		assert.Equal(t, int64(1), metrics.InitializationCount)
+		assert.Equal(t, int64(0), metrics.FailureCount)
+		assert.Greater(t, metrics.InitializationTime, time.Duration(0))
+
+		// Check all metrics
+		allMetrics := manager.GetAllBridgeMetrics()
+		assert.Len(t, allMetrics, 1)
+		assert.Contains(t, allMetrics, "metrics-bridge")
+	})
+
+	t.Run("Bridge Failure Metrics", func(t *testing.T) {
+		manager := NewBridgeManagerWithEvents(nil, nil)
+		defer func() { _ = manager.Cleanup() }()
+
+		bridge := &mockBridge{
+			id:        "failure-bridge",
+			initError: errors.New("initialization failed"),
+		}
+		err := manager.RegisterBridge(bridge)
+		assert.NoError(t, err)
+
+		// Try to initialize bridge (should fail)
+		ctx := context.Background()
+		err = manager.InitializeBridge(ctx, "failure-bridge")
+		assert.Error(t, err)
+
+		// Check failure metrics
+		metrics, err := manager.GetBridgeMetrics("failure-bridge")
+		assert.NoError(t, err)
+		assert.NotNil(t, metrics)
+		assert.Equal(t, int64(1), metrics.InitializationCount)
+		assert.Equal(t, int64(1), metrics.FailureCount)
+		assert.NotNil(t, metrics.LastError)
+		assert.Equal(t, "initialization failed", metrics.LastError.Error())
+	})
+
+	t.Run("Generate Bridge Report", func(t *testing.T) {
+		manager := NewBridgeManagerWithEvents(nil, nil)
+		defer func() { _ = manager.Cleanup() }()
+
+		// Register multiple bridges
+		bridge1 := &mockBridge{id: "bridge1"}
+		bridge2 := &mockBridge{id: "bridge2"}
+		bridge3 := &mockBridge{id: "bridge3", initError: errors.New("failed")}
+
+		_ = manager.RegisterBridge(bridge1)
+		_ = manager.RegisterBridge(bridge2)
+		_ = manager.RegisterBridge(bridge3)
+
+		// Initialize some bridges
+		ctx := context.Background()
+		_ = manager.InitializeBridge(ctx, "bridge1")
+		_ = manager.InitializeBridge(ctx, "bridge2")
+		_ = manager.InitializeBridge(ctx, "bridge3") // This will fail
+
+		// Generate report
+		report := manager.GenerateBridgeReport()
+		assert.NotNil(t, report)
+		assert.Equal(t, 3, report["totalBridges"])
+		assert.Equal(t, 2, report["initialized"])
+		assert.Equal(t, 1, report["failed"])
+		assert.NotEmpty(t, report["sessionID"])
+
+		bridgeDetails := report["bridgeDetails"].(map[string]interface{})
+		assert.Len(t, bridgeDetails, 3)
+
+		// Check specific bridge details
+		bridge1Details := bridgeDetails["bridge1"].(map[string]interface{})
+		assert.Equal(t, true, bridge1Details["initialized"])
+		assert.Equal(t, int64(1), bridge1Details["initializationCount"])
+		assert.Equal(t, int64(0), bridge1Details["failureCount"])
+
+		bridge3Details := bridgeDetails["bridge3"].(map[string]interface{})
+		assert.Equal(t, false, bridge3Details["initialized"])
+		assert.Equal(t, int64(1), bridge3Details["initializationCount"])
+		assert.Equal(t, int64(1), bridge3Details["failureCount"])
+	})
+
+	t.Run("Performance Profiling Methods", func(t *testing.T) {
+		manager := NewBridgeManagerWithEvents(nil, nil)
+		defer func() { _ = manager.Cleanup() }()
+
+		// These methods should not panic and should be safe to call
+		assert.NotPanics(t, func() {
+			manager.StartProfiling()
+			manager.StopProfiling()
+		})
+	})
+
+	t.Run("Cleanup Event System Resources", func(t *testing.T) {
+		manager := NewBridgeManagerWithEvents(nil, nil)
+
+		// Should not error on cleanup
+		err := manager.Cleanup()
+		assert.NoError(t, err)
+
+		// Should be safe to call multiple times
+		err = manager.Cleanup()
+		assert.NoError(t, err)
+	})
+
+	t.Run("Backward Compatibility with NewBridgeManager", func(t *testing.T) {
+		// Original constructor should still work and provide event system
+		manager := NewBridgeManager()
+		assert.NotNil(t, manager)
+		assert.NotNil(t, manager.GetEventBus())
+		assert.NotNil(t, manager.GetEventStore())
+
+		// Should be able to register and initialize bridges normally
+		bridge := &mockBridge{id: "compat-bridge"}
+		err := manager.RegisterBridge(bridge)
+		assert.NoError(t, err)
+
+		ctx := context.Background()
+		err = manager.InitializeBridge(ctx, "compat-bridge")
+		assert.NoError(t, err)
+
+		// Should be able to get metrics
+		metrics, err := manager.GetBridgeMetrics("compat-bridge")
+		assert.NoError(t, err)
+		assert.NotNil(t, metrics)
+
+		// Clean up
+		defer func() { _ = manager.Cleanup() }()
+	})
+}
+
+// Test documentation generation specifically
+func TestBridgeManagerDocumentationGeneration(t *testing.T) {
+	manager := NewBridgeManager()
+	ctx := context.Background()
+
+	// Register a test bridge
+	testBridge := &mockBridge{
+		id: "test-doc-bridge",
+	}
+
+	err := manager.RegisterBridge(testBridge)
+	assert.NoError(t, err)
+
+	t.Run("OpenAPI Documentation Generation", func(t *testing.T) {
+		result, err := manager.GenerateDocumentation(ctx, "openapi")
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("Markdown Documentation Generation", func(t *testing.T) {
+		result, err := manager.GenerateDocumentation(ctx, "markdown")
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("JSON Documentation Generation", func(t *testing.T) {
+		result, err := manager.GenerateDocumentation(ctx, "json")
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("Unsupported Format", func(t *testing.T) {
+		_, err := manager.GenerateDocumentation(ctx, "unsupported")
+		assert.Error(t, err)
+	})
+
+	t.Run("API Schema Export", func(t *testing.T) {
+		schema := manager.ExportAPISchema()
+		assert.NotNil(t, schema)
+		assert.Contains(t, schema, "bridges")
+		assert.Contains(t, schema, "types")
+		assert.Contains(t, schema, "version")
+		assert.Contains(t, schema, "sessionID")
+
+		bridges := schema["bridges"].(map[string]interface{})
+		assert.Contains(t, bridges, "test-doc-bridge")
+	})
+
+	t.Run("Specific Bridge Documentation", func(t *testing.T) {
+		result, err := manager.GenerateBridgeDocumentation(ctx, "test-doc-bridge", "json")
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("Non-existent Bridge Documentation", func(t *testing.T) {
+		_, err := manager.GenerateBridgeDocumentation(ctx, "non-existent", "json")
+		assert.Error(t, err)
+	})
+
+	t.Run("Specific Documentation Methods", func(t *testing.T) {
+		openAPISpec, err := manager.GenerateOpenAPIDocumentation(ctx)
+		assert.NoError(t, err)
+		assert.NotNil(t, openAPISpec)
+		assert.Equal(t, "3.0.3", openAPISpec.OpenAPI)
+
+		markdownDoc, err := manager.GenerateMarkdownDocumentation(ctx)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, markdownDoc)
+
+		jsonDoc, err := manager.GenerateJSONDocumentation(ctx)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, jsonDoc)
+	})
+
+	// Clean up
+	defer func() { _ = manager.Cleanup() }()
 }

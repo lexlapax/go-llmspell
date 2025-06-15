@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lexlapax/go-llms/pkg/agent/events"
+	"github.com/lexlapax/go-llms/pkg/docs"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
@@ -20,16 +22,65 @@ type BridgeManager struct {
 	dependencies map[string][]string // Bridge ID -> list of dependency IDs
 	watchers     map[string][]chan string
 	changeNotify chan string
+
+	// Event system fields
+	eventBus   *events.EventBus
+	eventStore events.EventStorage
+	publisher  *events.BridgeEventPublisher
+	sessionID  string
+
+	// Metrics
+	metrics map[string]*BridgeMetrics
+}
+
+// BridgeMetrics tracks performance and usage metrics for a bridge
+type BridgeMetrics struct {
+	InitializationTime  time.Duration
+	InitializationCount int64
+	FailureCount        int64
+	LastError           error
+	LastInitialized     time.Time
+	LastFailure         time.Time
 }
 
 // NewBridgeManager creates a new bridge manager.
 func NewBridgeManager() *BridgeManager {
+	return NewBridgeManagerWithEvents(nil, nil)
+}
+
+// NewBridgeManagerWithEvents creates a new bridge manager with event system support.
+func NewBridgeManagerWithEvents(eventBus *events.EventBus, eventStore events.EventStorage) *BridgeManager {
+	// Create event bus if not provided
+	if eventBus == nil {
+		eventBus = events.NewEventBus(events.WithBufferSize(1000))
+	}
+
+	// Create in-memory event store if not provided
+	if eventStore == nil {
+		eventStore = events.NewMemoryStorage()
+	}
+
+	// Generate session ID for this manager instance
+	sessionID := fmt.Sprintf("bridge-manager-%d", time.Now().UnixNano())
+
+	// Create bridge event publisher
+	publisher := events.NewBridgeEventPublisher(eventBus, "bridge-manager", sessionID)
+
 	return &BridgeManager{
 		bridges:      make(map[string]engine.Bridge),
 		initialized:  make(map[string]bool),
 		dependencies: make(map[string][]string),
 		watchers:     make(map[string][]chan string),
 		changeNotify: make(chan string, 100),
+
+		// Event system
+		eventBus:   eventBus,
+		eventStore: eventStore,
+		publisher:  publisher,
+		sessionID:  sessionID,
+
+		// Metrics
+		metrics: make(map[string]*BridgeMetrics),
 	}
 }
 
@@ -60,6 +111,22 @@ func (m *BridgeManager) RegisterBridge(bridge engine.Bridge) error {
 		m.dependencies[id] = metadata.Dependencies
 	}
 
+	// Initialize metrics for this bridge
+	m.metrics[id] = &BridgeMetrics{}
+
+	// Emit bridge registration event
+	if m.publisher != nil {
+		eventData := map[string]interface{}{
+			"bridgeID":     id,
+			"bridgeName":   metadata.Name,
+			"version":      metadata.Version,
+			"description":  metadata.Description,
+			"dependencies": metadata.Dependencies,
+		}
+		requestID := m.publisher.PublishRequest("bridge.register", eventData)
+		m.publisher.PublishResponse(requestID, map[string]interface{}{"status": "registered"}, nil, 0)
+	}
+
 	return nil
 }
 
@@ -82,13 +149,61 @@ func (m *BridgeManager) InitializeBridge(ctx context.Context, bridgeID string) e
 	m.initialized[bridgeID] = true
 	m.mu.Unlock()
 
-	// Initialize the bridge outside the lock
-	if err := bridge.Initialize(ctx); err != nil {
-		// On error, mark as not initialized
+	// Emit initializing event
+	if m.publisher != nil {
+		eventData := map[string]interface{}{
+			"bridgeID": bridgeID,
+			"status":   "initializing",
+		}
+		requestID := m.publisher.PublishRequest("bridge.initialize", eventData)
+
+		// Track initialization time
+		startTime := time.Now()
+
+		// Initialize the bridge outside the lock
+		err := bridge.Initialize(ctx)
+		duration := time.Since(startTime)
+
+		// Update metrics
 		m.mu.Lock()
-		m.initialized[bridgeID] = false
+		if metrics, exists := m.metrics[bridgeID]; exists {
+			metrics.InitializationCount++
+			metrics.InitializationTime = duration
+			if err != nil {
+				metrics.FailureCount++
+				metrics.LastError = err
+				metrics.LastFailure = time.Now()
+			} else {
+				metrics.LastInitialized = time.Now()
+			}
+		}
 		m.mu.Unlock()
-		return fmt.Errorf("failed to initialize bridge %s: %w", bridgeID, err)
+
+		if err != nil {
+			// On error, mark as not initialized
+			m.mu.Lock()
+			m.initialized[bridgeID] = false
+			m.mu.Unlock()
+
+			// Emit failure event
+			m.publisher.PublishResponse(requestID, nil, err, duration)
+			return fmt.Errorf("failed to initialize bridge %s: %w", bridgeID, err)
+		}
+
+		// Emit success event
+		m.publisher.PublishResponse(requestID, map[string]interface{}{
+			"status":   "initialized",
+			"duration": duration,
+		}, nil, duration)
+	} else {
+		// Fallback without events
+		if err := bridge.Initialize(ctx); err != nil {
+			// On error, mark as not initialized
+			m.mu.Lock()
+			m.initialized[bridgeID] = false
+			m.mu.Unlock()
+			return fmt.Errorf("failed to initialize bridge %s: %w", bridgeID, err)
+		}
 	}
 
 	return nil
@@ -384,6 +499,409 @@ func (m *BridgeManager) RegisterSpecificBridgesWithEngine(scriptEngine engine.Sc
 		if err := scriptEngine.RegisterBridge(bridge); err != nil {
 			return fmt.Errorf("failed to register bridge %s with engine: %w", id, err)
 		}
+	}
+
+	return nil
+}
+
+// Event System Methods
+
+// GetEventBus returns the event bus for external subscription
+func (m *BridgeManager) GetEventBus() *events.EventBus {
+	return m.eventBus
+}
+
+// GetEventStore returns the event store for querying bridge events
+func (m *BridgeManager) GetEventStore() events.EventStorage {
+	return m.eventStore
+}
+
+// SubscribeToBridgeEvents subscribes to bridge events with optional filtering
+func (m *BridgeManager) SubscribeToBridgeEvents(handler events.EventHandlerFunc, patterns ...string) []string {
+	if m.eventBus == nil {
+		return nil
+	}
+
+	var subscriptionIDs []string
+	if len(patterns) == 0 {
+		patterns = []string{"bridge.*"}
+	}
+
+	for _, pattern := range patterns {
+		subscriptionID, err := m.eventBus.SubscribePattern(pattern, handler)
+		if err == nil {
+			subscriptionIDs = append(subscriptionIDs, subscriptionID)
+		}
+	}
+
+	return subscriptionIDs
+}
+
+// UnsubscribeFromBridgeEvents unsubscribes from bridge events
+func (m *BridgeManager) UnsubscribeFromBridgeEvents(subscriptionIDs []string) {
+	if m.eventBus == nil {
+		return
+	}
+
+	for _, subscriptionID := range subscriptionIDs {
+		m.eventBus.Unsubscribe(subscriptionID)
+	}
+}
+
+// Metrics and Monitoring Methods
+
+// GetBridgeMetrics returns metrics for a specific bridge
+func (m *BridgeManager) GetBridgeMetrics(bridgeID string) (*BridgeMetrics, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if metrics, exists := m.metrics[bridgeID]; exists {
+		// Return a copy to prevent race conditions
+		metricsCopy := *metrics
+		return &metricsCopy, nil
+	}
+
+	return nil, fmt.Errorf("bridge %s not found", bridgeID)
+}
+
+// GetAllBridgeMetrics returns metrics for all bridges
+func (m *BridgeManager) GetAllBridgeMetrics() map[string]*BridgeMetrics {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make(map[string]*BridgeMetrics)
+	for bridgeID, metrics := range m.metrics {
+		// Return copies to prevent race conditions
+		metricsCopy := *metrics
+		result[bridgeID] = &metricsCopy
+	}
+
+	return result
+}
+
+// GenerateBridgeReport generates a comprehensive report of all bridge activity
+func (m *BridgeManager) GenerateBridgeReport() map[string]interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	report := map[string]interface{}{
+		"sessionID":     m.sessionID,
+		"totalBridges":  len(m.bridges),
+		"initialized":   0,
+		"failed":        0,
+		"bridgeDetails": make(map[string]interface{}),
+	}
+
+	initializedCount := 0
+	failedCount := 0
+	bridgeDetails := make(map[string]interface{})
+
+	for bridgeID, bridge := range m.bridges {
+		isInitialized := m.initialized[bridgeID]
+		if isInitialized {
+			initializedCount++
+		}
+
+		metrics := m.metrics[bridgeID]
+		if metrics != nil && metrics.FailureCount > 0 {
+			failedCount++
+		}
+
+		metadata := bridge.GetMetadata()
+		bridgeDetails[bridgeID] = map[string]interface{}{
+			"name":                metadata.Name,
+			"version":             metadata.Version,
+			"description":         metadata.Description,
+			"dependencies":        metadata.Dependencies,
+			"initialized":         isInitialized,
+			"initializationCount": metrics.InitializationCount,
+			"failureCount":        metrics.FailureCount,
+			"lastInitialized":     metrics.LastInitialized,
+			"lastFailure":         metrics.LastFailure,
+			"initializationTime":  metrics.InitializationTime,
+		}
+	}
+
+	report["initialized"] = initializedCount
+	report["failed"] = failedCount
+	report["bridgeDetails"] = bridgeDetails
+
+	return report
+}
+
+// Performance Profiling Methods
+
+// StartProfiling enables performance profiling for bridge operations
+func (m *BridgeManager) StartProfiling() {
+	// This method can be extended to add more detailed profiling
+	// For now, we're already collecting basic metrics in the existing methods
+}
+
+// StopProfiling disables performance profiling
+func (m *BridgeManager) StopProfiling() {
+	// This method can be extended to stop detailed profiling
+}
+
+// Documentation Generation Methods
+
+// BridgeDocumentable implements docs.Documentable for bridges
+type BridgeDocumentable struct {
+	ID           string
+	Name         string
+	Version      string
+	Description  string
+	Methods      []engine.MethodInfo
+	TypeMappings map[string]engine.TypeMapping
+	Permissions  []engine.Permission
+	Dependencies []string
+}
+
+// GetDocumentation returns the documentation for this bridge
+func (bd *BridgeDocumentable) GetDocumentation() docs.Documentation {
+	// Create examples from methods
+	examples := make([]docs.Example, 0, len(bd.Methods))
+	for _, method := range bd.Methods {
+		examples = append(examples, docs.Example{
+			Name:        method.Name,
+			Description: method.Description,
+			Code:        fmt.Sprintf("bridge.%s()", method.Name),
+			Language:    "javascript",
+		})
+	}
+
+	return docs.Documentation{
+		Name:        bd.Name,
+		Description: bd.Description,
+		Category:    "bridge",
+		Version:     bd.Version,
+		Examples:    examples,
+		Metadata: map[string]interface{}{
+			"id":           bd.ID,
+			"dependencies": bd.Dependencies,
+			"permissions":  bd.Permissions,
+			"methods":      bd.Methods,
+			"typeMappings": bd.TypeMappings,
+		},
+	}
+}
+
+// GenerateDocumentation generates comprehensive documentation for all bridges
+func (m *BridgeManager) GenerateDocumentation(ctx context.Context, format string) (interface{}, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// Create documentable items for each bridge
+	var documentableItems []docs.Documentable
+
+	for bridgeID, bridge := range m.bridges {
+		metadata := bridge.GetMetadata()
+		methods := bridge.Methods()
+		typeMappings := bridge.TypeMappings()
+		permissions := bridge.RequiredPermissions()
+
+		bridgeDoc := &BridgeDocumentable{
+			ID:           bridgeID,
+			Name:         metadata.Name,
+			Version:      metadata.Version,
+			Description:  metadata.Description,
+			Methods:      methods,
+			TypeMappings: typeMappings,
+			Permissions:  permissions,
+			Dependencies: metadata.Dependencies,
+		}
+
+		documentableItems = append(documentableItems, bridgeDoc)
+	}
+
+	// Create appropriate generator for the format
+	config := docs.GeneratorConfig{
+		Title:       "Bridge Documentation",
+		Version:     "1.0.0",
+		Description: "Documentation for all registered bridges",
+	}
+
+	// Generate documentation based on format
+	switch format {
+	case "openapi":
+		generator := docs.NewOpenAPIGenerator(config)
+		return generator.GenerateOpenAPI(ctx, documentableItems)
+	case "markdown":
+		generator := docs.NewMarkdownGenerator(config)
+		return generator.GenerateMarkdown(ctx, documentableItems)
+	case "json":
+		generator := docs.NewMarkdownGenerator(config) // Use markdown generator for JSON too
+		return generator.GenerateJSON(ctx, documentableItems)
+	default:
+		return nil, fmt.Errorf("unsupported documentation format: %s", format)
+	}
+}
+
+// GenerateOpenAPIDocumentation generates OpenAPI specification for all bridges
+func (m *BridgeManager) GenerateOpenAPIDocumentation(ctx context.Context) (*docs.OpenAPISpec, error) {
+	result, err := m.GenerateDocumentation(ctx, "openapi")
+	if err != nil {
+		return nil, err
+	}
+
+	spec, ok := result.(*docs.OpenAPISpec)
+	if !ok {
+		return nil, fmt.Errorf("failed to generate OpenAPI specification")
+	}
+
+	return spec, nil
+}
+
+// GenerateMarkdownDocumentation generates Markdown documentation for all bridges
+func (m *BridgeManager) GenerateMarkdownDocumentation(ctx context.Context) (string, error) {
+	result, err := m.GenerateDocumentation(ctx, "markdown")
+	if err != nil {
+		return "", err
+	}
+
+	markdown, ok := result.(string)
+	if !ok {
+		return "", fmt.Errorf("failed to generate Markdown documentation")
+	}
+
+	return markdown, nil
+}
+
+// GenerateJSONDocumentation generates JSON documentation for all bridges
+func (m *BridgeManager) GenerateJSONDocumentation(ctx context.Context) ([]byte, error) {
+	result, err := m.GenerateDocumentation(ctx, "json")
+	if err != nil {
+		return nil, err
+	}
+
+	jsonData, ok := result.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("failed to generate JSON documentation")
+	}
+
+	return jsonData, nil
+}
+
+// GenerateBridgeDocumentation generates documentation for a specific bridge
+func (m *BridgeManager) GenerateBridgeDocumentation(ctx context.Context, bridgeID string, format string) (interface{}, error) {
+	m.mu.RLock()
+	bridge, exists := m.bridges[bridgeID]
+	m.mu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("bridge %s not found", bridgeID)
+	}
+
+	metadata := bridge.GetMetadata()
+	methods := bridge.Methods()
+	typeMappings := bridge.TypeMappings()
+	permissions := bridge.RequiredPermissions()
+
+	bridgeDoc := &BridgeDocumentable{
+		ID:           bridgeID,
+		Name:         metadata.Name,
+		Version:      metadata.Version,
+		Description:  metadata.Description,
+		Methods:      methods,
+		TypeMappings: typeMappings,
+		Permissions:  permissions,
+		Dependencies: metadata.Dependencies,
+	}
+
+	// Create appropriate generator for the format
+	config := docs.GeneratorConfig{
+		Title:       bridgeDoc.Name + " Documentation",
+		Version:     bridgeDoc.Version,
+		Description: "Documentation for " + bridgeDoc.Name + " bridge",
+	}
+
+	// Generate documentation for single bridge
+	switch format {
+	case "openapi":
+		generator := docs.NewOpenAPIGenerator(config)
+		return generator.GenerateOpenAPI(ctx, []docs.Documentable{bridgeDoc})
+	case "markdown":
+		generator := docs.NewMarkdownGenerator(config)
+		return generator.GenerateMarkdown(ctx, []docs.Documentable{bridgeDoc})
+	case "json":
+		generator := docs.NewMarkdownGenerator(config)
+		return generator.GenerateJSON(ctx, []docs.Documentable{bridgeDoc})
+	default:
+		return nil, fmt.Errorf("unsupported documentation format: %s", format)
+	}
+}
+
+// ExportAPISchema exports the API schema for all bridges with type mappings
+func (m *BridgeManager) ExportAPISchema() map[string]interface{} {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	schema := map[string]interface{}{
+		"version":   "1.0.0",
+		"bridges":   make(map[string]interface{}),
+		"types":     make(map[string]interface{}),
+		"sessionID": m.sessionID,
+		"generated": time.Now().UTC(),
+	}
+
+	bridges := make(map[string]interface{})
+	allTypes := make(map[string]interface{})
+
+	for bridgeID, bridge := range m.bridges {
+		metadata := bridge.GetMetadata()
+		methods := bridge.Methods()
+		typeMappings := bridge.TypeMappings()
+		permissions := bridge.RequiredPermissions()
+
+		bridgeSchema := map[string]interface{}{
+			"id":           bridgeID,
+			"name":         metadata.Name,
+			"version":      metadata.Version,
+			"description":  metadata.Description,
+			"dependencies": metadata.Dependencies,
+			"methods":      methods,
+			"permissions":  permissions,
+			"initialized":  m.initialized[bridgeID],
+		}
+
+		// Add metrics if available
+		if metrics, exists := m.metrics[bridgeID]; exists {
+			bridgeSchema["metrics"] = map[string]interface{}{
+				"initializationCount": metrics.InitializationCount,
+				"failureCount":        metrics.FailureCount,
+				"lastInitialized":     metrics.LastInitialized,
+				"initializationTime":  metrics.InitializationTime,
+			}
+		}
+
+		bridges[bridgeID] = bridgeSchema
+
+		// Collect type mappings
+		for typeName, typeMapping := range typeMappings {
+			allTypes[fmt.Sprintf("%s.%s", bridgeID, typeName)] = map[string]interface{}{
+				"bridge":     bridgeID,
+				"name":       typeName,
+				"goType":     typeMapping.GoType,
+				"scriptType": typeMapping.ScriptType,
+				"converter":  typeMapping.Converter != "",
+				"metadata":   typeMapping.Metadata,
+			}
+		}
+	}
+
+	schema["bridges"] = bridges
+	schema["types"] = allTypes
+
+	return schema
+}
+
+// Cleanup method to properly close event system resources
+func (m *BridgeManager) Cleanup() error {
+	if m.eventBus != nil {
+		m.eventBus.Close()
+	}
+
+	if m.eventStore != nil {
+		return m.eventStore.Close()
 	}
 
 	return nil
