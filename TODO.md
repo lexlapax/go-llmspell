@@ -20,7 +20,8 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1.4.3: Utility Bridge Upgrades [COMPLETED - 2025-06-16]
 - ✅ Phase 1.4.4: LLM Bridge Advanced Features [COMPLETED - 2025-06-16]
 - ✅ Phase 1.4.5: Schema Bridge Full Implementation [COMPLETED - 2025-06-16]
-- 🚧 Phase 1.4.6+: Advanced Features - NEXT
+- ⏸️ Phase 1.4.6: Model Info Bridge Intelligence [DEFERRED - Not in go-llms]
+- 🚧 Phase 1.4.7+: Advanced Features - NEXT
 - 🚧 Phase 2-5: Engine Implementations - NOT STARTED
 
 ---
@@ -58,37 +59,23 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
 
 All schema bridge full implementation completed. See TODO-DONE.md for detailed completion summary.
 
-#### 1.4.6 Model Info Bridge Intelligence
+#### ⏸️ 1.4.6 Model Info Bridge Intelligence [DEFERRED - Features not in go-llms]
 
-- [ ] **Task 1.4.6.1: Add Model Performance Analytics**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Add metricsStore field
-  - [ ] Implement getModelPerformance method
-  - [ ] Add performance report generation
-  - [ ] Track latency, token usage, costs
-  - [ ] Generate performance trends
-  - [ ] Add anomaly detection
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+**Status**: Tasks deferred - missing features documented in `go-llms-upstream-request.md`
 
-- [ ] **Task 1.4.6.2: Add Model Recommendation Engine**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Implement findModelsWithCapabilities
-  - [ ] Add task-based model selection
-  - [ ] Consider cost/performance tradeoffs
-  - [ ] Support multi-criteria optimization
-  - [ ] Add recommendation explanations
-  - [ ] Implement A/B testing support
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+- [ ] **Task 1.4.6.1: Add Model Performance Analytics** ⏸️ **[DEFERRED]**
+  - Missing from go-llms: Model performance tracking, analytics, metrics
+  - Documented in upstream request #1
 
-- [ ] **Task 1.4.6.3: Add Model Catalog Export**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Implement OpenAPI export for models
-  - [ ] Add interactive documentation
-  - [ ] Include pricing information
-  - [ ] Add capability matrices
-  - [ ] Generate comparison charts
-  - [ ] Support custom export formats
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+- [ ] **Task 1.4.6.2: Add Model Recommendation Engine** ⏸️ **[DEFERRED]**  
+  - Missing from go-llms: Recommendation algorithms, model selection
+  - Documented in upstream request #2
+
+- [ ] **Task 1.4.6.3: Add Model Catalog Export** ⏸️ **[DEFERRED]**
+  - Missing from go-llms: Catalog export, OpenAPI generation for models
+  - Documented in upstream request #3
+
+**Next Action**: Contribute features to go-llms first, then implement bridges
 
 #### 1.4.7 Agent Bridge Advanced Features
 

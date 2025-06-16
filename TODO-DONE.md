@@ -1023,6 +1023,48 @@ Successfully implemented custom validator system with advanced features:
 - ✅ Proper error handling and edge case coverage
 - ✅ Used go-llms pkg/testutils for consistent test patterns
 
+## ⏸️ **Phase 1.4.6: Model Info Bridge Intelligence - DEFERRED** [Date: 2025-06-16]
+
+**Status**: Phase deferred due to missing upstream functionality in go-llms
+
+### Rationale for Deferral
+Following the bridge-first architecture principle ("If it's not in go-llms, we don't implement it in go-llmspell"), Phase 1.4.6 has been deferred because the required functionality does not exist in go-llms v0.3.5.
+
+### Missing Functionality Analysis
+**Comprehensive review of go-llms codebase revealed:**
+
+- ✅ **Available**: Basic metrics system (`pkg/util/metrics/`)
+- ✅ **Available**: Pool metrics for performance monitoring
+- ✅ **Available**: Model inventory and fetching system
+- ✅ **Available**: Model registry (already bridged)
+
+- ❌ **Missing**: Model performance analytics and tracking
+- ❌ **Missing**: Model recommendation engines and selection algorithms  
+- ❌ **Missing**: Model catalog export and documentation generation
+
+### Tasks Deferred
+- **Task 1.4.6.1**: Add Model Performance Analytics
+- **Task 1.4.6.2**: Add Model Recommendation Engine  
+- **Task 1.4.6.3**: Add Model Catalog Export
+
+### Upstream Request Documentation
+Created comprehensive upstream feature request document:
+- **File**: `go-llms-upstream-request.md`
+- **Content**: Detailed specifications for 10 missing features
+- **Priority**: High priority items identified for go-llms contribution
+- **Implementation Plan**: Bridge implementation plan after upstream availability
+
+### Next Steps
+1. Contribute missing features to go-llms upstream
+2. Wait for go-llms release with new functionality
+3. Implement corresponding bridges in go-llmspell
+4. Complete Phase 1.4.6 after upstream features are available
+
+### Architecture Compliance
+✅ **Bridge-First Principle Maintained**: No business logic implemented in go-llmspell
+✅ **Documentation Complete**: All missing features documented for upstream contribution
+✅ **Proper Deferral**: Phase properly marked as deferred rather than skipped
+
 ## ✅ **Phase 1.4.2: State Bridge Enhancements - COMPLETED** [Date: 2025-06-15]
 
 - ✅ **Task 1.4.2.1: Add State Schema Validation** [COMPLETED - 2025-06-15]
