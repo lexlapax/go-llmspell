@@ -187,6 +187,42 @@ func (m *mockScriptEngine) ExecuteScript(ctx context.Context, script string, opt
 	return result, nil
 }
 
+// Task 1.4.11.1: Engine Event Bus
+func (m *mockScriptEngine) GetEventBus() EventBus {
+	return NewDefaultEventBus()
+}
+
+// Task 1.4.11.2: Type Conversion Registry
+func (m *mockScriptEngine) RegisterTypeConverter(fromType, toType string, converter TypeConverterFunc) error {
+	return nil
+}
+
+func (m *mockScriptEngine) GetTypeRegistry() TypeRegistry {
+	return NewDefaultTypeRegistry()
+}
+
+// Task 1.4.11.3: Engine Profiling
+func (m *mockScriptEngine) EnableProfiling(config ProfilingConfig) error {
+	return nil
+}
+
+func (m *mockScriptEngine) DisableProfiling() error {
+	return nil
+}
+
+func (m *mockScriptEngine) GetProfilingReport() (*ProfilingReport, error) {
+	return &ProfilingReport{}, nil
+}
+
+// Task 1.4.11.4: Engine API Export
+func (m *mockScriptEngine) ExportAPI(format ExportFormat) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
+func (m *mockScriptEngine) GenerateClientLibrary(language string, options ClientLibraryOptions) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
 // Mock implementation of Bridge for testing
 type mockBridge struct {
 	name        string

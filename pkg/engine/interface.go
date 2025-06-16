@@ -44,6 +44,22 @@ type ScriptEngine interface {
 	CreateContext(options ContextOptions) (ScriptContext, error)
 	DestroyContext(ctx ScriptContext) error
 	ExecuteScript(ctx context.Context, script string, options ExecutionOptions) (*ExecutionResult, error)
+
+	// Task 1.4.11.1: Engine Event Bus
+	GetEventBus() EventBus
+
+	// Task 1.4.11.2: Type Conversion Registry
+	RegisterTypeConverter(fromType, toType string, converter TypeConverterFunc) error
+	GetTypeRegistry() TypeRegistry
+
+	// Task 1.4.11.3: Engine Profiling
+	EnableProfiling(config ProfilingConfig) error
+	DisableProfiling() error
+	GetProfilingReport() (*ProfilingReport, error)
+
+	// Task 1.4.11.4: Engine API Export
+	ExportAPI(format ExportFormat) ([]byte, error)
+	GenerateClientLibrary(language string, options ClientLibraryOptions) ([]byte, error)
 }
 
 // Bridge defines the interface for functionality that can be exposed to scripts.
@@ -307,6 +323,133 @@ const (
 	PermissionCrypto     PermissionType = "crypto"
 	PermissionStorage    PermissionType = "storage"
 )
+
+// Task 1.4.11.1: EventBus interface for engine-level events
+type EventBus interface {
+	// Subscribe to events with optional filters
+	Subscribe(pattern string, handler EventHandler) (string, error)
+	Unsubscribe(subscriptionID string) error
+
+	// Publish events
+	Publish(event EngineEvent) error
+	PublishAsync(event EngineEvent) error
+
+	// Event routing and management
+	SetPriority(subscriptionID string, priority int) error
+	GetSubscriptions() []SubscriptionInfo
+	Clear() error
+}
+
+// EventHandler for engine events
+type EventHandler func(event EngineEvent) error
+
+// EngineEvent represents an event in the engine
+type EngineEvent struct {
+	ID        string                 `json:"id"`
+	Type      string                 `json:"type"`
+	Source    string                 `json:"source"`
+	Timestamp time.Time              `json:"timestamp"`
+	Data      interface{}            `json:"data"`
+	Metadata  map[string]interface{} `json:"metadata"`
+}
+
+// SubscriptionInfo contains information about an event subscription
+type SubscriptionInfo struct {
+	ID       string    `json:"id"`
+	Pattern  string    `json:"pattern"`
+	Priority int       `json:"priority"`
+	Created  time.Time `json:"created"`
+}
+
+// Task 1.4.11.2: Type conversion registry
+type TypeRegistry interface {
+	// Register converters
+	Register(fromType, toType string, converter TypeConverterFunc) error
+	RegisterBidirectional(type1, type2 string, forward, reverse TypeConverterFunc) error
+
+	// Conversion operations
+	Convert(value interface{}, fromType, toType string) (interface{}, error)
+	CanConvert(fromType, toType string) bool
+
+	// Registry management
+	GetConverters() map[string][]string
+	ClearCache() error
+	ExportDocumentation() ([]byte, error)
+}
+
+// TypeConverterFunc converts values between types
+type TypeConverterFunc func(value interface{}) (interface{}, error)
+
+// Task 1.4.11.3: Profiling support
+type ProfilingConfig struct {
+	Enabled        bool          `json:"enabled"`
+	CPUProfiling   bool          `json:"cpu_profiling"`
+	MemProfiling   bool          `json:"mem_profiling"`
+	TraceProfiling bool          `json:"trace_profiling"`
+	SampleRate     int           `json:"sample_rate"`
+	OutputDir      string        `json:"output_dir"`
+	Duration       time.Duration `json:"duration"`
+}
+
+// ProfilingReport contains profiling results
+type ProfilingReport struct {
+	StartTime       time.Time              `json:"start_time"`
+	EndTime         time.Time              `json:"end_time"`
+	Duration        time.Duration          `json:"duration"`
+	Executions      int64                  `json:"executions"`
+	AverageExecTime time.Duration          `json:"average_exec_time"`
+	MemoryStats     MemoryStats            `json:"memory_stats"`
+	Hotspots        []Hotspot              `json:"hotspots"`
+	Optimizations   []OptimizationHint     `json:"optimizations"`
+	Metrics         map[string]interface{} `json:"metrics"`
+}
+
+// MemoryStats contains memory usage statistics
+type MemoryStats struct {
+	Allocated      uint64 `json:"allocated"`
+	TotalAllocated uint64 `json:"total_allocated"`
+	Sys            uint64 `json:"sys"`
+	NumGC          uint32 `json:"num_gc"`
+	PauseTotal     uint64 `json:"pause_total"`
+}
+
+// Hotspot represents a performance hotspot
+type Hotspot struct {
+	Location    string        `json:"location"`
+	Count       int64         `json:"count"`
+	TotalTime   time.Duration `json:"total_time"`
+	AverageTime time.Duration `json:"average_time"`
+	Percentage  float64       `json:"percentage"`
+}
+
+// OptimizationHint suggests performance improvements
+type OptimizationHint struct {
+	Type        string `json:"type"`
+	Location    string `json:"location"`
+	Description string `json:"description"`
+	Impact      string `json:"impact"`
+	Priority    int    `json:"priority"`
+}
+
+// Task 1.4.11.4: API Export formats
+type ExportFormat string
+
+const (
+	ExportFormatOpenAPI  ExportFormat = "openapi"
+	ExportFormatMarkdown ExportFormat = "markdown"
+	ExportFormatJSON     ExportFormat = "json"
+	ExportFormatGraphQL  ExportFormat = "graphql"
+	ExportFormatProtobuf ExportFormat = "protobuf"
+)
+
+// ClientLibraryOptions for generating client libraries
+type ClientLibraryOptions struct {
+	PackageName  string                 `json:"package_name"`
+	Version      string                 `json:"version"`
+	IncludeTypes bool                   `json:"include_types"`
+	IncludeDocs  bool                   `json:"include_docs"`
+	CustomConfig map[string]interface{} `json:"custom_config"`
+}
 
 // Errors that engines can return
 

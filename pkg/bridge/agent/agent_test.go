@@ -83,6 +83,42 @@ func (m *MockScriptEngine) ListBridges() []string {
 	return ids
 }
 
+// Task 1.4.11.1: Engine Event Bus
+func (m *MockScriptEngine) GetEventBus() engine.EventBus {
+	return engine.NewDefaultEventBus()
+}
+
+// Task 1.4.11.2: Type Conversion Registry
+func (m *MockScriptEngine) RegisterTypeConverter(fromType, toType string, converter engine.TypeConverterFunc) error {
+	return nil
+}
+
+func (m *MockScriptEngine) GetTypeRegistry() engine.TypeRegistry {
+	return engine.NewDefaultTypeRegistry()
+}
+
+// Task 1.4.11.3: Engine Profiling
+func (m *MockScriptEngine) EnableProfiling(config engine.ProfilingConfig) error {
+	return nil
+}
+
+func (m *MockScriptEngine) DisableProfiling() error {
+	return nil
+}
+
+func (m *MockScriptEngine) GetProfilingReport() (*engine.ProfilingReport, error) {
+	return &engine.ProfilingReport{}, nil
+}
+
+// Task 1.4.11.4: Engine API Export
+func (m *MockScriptEngine) ExportAPI(format engine.ExportFormat) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
+func (m *MockScriptEngine) GenerateClientLibrary(language string, options engine.ClientLibraryOptions) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
 func TestNewAgentBridge(t *testing.T) {
 	bridge := NewAgentBridge()
 	assert.NotNil(t, bridge)

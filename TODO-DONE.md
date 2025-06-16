@@ -1,6 +1,6 @@
 # TODO-DONE: Go-LLMSpell v0.3.5 Migration - Completed Tasks
 
-This file tracks completed tasks for the go-llmspell multi-engine architecture migration to v0.3.3.
+This file tracks completed tasks for the go-llmspell multi-engine architecture migration to v0.3.5.
 
 ## Migration Start Date: June 2025
 
@@ -1585,4 +1585,73 @@ Phase 1.4.8 (Event Bridge Replacement) has been successfully completed with all 
 
 **Bridge-First Architecture**: ✅ All functionality leverages existing go-llms workflow package without reimplementing core features.
 
-**All Tests Passing**: ✅ All workflow serialization features tested and passing (import/export, script steps, templates).
+---
+
+#### ✅ 1.4.11 Engine Integration [COMPLETED - 2025-06-16]
+
+Enhanced engine capabilities for advanced scripting needs. Bridge go-llms core functionality for profiling, events, and API generation.
+
+**Summary**: Successfully implemented all four engine integration features, providing engines with event handling, type conversion, profiling, and API export capabilities.
+
+**Task 1.4.11.1: Add Engine Event Bus** - [Date: 2025-06-16]
+  - ✅ Leveraged imports from go-llms/pkg/agent/events package
+  - ✅ Added GetEventBus to ScriptEngine interface
+  - ✅ Implemented DefaultEventBus with priority-based subscription handling
+  - ✅ Support cross-engine events with publish/subscribe pattern
+  - ✅ Add event routing with pattern matching
+  - ✅ Implemented event priorities with sorted execution
+  - ✅ Test event isolation and concurrent operations
+  - ✅ Comprehensive test coverage for all event bus features
+
+**Task 1.4.11.2: Add Type Conversion Registry** - [Date: 2025-06-16]
+  - ✅ Leveraged imports from go-llms/pkg/util/types package
+  - ✅ Added RegisterTypeConverter and GetTypeRegistry methods
+  - ✅ Implemented DefaultTypeRegistry with conversion tracking
+  - ✅ Support bidirectional conversions with RegisterBidirectional
+  - ✅ Added conversion caching with ClearCache functionality
+  - ✅ Generate conversion docs with ExportDocumentation
+  - ✅ Test conversion accuracy with dynamic converter registration
+  - ✅ Full test coverage including edge cases and error handling
+
+**Task 1.4.11.3: Add Engine Profiling** - [Date: 2025-06-16]
+  - ✅ Leveraged imports from go-llms/pkg/util/profiling package
+  - ✅ Added EnableProfiling, DisableProfiling, GetProfilingReport methods
+  - ✅ Implemented DefaultEngineProfiler with go-llms profiler integration
+  - ✅ Track script execution with CPU and memory profiling
+  - ✅ Monitor memory usage with detailed memory statistics
+  - ✅ Generate performance reports with duration and metrics
+  - ✅ Added optimization hints with memory and GC recommendations
+  - ✅ Comprehensive tests for profiling lifecycle and report generation
+
+**Task 1.4.11.4: Add Engine API Export** - [Date: 2025-06-16]
+  - ✅ Leveraged imports from go-llms/pkg/docs package
+  - ✅ Added ExportAPI and GenerateClientLibrary methods
+  - ✅ Generate API specifications in OpenAPI, Markdown, and JSON formats
+  - ✅ Include type information from bridge metadata
+  - ✅ Add method signatures with parameter and return type information
+  - ✅ Generate client libraries for multiple languages (template-based)
+  - ✅ Support API versioning through bridge metadata
+  - ✅ Full test coverage for all export formats and error conditions
+
+**Key Implementation Details**:
+- Enhanced ScriptEngine interface with 8 new methods for integration features
+- Created DefaultEventBus with priority-based subscription handling using go-llms events
+- Built DefaultTypeRegistry with converter tracking and bidirectional support
+- Implemented DefaultEngineProfiler with go-llms profiling infrastructure
+- Created DefaultAPIExporter supporting multiple export formats
+- Updated all mock engines in bridge tests to implement new interface methods
+- Comprehensive test suite with 100+ assertions covering all integration features
+
+**Files Created/Modified**:
+- `/pkg/engine/interface.go`: Enhanced ScriptEngine interface with integration methods
+- `/pkg/engine/integration.go`: Core implementations for all integration features
+- `/pkg/engine/integration_test.go`: Comprehensive test suite for integration features
+- `/pkg/engine/interface_test.go`: Updated mock engine with new interface methods
+- `/pkg/engine/registry_test.go`: Updated mock engine with new interface methods
+- `/pkg/bridge/agent/agent_test.go`: Added missing interface methods to MockScriptEngine
+- `/pkg/bridge/state/manager_test.go`: Added missing interface methods to MockScriptEngine
+- `/pkg/bridge/manager_test.go`: Added missing interface methods to mockScriptEngine
+
+**Bridge-First Architecture**: ✅ All functionality leverages existing go-llms packages (events, types, profiling, docs) without reimplementing core features. Pure bridge pattern maintained throughout.
+
+**All Tests Passing**: ✅ All engine integration features tested and passing with comprehensive test coverage.

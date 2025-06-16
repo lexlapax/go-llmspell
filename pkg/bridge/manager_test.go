@@ -636,6 +636,42 @@ func (m *mockScriptEngine) DestroyContext(ctx engine.ScriptContext) error {
 	return nil
 }
 
+// Task 1.4.11.1: Engine Event Bus
+func (m *mockScriptEngine) GetEventBus() engine.EventBus {
+	return engine.NewDefaultEventBus()
+}
+
+// Task 1.4.11.2: Type Conversion Registry
+func (m *mockScriptEngine) RegisterTypeConverter(fromType, toType string, converter engine.TypeConverterFunc) error {
+	return nil
+}
+
+func (m *mockScriptEngine) GetTypeRegistry() engine.TypeRegistry {
+	return engine.NewDefaultTypeRegistry()
+}
+
+// Task 1.4.11.3: Engine Profiling
+func (m *mockScriptEngine) EnableProfiling(config engine.ProfilingConfig) error {
+	return nil
+}
+
+func (m *mockScriptEngine) DisableProfiling() error {
+	return nil
+}
+
+func (m *mockScriptEngine) GetProfilingReport() (*engine.ProfilingReport, error) {
+	return &engine.ProfilingReport{}, nil
+}
+
+// Task 1.4.11.4: Engine API Export
+func (m *mockScriptEngine) ExportAPI(format engine.ExportFormat) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
+func (m *mockScriptEngine) GenerateClientLibrary(language string, options engine.ClientLibraryOptions) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
 // Performance and stress tests
 func TestBridgeManagerPerformance(t *testing.T) {
 	t.Run("Large Scale Registration", func(t *testing.T) {

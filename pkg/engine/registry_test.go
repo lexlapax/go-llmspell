@@ -259,6 +259,42 @@ func (m *mockRegistryScriptEngine) ExecuteScript(ctx context.Context, script str
 	return result, nil
 }
 
+// Task 1.4.11.1: Engine Event Bus
+func (m *mockRegistryScriptEngine) GetEventBus() EventBus {
+	return NewDefaultEventBus()
+}
+
+// Task 1.4.11.2: Type Conversion Registry
+func (m *mockRegistryScriptEngine) RegisterTypeConverter(fromType, toType string, converter TypeConverterFunc) error {
+	return nil
+}
+
+func (m *mockRegistryScriptEngine) GetTypeRegistry() TypeRegistry {
+	return NewDefaultTypeRegistry()
+}
+
+// Task 1.4.11.3: Engine Profiling
+func (m *mockRegistryScriptEngine) EnableProfiling(config ProfilingConfig) error {
+	return nil
+}
+
+func (m *mockRegistryScriptEngine) DisableProfiling() error {
+	return nil
+}
+
+func (m *mockRegistryScriptEngine) GetProfilingReport() (*ProfilingReport, error) {
+	return &ProfilingReport{}, nil
+}
+
+// Task 1.4.11.4: Engine API Export
+func (m *mockRegistryScriptEngine) ExportAPI(format ExportFormat) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
+func (m *mockRegistryScriptEngine) GenerateClientLibrary(language string, options ClientLibraryOptions) ([]byte, error) {
+	return []byte("{}"), nil
+}
+
 // Mock implementation of ScriptContext for registry testing
 type mockRegistryScriptContext struct {
 	id        string
