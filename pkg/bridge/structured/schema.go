@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"reflect"
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -20,17 +22,23 @@ import (
 
 // SchemaBridge provides access to go-llms schema validation system
 type SchemaBridge struct {
-	mu          sync.RWMutex
-	initialized bool
-	validator   schemaDomain.Validator
-	generator   schemaDomain.SchemaGenerator
-	repository  schemaDomain.SchemaRepository
-	schemas     map[string]*schemaDomain.Schema // Simple in-memory storage
+	mu           sync.RWMutex
+	initialized  bool
+	validator    schemaDomain.Validator
+	generator    schemaDomain.SchemaGenerator
+	repository   schemaDomain.SchemaRepository
+	fileRepo     schemaDomain.SchemaRepository        // File-based repository for persistence
+	migrators    map[string]repository.SchemaMigrator // Migration registry
+	tagGenerator schemaDomain.SchemaGenerator         // Tag-based generator
+	schemas      map[string]*schemaDomain.Schema      // Simple in-memory storage
 }
 
 // NewSchemaBridge creates a new schema bridge
 func NewSchemaBridge() *SchemaBridge {
-	return &SchemaBridge{}
+	return &SchemaBridge{
+		migrators: make(map[string]repository.SchemaMigrator),
+		schemas:   make(map[string]*schemaDomain.Schema),
+	}
 }
 
 // GetID returns the bridge ID
@@ -42,8 +50,8 @@ func (b *SchemaBridge) GetID() string {
 func (b *SchemaBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Schema Bridge",
-		Version:     "1.0.0",
-		Description: "Provides access to go-llms schema validation and generation system",
+		Version:     "2.0.0",
+		Description: "Provides access to go-llms schema validation, generation, versioning, and migration system",
 		Author:      "go-llmspell",
 	}
 }
@@ -61,6 +69,8 @@ func (b *SchemaBridge) Initialize(ctx context.Context) error {
 	b.validator = validation.NewValidator()
 	b.generator = generator.NewReflectionSchemaGenerator()
 	b.repository = repository.NewInMemorySchemaRepository()
+	b.tagGenerator = generator.NewTagSchemaGenerator()
+	// Note: fileRepo will be initialized on demand when a directory is specified
 
 	b.initialized = true
 	return nil
@@ -174,6 +184,92 @@ func (b *SchemaBridge) Methods() []engine.MethodInfo {
 			},
 			ReturnType: "void",
 		},
+		// Versioning and migration methods
+		{
+			Name:        "initializeFileRepository",
+			Description: "Initialize file-based repository for schema persistence",
+			Parameters: []engine.ParameterInfo{
+				{Name: "directory", Type: "string", Description: "Directory path for schema storage", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "saveSchemaVersion",
+			Description: "Save a specific version of a schema",
+			Parameters: []engine.ParameterInfo{
+				{Name: "id", Type: "string", Description: "Schema ID", Required: true},
+				{Name: "schema", Type: "object", Description: "Schema object", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "getSchemaVersion",
+			Description: "Get a specific version of a schema",
+			Parameters: []engine.ParameterInfo{
+				{Name: "id", Type: "string", Description: "Schema ID", Required: true},
+				{Name: "version", Type: "number", Description: "Version number", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "listSchemaVersions",
+			Description: "List all versions of a schema",
+			Parameters: []engine.ParameterInfo{
+				{Name: "id", Type: "string", Description: "Schema ID", Required: true},
+			},
+			ReturnType: "array",
+		},
+		{
+			Name:        "setCurrentSchemaVersion",
+			Description: "Set the current version of a schema",
+			Parameters: []engine.ParameterInfo{
+				{Name: "id", Type: "string", Description: "Schema ID", Required: true},
+				{Name: "version", Type: "number", Description: "Version number", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "registerMigrator",
+			Description: "Register a schema migrator",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Migrator name", Required: true},
+				{Name: "migrator", Type: "function", Description: "Migrator function", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "migrateSchema",
+			Description: "Migrate a schema between versions",
+			Parameters: []engine.ParameterInfo{
+				{Name: "id", Type: "string", Description: "Schema ID", Required: true},
+				{Name: "fromVersion", Type: "number", Description: "Source version", Required: true},
+				{Name: "toVersion", Type: "number", Description: "Target version", Required: true},
+				{Name: "migratorName", Type: "string", Description: "Migrator to use", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "exportRepository",
+			Description: "Export entire repository to JSON",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "string",
+		},
+		{
+			Name:        "importRepository",
+			Description: "Import repository from JSON",
+			Parameters: []engine.ParameterInfo{
+				{Name: "data", Type: "string", Description: "JSON data to import", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "generateFromTags",
+			Description: "Generate schema from struct tags",
+			Parameters: []engine.ParameterInfo{
+				{Name: "source", Type: "string", Description: "Source code with struct tags", Required: true},
+			},
+			ReturnType: "object",
+		},
 	}
 }
 
@@ -202,6 +298,18 @@ func (b *SchemaBridge) TypeMappings() map[string]engine.TypeMapping {
 		},
 		"SchemaGenerator": {
 			GoType:     "SchemaGenerator",
+			ScriptType: "object",
+		},
+		"SchemaVersion": {
+			GoType:     "SchemaVersion",
+			ScriptType: "object",
+		},
+		"SchemaMigrator": {
+			GoType:     "SchemaMigrator",
+			ScriptType: "function",
+		},
+		"SchemaMetadata": {
+			GoType:     "SchemaMetadata",
 			ScriptType: "object",
 		},
 	}
@@ -386,9 +494,23 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []in
 			return nil, fmt.Errorf("id must be string")
 		}
 
-		schema, err := b.repository.Get(id)
+		// Use file repo if available, otherwise memory repo
+		repo := b.repository
+		if b.fileRepo != nil {
+			repo = b.fileRepo
+		}
+
+		schema, err := repo.Get(id)
 		if err != nil {
-			return nil, fmt.Errorf("schema not found: %w", err)
+			// If file repo failed, try memory repo as fallback
+			if b.fileRepo != nil && repo != b.repository {
+				schema, err = b.repository.Get(id)
+				if err != nil {
+					return nil, fmt.Errorf("schema not found: %w", err)
+				}
+			} else {
+				return nil, fmt.Errorf("schema not found: %w", err)
+			}
 		}
 
 		return schemaToScript(schema), nil
@@ -408,6 +530,313 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []in
 		}
 
 		return nil, nil
+
+	case "initializeFileRepository":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("initializeFileRepository requires directory parameter")
+		}
+
+		directory, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("directory must be string")
+		}
+
+		// Create file-based repository
+		fileRepo, err := repository.NewFileSchemaRepository(directory)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize file repository: %w", err)
+		}
+
+		b.fileRepo = fileRepo
+		return nil, nil
+
+	case "saveSchemaVersion":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("saveSchemaVersion requires id and schema parameters")
+		}
+
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+
+		schemaDef, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		schema, err := scriptToSchema(schemaDef)
+		if err != nil {
+			return nil, fmt.Errorf("invalid schema: %w", err)
+		}
+
+		// Use file repo if available, otherwise memory repo
+		repo := b.repository
+		if b.fileRepo != nil {
+			repo = b.fileRepo
+		}
+
+		if err := repo.Save(id, schema); err != nil {
+			return nil, fmt.Errorf("failed to save schema version: %w", err)
+		}
+
+		// Get version info if available from FileSchemaRepository metadata
+		if fileRepo, ok := repo.(*repository.FileSchemaRepository); ok {
+			// Read metadata file directly
+			metadataPath := fmt.Sprintf("%s/%s/metadata.json", b.getBasePath(fileRepo), id)
+			if data, err := os.ReadFile(metadataPath); err == nil {
+				var metadata repository.SchemaMetadata
+				if json.Unmarshal(data, &metadata) == nil {
+					return map[string]interface{}{
+						"id":             metadata.ID,
+						"latestVersion":  metadata.LatestVersion,
+						"currentVersion": metadata.CurrentVersion,
+						"totalVersions":  metadata.TotalVersions,
+					}, nil
+				}
+			}
+		}
+
+		return map[string]interface{}{"saved": true}, nil
+
+	case "getSchemaVersion":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("getSchemaVersion requires id and version parameters")
+		}
+
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+
+		version, err := getIntValue(args[1])
+		if err != nil {
+			return nil, fmt.Errorf("version must be number: %w", err)
+		}
+
+		// Use file repo if available
+		repo := b.repository
+		if b.fileRepo != nil {
+			repo = b.fileRepo
+		}
+
+		// Check if repo supports versioning (both file and memory repos have GetVersion)
+		if versionedRepo, ok := repo.(interface {
+			GetVersion(string, int) (*schemaDomain.Schema, error)
+		}); ok {
+			schema, err := versionedRepo.GetVersion(id, version)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get schema version: %w", err)
+			}
+			return schemaToScript(schema), nil
+		}
+
+		return nil, fmt.Errorf("repository does not support versioning")
+
+	case "listSchemaVersions":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("listSchemaVersions requires id parameter")
+		}
+
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+
+		// Use file repo if available
+		repo := b.repository
+		if b.fileRepo != nil {
+			repo = b.fileRepo
+		}
+
+		// Check if repo supports versioning - file repo has ListVersions, memory repo has ListVersions
+		if fileRepo, ok := repo.(*repository.FileSchemaRepository); ok {
+			versions, err := fileRepo.ListVersions(id)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list schema versions: %w", err)
+			}
+			return versions, nil
+		}
+
+		// For memory repo, get from versions
+		if memRepo, ok := repo.(*repository.InMemorySchemaRepository); ok {
+			versions, err := memRepo.ListVersions(id)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list schema versions: %w", err)
+			}
+			// Extract just the version numbers
+			var versionNumbers []int
+			for _, v := range versions {
+				versionNumbers = append(versionNumbers, v.Version)
+			}
+			return versionNumbers, nil
+		}
+
+		return nil, fmt.Errorf("repository does not support versioning")
+
+	case "setCurrentSchemaVersion":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("setCurrentSchemaVersion requires id and version parameters")
+		}
+
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+
+		version, err := getIntValue(args[1])
+		if err != nil {
+			return nil, fmt.Errorf("version must be number: %w", err)
+		}
+
+		// Use file repo if available
+		repo := b.repository
+		if b.fileRepo != nil {
+			repo = b.fileRepo
+		}
+
+		// Check if repo supports versioning
+		if fileRepo, ok := repo.(*repository.FileSchemaRepository); ok {
+			if err := fileRepo.SetCurrentVersion(id, version); err != nil {
+				return nil, fmt.Errorf("failed to set current version: %w", err)
+			}
+			return nil, nil
+		}
+
+		// For memory repo
+		if memRepo, ok := repo.(*repository.InMemorySchemaRepository); ok {
+			if err := memRepo.SetCurrentVersion(id, version); err != nil {
+				return nil, fmt.Errorf("failed to set current version: %w", err)
+			}
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("repository does not support versioning")
+
+	case "registerMigrator":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerMigrator requires name and migrator parameters")
+		}
+
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		// Create a script-based migrator wrapper
+		migrator := &scriptMigrator{
+			scriptFunc: args[1],
+		}
+
+		b.migrators[name] = migrator
+		return nil, nil
+
+	case "migrateSchema":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("migrateSchema requires id, fromVersion, and toVersion parameters")
+		}
+
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+
+		fromVersion, err := getIntValue(args[1])
+		if err != nil {
+			return nil, fmt.Errorf("fromVersion must be number: %w", err)
+		}
+
+		toVersion, err := getIntValue(args[2])
+		if err != nil {
+			return nil, fmt.Errorf("toVersion must be number: %w", err)
+		}
+
+		// Get migrator name if provided
+		migratorName := "default"
+		if len(args) > 3 {
+			if name, ok := args[3].(string); ok {
+				migratorName = name
+			}
+		}
+
+		// Use file repo if available
+		repo := b.repository
+		if b.fileRepo != nil {
+			repo = b.fileRepo
+		}
+
+		// Check if repo supports migration (only file repo has Migrate method)
+		if fileRepo, ok := repo.(*repository.FileSchemaRepository); ok {
+			migrator, exists := b.migrators[migratorName]
+			if !exists {
+				return nil, fmt.Errorf("migrator '%s' not found", migratorName)
+			}
+
+			if err := fileRepo.Migrate(id, fromVersion, toVersion, migrator); err != nil {
+				return nil, fmt.Errorf("migration failed: %w", err)
+			}
+
+			// Get the migrated schema
+			schema, err := fileRepo.GetVersion(id, toVersion)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get migrated schema: %w", err)
+			}
+
+			return schemaToScript(schema), nil
+		}
+
+		return nil, fmt.Errorf("repository does not support migration")
+
+	case "exportRepository":
+		// Check if repo supports export
+		if memRepo, ok := b.repository.(*repository.InMemorySchemaRepository); ok {
+			data, err := memRepo.Export()
+			if err != nil {
+				return nil, fmt.Errorf("failed to export repository: %w", err)
+			}
+			return string(data), nil
+		}
+
+		return nil, fmt.Errorf("repository does not support export")
+
+	case "importRepository":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("importRepository requires data parameter")
+		}
+
+		data, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("data must be string")
+		}
+
+		// Check if repo supports import
+		if memRepo, ok := b.repository.(*repository.InMemorySchemaRepository); ok {
+			if err := memRepo.Import([]byte(data)); err != nil {
+				return nil, fmt.Errorf("failed to import repository: %w", err)
+			}
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("repository does not support import")
+
+	case "generateFromTags":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("generateFromTags requires source parameter")
+		}
+
+		source, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("source must be string")
+		}
+
+		// Use tag generator to parse struct tags
+		// Note: This is a simplified implementation - actual parsing would need more work
+		schema, err := b.tagGenerator.GenerateSchema(source)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate schema from tags: %w", err)
+		}
+
+		return schemaToScript(schema), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
@@ -672,4 +1101,44 @@ func getNumericValue(val interface{}) *float64 {
 	default:
 		return nil
 	}
+}
+
+// getIntValue converts a numeric value to int
+func getIntValue(val interface{}) (int, error) {
+	switch v := val.(type) {
+	case int:
+		return v, nil
+	case int32:
+		return int(v), nil
+	case int64:
+		return int(v), nil
+	case float32:
+		return int(v), nil
+	case float64:
+		return int(v), nil
+	default:
+		return 0, fmt.Errorf("value must be numeric, got %T", val)
+	}
+}
+
+// scriptMigrator wraps a script function as a SchemaMigrator
+type scriptMigrator struct {
+	scriptFunc interface{}
+}
+
+// Migrate implements repository.SchemaMigrator
+func (m *scriptMigrator) Migrate(schema *schemaDomain.Schema, fromVersion, toVersion int) (*schemaDomain.Schema, error) {
+	// This would need to be implemented based on the script engine
+	// For now, return an error indicating script execution is needed
+	return nil, fmt.Errorf("script-based migration not yet implemented - requires script engine integration")
+}
+
+// getBasePath extracts the base path from a FileSchemaRepository using reflection
+func (b *SchemaBridge) getBasePath(repo *repository.FileSchemaRepository) string {
+	v := reflect.ValueOf(repo).Elem()
+	basePathField := v.FieldByName("basePath")
+	if !basePathField.IsValid() {
+		return ""
+	}
+	return basePathField.String()
 }

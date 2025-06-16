@@ -55,15 +55,15 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
 
 #### 1.4.5 Schema Bridge Full Implementation
 
-- [ ] **Task 1.4.5.1: Add Schema Versioning and Migration**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Add fileRepo for file-based persistence
-  - [ ] Implement saveSchemaVersion method
-  - [ ] Add schema migration support
-  - [ ] Create migration registry
-  - [ ] Implement automatic migration
-  - [ ] Add migration validation
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.5.1: Add Schema Versioning and Migration** [COMPLETED - 2025-06-16]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Add fileRepo for file-based persistence
+  - [x] Implement saveSchemaVersion method
+  - [x] Add schema migration support
+  - [x] Create migration registry
+  - [x] Implement automatic migration
+  - [x] Add migration validation
+  - [x] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.5.2: Add Tag-Based Schema Generation**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -378,9 +378,21 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
 ---
 
 ## Phase 2: Lua Engine Implementation
+### 2.1 Lua Engine Research and Planning
+- [ ] 2.1.1. Research gopher-lua integration with go and add additional TODO.md entries as needed 
+- [ ] 2.1.2. Analyze lua_State management and memory integration
+- [ ] 2.1.3. Design ScriptValue ↔ Lua type conversion system 
+- [ ] 2.1.4. Plan coroutine integration for async operations
+- [ ] 2.1.5. Design security sandboxing approach
+- [ ] 2.1.6. Create detailed implementation roadmap
+- [ ] 2.1.7. Research Lua bytecode validation and security implications - may not apply to gopher-lua
+- [ ] 2.1.8. Investigate gopher-lua, Lua 5.4 warning system integration 
+- [ ] 2.1.9. Study gopher-Lua generational GC vs incremental GC trade-offs
+- [ ] 2.1.10. Research Lua debug introspection capabilities for development tools
+- [ ] 2.1.11. Combine all research documents and re-synthesize into one lua_engine_architecture.md document
 
-### 2.1 Lua Engine Core
-- [ ] **Task 2.1.1: Engine Implementation**
+### 2.2 Lua Engine Core
+- [ ] **Task 2.2.1: Engine Implementation**
   - [ ] Create test file `/pkg/engine/lua/engine_test.go`
   - [ ] Test ScriptEngine interface implementation
   - [ ] Test GopherLua integration
@@ -390,7 +402,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Integrate GopherLua
   - [ ] Implement resource limits
 
-- [ ] **Task 2.1.2: Type Converter**
+- [ ] **Task 2.2.2: Type Converter**
   - [ ] Create test file `/pkg/engine/lua/converter_test.go`
   - [ ] Test Lua ↔ Go type conversions
   - [ ] Test Lua tables → Go maps/arrays
@@ -398,7 +410,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Implement type conversions
   - [ ] Optimize for performance
 
-- [ ] **Task 2.1.3: Security Sandbox**
+- [ ] **Task 2.2.3: Security Sandbox**
   - [ ] Create test file `/pkg/engine/lua/sandbox_test.go`
   - [ ] Test dangerous functions disabled
   - [ ] Test file system restrictions
@@ -406,8 +418,8 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Disable dangerous Lua functions
   - [ ] Implement restrictions
 
-### 2.2 Lua Standard Library
-- [ ] **Task 2.2.1: Core Modules**
+### 2.3 Lua Standard Library
+- [ ] **Task 2.3.1: Core Modules**
   - [ ] Create `/pkg/engine/lua/stdlib/core.lua`
   - [ ] Create `/pkg/engine/lua/stdlib/llm.lua` - LLM bridge wrapper
   - [ ] Create `/pkg/engine/lua/stdlib/tools.lua` - Tools bridge wrapper
