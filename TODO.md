@@ -98,47 +98,7 @@ All workflow bridge serialization features completed. See TODO-DONE.md for detai
 
 #### ✅ 1.4.11 Engine Integration [COMPLETED - 2025-06-16]
 
-Enhanced engine capabilities for advanced scripting needs. Bridge go-llms core functionality for profiling, events, and API generation.
-
-- ✅ **Task 1.4.11.1: Add Engine Event Bus** [COMPLETED]
-  - ✅ Ensure we leverage imports from go-llms pkg
-  - ✅ Add GetEventBus to ScriptEngine interface
-  - ✅ Implement event bus per engine
-  - ✅ Support cross-engine events
-  - ✅ Add event routing
-  - ✅ Implement event priorities
-  - ✅ Test event isolation
-  - ✅ Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- ✅ **Task 1.4.11.2: Add Type Conversion Registry** [COMPLETED]
-  - ✅ Ensure we leverage imports from go-llms pkg
-  - ✅ Add RegisterTypeConverter method
-  - ✅ Implement conversion registry
-  - ✅ Support bidirectional conversions
-  - ✅ Add conversion caching
-  - ✅ Generate conversion docs
-  - ✅ Test conversion accuracy
-  - ✅ Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- ✅ **Task 1.4.11.3: Add Engine Profiling** [COMPLETED]
-  - ✅ Ensure we leverage imports from go-llms pkg
-  - ✅ Add EnableProfiling method
-  - ✅ Implement profiler interface
-  - ✅ Track script execution
-  - ✅ Monitor memory usage
-  - ✅ Generate performance reports
-  - ✅ Add optimization hints
-  - ✅ Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- ✅ **Task 1.4.11.4: Add Engine API Export** [COMPLETED]
-  - ✅ Ensure we leverage imports from go-llms pkg
-  - ✅ Add ExportAPI method
-  - ✅ Generate API specifications
-  - ✅ Include type information
-  - ✅ Add method signatures
-  - ✅ Generate client libraries
-  - ✅ Support API versioning
-  - ✅ Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+Enhanced engine capabilities for advanced scripting needs. Bridge go-llms core functionality for profiling, events, and API generation. See TODO-DONE.md for detailed completion summary.
 
 ### 1.5 Additional Original Bridges
 
@@ -202,21 +162,49 @@ Enhanced engine capabilities for advanced scripting needs. Bridge go-llms core f
   - [ ] Implement tool deprecation handling
   - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
-- [ ] **Task 1.5.7: Profiling Bridge**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Create `/pkg/bridge/observability/profiling.go`
-  - [ ] Bridge performance profiling utilities
-  - [ ] Support integration test profiling
-  - [ ] Enable performance monitoring from scripts
-  - [ ] Add CPU and memory profiling
-  - [ ] Generate profiling reports
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+- [ ] **Task 1.5.7: Profiling Bridge** ✅ **[COMPLETED - Already implemented in Tasks 1.4.7.3 and 1.4.11.3]**
+  - [ ] Performance profiling already available through Agent Bridge and Engine Integration
+  - [ ] go-llms profiling infrastructure already bridged
+  - [ ] CPU and memory profiling already implemented
 
 - [ ] **Task 1.5.8: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms
 
 - [ ] **Task 1.5.9: Conversation Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms
+
+### 1.6 Logging Infrastructure
+
+- [ ] **Task 1.6.1: Debug Logging Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
+  - [ ] Create `/pkg/bridge/util/debug.go`
+  - [ ] Bridge go-llms debug logging system (`pkg/internal/debug`)
+  - [ ] Support component-based debug control via `GO_LLMS_DEBUG` environment variable
+  - [ ] Expose debug.Printf and debug.Println to scripts
+  - [ ] Enable conditional compilation support (debug vs production builds)
+  - [ ] Support custom logger integration with debug.SetLogger
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+
+- [ ] **Task 1.6.2: Structured Logging Bridge**
+  - [ ] Ensure we leverage imports from go-llms pkg
+  - [ ] Create `/pkg/bridge/util/slog.go`
+  - [ ] Bridge slog integration for structured logging (`pkg/agent/core/logging_hook.go`)
+  - [ ] Expose log levels: Basic, Detailed, Debug with emoji enhancement
+  - [ ] Support structured logging with key-value pairs from scripts
+  - [ ] Enable log message truncation and JSON marshaling
+  - [ ] Bridge LoggingHook for agent operations
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+
+- [ ] **Task 1.6.3: Script Logger Interface Design**
+  - [ ] Ensure we leverage imports from go-llms pkg
+  - [ ] Create `/pkg/bridge/util/script_logger.go`
+  - [ ] Design unified script-friendly logging APIs
+  - [ ] Combine debug and structured logging capabilities
+  - [ ] Support context propagation through script calls
+  - [ ] Integrate with existing bridge error handling
+  - [ ] Support log formatting and output customization
+  - [ ] Enable logger configuration from script environments
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 ---
 

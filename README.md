@@ -48,12 +48,18 @@ log.info("Story created!")
   - Agent, workflow, events, tools, and hooks bridges
   - Enhanced custom tool support with go-llms v0.3.5
   - Comprehensive test coverage with go-llms testutils
-- ✅ **Phase 1.4.1-1.4.4** - v0.3.5 Feature Integration complete
+- ✅ **Phase 1.4** - v0.3.5 Feature Integration complete
   - Foundation updates with event system and documentation generation
   - State bridge enhancements with schema validation and persistence
   - Utility bridge upgrades (v2.0) with structured output parsing
   - LLM bridge advanced features (schema validation, metadata, streaming)
-- 🚧 **Phase 1.4.5+** - Additional advanced features in progress
+  - Schema bridge full implementation with versioning and validation
+  - Agent bridge v2.0 with state serialization and performance profiling
+  - Event bridge v2.0 with complete event system capabilities
+  - Tools bridge v2.1 with enhanced execution analytics
+  - Workflow bridge v2.0 with serialization and script steps
+  - Engine Integration with event bus, type registry, profiling, and API export
+- 🚧 **Phase 1.5** - Additional Original Bridges in progress
 - 🔮 **Coming Soon** - Lua engine, then JavaScript and Tengo
 
 ## 🛠️ Quick Start
