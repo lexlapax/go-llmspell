@@ -5,13 +5,69 @@ package structured
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lexlapax/go-llms/pkg/schema/domain"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
+
+// Test helper functions using go-llms testutils patterns
+
+// setupTestBridge creates and initializes a schema bridge for testing
+func setupTestBridge(t *testing.T) (*SchemaBridge, context.Context) {
+	t.Helper()
+
+	ctx := context.Background()
+	bridge := NewSchemaBridge()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	return bridge, ctx
+}
+
+// setupTestBridgeWithFileRepo creates a bridge with file repository for versioning tests
+func setupTestBridgeWithFileRepo(t *testing.T) (*SchemaBridge, context.Context, string) {
+	t.Helper()
+
+	bridge, ctx := setupTestBridge(t)
+	tmpDir := t.TempDir()
+
+	_, err := bridge.ExecuteMethod(ctx, "initializeFileRepository", []interface{}{tmpDir})
+	require.NoError(t, err)
+	require.NotNil(t, bridge.fileRepo)
+
+	return bridge, ctx, tmpDir
+}
+
+// createTestSchema creates a standard test schema for validation tests
+func createTestSchema() map[string]interface{} {
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"id": map[string]interface{}{
+				"type":        "string",
+				"format":      "uuid",
+				"description": "Unique identifier",
+			},
+			"name": map[string]interface{}{
+				"type":        "string",
+				"minLength":   1.0,
+				"maxLength":   100.0,
+				"description": "User's full name",
+			},
+			"email": map[string]interface{}{
+				"type":        "string",
+				"format":      "email",
+				"description": "Email address",
+			},
+		},
+		"required": []interface{}{"id", "name", "email"},
+	}
+}
 
 func TestSchemaBridge_BasicOperations(t *testing.T) {
 	tests := []struct {
@@ -101,9 +157,7 @@ func TestSchemaBridge_Methods(t *testing.T) {
 }
 
 func TestSchemaBridge_SchemaOperations(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewSchemaBridge()
-	require.NoError(t, bridge.Initialize(ctx))
+	bridge, ctx := setupTestBridge(t)
 
 	tests := []struct {
 		name     string
@@ -265,20 +319,11 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 }
 
 func TestSchemaBridge_Repository(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewSchemaBridge()
-	require.NoError(t, bridge.Initialize(ctx))
+	bridge, ctx := setupTestBridge(t)
 
 	// Test schema storage and retrieval
 	t.Run("save and get schema", func(t *testing.T) {
-		schema := map[string]interface{}{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"id": map[string]interface{}{
-					"type": "string",
-				},
-			},
-		}
+		schema := createTestSchema()
 
 		// Save schema
 		_, err := bridge.ExecuteMethod(ctx, "saveSchema", []interface{}{"test-schema", schema})
@@ -303,9 +348,7 @@ func TestSchemaBridge_Repository(t *testing.T) {
 }
 
 func TestSchemaBridge_SchemaGeneration(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewSchemaBridge()
-	require.NoError(t, bridge.Initialize(ctx))
+	bridge, ctx := setupTestBridge(t)
 
 	t.Run("generateSchemaFromType generates schema from struct", func(t *testing.T) {
 		// Test with a sample struct type representation
@@ -342,32 +385,73 @@ func TestSchemaBridge_SchemaGeneration(t *testing.T) {
 }
 
 func TestSchemaBridge_ErrorHandling(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewSchemaBridge()
+	// Test table-driven error scenarios using go-llms testutils patterns
+	errorTests := []struct {
+		name        string
+		setup       func() (*SchemaBridge, context.Context)
+		method      string
+		args        []interface{}
+		expectedErr string
+	}{
+		{
+			name: "methods fail when not initialized",
+			setup: func() (*SchemaBridge, context.Context) {
+				return NewSchemaBridge(), context.Background()
+			},
+			method:      "createSchema",
+			args:        []interface{}{},
+			expectedErr: "not initialized",
+		},
+		{
+			name: "unknown method returns error",
+			setup: func() (*SchemaBridge, context.Context) {
+				bridge, ctx := setupTestBridge(t)
+				return bridge, ctx
+			},
+			method:      "unknownMethod",
+			args:        []interface{}{},
+			expectedErr: "method not found",
+		},
+		{
+			name: "missing required arguments",
+			setup: func() (*SchemaBridge, context.Context) {
+				bridge, ctx := setupTestBridge(t)
+				return bridge, ctx
+			},
+			method:      "createProperty",
+			args:        []interface{}{},
+			expectedErr: "requires",
+		},
+		{
+			name: "wrong argument type",
+			setup: func() (*SchemaBridge, context.Context) {
+				bridge, ctx := setupTestBridge(t)
+				return bridge, ctx
+			},
+			method:      "validateJSON",
+			args:        []interface{}{123, "data"},
+			expectedErr: "schema must be",
+		},
+		{
+			name: "import invalid data",
+			setup: func() (*SchemaBridge, context.Context) {
+				bridge, ctx := setupTestBridge(t)
+				return bridge, ctx
+			},
+			method:      "importRepository",
+			args:        []interface{}{"invalid json"},
+			expectedErr: "failed to import repository",
+		},
+	}
 
-	t.Run("methods fail when not initialized", func(t *testing.T) {
-		_, err := bridge.ExecuteMethod(ctx, "createSchema", []interface{}{})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not initialized")
-	})
-
-	require.NoError(t, bridge.Initialize(ctx))
-
-	t.Run("unknown method returns error", func(t *testing.T) {
-		_, err := bridge.ExecuteMethod(ctx, "unknownMethod", []interface{}{})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "method not found")
-	})
-
-	t.Run("invalid arguments return error", func(t *testing.T) {
-		// Missing required arguments
-		_, err := bridge.ExecuteMethod(ctx, "createProperty", []interface{}{})
-		assert.Error(t, err)
-
-		// Wrong argument type
-		_, err = bridge.ExecuteMethod(ctx, "validateJSON", []interface{}{123, "data"})
-		assert.Error(t, err)
-	})
+	for _, tt := range errorTests {
+		t.Run(tt.name, func(t *testing.T) {
+			bridge, ctx := tt.setup()
+			_, err := bridge.ExecuteMethod(ctx, tt.method, tt.args)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.expectedErr)
+		})
+	}
 }
 
 func TestSchemaBridge_TypeMappings(t *testing.T) {
@@ -411,4 +495,264 @@ func TestSchemaBridge_Permissions(t *testing.T) {
 		}
 	}
 	assert.True(t, hasSchemaPermission, "Missing schema operation permission")
+}
+
+// Versioning and migration tests
+
+func TestSchemaBridge_Versioning(t *testing.T) {
+	bridge, ctx, _ := setupTestBridgeWithFileRepo(t)
+
+	t.Run("save schema with file persistence", func(t *testing.T) {
+		// Create a test schema
+		schema := createTestSchema()
+		schema["title"] = "User Profile"
+		schema["description"] = "User profile schema for testing"
+
+		// Save schema version
+		result, err := bridge.ExecuteMethod(ctx, "saveSchemaVersion", []interface{}{"user-profile", schema})
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+
+		// Check returned metadata
+		metadata, ok := result.(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, "user-profile", metadata["id"])
+		assert.Equal(t, 1, metadata["latestVersion"])
+		assert.Equal(t, 1, metadata["currentVersion"])
+		assert.Equal(t, 1, metadata["totalVersions"])
+	})
+
+	t.Run("get specific schema version", func(t *testing.T) {
+		// Save additional versions
+		for i := 2; i <= 3; i++ {
+			schema := map[string]interface{}{
+				"type":        "object",
+				"title":       "User Profile",
+				"description": fmt.Sprintf("Version %d of user profile", i),
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type": "string",
+					},
+					"name": map[string]interface{}{
+						"type": "string",
+					},
+					"email": map[string]interface{}{
+						"type": "string",
+					},
+				},
+				"required": []interface{}{"id", "name", "email"},
+			}
+
+			if i == 3 {
+				// Add new field in version 3
+				schema["properties"].(map[string]interface{})["age"] = map[string]interface{}{
+					"type":        "integer",
+					"minimum":     0.0,
+					"maximum":     150.0,
+					"description": "User's age",
+				}
+			}
+
+			_, err := bridge.ExecuteMethod(ctx, "saveSchemaVersion", []interface{}{"user-profile", schema})
+			require.NoError(t, err)
+		}
+
+		// Get version 2
+		result, err := bridge.ExecuteMethod(ctx, "getSchemaVersion", []interface{}{"user-profile", 2})
+		assert.NoError(t, err)
+
+		schema, ok := result.(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, "Version 2 of user profile", schema["description"])
+
+		// Verify version 2 doesn't have age field
+		props := schema["properties"].(map[string]interface{})
+		assert.NotContains(t, props, "age")
+
+		// Get version 3
+		result, err = bridge.ExecuteMethod(ctx, "getSchemaVersion", []interface{}{"user-profile", 3})
+		assert.NoError(t, err)
+
+		schema, ok = result.(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, "Version 3 of user profile", schema["description"])
+
+		// Verify version 3 has age field
+		props = schema["properties"].(map[string]interface{})
+		assert.Contains(t, props, "age")
+	})
+
+	t.Run("list schema versions", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "listSchemaVersions", []interface{}{"user-profile"})
+		assert.NoError(t, err)
+
+		versions, ok := result.([]int)
+		assert.True(t, ok)
+		assert.Equal(t, []int{1, 2, 3}, versions)
+	})
+
+	t.Run("set current schema version", func(t *testing.T) {
+		// Set version 2 as current
+		_, err := bridge.ExecuteMethod(ctx, "setCurrentSchemaVersion", []interface{}{"user-profile", 2})
+		assert.NoError(t, err)
+
+		// Get current version (should be v2)
+		result, err := bridge.ExecuteMethod(ctx, "getSchema", []interface{}{"user-profile"})
+		assert.NoError(t, err)
+
+		schema, ok := result.(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, "Version 2 of user profile", schema["description"])
+
+		// Set back to latest
+		_, err = bridge.ExecuteMethod(ctx, "setCurrentSchemaVersion", []interface{}{"user-profile", 3})
+		assert.NoError(t, err)
+	})
+}
+
+func TestSchemaBridge_Migration(t *testing.T) {
+	bridge, ctx, _ := setupTestBridgeWithFileRepo(t)
+
+	t.Run("register and use migrator", func(t *testing.T) {
+		// Create v1 schema
+		v1Schema := map[string]interface{}{
+			"type":  "object",
+			"title": "Config v1",
+			"properties": map[string]interface{}{
+				"apiKey": map[string]interface{}{
+					"type": "string",
+				},
+			},
+			"required": []interface{}{"apiKey"},
+		}
+
+		// Save v1
+		_, err := bridge.ExecuteMethod(ctx, "saveSchemaVersion", []interface{}{"config", v1Schema})
+		require.NoError(t, err)
+
+		// Create v2 schema with renamed field
+		v2Schema := map[string]interface{}{
+			"type":  "object",
+			"title": "Config v2",
+			"properties": map[string]interface{}{
+				"api_key": map[string]interface{}{
+					"type": "string",
+				},
+				"timeout": map[string]interface{}{
+					"type":    "integer",
+					"minimum": 0.0,
+				},
+			},
+			"required": []interface{}{"api_key"},
+		}
+
+		// Save v2
+		_, err = bridge.ExecuteMethod(ctx, "saveSchemaVersion", []interface{}{"config", v2Schema})
+		require.NoError(t, err)
+
+		// Register a test migrator function
+		testMigrator := func(schema *domain.Schema, from, to int) (*domain.Schema, error) {
+			// This is just for testing - real migration would be done in script
+			return schema, nil
+		}
+
+		// Register migrator
+		_, err = bridge.ExecuteMethod(ctx, "registerMigrator", []interface{}{"test-migrator", testMigrator})
+		assert.NoError(t, err)
+
+		// Verify migrator was registered
+		assert.Contains(t, bridge.migrators, "test-migrator")
+	})
+
+	t.Run("migrate schema", func(t *testing.T) {
+		// Attempt migration (will fail since script integration not implemented)
+		_, err := bridge.ExecuteMethod(ctx, "migrateSchema", []interface{}{"config", 1, 2, "test-migrator"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "script-based migration not yet implemented")
+	})
+
+	t.Run("migration with non-existent migrator", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "migrateSchema", []interface{}{"config", 1, 2, "non-existent"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "migrator 'non-existent' not found")
+	})
+
+	t.Run("migration with non-versioned repository", func(t *testing.T) {
+		// Save to memory repo only
+		schema := map[string]interface{}{
+			"type": "object",
+		}
+		_, err := bridge.ExecuteMethod(ctx, "saveSchema", []interface{}{"memory-schema", schema})
+		require.NoError(t, err)
+
+		// Try to migrate (should fail - no migrator registered for default)
+		_, err = bridge.ExecuteMethod(ctx, "migrateSchema", []interface{}{"memory-schema", 1, 2})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "migrator 'default' not found")
+	})
+}
+
+func TestSchemaBridge_ImportExport(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("export and import repository", func(t *testing.T) {
+		// Create some schemas
+		schemas := []struct {
+			id     string
+			schema map[string]interface{}
+		}{
+			{
+				id: "schema1",
+				schema: map[string]interface{}{
+					"type":  "object",
+					"title": "Schema 1",
+				},
+			},
+			{
+				id: "schema2",
+				schema: map[string]interface{}{
+					"type":  "object",
+					"title": "Schema 2",
+					"properties": map[string]interface{}{
+						"field": map[string]interface{}{
+							"type": "string",
+						},
+					},
+				},
+			},
+		}
+
+		// Save schemas
+		for _, s := range schemas {
+			_, err := bridge.ExecuteMethod(ctx, "saveSchema", []interface{}{s.id, s.schema})
+			require.NoError(t, err)
+		}
+
+		// Export repository
+		result, err := bridge.ExecuteMethod(ctx, "exportRepository", []interface{}{})
+		assert.NoError(t, err)
+
+		exported, ok := result.(string)
+		assert.True(t, ok)
+		assert.NotEmpty(t, exported)
+
+		// Create new bridge and import
+		bridge2 := NewSchemaBridge()
+		err = bridge2.Initialize(ctx)
+		require.NoError(t, err)
+
+		// Import data
+		_, err = bridge2.ExecuteMethod(ctx, "importRepository", []interface{}{exported})
+		assert.NoError(t, err)
+
+		// Verify schemas were imported
+		for _, s := range schemas {
+			result, err := bridge2.ExecuteMethod(ctx, "getSchema", []interface{}{s.id})
+			assert.NoError(t, err)
+
+			schema, ok := result.(map[string]interface{})
+			assert.True(t, ok)
+			assert.Equal(t, s.schema["title"], schema["title"])
+		}
+	})
 }

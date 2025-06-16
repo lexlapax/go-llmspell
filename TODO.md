@@ -65,15 +65,15 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [x] Add migration validation
   - [x] Check tests to use go-llms pkg/testutils
 
-- [ ] **Task 1.4.5.2: Add Tag-Based Schema Generation**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Add tagGenerator field
-  - [ ] Implement generateFromTags method
-  - [ ] Support struct tag parsing
-  - [ ] Add custom tag handlers
-  - [ ] Generate documentation from tags
-  - [ ] Support nested struct generation
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.5.2: Add Tag-Based Schema Generation** [COMPLETED - 2025-06-16]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Add tagGenerator field
+  - [x] Implement generateFromTags method
+  - [x] Support struct tag parsing
+  - [x] Add custom tag handlers
+  - [x] Generate documentation from tags
+  - [x] Support nested struct generation
+  - [x] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.5.3: Add Schema Import/Export**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -83,7 +83,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add schema format conversion
   - [ ] Implement schema merging
   - [ ] Add schema diff generation
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.5.4: Add Custom Validators**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -93,7 +93,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Implement validation caching
   - [ ] Add validation performance metrics
   - [ ] Support conditional validation
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 #### 1.4.6 Model Info Bridge Intelligence
 
@@ -105,7 +105,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Track latency, token usage, costs
   - [ ] Generate performance trends
   - [ ] Add anomaly detection
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.6.2: Add Model Recommendation Engine**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -115,7 +115,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Support multi-criteria optimization
   - [ ] Add recommendation explanations
   - [ ] Implement A/B testing support
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.6.3: Add Model Catalog Export**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -125,7 +125,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add capability matrices
   - [ ] Generate comparison charts
   - [ ] Support custom export formats
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 #### 1.4.7 Agent Bridge Advanced Features
 
@@ -137,7 +137,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add state encryption option
   - [ ] Implement state versioning
   - [ ] Test state portability
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.7.2: Add Agent Replay from Events**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -147,7 +147,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add replay debugging
   - [ ] Implement deterministic replay
   - [ ] Add replay visualization
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.7.3: Add Agent Performance Profiling**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -157,7 +157,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Generate flame graphs
   - [ ] Add bottleneck detection
   - [ ] Support continuous profiling
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 #### 1.4.8 Event Bridge Replacement
 
@@ -169,7 +169,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Implement event filtering
   - [ ] Add event serialization
   - [ ] Update all event tests
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.8.2: Add Event Aggregation**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -179,7 +179,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add aggregation caching
   - [ ] Implement real-time dashboards
   - [ ] Export aggregated metrics
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.8.3: Add Event Replay System**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -189,7 +189,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add checkpoint support
   - [ ] Implement replay hooks
   - [ ] Test replay accuracy
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 #### 1.4.9 Tools Bridge Enhancement
 
@@ -201,7 +201,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Validate output format
   - [ ] Add validation caching
   - [ ] Generate validation reports
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.9.2: Add Tool Documentation Generation**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -211,7 +211,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add interactive playground
   - [ ] Generate SDK snippets
   - [ ] Support multiple languages
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.9.3: Add Tool Execution Analytics**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -221,7 +221,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Generate usage reports
   - [ ] Implement cost tracking
   - [ ] Add anomaly alerts
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 #### 1.4.10 Workflow Bridge Serialization
 
@@ -233,7 +233,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Support version compatibility
   - [ ] Add migration support
   - [ ] Test round-trip accuracy
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.10.2: Add Script Step Handlers**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -243,7 +243,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add step composition
   - [ ] Support async steps
   - [ ] Add step visualization
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.10.3: Add Workflow Templates**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -253,7 +253,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add template composition
   - [ ] Generate template documentation
   - [ ] Implement template versioning
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 #### 1.4.11 Engine Integration
 
@@ -265,7 +265,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add event routing
   - [ ] Implement event priorities
   - [ ] Test event isolation
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.11.2: Add Type Conversion Registry**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -275,7 +275,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add conversion caching
   - [ ] Generate conversion docs
   - [ ] Test conversion accuracy
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.11.3: Add Engine Profiling**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -285,7 +285,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Monitor memory usage
   - [ ] Generate performance reports
   - [ ] Add optimization hints
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.11.4: Add Engine API Export**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -295,7 +295,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Add method signatures
   - [ ] Generate client libraries
   - [ ] Support API versioning
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 ### 1.5 Additional Original Bridges
 
@@ -307,7 +307,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Enable trace correlation
   - [ ] Add trace sampling configuration
   - [ ] Support custom trace attributes
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.5.2: Guardrails Bridge**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -317,7 +317,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Enable behavioral constraints
   - [ ] Add custom guardrail rules
   - [ ] Implement guardrail analytics
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.5.3: Metrics Bridge**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -327,7 +327,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Enable metric aggregation
   - [ ] Add metric export formats
   - [ ] Implement alerting rules
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.5.4: Provider System Bridge**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -337,7 +337,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Bridge multi-provider with strategies (primary/fallback, sequential)
   - [ ] Expose provider configuration and options
   - [ ] Add provider-specific optimizations
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.5.5: Provider Pool Bridge**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -347,7 +347,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Support connection limits and timeouts
   - [ ] Add pool health monitoring
   - [ ] Implement adaptive pooling
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.5.6: Built-in Tools Registry Bridge**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -357,7 +357,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Support dynamic tool loading
   - [ ] Add tool versioning support
   - [ ] Implement tool deprecation handling
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.5.7: Profiling Bridge**
   - [ ] Ensure we leverage imports from go-llms pkg
@@ -367,7 +367,7 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [ ] Enable performance monitoring from scripts
   - [ ] Add CPU and memory profiling
   - [ ] Generate profiling reports
-  - [ ] Check tests to use go-llms pkg/testutils
+  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.5.8: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms

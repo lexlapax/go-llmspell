@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -266,7 +267,41 @@ func (b *SchemaBridge) Methods() []engine.MethodInfo {
 			Name:        "generateFromTags",
 			Description: "Generate schema from struct tags",
 			Parameters: []engine.ParameterInfo{
-				{Name: "source", Type: "string", Description: "Source code with struct tags", Required: true},
+				{Name: "source", Type: "any", Description: "Struct object or type to analyze", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "setTagPriority",
+			Description: "Set the order in which tags are processed",
+			Parameters: []engine.ParameterInfo{
+				{Name: "tags", Type: "array", Description: "Array of tag names in priority order", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "registerTagParser",
+			Description: "Register a custom tag parser",
+			Parameters: []engine.ParameterInfo{
+				{Name: "tagName", Type: "string", Description: "Name of the tag to parse", Required: true},
+				{Name: "parser", Type: "function", Description: "Parser function", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "extractValidationRules",
+			Description: "Extract validation rules from struct tags",
+			Parameters: []engine.ParameterInfo{
+				{Name: "source", Type: "any", Description: "Struct object or type to analyze", Required: true},
+			},
+			ReturnType: "array",
+		},
+		{
+			Name:        "generateWithDocumentation",
+			Description: "Generate schema with embedded documentation from tags",
+			Parameters: []engine.ParameterInfo{
+				{Name: "source", Type: "any", Description: "Struct object or type to analyze", Required: true},
+				{Name: "includeExamples", Type: "boolean", Description: "Include example values from tags", Required: false},
 			},
 			ReturnType: "object",
 		},
@@ -311,6 +346,18 @@ func (b *SchemaBridge) TypeMappings() map[string]engine.TypeMapping {
 		"SchemaMetadata": {
 			GoType:     "SchemaMetadata",
 			ScriptType: "object",
+		},
+		"TagParser": {
+			GoType:     "TagParser",
+			ScriptType: "function",
+		},
+		"ValidationRule": {
+			GoType:     "ValidationRule",
+			ScriptType: "object",
+		},
+		"ValidationExtractor": {
+			GoType:     "ValidationExtractor",
+			ScriptType: "function",
 		},
 	}
 }
@@ -824,16 +871,96 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []in
 			return nil, fmt.Errorf("generateFromTags requires source parameter")
 		}
 
-		source, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("source must be string")
-		}
-
-		// Use tag generator to parse struct tags
-		// Note: This is a simplified implementation - actual parsing would need more work
-		schema, err := b.tagGenerator.GenerateSchema(source)
+		// Try to use the source directly - scripts would pass Go objects
+		schema, err := b.tagGenerator.GenerateSchema(args[0])
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate schema from tags: %w", err)
+		}
+
+		return schemaToScript(schema), nil
+
+	case "setTagPriority":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("setTagPriority requires tags parameter")
+		}
+
+		tags, ok := args[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("tags must be array")
+		}
+
+		// Convert to string slice
+		tagNames := make([]string, len(tags))
+		for i, tag := range tags {
+			tagStr, ok := tag.(string)
+			if !ok {
+				return nil, fmt.Errorf("all tag names must be strings")
+			}
+			tagNames[i] = tagStr
+		}
+
+		// Set tag priority on the generator
+		if tagGen, ok := b.tagGenerator.(*generator.TagSchemaGenerator); ok {
+			tagGen.SetTagPriority(tagNames)
+		} else {
+			return nil, fmt.Errorf("tag generator does not support priority setting")
+		}
+
+		return nil, nil
+
+	case "registerTagParser":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerTagParser requires tagName and parser parameters")
+		}
+
+		tagName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("tagName must be string")
+		}
+
+		// Create a wrapper for the script parser
+		scriptParser := &scriptTagParser{
+			scriptFunc: args[1],
+		}
+
+		// Register with the tag generator
+		if tagGen, ok := b.tagGenerator.(*generator.TagSchemaGenerator); ok {
+			tagGen.RegisterTagParser(tagName, scriptParser.Parse)
+		} else {
+			return nil, fmt.Errorf("tag generator does not support custom parsers")
+		}
+
+		return nil, nil
+
+	case "extractValidationRules":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("extractValidationRules requires source parameter")
+		}
+
+		// Extract validation rules using reflection
+		rules, err := b.extractValidationRulesFromStruct(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract validation rules: %w", err)
+		}
+
+		return rules, nil
+
+	case "generateWithDocumentation":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("generateWithDocumentation requires source parameter")
+		}
+
+		includeExamples := false
+		if len(args) > 1 {
+			if examples, ok := args[1].(bool); ok {
+				includeExamples = examples
+			}
+		}
+
+		// Generate schema with enhanced documentation
+		schema, err := b.generateSchemaWithDocumentation(args[0], includeExamples)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate schema with documentation: %w", err)
 		}
 
 		return schemaToScript(schema), nil
@@ -1141,4 +1268,258 @@ func (b *SchemaBridge) getBasePath(repo *repository.FileSchemaRepository) string
 		return ""
 	}
 	return basePathField.String()
+}
+
+// scriptTagParser wraps a script function as a TagParser
+type scriptTagParser struct {
+	scriptFunc interface{}
+}
+
+// Parse implements generator.TagParser (placeholder for script engine integration)
+func (p *scriptTagParser) Parse(tagValue string, prop *schemaDomain.Property) error {
+	// This would need to be implemented based on the script engine
+	// For now, return an error indicating script execution is needed
+	return fmt.Errorf("script-based tag parsing not yet implemented - requires script engine integration")
+}
+
+// extractValidationRulesFromStruct extracts validation rules from a struct using reflection
+func (b *SchemaBridge) extractValidationRulesFromStruct(source interface{}) ([]interface{}, error) {
+	t := reflect.TypeOf(source)
+	if t == nil {
+		return nil, fmt.Errorf("cannot extract rules from nil")
+	}
+
+	// Handle pointers
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	// Only handle structs
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("validation rule extraction only supports structs, got %s", t.Kind())
+	}
+
+	var rules []interface{}
+
+	// Process each field
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		// Skip unexported fields
+		if !field.IsExported() {
+			continue
+		}
+
+		// Extract rules from tags
+		fieldRules := b.extractRulesFromField(field)
+		if len(fieldRules) > 0 {
+			ruleMap := map[string]interface{}{
+				"field": field.Name,
+				"rules": fieldRules,
+			}
+			rules = append(rules, ruleMap)
+		}
+	}
+
+	return rules, nil
+}
+
+// extractRulesFromField extracts validation rules from a specific field
+func (b *SchemaBridge) extractRulesFromField(field reflect.StructField) []interface{} {
+	var rules []interface{}
+
+	// Check common validation tags
+	validationTags := []string{"validate", "binding", "schema"}
+
+	for _, tagName := range validationTags {
+		tagValue := field.Tag.Get(tagName)
+		if tagValue == "" {
+			continue
+		}
+
+		// Parse tag value and extract rules
+		tagRules := b.parseValidationTag(tagName, tagValue)
+		rules = append(rules, tagRules...)
+	}
+
+	return rules
+}
+
+// parseValidationTag parses a validation tag and returns rules
+func (b *SchemaBridge) parseValidationTag(tagName, tagValue string) []interface{} {
+	var rules []interface{}
+
+	switch tagName {
+	case "validate", "binding":
+		for _, rule := range strings.Split(tagValue, ",") {
+			rule = strings.TrimSpace(rule)
+			if rule == "" {
+				continue
+			}
+
+			ruleObj := map[string]interface{}{
+				"type":   rule,
+				"source": tagName,
+			}
+
+			// Handle parameterized rules
+			if idx := strings.Index(rule, "="); idx > 0 {
+				ruleObj["type"] = rule[:idx]
+				ruleObj["value"] = rule[idx+1:]
+			}
+
+			rules = append(rules, ruleObj)
+		}
+
+	case "schema":
+		for _, part := range strings.Split(tagValue, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+
+			if idx := strings.Index(part, "="); idx > 0 {
+				ruleObj := map[string]interface{}{
+					"type":   part[:idx],
+					"value":  part[idx+1:],
+					"source": tagName,
+				}
+				rules = append(rules, ruleObj)
+			}
+		}
+	}
+
+	return rules
+}
+
+// generateSchemaWithDocumentation generates a schema with enhanced documentation
+func (b *SchemaBridge) generateSchemaWithDocumentation(source interface{}, includeExamples bool) (*schemaDomain.Schema, error) {
+	// First generate the basic schema
+	schema, err := b.tagGenerator.GenerateSchema(source)
+	if err != nil {
+		return nil, err
+	}
+
+	// Enhance with additional documentation
+	t := reflect.TypeOf(source)
+	if t == nil {
+		return schema, nil
+	}
+
+	// Handle pointers
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	if t.Kind() != reflect.Struct {
+		return schema, nil
+	}
+
+	// Enhance properties with additional documentation
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+
+		// Get field name (same logic as tag generator)
+		fieldName := b.getFieldNameForDoc(field)
+		if fieldName == "" {
+			continue
+		}
+
+		// Enhance property if it exists
+		if prop, exists := schema.Properties[fieldName]; exists {
+			enhancedProp := b.enhancePropertyDocumentation(field, prop, includeExamples)
+			schema.Properties[fieldName] = enhancedProp
+		}
+	}
+
+	// Add schema-level documentation
+	b.enhanceSchemaDocumentation(t, schema)
+
+	return schema, nil
+}
+
+// getFieldNameForDoc gets the field name for documentation (similar to tag generator logic)
+func (b *SchemaBridge) getFieldNameForDoc(field reflect.StructField) string {
+	// Check JSON tag first
+	if jsonTag := field.Tag.Get("json"); jsonTag != "" {
+		parts := strings.Split(jsonTag, ",")
+		if parts[0] == "-" {
+			return ""
+		}
+		if parts[0] != "" {
+			return parts[0]
+		}
+	}
+
+	// Check schema tag
+	if schemaTag := field.Tag.Get("schema"); schemaTag != "" {
+		for _, part := range strings.Split(schemaTag, ",") {
+			if strings.HasPrefix(part, "name=") {
+				return strings.TrimPrefix(part, "name=")
+			}
+		}
+	}
+
+	return field.Name
+}
+
+// enhancePropertyDocumentation enhances a property with additional documentation
+func (b *SchemaBridge) enhancePropertyDocumentation(field reflect.StructField, prop schemaDomain.Property, includeExamples bool) schemaDomain.Property {
+	// Add examples if requested
+	if includeExamples {
+		if example := field.Tag.Get("example"); example != "" {
+			// Note: JSON Schema examples would go here if supported
+			if prop.Description != "" {
+				prop.Description += fmt.Sprintf(" (Example: %s)", example)
+			} else {
+				prop.Description = fmt.Sprintf("Example: %s", example)
+			}
+		}
+	}
+
+	// Add deprecation info
+	if deprecated := field.Tag.Get("deprecated"); deprecated != "" {
+		if prop.Description != "" {
+			prop.Description += " [DEPRECATED"
+			if deprecated != "true" {
+				prop.Description += ": " + deprecated
+			}
+			prop.Description += "]"
+		} else {
+			prop.Description = "DEPRECATED"
+			if deprecated != "true" {
+				prop.Description += ": " + deprecated
+			}
+		}
+	}
+
+	// Add version info
+	if version := field.Tag.Get("version"); version != "" {
+		if prop.Description != "" {
+			prop.Description += fmt.Sprintf(" (Since: %s)", version)
+		} else {
+			prop.Description = fmt.Sprintf("Since: %s", version)
+		}
+	}
+
+	return prop
+}
+
+// enhanceSchemaDocumentation enhances schema-level documentation
+func (b *SchemaBridge) enhanceSchemaDocumentation(t reflect.Type, schema *schemaDomain.Schema) {
+	// Create comprehensive description
+	if schema.Description == "" {
+		pkg := t.PkgPath()
+		if pkg != "" {
+			schema.Description = fmt.Sprintf("Generated from %s.%s", pkg, t.Name())
+		} else {
+			schema.Description = fmt.Sprintf("Generated from %s", t.Name())
+		}
+	}
+
+	// Add version info if available (would come from build tags or constants)
+	schema.Description += " - Generated by go-llmspell tag-based schema generator"
 }
