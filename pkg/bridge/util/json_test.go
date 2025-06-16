@@ -22,8 +22,8 @@ func TestUtilJSONBridgeMetadata(t *testing.T) {
 	metadata := bridge.GetMetadata()
 
 	assert.Equal(t, "util_json", metadata.Name)
-	assert.Equal(t, "1.0.0", metadata.Version)
-	assert.Contains(t, metadata.Description, "JSON utilities")
+	assert.Equal(t, "2.0.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "Structured output parser")
 	assert.Equal(t, "go-llmspell", metadata.Author)
 	assert.Equal(t, "MIT", metadata.License)
 }

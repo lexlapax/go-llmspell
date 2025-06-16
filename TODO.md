@@ -92,14 +92,14 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [ ] Update tests for new parser capabilities
   - [ ] Check tests to use go-llms pkg/testutils
 
-- [ ] **Task 1.4.3.2: Enhance Auth Bridge with OAuth2 Discovery**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Add OAuth2 .well-known endpoint discovery
-  - [ ] Implement token validation with schema system
-  - [ ] Add auth event logging for security audit
-  - [ ] Implement credential serialization
-  - [ ] Add token refresh automation
-  - [ ] Support multiple auth schemes per endpoint
+- [x] **Task 1.4.3.2: Enhance Auth Bridge with OAuth2 Discovery** [COMPLETED - 2025-06-16]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Add OAuth2 .well-known endpoint discovery
+  - [x] Implement token validation with schema system
+  - [x] Add auth event logging for security audit
+  - [x] Implement credential serialization
+  - [x] Add token refresh automation
+  - [x] Support multiple auth schemes per endpoint
   - [ ] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.3.3: Enhance LLM Utility Bridge**

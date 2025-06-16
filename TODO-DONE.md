@@ -945,5 +945,52 @@ All core bridge functionality is now complete and ready for script engine integr
   - ✅ Maintained backward compatibility with existing JSON utilities
   - ✅ Used go-llms singleton patterns for optimal performance (global schema cache, default prompt enhancer)
 
+- ✅ **Task 1.4.3.2: Enhance Auth Bridge with OAuth2 Discovery** [COMPLETED - 2025-06-16]
+  - ✅ Leveraged imports from go-llms pkg (util/auth, agent/domain, agent/events, schema/domain, schema/validation)
+  - ✅ Enhanced auth bridge with go-llms v0.3.5 features:
+    - SessionManager for credential management
+    - EventEmitter for auth event logging
+    - Validator for token validation
+    - Schema system for credential validation
+  - ✅ Added OAuth2 .well-known endpoint discovery:
+    - discoverOAuth2Endpoints method simulates .well-known/openid-configuration
+    - Returns standard OpenID Connect discovery metadata
+    - Note: Actual HTTP discovery not in go-llms yet, so simulated
+  - ✅ Implemented token validation with schema system:
+    - validateOAuth2Token parses JWT and validates against schema
+    - parseJWTClaims extracts claims without verification
+    - Schema validation for token claims if schema provided
+  - ✅ Added auth event logging for security audit:
+    - logAuthEvent emits security events via EventEmitter/EventBus
+    - getAuthEventHistory retrieves event history
+    - subscribeToAuthEvents for real-time monitoring
+    - Events: login, logout, refresh, failure, discovery attempts
+  - ✅ Implemented credential serialization:
+    - serializeCredentials for secure storage (encryption ready)
+    - deserializeCredentials for retrieval
+    - cacheCredentials with TTL and metadata
+    - Credential versioning and validation
+  - ✅ Added token refresh automation:
+    - autoRefreshToken configures automatic refresh
+    - Tracks refresh timing and metadata
+    - Integration with session management
+  - ✅ Support multiple auth schemes per endpoint:
+    - registerAuthScheme for endpoint-specific auth
+    - getAuthSchemes with pattern matching
+    - selectBestAuthScheme for optimal auth selection
+    - Multi-scheme authentication strategies
+  - ✅ Additional enhancements:
+    - Session management (createAuthSession, validateSession)
+    - Credential masking (maskCredentials for logs)
+    - API key rotation suggestions (rotateAPIKey)
+    - Custom header authentication with prefixes
+    - OAuth2 configuration and token exchange
+  - ✅ Updated bridge metadata to v2.0.0 reflecting enhanced OAuth2 capabilities
+  - ✅ Fixed compilation errors:
+    - Added missing strings import
+    - Fixed JWT claims type handling (converted struct to map)
+    - Corrected ParseJWTClaims return value conversion
+  - ✅ Updated tests to match new v2.0.0 metadata and description
+
 ### Next Phase Ready:
-**Task 1.4.3.1 of Utility Bridge Upgrades is complete.** Tasks 1.4.3.2-1.4.3.4 are next.
+**Task 1.4.3.2 of Utility Bridge Upgrades is complete.** Tasks 1.4.3.3-1.4.3.4 are next.

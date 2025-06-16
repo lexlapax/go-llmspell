@@ -22,8 +22,8 @@ func TestUtilAuthBridgeMetadata(t *testing.T) {
 	metadata := bridge.GetMetadata()
 
 	assert.Equal(t, "util_auth", metadata.Name)
-	assert.Equal(t, "1.0.0", metadata.Version)
-	assert.Contains(t, metadata.Description, "Authentication utilities")
+	assert.Equal(t, "2.0.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "Enhanced authentication with OAuth2 flows")
 	assert.Equal(t, "go-llmspell", metadata.Author)
 	assert.Equal(t, "MIT", metadata.License)
 }
