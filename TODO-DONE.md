@@ -1,4 +1,4 @@
-# TODO-DONE: Go-LLMSpell v0.3.3 Migration - Completed Tasks
+# TODO-DONE: Go-LLMSpell v0.3.5 Migration - Completed Tasks
 
 This file tracks completed tasks for the go-llmspell multi-engine architecture migration to v0.3.3.
 
@@ -900,5 +900,25 @@ All core bridge functionality is now complete and ready for script engine integr
 - ✅ Fixed race condition in event system tests using atomic operations
 - ✅ Leveraged go-llms pkg/testutils for consistent test patterns
 
+- ✅ **Task 1.4.2.4: Add State Transformation Pipeline** [COMPLETED - 2025-06-15]
+  - ✅ Leveraged imports from go-llms pkg (core.StateTransform, StateManager)
+  - ✅ Integrated with go-llms transformation pipeline using StateManager
+  - ✅ Added pipeline configuration from scripts with ExecuteMethod cases
+  - ✅ Supported chained transformations with pipeline system
+  - ✅ Added transformation validation through built-in transform types
+  - ✅ Implemented transformation caching with cacheKey generation
+  - ✅ Added transformation metrics with TransformMetrics struct tracking:
+    - Execution count, duration, success/error rates
+    - Cache hits/misses, last execution time
+    - Average duration calculations
+  - ✅ Created registerTransform method for dynamic transform registration
+  - ✅ Created applyTransform method for single transform execution
+  - ✅ Created createPipeline method for chained transformation setup
+  - ✅ Created applyPipeline method for pipeline execution with caching
+  - ✅ Created getTransformMetrics method for performance monitoring
+  - ✅ Fixed compilation errors (RegisterTransform signature, SharedStateContext API)
+  - ✅ Added all built-in transform types: filter, selectKeys, renameKeys, prefixKeys, normalizeKeys, flatten, clearMessages, limitMessages, filterMessagesByRole
+  - ✅ Implemented helper methods: sharedContextToState, updateSharedContextFromState, updateTransformMetrics
+
 ### Next Phase Ready:
-**Phase 1.4.1 Foundation Updates is complete.** All infrastructure is in place for Phase 1.4.2: State Bridge Enhancements.
+**Tasks 1.4.2.1-1.4.2.4 of State Bridge Enhancements are complete.** Phase 1.4.3: Utility Bridge Upgrades is next.

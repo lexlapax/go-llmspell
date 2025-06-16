@@ -24,6 +24,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
+// TransformMetrics tracks transformation pipeline metrics
+type TransformMetrics struct {
+	ExecutionCount  int64         `json:"execution_count"`
+	TotalDuration   time.Duration `json:"total_duration"`
+	AverageDuration time.Duration `json:"average_duration"`
+	LastExecuted    time.Time     `json:"last_executed"`
+	SuccessCount    int64         `json:"success_count"`
+	ErrorCount      int64         `json:"error_count"`
+	CacheHits       int64         `json:"cache_hits"`
+	CacheMisses     int64         `json:"cache_misses"`
+}
+
 // StateContextBridge bridges go-llms SharedStateContext to script engines
 type StateContextBridge struct {
 	mu       sync.RWMutex
@@ -51,6 +63,13 @@ type StateContextBridge struct {
 	stateVersions  map[string][]int         // contextID -> version numbers
 	enableCompress bool                     // Enable compression for large states
 	persistenceMu  sync.RWMutex             // Separate mutex for persistence operations
+
+	// State transformation pipeline fields from go-llms v0.3.5
+	transformPipelines map[string][]string               // contextID -> transform chain names
+	pipelineConfigs    map[string]map[string]interface{} // pipelineID -> config
+	transformCache     map[string]*domain.State          // Cache for transformed states
+	transformMetrics   map[string]*TransformMetrics      // Metrics per pipeline
+	transformMu        sync.RWMutex                      // Separate mutex for transformation operations
 }
 
 // inheritanceConfig tracks inheritance settings for a shared context
@@ -125,6 +144,13 @@ func NewStateContextBridgeWithOptions(eventEmitter domain.EventEmitter, persistD
 		stateVersions:  make(map[string][]int),
 		enableCompress: enableCompress,
 		persistenceMu:  sync.RWMutex{},
+
+		// State transformation pipeline from go-llms
+		transformPipelines: make(map[string][]string),
+		pipelineConfigs:    make(map[string]map[string]interface{}),
+		transformCache:     make(map[string]*domain.State),
+		transformMetrics:   make(map[string]*TransformMetrics),
+		transformMu:        sync.RWMutex{},
 	}, nil
 }
 
@@ -2987,7 +3013,609 @@ func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, arg
 		}
 		return b.migrateState(ctx, params)
 
+	// Transformation pipeline methods
+	case "registerTransform":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerTransform requires name and transformType parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		transformType, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("transformType must be string")
+		}
+
+		var config map[string]interface{}
+		if len(args) > 2 {
+			if cfg, ok := args[2].(map[string]interface{}); ok {
+				config = cfg
+			}
+		}
+
+		params := map[string]interface{}{
+			"name":          name,
+			"transformType": transformType,
+			"config":        config,
+		}
+		return b.registerTransform(ctx, params)
+
+	case "applyTransform":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("applyTransform requires context and transformName parameters")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+		transformName, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("transformName must be string")
+		}
+
+		params := map[string]interface{}{
+			"context":       contextObj,
+			"transformName": transformName,
+		}
+		return b.applyTransform(ctx, params)
+
+	case "createPipeline":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("createPipeline requires pipelineId and transforms parameters")
+		}
+		pipelineId, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pipelineId must be string")
+		}
+		transforms, ok := args[1].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("transforms must be array")
+		}
+
+		var config map[string]interface{}
+		if len(args) > 2 {
+			if cfg, ok := args[2].(map[string]interface{}); ok {
+				config = cfg
+			}
+		}
+
+		params := map[string]interface{}{
+			"pipelineId": pipelineId,
+			"transforms": transforms,
+			"config":     config,
+		}
+		return b.createPipeline(ctx, params)
+
+	case "applyPipeline":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("applyPipeline requires context and pipelineId parameters")
+		}
+		contextObj, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("context must be object")
+		}
+		pipelineId, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("pipelineId must be string")
+		}
+
+		params := map[string]interface{}{
+			"context":    contextObj,
+			"pipelineId": pipelineId,
+		}
+		return b.applyPipeline(ctx, params)
+
+	case "getTransformMetrics":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getTransformMetrics requires pipelineId parameter")
+		}
+		pipelineId, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pipelineId must be string")
+		}
+
+		params := map[string]interface{}{
+			"pipelineId": pipelineId,
+		}
+		return b.getTransformMetrics(ctx, params)
+
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
+	}
+}
+
+// State transformation pipeline methods using go-llms infrastructure
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) registerTransform(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	name, ok := params["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("name parameter is required and must be a string")
+	}
+
+	transformType, ok := params["transformType"].(string)
+	if !ok {
+		return nil, fmt.Errorf("transformType parameter is required and must be a string")
+	}
+
+	config, _ := params["config"].(map[string]interface{})
+
+	// Create the appropriate transform based on type
+	var transform core.StateTransform
+	switch transformType {
+	case "filter":
+		pattern := ""
+		if config != nil {
+			if p, ok := config["pattern"].(string); ok {
+				pattern = p
+			}
+		}
+		transform = core.FilterTransform(pattern)
+
+	case "selectKeys":
+		keys := []string{}
+		if config != nil {
+			if keysList, ok := config["keys"].([]interface{}); ok {
+				for _, k := range keysList {
+					if keyStr, ok := k.(string); ok {
+						keys = append(keys, keyStr)
+					}
+				}
+			}
+		}
+		transform = core.SelectKeysTransform(keys...)
+
+	case "renameKeys":
+		mapping := make(map[string]string)
+		if config != nil {
+			if mappingConfig, ok := config["mapping"].(map[string]interface{}); ok {
+				for k, v := range mappingConfig {
+					if vStr, ok := v.(string); ok {
+						mapping[k] = vStr
+					}
+				}
+			}
+		}
+		transform = core.RenameKeysTransform(mapping)
+
+	case "prefixKeys":
+		prefix := ""
+		if config != nil {
+			if p, ok := config["prefix"].(string); ok {
+				prefix = p
+			}
+		}
+		transform = core.PrefixKeysTransform(prefix)
+
+	case "normalizeKeys":
+		transform = core.NormalizeKeysTransform()
+
+	case "flatten":
+		separator := "."
+		if config != nil {
+			if s, ok := config["separator"].(string); ok {
+				separator = s
+			}
+		}
+		transform = core.FlattenTransform(separator)
+
+	case "clearMessages":
+		transform = core.ClearMessagesTransform()
+
+	case "limitMessages":
+		limit := 10
+		if config != nil {
+			if l, ok := config["limit"].(int); ok {
+				limit = l
+			} else if l, ok := config["limit"].(float64); ok {
+				limit = int(l)
+			}
+		}
+		transform = core.LimitMessagesTransform(limit)
+
+	case "filterMessagesByRole":
+		roles := []string{}
+		if config != nil {
+			if rolesList, ok := config["roles"].([]interface{}); ok {
+				for _, r := range rolesList {
+					if roleStr, ok := r.(string); ok {
+						roles = append(roles, roleStr)
+					}
+				}
+			}
+		}
+		transform = core.FilterMessagesByRole(roles...)
+
+	default:
+		return nil, fmt.Errorf("unsupported transform type: %s", transformType)
+	}
+
+	// Register the transform with the state manager
+	b.stateManager.RegisterTransform(name, transform)
+
+	return map[string]interface{}{
+		"name":          name,
+		"transformType": transformType,
+		"registered":    true,
+		"timestamp":     time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) applyTransform(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextObj, ok := params["context"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("context parameter is required and must be a shared context object")
+	}
+
+	transformName, ok := params["transformName"].(string)
+	if !ok {
+		return nil, fmt.Errorf("transformName parameter is required and must be a string")
+	}
+
+	// Get context ID
+	contextID, ok := contextObj["_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("shared context object missing _id")
+	}
+
+	// Get shared context from map
+	b.mu.RLock()
+	sharedContext, exists := b.contexts[contextID]
+	b.mu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("shared context not found: %s", contextID)
+	}
+
+	// Create a state from the shared context for transformation
+	state := b.sharedContextToState(sharedContext)
+
+	// Apply the transform using state manager
+	startTime := time.Now()
+	transformedState, err := b.stateManager.ApplyTransform(ctx, transformName, state)
+	duration := time.Since(startTime)
+
+	// Update metrics
+	b.updateTransformMetrics(transformName, duration, err == nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply transform %s: %w", transformName, err)
+	}
+
+	// Update the shared context with transformed state
+	b.mu.Lock()
+	b.updateSharedContextFromState(sharedContext, transformedState)
+	b.mu.Unlock()
+
+	// Emit transform event if event emitter is available
+	if b.eventEmitter != nil {
+		transformEventData := map[string]interface{}{
+			"contextId":     contextID,
+			"transformName": transformName,
+			"duration":      duration.String(),
+			"timestamp":     time.Now(),
+		}
+		b.eventEmitter.EmitCustom("state.transformed", transformEventData)
+	}
+
+	return map[string]interface{}{
+		"contextId":          contextID,
+		"transformName":      transformName,
+		"success":            true,
+		"duration":           duration.String(),
+		"transformedContext": b.sharedContextToScript(contextID, sharedContext),
+		"timestamp":          time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) createPipeline(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	pipelineId, ok := params["pipelineId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("pipelineId parameter is required and must be a string")
+	}
+
+	transforms, ok := params["transforms"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("transforms parameter is required and must be an array")
+	}
+
+	config, _ := params["config"].(map[string]interface{})
+
+	// Convert transforms to string array
+	transformNames := make([]string, len(transforms))
+	for i, t := range transforms {
+		if tStr, ok := t.(string); ok {
+			transformNames[i] = tStr
+		} else {
+			return nil, fmt.Errorf("transform at index %d must be a string", i)
+		}
+	}
+
+	b.transformMu.Lock()
+	defer b.transformMu.Unlock()
+
+	// Store the pipeline configuration
+	b.transformPipelines[pipelineId] = transformNames
+	if config != nil {
+		b.pipelineConfigs[pipelineId] = config
+	}
+
+	// Initialize metrics for the pipeline
+	b.transformMetrics[pipelineId] = &TransformMetrics{
+		ExecutionCount:  0,
+		TotalDuration:   0,
+		AverageDuration: 0,
+		LastExecuted:    time.Time{},
+		SuccessCount:    0,
+		ErrorCount:      0,
+		CacheHits:       0,
+		CacheMisses:     0,
+	}
+
+	return map[string]interface{}{
+		"pipelineId": pipelineId,
+		"transforms": transformNames,
+		"config":     config,
+		"created":    true,
+		"timestamp":  time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) applyPipeline(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	contextObj, ok := params["context"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("context parameter is required and must be a shared context object")
+	}
+
+	pipelineId, ok := params["pipelineId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("pipelineId parameter is required and must be a string")
+	}
+
+	// Get context ID
+	contextID, ok := contextObj["_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("shared context object missing _id")
+	}
+
+	// Get pipeline transforms
+	b.transformMu.RLock()
+	transformNames, exists := b.transformPipelines[pipelineId]
+	config := b.pipelineConfigs[pipelineId]
+	b.transformMu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("pipeline not found: %s", pipelineId)
+	}
+
+	// Get shared context from map
+	b.mu.RLock()
+	sharedContext, contextExists := b.contexts[contextID]
+	b.mu.RUnlock()
+
+	if !contextExists {
+		return nil, fmt.Errorf("shared context not found: %s", contextID)
+	}
+
+	// Check cache first if enabled
+	cacheKey := fmt.Sprintf("%s_%s_%d", contextID, pipelineId, time.Now().Unix())
+	useCache := false
+	if config != nil {
+		if cacheCfg, ok := config["cache"].(bool); ok {
+			useCache = cacheCfg
+		}
+	}
+
+	if useCache {
+		b.transformMu.RLock()
+		if cachedState, found := b.transformCache[cacheKey]; found {
+			b.transformMu.RUnlock()
+
+			// Update cache hit metrics
+			b.updateCacheMetrics(pipelineId, true)
+
+			// Update shared context from cached state
+			b.mu.Lock()
+			b.updateSharedContextFromState(sharedContext, cachedState)
+			b.mu.Unlock()
+
+			return map[string]interface{}{
+				"contextId":          contextID,
+				"pipelineId":         pipelineId,
+				"transformsApplied":  len(transformNames),
+				"fromCache":          true,
+				"transformedContext": b.sharedContextToScript(contextID, sharedContext),
+				"timestamp":          time.Now().Format(time.RFC3339),
+			}, nil
+		}
+		b.transformMu.RUnlock()
+
+		// Update cache miss metrics
+		b.updateCacheMetrics(pipelineId, false)
+	}
+
+	// Create a state from the shared context for transformation
+	state := b.sharedContextToState(sharedContext)
+
+	// Apply transforms in sequence
+	startTime := time.Now()
+	currentState := state
+	transformsApplied := 0
+
+	for _, transformName := range transformNames {
+		transformedState, err := b.stateManager.ApplyTransform(ctx, transformName, currentState)
+		if err != nil {
+			duration := time.Since(startTime)
+			b.updatePipelineMetrics(pipelineId, duration, false)
+			return nil, fmt.Errorf("failed to apply transform %s in pipeline %s: %w", transformName, pipelineId, err)
+		}
+		currentState = transformedState
+		transformsApplied++
+	}
+
+	duration := time.Since(startTime)
+	b.updatePipelineMetrics(pipelineId, duration, true)
+
+	// Cache the result if caching is enabled
+	if useCache {
+		b.transformMu.Lock()
+		b.transformCache[cacheKey] = currentState
+		b.transformMu.Unlock()
+	}
+
+	// Update the shared context with transformed state
+	b.mu.Lock()
+	b.updateSharedContextFromState(sharedContext, currentState)
+	b.mu.Unlock()
+
+	// Emit pipeline event if event emitter is available
+	if b.eventEmitter != nil {
+		pipelineEventData := map[string]interface{}{
+			"contextId":         contextID,
+			"pipelineId":        pipelineId,
+			"transformsApplied": transformsApplied,
+			"duration":          duration.String(),
+			"fromCache":         false,
+			"timestamp":         time.Now(),
+		}
+		b.eventEmitter.EmitCustom("state.pipeline.applied", pipelineEventData)
+	}
+
+	return map[string]interface{}{
+		"contextId":          contextID,
+		"pipelineId":         pipelineId,
+		"transformsApplied":  transformsApplied,
+		"duration":           duration.String(),
+		"fromCache":          false,
+		"transformedContext": b.sharedContextToScript(contextID, sharedContext),
+		"timestamp":          time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+//nolint:unused // Will be used by script engines
+func (b *StateContextBridge) getTransformMetrics(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	pipelineId, ok := params["pipelineId"].(string)
+	if !ok {
+		return nil, fmt.Errorf("pipelineId parameter is required and must be a string")
+	}
+
+	b.transformMu.RLock()
+	metrics, exists := b.transformMetrics[pipelineId]
+	b.transformMu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("metrics not found for pipeline: %s", pipelineId)
+	}
+
+	return map[string]interface{}{
+		"pipelineId":      pipelineId,
+		"executionCount":  metrics.ExecutionCount,
+		"totalDuration":   metrics.TotalDuration.String(),
+		"averageDuration": metrics.AverageDuration.String(),
+		"lastExecuted":    metrics.LastExecuted.Format(time.RFC3339),
+		"successCount":    metrics.SuccessCount,
+		"errorCount":      metrics.ErrorCount,
+		"successRate":     float64(metrics.SuccessCount) / float64(metrics.ExecutionCount),
+		"cacheHits":       metrics.CacheHits,
+		"cacheMisses":     metrics.CacheMisses,
+		"cacheHitRate":    float64(metrics.CacheHits) / float64(metrics.CacheHits+metrics.CacheMisses),
+		"timestamp":       time.Now().Format(time.RFC3339),
+	}, nil
+}
+
+// Helper methods for transformation pipeline
+
+// sharedContextToState converts a SharedStateContext to a State for transformation
+func (b *StateContextBridge) sharedContextToState(sharedContext *domain.SharedStateContext) *domain.State {
+	// Convert shared context to a regular state by merging all data
+	return sharedContext.AsState()
+}
+
+// updateSharedContextFromState updates a SharedStateContext with data from a transformed State
+func (b *StateContextBridge) updateSharedContextFromState(sharedContext *domain.SharedStateContext, state *domain.State) {
+	// Get the local state from shared context
+	currentState := sharedContext.LocalState()
+
+	// Merge the transformed state data
+	for key, value := range state.Values() {
+		currentState.Set(key, value)
+	}
+
+	// Merge artifacts
+	for _, artifact := range state.Artifacts() {
+		currentState.AddArtifact(artifact)
+	}
+
+	// Merge metadata
+	for key, value := range state.GetAllMetadata() {
+		currentState.SetMetadata(key, value)
+	}
+}
+
+// updateTransformMetrics updates metrics for individual transform execution
+func (b *StateContextBridge) updateTransformMetrics(transformName string, duration time.Duration, success bool) {
+	b.transformMu.Lock()
+	defer b.transformMu.Unlock()
+
+	metrics, exists := b.transformMetrics[transformName]
+	if !exists {
+		metrics = &TransformMetrics{}
+		b.transformMetrics[transformName] = metrics
+	}
+
+	metrics.ExecutionCount++
+	metrics.TotalDuration += duration
+	metrics.AverageDuration = time.Duration(int64(metrics.TotalDuration) / metrics.ExecutionCount)
+	metrics.LastExecuted = time.Now()
+
+	if success {
+		metrics.SuccessCount++
+	} else {
+		metrics.ErrorCount++
+	}
+}
+
+// updatePipelineMetrics updates metrics for pipeline execution
+func (b *StateContextBridge) updatePipelineMetrics(pipelineId string, duration time.Duration, success bool) {
+	b.transformMu.Lock()
+	defer b.transformMu.Unlock()
+
+	metrics, exists := b.transformMetrics[pipelineId]
+	if !exists {
+		metrics = &TransformMetrics{}
+		b.transformMetrics[pipelineId] = metrics
+	}
+
+	metrics.ExecutionCount++
+	metrics.TotalDuration += duration
+	metrics.AverageDuration = time.Duration(int64(metrics.TotalDuration) / metrics.ExecutionCount)
+	metrics.LastExecuted = time.Now()
+
+	if success {
+		metrics.SuccessCount++
+	} else {
+		metrics.ErrorCount++
+	}
+}
+
+// updateCacheMetrics updates cache-related metrics
+func (b *StateContextBridge) updateCacheMetrics(pipelineId string, hit bool) {
+	b.transformMu.Lock()
+	defer b.transformMu.Unlock()
+
+	metrics, exists := b.transformMetrics[pipelineId]
+	if !exists {
+		metrics = &TransformMetrics{}
+		b.transformMetrics[pipelineId] = metrics
+	}
+
+	if hit {
+		metrics.CacheHits++
+	} else {
+		metrics.CacheMisses++
 	}
 }
