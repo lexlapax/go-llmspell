@@ -22,7 +22,8 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1.4.5: Schema Bridge Full Implementation [COMPLETED - 2025-06-16]
 - ⏸️ Phase 1.4.6: Model Info Bridge Intelligence [DEFERRED - Not in go-llms]
 - ✅ Phase 1.4.7: Agent Bridge Advanced Features [COMPLETED - 2025-06-16]
-- 🚧 Phase 1.4.8+: Advanced Features - NEXT
+- ✅ Phase 1.4.8: Event Bridge Replacement [COMPLETED - 2025-06-16]
+- 🚧 Phase 1.4.9+: Advanced Features - NEXT
 - 🚧 Phase 2-5: Engine Implementations - NOT STARTED
 
 ---
@@ -82,37 +83,9 @@ All schema bridge full implementation completed. See TODO-DONE.md for detailed c
 
 All agent bridge advanced features completed. See TODO-DONE.md for detailed completion summary.
 
-#### 1.4.8 Event Bridge Replacement
+#### ✅ 1.4.8 Event Bridge Replacement [COMPLETED - 2025-06-16]
 
-- [ ] **Task 1.4.8.1: Replace with v0.3.5 Event System**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Remove current event bridge implementation
-  - [ ] Integrate v0.3.5 EventEmitter
-  - [ ] Add EventStore support
-  - [ ] Implement event filtering
-  - [ ] Add event serialization
-  - [ ] Update all event tests
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- [ ] **Task 1.4.8.2: Add Event Aggregation**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Implement event aggregation rules
-  - [ ] Add time-window aggregation
-  - [ ] Support custom aggregators
-  - [ ] Add aggregation caching
-  - [ ] Implement real-time dashboards
-  - [ ] Export aggregated metrics
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- [ ] **Task 1.4.8.3: Add Event Replay System**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Implement EventReplayer
-  - [ ] Add replay filtering
-  - [ ] Support speed control
-  - [ ] Add checkpoint support
-  - [ ] Implement replay hooks
-  - [ ] Test replay accuracy
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+All event bridge replacement features completed. See TODO-DONE.md for detailed completion summary.
 
 #### 1.4.9 Tools Bridge Enhancement
 
