@@ -5,6 +5,7 @@ package agent
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -545,24 +546,37 @@ func TestHooksBridge_WithAgentHelpers(t *testing.T) {
 	// Create a mock agent with delay to test hook timing
 	agent := helpers.CreateMockAgentWithDelay("test_agent", 100)
 
-	// Track hook execution timing
+	// Track hook execution timing with proper synchronization
+	var hookOrderMu sync.Mutex
 	var hookOrder []string
+
+	appendToOrder := func(order string) {
+		hookOrderMu.Lock()
+		defer hookOrderMu.Unlock()
+		hookOrder = append(hookOrder, order)
+	}
+
+	getOrder := func() []string {
+		hookOrderMu.Lock()
+		defer hookOrderMu.Unlock()
+		return append([]string(nil), hookOrder...)
+	}
 
 	// Register hooks that track execution order
 	_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{
 		"timing_hook",
 		map[string]interface{}{
 			"beforeGenerate": func(ctx interface{}, messages interface{}) {
-				hookOrder = append(hookOrder, "before_start")
+				appendToOrder("before_start")
 				// Simulate agent starting
 				go func() {
 					state := domain.NewState()
 					_, _ = agent.Run(context.Background(), state)
-					hookOrder = append(hookOrder, "agent_complete")
+					appendToOrder("agent_complete")
 				}()
 			},
 			"afterGenerate": func(ctx interface{}, response interface{}, err interface{}) {
-				hookOrder = append(hookOrder, "after_complete")
+				appendToOrder("after_complete")
 			},
 			"priority": 1,
 		},
@@ -581,5 +595,6 @@ func TestHooksBridge_WithAgentHelpers(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify execution started
-	assert.Contains(t, hookOrder, "before_start")
+	currentOrder := getOrder()
+	assert.Contains(t, currentOrder, "before_start")
 }

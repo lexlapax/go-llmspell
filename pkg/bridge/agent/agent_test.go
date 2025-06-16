@@ -94,8 +94,10 @@ func TestAgentBridgeMetadata(t *testing.T) {
 	metadata := bridge.GetMetadata()
 
 	assert.Equal(t, "agent", metadata.Name)
-	assert.Equal(t, "1.0.0", metadata.Version)
-	assert.Contains(t, metadata.Description, "agent")
+	assert.Equal(t, "2.0.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "state serialization")
+	assert.Contains(t, metadata.Description, "event replay")
+	assert.Contains(t, metadata.Description, "performance profiling")
 	assert.NotEmpty(t, metadata.Author)
 	assert.NotEmpty(t, metadata.License)
 }
@@ -148,6 +150,26 @@ func TestAgentBridgeMethods(t *testing.T) {
 		"listAgents",
 		"getAgent",
 		"removeAgent",
+		// State serialization methods (v2.0.0)
+		"exportAgentState",
+		"importAgentState",
+		"saveAgentSnapshot",
+		"loadAgentSnapshot",
+		"listAgentSnapshots",
+		"deleteAgentSnapshot",
+		// Event replay methods (v2.0.0)
+		"replayAgentEvents",
+		"startEventRecording",
+		"stopEventRecording",
+		"getEventHistory",
+		"clearEventHistory",
+		// Performance profiling methods (v2.0.0)
+		"startAgentProfiling",
+		"stopAgentProfiling",
+		"getAgentPerformanceReport",
+		"clearAgentProfilingData",
+		"exportAgentProfilingData",
+		"setAgentProfilingConfig",
 	}
 
 	methodMap := make(map[string]bool)
@@ -328,5 +350,124 @@ func TestAgentBridgeConcurrentAccess(t *testing.T) {
 	// Wait for all goroutines
 	for i := 0; i < 3; i++ {
 		<-done
+	}
+}
+
+// TestAgentBridge_StateSerializationMethods tests that state serialization methods are properly registered
+func TestAgentBridge_StateSerializationMethods(t *testing.T) {
+	bridge := NewAgentBridge()
+	methods := bridge.Methods()
+
+	// Create a map for quick lookup
+	methodMap := make(map[string]bool)
+	for _, method := range methods {
+		methodMap[method.Name] = true
+	}
+
+	// Test that all state serialization methods are present
+	stateSerializationMethods := []string{
+		"exportAgentState",
+		"importAgentState",
+		"saveAgentSnapshot",
+		"loadAgentSnapshot",
+		"listAgentSnapshots",
+		"deleteAgentSnapshot",
+	}
+
+	for _, methodName := range stateSerializationMethods {
+		t.Run(fmt.Sprintf("method_%s_registered", methodName), func(t *testing.T) {
+			assert.True(t, methodMap[methodName], "Method %s should be registered", methodName)
+		})
+	}
+
+	// Test method signatures for key state serialization methods
+	for _, method := range methods {
+		switch method.Name {
+		case "exportAgentState":
+			assert.GreaterOrEqual(t, len(method.Parameters), 2, "exportAgentState should have at least 2 parameters (agentID, format)")
+			assert.NotEmpty(t, method.Description, "exportAgentState should have a description")
+		case "saveAgentSnapshot":
+			assert.GreaterOrEqual(t, len(method.Parameters), 2, "saveAgentSnapshot should have at least 2 parameters (agentID, snapshotID)")
+			assert.NotEmpty(t, method.Description, "saveAgentSnapshot should have a description")
+		}
+	}
+}
+
+// TestAgentBridge_EventReplayMethods tests that event replay methods are properly registered
+func TestAgentBridge_EventReplayMethods(t *testing.T) {
+	bridge := NewAgentBridge()
+	methods := bridge.Methods()
+
+	// Create a map for quick lookup
+	methodMap := make(map[string]bool)
+	for _, method := range methods {
+		methodMap[method.Name] = true
+	}
+
+	// Test that all event replay methods are present
+	eventReplayMethods := []string{
+		"replayAgentEvents",
+		"startEventRecording",
+		"stopEventRecording",
+		"getEventHistory",
+		"clearEventHistory",
+	}
+
+	for _, methodName := range eventReplayMethods {
+		t.Run(fmt.Sprintf("method_%s_registered", methodName), func(t *testing.T) {
+			assert.True(t, methodMap[methodName], "Method %s should be registered", methodName)
+		})
+	}
+
+	// Test method signatures for key event replay methods
+	for _, method := range methods {
+		switch method.Name {
+		case "replayAgentEvents":
+			assert.GreaterOrEqual(t, len(method.Parameters), 2, "replayAgentEvents should have at least 2 parameters (agentID, speed)")
+			assert.NotEmpty(t, method.Description, "replayAgentEvents should have a description")
+		case "getEventHistory":
+			assert.GreaterOrEqual(t, len(method.Parameters), 2, "getEventHistory should have at least 2 parameters (agentID, limit)")
+			assert.NotEmpty(t, method.Description, "getEventHistory should have a description")
+		}
+	}
+}
+
+// TestAgentBridge_PerformanceProfilingMethods tests that performance profiling methods are properly registered
+func TestAgentBridge_PerformanceProfilingMethods(t *testing.T) {
+	bridge := NewAgentBridge()
+	methods := bridge.Methods()
+
+	// Create a map for quick lookup
+	methodMap := make(map[string]bool)
+	for _, method := range methods {
+		methodMap[method.Name] = true
+	}
+
+	// Test that all performance profiling methods are present
+	performanceProfilingMethods := []string{
+		"startAgentProfiling",
+		"stopAgentProfiling",
+		"getAgentPerformanceReport",
+		"clearAgentProfilingData",
+		"exportAgentProfilingData",
+		"setAgentProfilingConfig",
+	}
+
+	for _, methodName := range performanceProfilingMethods {
+		t.Run(fmt.Sprintf("method_%s_registered", methodName), func(t *testing.T) {
+			assert.True(t, methodMap[methodName], "Method %s should be registered", methodName)
+		})
+	}
+
+	// Test method signatures for key performance profiling methods
+	for _, method := range methods {
+		switch method.Name {
+		case "getAgentPerformanceReport":
+			assert.GreaterOrEqual(t, len(method.Parameters), 1, "getAgentPerformanceReport should have at least 1 parameter (agentID)")
+			assert.NotEmpty(t, method.Description, "getAgentPerformanceReport should have a description")
+		case "exportAgentProfilingData":
+			assert.GreaterOrEqual(t, len(method.Parameters), 2, "exportAgentProfilingData should have at least 2 parameters (agentID, format)")
+			assert.NotEmpty(t, method.Description, "exportAgentProfilingData should have a description")
+		}
 	}
 }

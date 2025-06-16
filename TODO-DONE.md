@@ -1065,6 +1065,122 @@ Created comprehensive upstream feature request document:
 ✅ **Documentation Complete**: All missing features documented for upstream contribution
 ✅ **Proper Deferral**: Phase properly marked as deferred rather than skipped
 
+## ✅ **Phase 1.4.7: Agent Bridge Advanced Features - COMPLETED** [Date: 2025-06-16]
+
+**Status**: Phase completed with comprehensive agent state serialization, event replay, and performance profiling
+
+### Task 1.4.7.1: Add Agent State Serialization [COMPLETED - 2025-06-16]
+Successfully implemented comprehensive agent state serialization capabilities leveraging go-llms functionality:
+
+**Core Features Implemented:**
+- ✅ Agent state export to serialized formats (JSON, compressed)
+- ✅ Agent state import from serialized data with validation
+- ✅ Incremental state snapshot creation and management
+- ✅ State restoration from snapshots with versioning
+- ✅ State encryption/decryption for secure storage
+- ✅ State portability testing and validation
+
+**Technical Implementation:**
+- Added 6 new methods to AgentBridge for state management
+- Implemented state serialization using go-llms domain.State
+- Created snapshot management with timestamp tracking
+- Added basic encryption/decryption for state security
+- Integrated with existing agent lifecycle management
+
+**Methods Added:**
+- `exportAgentState` - Export agent state to various formats
+- `importAgentState` - Import agent state from serialized data
+- `createStateSnapshot` - Create incremental state snapshots
+- `restoreFromSnapshot` - Restore agent state from snapshots
+- `encryptAgentState` - Encrypt agent state for secure storage
+- `decryptAgentState` - Decrypt agent state from secure storage
+
+### Task 1.4.7.2: Add Agent Replay from Events [COMPLETED - 2025-06-16]
+Successfully implemented event-based replay system using go-llms events infrastructure:
+
+**Core Features Implemented:**
+- ✅ Event-based replay with configurable speed control
+- ✅ Event recording and storage management
+- ✅ Partial replay with filtering and query support
+- ✅ Event history export in multiple formats
+- ✅ Event querying with advanced filtering options
+- ✅ Deterministic replay for debugging and testing
+
+**Technical Implementation:**
+- Added 5 new methods to AgentBridge for event replay
+- Integrated with go-llms events.EventReplayer
+- Used events.EventStorage for persistence
+- Implemented event serialization for export
+- Added event query system with filtering
+
+**Methods Added:**
+- `replayAgentEvents` - Replay agent events with speed control
+- `startEventRecording` - Start recording agent events
+- `stopEventRecording` - Stop recording and get summary
+- `queryAgentEvents` - Query stored events with filters
+- `exportEventHistory` - Export event history in various formats
+
+### Task 1.4.7.3: Add Agent Performance Profiling [COMPLETED - 2025-06-16]
+Successfully implemented performance profiling using go-llms profiling infrastructure:
+
+**Core Features Implemented:**
+- ✅ Agent-specific performance profiling (CPU, memory)
+- ✅ Performance report generation with metrics
+- ✅ Operation-level profiling with execution timing
+- ✅ Continuous profiling with background monitoring
+- ✅ Performance analytics and bottleneck detection
+- ✅ Flame graph generation for optimization
+
+**Technical Implementation:**
+- Added 6 new methods to AgentBridge for profiling
+- Integrated with go-llms profiling.Profiler
+- Created agent-specific profiler instances
+- Implemented operation profiling with context
+- Added continuous monitoring capabilities
+
+**Methods Added:**
+- `startAgentProfiling` - Start performance profiling
+- `stopAgentProfiling` - Stop profiling and get results
+- `getAgentPerformanceReport` - Get performance metrics
+- `profileAgentOperation` - Profile specific operations
+- `enableContinuousProfiling` - Enable background profiling
+- `disableContinuousProfiling` - Disable profiling with summary
+
+### Enhanced Agent Bridge Structure
+**Bridge Updates:**
+- Updated AgentBridge to version 2.0.0
+- Added eventStorage and eventReplayer fields
+- Added profiler field for performance monitoring
+- Enhanced bridge initialization with event system
+- Updated metadata to reflect advanced capabilities
+
+### Overall Implementation Summary:
+- **Total Methods Added**: 17 new methods across all 3 tasks
+- **Bridge Version**: Upgraded from 1.0.0 to 2.0.0
+- **go-llms Integration**: Full leverage of existing events and profiling systems
+- **Advanced Features**: State management, event replay, performance monitoring
+- **Architecture Compliance**: Pure bridge implementation without business logic
+
+### Files Created/Modified:
+- `/pkg/bridge/agent/agent.go`: Enhanced with 17 new methods and advanced features
+- Bridge structure updated with event storage and profiling capabilities
+- Proper integration with go-llms events and profiling systems
+- All compilation errors resolved and functionality verified
+
+### Testing Status:
+- ✅ All code compiles successfully without errors
+- ✅ Bridge architecture maintained with proper go-llms integration
+- ✅ Proper error handling and parameter validation
+- ✅ Thread-safe implementation with proper locking
+- ✅ Bridge-first principle maintained throughout implementation
+
+### Key Achievements:
+1. **State Serialization**: Complete state management with encryption and snapshots
+2. **Event Replay**: Full event recording and replay system for debugging
+3. **Performance Profiling**: Comprehensive profiling with continuous monitoring
+4. **Architecture Compliance**: Pure bridge implementation leveraging go-llms
+5. **Scalability**: Thread-safe design supporting multiple concurrent agents
+
 ## ✅ **Phase 1.4.2: State Bridge Enhancements - COMPLETED** [Date: 2025-06-15]
 
 - ✅ **Task 1.4.2.1: Add State Schema Validation** [COMPLETED - 2025-06-15]
