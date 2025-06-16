@@ -228,5 +228,69 @@ func TestLLMBridgeWithTestutils(t *testing.T) {
 	// For now, just verify the test infrastructure is available
 }
 
+func TestLLMBridgeProviderMetadata(t *testing.T) {
+	bridge := NewLLMBridge()
+	ctx := context.Background()
+
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test getProviderCapabilities when no providers exist
+	_, err = bridge.ExecuteMethod(ctx, "getProviderCapabilities", []interface{}{"nonexistent"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "provider not found")
+
+	// Test findProvidersByCapability
+	providers, err := bridge.ExecuteMethod(ctx, "findProvidersByCapability", []interface{}{"streaming"})
+	assert.NoError(t, err)
+	assert.NotNil(t, providers)
+	assert.IsType(t, []string{}, providers)
+
+	// Test selectProviderByStrategy
+	_, err = bridge.ExecuteMethod(ctx, "selectProviderByStrategy", []interface{}{"fastest"})
+	assert.NoError(t, err) // Returns empty string when no providers
+
+	// Test getProviderHealth
+	health, err := bridge.ExecuteMethod(ctx, "getProviderHealth", []interface{}{"test-provider"})
+	assert.NoError(t, err)
+	assert.NotNil(t, health)
+	healthMap, ok := health.(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "inactive", healthMap["status"])
+	assert.False(t, healthMap["healthy"].(bool))
+
+	// Test configureFallbackChain
+	_, err = bridge.ExecuteMethod(ctx, "configureFallbackChain", []interface{}{
+		[]interface{}{"primary", "secondary", "tertiary"},
+	})
+	assert.NoError(t, err)
+}
+
+func TestLLMBridgeProviderMetadataMethods(t *testing.T) {
+	bridge := NewLLMBridge()
+	methods := bridge.Methods()
+
+	// Check that provider metadata methods are present
+	metadataMethods := map[string]bool{
+		"getProviderCapabilities":   false,
+		"getModelInfo":              false,
+		"listModelsForProvider":     false,
+		"findProvidersByCapability": false,
+		"selectProviderByStrategy":  false,
+		"getProviderHealth":         false,
+		"configureFallbackChain":    false,
+	}
+
+	for _, method := range methods {
+		if _, ok := metadataMethods[method.Name]; ok {
+			metadataMethods[method.Name] = true
+		}
+	}
+
+	for method, found := range metadataMethods {
+		assert.True(t, found, "Provider metadata method %s not found", method)
+	}
+}
+
 // Note: Actual provider testing would require real go-llms Provider implementations
 // or would be done at integration test level with actual LLM providers

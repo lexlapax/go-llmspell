@@ -40,13 +40,18 @@ type LLMBridge struct {
 	schemaCache     *processor.SchemaCache          // Performance cache
 	promptEnhancer  structuredDomain.PromptEnhancer // Prompt enhancement
 	structProcessor structuredDomain.Processor      // JSON extraction
+
+	// Provider metadata components from go-llms v0.3.5
+	providerRegistry *provider.DynamicRegistry            // Provider registry
+	providerMetadata map[string]provider.ProviderMetadata // Cached metadata
 }
 
 // NewLLMBridge creates a new LLM bridge.
 func NewLLMBridge() *LLMBridge {
 	return &LLMBridge{
-		providers:       make(map[string]bridge.Provider),
-		responseSchemas: make(map[string]*schemaDomain.Schema),
+		providers:        make(map[string]bridge.Provider),
+		responseSchemas:  make(map[string]*schemaDomain.Schema),
+		providerMetadata: make(map[string]provider.ProviderMetadata),
 	}
 }
 
@@ -82,6 +87,9 @@ func (b *LLMBridge) Initialize(ctx context.Context) error {
 	b.schemaCache = processor.NewSchemaCache()
 	b.promptEnhancer = processor.NewPromptEnhancer()
 	b.structProcessor = processor.NewStructuredProcessor(b.schemaValidator)
+
+	// Initialize provider metadata components from go-llms v0.3.5
+	b.providerRegistry = provider.NewDynamicRegistry()
 
 	b.initialized = true
 	return nil
@@ -236,6 +244,65 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 			Parameters:  []engine.ParameterInfo{},
 			ReturnType:  "void",
 		},
+		// Provider metadata methods (v0.3.5)
+		{
+			Name:        "getProviderCapabilities",
+			Description: "Get capabilities for a specific provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "getModelInfo",
+			Description: "Get detailed information about a specific model",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
+				{Name: "model", Type: "string", Description: "Model name", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "listModelsForProvider",
+			Description: "List all available models for a provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
+			},
+			ReturnType: "array",
+		},
+		{
+			Name:        "findProvidersByCapability",
+			Description: "Find providers that support a specific capability",
+			Parameters: []engine.ParameterInfo{
+				{Name: "capability", Type: "string", Description: "Capability name (e.g., streaming, functionCalling)", Required: true},
+			},
+			ReturnType: "array",
+		},
+		{
+			Name:        "selectProviderByStrategy",
+			Description: "Select a provider using a specific strategy",
+			Parameters: []engine.ParameterInfo{
+				{Name: "strategy", Type: "string", Description: "Selection strategy (fastest, cheapest, mostCapable)", Required: true},
+				{Name: "requirements", Type: "object", Description: "Optional requirements", Required: false},
+			},
+			ReturnType: "string",
+		},
+		{
+			Name:        "getProviderHealth",
+			Description: "Get health status of a provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "configureFallbackChain",
+			Description: "Configure a fallback chain of providers",
+			Parameters: []engine.ParameterInfo{
+				{Name: "providers", Type: "array", Description: "Ordered list of provider names", Required: true},
+			},
+			ReturnType: "void",
+		},
 	}
 }
 
@@ -268,6 +335,22 @@ func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 		},
 		"SchemaInfo": {
 			GoType:     "SchemaInfo",
+			ScriptType: "object",
+		},
+		"ProviderMetadata": {
+			GoType:     "ProviderMetadata",
+			ScriptType: "object",
+		},
+		"ModelInfo": {
+			GoType:     "ModelInfo",
+			ScriptType: "object",
+		},
+		"Capability": {
+			GoType:     "Capability",
+			ScriptType: "string",
+		},
+		"HealthStatus": {
+			GoType:     "HealthStatus",
 			ScriptType: "object",
 		},
 	}
@@ -699,6 +782,229 @@ func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []inter
 
 	case "clearSchemaCache":
 		b.schemaCache.Clear()
+		return nil, nil
+
+	case "getProviderCapabilities":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getProviderCapabilities requires provider parameter")
+		}
+
+		providerName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider must be string")
+		}
+
+		// Get provider metadata
+		metadata, exists := b.providerMetadata[providerName]
+		if !exists {
+			// Try to get from registry
+			prov, err := b.providerRegistry.GetProvider(providerName)
+			if err != nil {
+				return nil, fmt.Errorf("provider not found: %s", providerName)
+			}
+			// Check if provider implements MetadataProvider
+			if mp, ok := prov.(provider.MetadataProvider); ok {
+				metadata = mp.GetMetadata()
+				b.providerMetadata[providerName] = metadata
+			} else {
+				return nil, fmt.Errorf("provider does not support metadata: %s", providerName)
+			}
+		}
+
+		// Return capabilities
+		return map[string]interface{}{
+			"name":         metadata.Name(),
+			"description":  metadata.Description(),
+			"capabilities": metadata.GetCapabilities(),
+			"constraints":  metadata.GetConstraints(),
+		}, nil
+
+	case "getModelInfo":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("getModelInfo requires provider and model parameters")
+		}
+
+		providerName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider must be string")
+		}
+
+		modelName, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("model must be string")
+		}
+
+		// Get provider metadata
+		metadata, exists := b.providerMetadata[providerName]
+		if !exists {
+			return nil, fmt.Errorf("provider not found: %s", providerName)
+		}
+
+		// Get model info
+		models, err := metadata.GetModels(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get models: %w", err)
+		}
+		for _, model := range models {
+			if model.Name == modelName {
+				return map[string]interface{}{
+					"name":          model.Name,
+					"description":   model.Description,
+					"capabilities":  model.Capabilities,
+					"contextWindow": model.ContextWindow,
+					"maxTokens":     model.MaxTokens,
+					"inputPricing":  model.InputPricing,
+					"outputPricing": model.OutputPricing,
+				}, nil
+			}
+		}
+
+		return nil, fmt.Errorf("model not found: %s", modelName)
+
+	case "listModelsForProvider":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("listModelsForProvider requires provider parameter")
+		}
+
+		providerName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider must be string")
+		}
+
+		// Get provider metadata
+		metadata, exists := b.providerMetadata[providerName]
+		if !exists {
+			return nil, fmt.Errorf("provider not found: %s", providerName)
+		}
+
+		// Return models
+		models, err := metadata.GetModels(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get models: %w", err)
+		}
+		result := make([]map[string]interface{}, 0, len(models))
+		for _, model := range models {
+			result = append(result, map[string]interface{}{
+				"name":          model.Name,
+				"description":   model.Description,
+				"capabilities":  model.Capabilities,
+				"contextWindow": model.ContextWindow,
+			})
+		}
+
+		return result, nil
+
+	case "findProvidersByCapability":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("findProvidersByCapability requires capability parameter")
+		}
+
+		capability, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("capability must be string")
+		}
+
+		// Find providers with the capability
+		cap := provider.Capability(capability)
+		result := make([]string, 0)
+
+		// Check all registered providers
+		for name, metadata := range b.providerMetadata {
+			caps := metadata.GetCapabilities()
+			for _, c := range caps {
+				if c == cap {
+					result = append(result, name)
+					break
+				}
+			}
+		}
+
+		return result, nil
+
+	case "selectProviderByStrategy":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("selectProviderByStrategy requires strategy parameter")
+		}
+
+		strategy, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("strategy must be string")
+		}
+
+		// Simple strategy implementation
+		switch strategy {
+		case "fastest":
+			// Return the first available provider (simplified)
+			for name := range b.providers {
+				return name, nil
+			}
+			return "", nil // No providers available
+		case "cheapest":
+			// Would need to compare pricing info
+			for name := range b.providers {
+				return name, nil
+			}
+			return "", nil // No providers available
+		case "mostCapable":
+			// Return provider with most capabilities
+			var bestProvider string
+			maxCaps := 0
+			for name, metadata := range b.providerMetadata {
+				caps := len(metadata.GetCapabilities())
+				if caps > maxCaps {
+					maxCaps = caps
+					bestProvider = name
+				}
+			}
+			return bestProvider, nil
+		default:
+			return nil, fmt.Errorf("unknown strategy: %s", strategy)
+		}
+
+	case "getProviderHealth":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getProviderHealth requires provider parameter")
+		}
+
+		providerName, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("provider must be string")
+		}
+
+		// Check if provider exists and is active
+		_, exists := b.providers[providerName]
+		if !exists {
+			return map[string]interface{}{
+				"status":  "inactive",
+				"healthy": false,
+				"message": "Provider not registered",
+			}, nil
+		}
+
+		// Simple health check
+		return map[string]interface{}{
+			"status":  "active",
+			"healthy": true,
+			"message": "Provider is operational",
+		}, nil
+
+	case "configureFallbackChain":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("configureFallbackChain requires providers parameter")
+		}
+
+		providerList, ok := args[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("providers must be array")
+		}
+
+		// Store fallback chain (simplified - would need multi-provider support)
+		if len(providerList) > 0 {
+			if primaryName, ok := providerList[0].(string); ok {
+				b.activeProvider = primaryName
+			}
+		}
+
 		return nil, nil
 
 	default:

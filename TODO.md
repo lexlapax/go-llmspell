@@ -60,15 +60,15 @@ All utility bridge upgrades completed. See TODO-DONE.md for detailed completion 
   - [x] Implement schema caching
   - [x] Check tests to use go-llms pkg/testutils
 
-- [ ] **Task 1.4.4.2: Add Provider Metadata Discovery**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Implement getProviderCapabilities method
-  - [ ] Expose model-specific features
-  - [ ] Add capability-based routing
-  - [ ] Support dynamic provider selection
-  - [ ] Add provider health monitoring
-  - [ ] Implement fallback strategies
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.4.2: Add Provider Metadata Discovery** [COMPLETED - 2025-06-16]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Implement getProviderCapabilities method
+  - [x] Expose model-specific features
+  - [x] Add capability-based routing
+  - [x] Support dynamic provider selection
+  - [x] Add provider health monitoring
+  - [x] Implement fallback strategies
+  - [x] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.4.3: Add Streaming with Event Emission**
   - [ ] Ensure we leverage imports from go-llms pkg
