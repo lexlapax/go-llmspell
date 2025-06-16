@@ -50,15 +50,15 @@ All utility bridge upgrades completed. See TODO-DONE.md for detailed completion 
 
 #### 1.4.4 LLM Bridge Advanced Features
 
-- [ ] **Task 1.4.4.1: Add Schema-Validated Generation**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Add responseSchemas map to LLMBridge
-  - [ ] Implement generateWithSchema method
-  - [ ] Add schema validation for responses
-  - [ ] Support multiple schema versions
-  - [ ] Add schema inference from examples
-  - [ ] Implement schema caching
-  - [ ] Check tests to use go-llms pkg/testutils
+- [x] **Task 1.4.4.1: Add Schema-Validated Generation** [COMPLETED - 2025-06-16]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Add responseSchemas map to LLMBridge
+  - [x] Implement generateWithSchema method
+  - [x] Add schema validation for responses
+  - [x] Support multiple schema versions
+  - [x] Add schema inference from examples
+  - [x] Implement schema caching
+  - [x] Check tests to use go-llms pkg/testutils
 
 - [ ] **Task 1.4.4.2: Add Provider Metadata Discovery**
   - [ ] Ensure we leverage imports from go-llms pkg

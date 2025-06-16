@@ -5,6 +5,7 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -14,6 +15,14 @@ import (
 	// go-llms imports for LLM functionality
 	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
 	"github.com/lexlapax/go-llms/pkg/llm/provider"
+
+	// go-llms imports for schema validation
+	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
+	"github.com/lexlapax/go-llms/pkg/schema/generator"
+	"github.com/lexlapax/go-llms/pkg/schema/repository"
+	"github.com/lexlapax/go-llms/pkg/schema/validation"
+	structuredDomain "github.com/lexlapax/go-llms/pkg/structured/domain"
+	"github.com/lexlapax/go-llms/pkg/structured/processor"
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.
@@ -22,12 +31,22 @@ type LLMBridge struct {
 	providers      map[string]bridge.Provider
 	activeProvider string
 	initialized    bool
+
+	// Schema validation components from go-llms v0.3.5
+	responseSchemas map[string]*schemaDomain.Schema // Schema cache by name
+	schemaRepo      schemaDomain.SchemaRepository   // Schema storage
+	schemaValidator schemaDomain.Validator          // Schema validator
+	schemaGenerator schemaDomain.SchemaGenerator    // Schema generator
+	schemaCache     *processor.SchemaCache          // Performance cache
+	promptEnhancer  structuredDomain.PromptEnhancer // Prompt enhancement
+	structProcessor structuredDomain.Processor      // JSON extraction
 }
 
 // NewLLMBridge creates a new LLM bridge.
 func NewLLMBridge() *LLMBridge {
 	return &LLMBridge{
-		providers: make(map[string]bridge.Provider),
+		providers:       make(map[string]bridge.Provider),
+		responseSchemas: make(map[string]*schemaDomain.Schema),
 	}
 }
 
@@ -40,8 +59,8 @@ func (b *LLMBridge) GetID() string {
 func (b *LLMBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "llm",
-		Version:     "1.0.0",
-		Description: "LLM provider access bridge wrapping go-llms functionality",
+		Version:     "2.0.0",
+		Description: "LLM provider access bridge with v0.3.5 schema validation support",
 		Author:      "go-llmspell",
 		License:     "MIT",
 	}
@@ -55,6 +74,14 @@ func (b *LLMBridge) Initialize(ctx context.Context) error {
 	if b.initialized {
 		return nil
 	}
+
+	// Initialize schema validation components from go-llms v0.3.5
+	b.schemaRepo = repository.NewInMemorySchemaRepository()
+	b.schemaValidator = validation.NewValidator(validation.WithCoercion(true))
+	b.schemaGenerator = generator.NewReflectionSchemaGenerator()
+	b.schemaCache = processor.NewSchemaCache()
+	b.promptEnhancer = processor.NewPromptEnhancer()
+	b.structProcessor = processor.NewStructuredProcessor(b.schemaValidator)
 
 	b.initialized = true
 	return nil
@@ -149,6 +176,66 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 			Parameters:  []engine.ParameterInfo{},
 			ReturnType:  "string",
 		},
+		// Schema validation methods (v0.3.5)
+		{
+			Name:        "generateWithSchema",
+			Description: "Generate structured output with schema validation",
+			Parameters: []engine.ParameterInfo{
+				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
+				{Name: "schema", Type: "object", Description: "JSON Schema for validation", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "registerSchema",
+			Description: "Register a named schema for reuse",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Schema name", Required: true},
+				{Name: "schema", Type: "object", Description: "JSON Schema definition", Required: true},
+				{Name: "version", Type: "string", Description: "Schema version", Required: false},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "getSchema",
+			Description: "Get a registered schema by name",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Schema name", Required: true},
+				{Name: "version", Type: "string", Description: "Schema version (optional)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "listSchemas",
+			Description: "List all registered schemas",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "array",
+		},
+		{
+			Name:        "validateWithSchema",
+			Description: "Validate data against a schema",
+			Parameters: []engine.ParameterInfo{
+				{Name: "data", Type: "any", Description: "Data to validate", Required: true},
+				{Name: "schema", Type: "object", Description: "JSON Schema or schema name", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "generateSchemaFromExample",
+			Description: "Generate a JSON Schema from example data",
+			Parameters: []engine.ParameterInfo{
+				{Name: "example", Type: "any", Description: "Example data", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "clearSchemaCache",
+			Description: "Clear the schema cache",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "void",
+		},
 	}
 }
 
@@ -169,6 +256,18 @@ func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 		},
 		"ProviderOptions": {
 			GoType:     "ProviderOptions",
+			ScriptType: "object",
+		},
+		"Schema": {
+			GoType:     "Schema",
+			ScriptType: "object",
+		},
+		"ValidationResult": {
+			GoType:     "ValidationResult",
+			ScriptType: "object",
+		},
+		"SchemaInfo": {
+			GoType:     "SchemaInfo",
 			ScriptType: "object",
 		},
 	}
@@ -395,6 +494,212 @@ func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []inter
 			})
 		}
 		return providers, nil
+
+	case "generateWithSchema":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("generateWithSchema requires prompt and schema parameters")
+		}
+
+		// Get active provider
+		if b.activeProvider == "" {
+			return nil, fmt.Errorf("no active provider set")
+		}
+		provider, exists := b.providers[b.activeProvider]
+		if !exists {
+			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
+		}
+
+		// Get prompt
+		prompt, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("prompt must be string")
+		}
+
+		// Get schema
+		schemaMap, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		// Convert schema map to Schema struct
+		schemaJSON, err := json.Marshal(schemaMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal schema: %w", err)
+		}
+		var schema schemaDomain.Schema
+		if err := json.Unmarshal(schemaJSON, &schema); err != nil {
+			return nil, fmt.Errorf("invalid schema: %w", err)
+		}
+
+		// Enhance prompt with schema
+		enhancedPrompt, err := b.promptEnhancer.Enhance(prompt, &schema)
+		if err != nil {
+			return nil, fmt.Errorf("prompt enhancement failed: %w", err)
+		}
+
+		// Generate response
+		response, err := provider.Generate(ctx, enhancedPrompt, nil)
+		if err != nil {
+			return nil, fmt.Errorf("generation failed: %w", err)
+		}
+
+		// Extract and validate structured output
+		structuredData, err := b.structProcessor.Process(&schema, response)
+		if err != nil {
+			return nil, fmt.Errorf("structured output processing failed: %w", err)
+		}
+
+		return map[string]interface{}{
+			"data":      structuredData,
+			"rawOutput": response,
+			"validated": true,
+		}, nil
+
+	case "registerSchema":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerSchema requires name and schema parameters")
+		}
+
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		schemaMap, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		// Convert schema map to Schema struct
+		schemaJSON, err := json.Marshal(schemaMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal schema: %w", err)
+		}
+		var schema schemaDomain.Schema
+		if err := json.Unmarshal(schemaJSON, &schema); err != nil {
+			return nil, fmt.Errorf("invalid schema: %w", err)
+		}
+
+		// Get optional version (removed since repo doesn't support versions)
+		// Version tracking could be added as metadata in the schema description
+
+		// Store in repository
+		if err := b.schemaRepo.Save(name, &schema); err != nil {
+			return nil, fmt.Errorf("failed to save schema: %w", err)
+		}
+
+		// Store in local cache
+		b.responseSchemas[name] = &schema
+
+		// Cache for performance (cache stores JSON bytes)
+		b.schemaCache.Set(uint64(len(name)), schemaJSON)
+
+		return nil, nil
+
+	case "getSchema":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getSchema requires name parameter")
+		}
+
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		// Check local map first
+		if schema, found := b.responseSchemas[name]; found {
+			return schema, nil
+		}
+
+		// Get from repository
+		schema, err := b.schemaRepo.Get(name)
+		if err != nil {
+			return nil, fmt.Errorf("schema not found: %w", err)
+		}
+
+		// Store in local cache
+		b.responseSchemas[name] = schema
+
+		return schema, nil
+
+	case "listSchemas":
+		// List from local cache
+		result := make([]map[string]interface{}, 0, len(b.responseSchemas))
+		for name, schema := range b.responseSchemas {
+			result = append(result, map[string]interface{}{
+				"name":        name,
+				"description": schema.Description,
+				"title":       schema.Title,
+			})
+		}
+		return result, nil
+
+	case "validateWithSchema":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("validateWithSchema requires data and schema parameters")
+		}
+
+		data := args[0]
+
+		// Get schema (could be object or name)
+		var schema *schemaDomain.Schema
+		switch v := args[1].(type) {
+		case string:
+			// Schema name
+			var err error
+			schema, err = b.schemaRepo.Get(v)
+			if err != nil {
+				return nil, fmt.Errorf("schema not found: %w", err)
+			}
+		case map[string]interface{}:
+			// Schema object
+			schemaJSON, err := json.Marshal(v)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal schema: %w", err)
+			}
+			schema = &schemaDomain.Schema{}
+			if err := json.Unmarshal(schemaJSON, schema); err != nil {
+				return nil, fmt.Errorf("invalid schema: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("schema must be string (name) or object")
+		}
+
+		// Convert data to JSON string for validation
+		dataJSON, err := json.Marshal(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal data: %w", err)
+		}
+
+		// Validate
+		result, err := b.schemaValidator.Validate(schema, string(dataJSON))
+		if err != nil {
+			return nil, fmt.Errorf("validation error: %w", err)
+		}
+
+		return map[string]interface{}{
+			"valid":  result.Valid,
+			"errors": result.Errors,
+		}, nil
+
+	case "generateSchemaFromExample":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("generateSchemaFromExample requires example parameter")
+		}
+
+		example := args[0]
+
+		// Generate schema from example using reflection generator
+		schema, err := b.schemaGenerator.GenerateSchema(example)
+		if err != nil {
+			return nil, fmt.Errorf("schema generation failed: %w", err)
+		}
+
+		return schema, nil
+
+	case "clearSchemaCache":
+		b.schemaCache.Clear()
+		return nil, nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
