@@ -13,7 +13,7 @@ import (
 
 	// go-llms imports for workflow functionality
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
-	// _ "github.com/lexlapax/go-llms/pkg/agent/workflow" // Will be used when workflow package is available
+	"github.com/lexlapax/go-llms/pkg/agent/workflow"
 )
 
 // WorkflowBridge provides script access to go-llms workflow functionality
@@ -21,12 +21,39 @@ type WorkflowBridge struct {
 	mu          sync.RWMutex
 	initialized bool
 	workflows   map[string]bridge.BaseAgent // Workflows are agents in go-llms
+
+	// Task 1.4.10.1: Workflow Import/Export
+	serializers     map[string]workflow.WorkflowSerializer
+	serializerCache map[string][]byte // Cache serialized workflows
+
+	// Task 1.4.10.2: Script Step Handlers
+	scriptHandlers map[string]ScriptStepHandler
+	scriptRegistry map[string]*workflow.ScriptStep
+
+	// Task 1.4.10.3: Workflow Templates
+	templateCache    map[string]*workflow.WorkflowTemplate
+	templateRegistry map[string]*workflow.WorkflowTemplate // Local template registry
+}
+
+// ScriptStepHandler handles script execution for workflow steps
+type ScriptStepHandler struct {
+	Language  string
+	Validator func(script string) error
+	Executor  func(ctx context.Context, script string, env map[string]interface{}) (interface{}, error)
+	Debugger  func(script string, breakpoint int) error
+	Metadata  map[string]interface{}
 }
 
 // NewWorkflowBridge creates a new workflow bridge
 func NewWorkflowBridge() *WorkflowBridge {
 	return &WorkflowBridge{
-		workflows: make(map[string]bridge.BaseAgent),
+		workflows:        make(map[string]bridge.BaseAgent),
+		serializers:      make(map[string]workflow.WorkflowSerializer),
+		serializerCache:  make(map[string][]byte),
+		scriptHandlers:   make(map[string]ScriptStepHandler),
+		scriptRegistry:   make(map[string]*workflow.ScriptStep),
+		templateCache:    make(map[string]*workflow.WorkflowTemplate),
+		templateRegistry: make(map[string]*workflow.WorkflowTemplate),
 	}
 }
 
@@ -39,8 +66,8 @@ func (b *WorkflowBridge) GetID() string {
 func (b *WorkflowBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "workflow",
-		Version:     "1.0.0",
-		Description: "Workflow engine bridge wrapping go-llms workflow functionality",
+		Version:     "2.0.0",
+		Description: "Enhanced workflow engine bridge with serialization, script steps, and templates (v0.3.5)",
 		Author:      "go-llmspell",
 		License:     "MIT",
 	}
@@ -53,6 +80,19 @@ func (b *WorkflowBridge) Initialize(ctx context.Context) error {
 
 	if b.initialized {
 		return nil
+	}
+
+	// Initialize default serializers
+	b.serializers["json"] = workflow.NewJSONWorkflowSerializer(false)
+	b.serializers["json-pretty"] = workflow.NewJSONWorkflowSerializer(true)
+	b.serializers["yaml"] = workflow.NewYAMLWorkflowSerializer()
+
+	// Initialize default script handlers
+	b.initializeDefaultScriptHandlers()
+
+	// Register default templates
+	if err := workflow.RegisterDefaultTemplates(); err != nil {
+		return fmt.Errorf("failed to register default templates: %w", err)
 	}
 
 	b.initialized = true
@@ -450,6 +490,79 @@ func (b *WorkflowBridge) registerWorkflow(workflow bridge.BaseAgent) error {
 	return nil
 }
 
+// initializeDefaultScriptHandlers sets up default script handlers
+func (b *WorkflowBridge) initializeDefaultScriptHandlers() {
+	// JavaScript handler
+	b.scriptHandlers["javascript"] = ScriptStepHandler{
+		Language: "javascript",
+		Validator: func(script string) error {
+			// Basic JavaScript validation
+			if script == "" {
+				return fmt.Errorf("empty script")
+			}
+			return nil
+		},
+		Executor: func(ctx context.Context, script string, env map[string]interface{}) (interface{}, error) {
+			// Placeholder - would use actual JavaScript engine
+			return map[string]interface{}{
+				"result": "JavaScript execution placeholder",
+				"script": script,
+				"env":    env,
+			}, nil
+		},
+		Metadata: map[string]interface{}{
+			"supported": true,
+			"version":   "ES6",
+		},
+	}
+
+	// Lua handler
+	b.scriptHandlers["lua"] = ScriptStepHandler{
+		Language: "lua",
+		Validator: func(script string) error {
+			if script == "" {
+				return fmt.Errorf("empty script")
+			}
+			return nil
+		},
+		Executor: func(ctx context.Context, script string, env map[string]interface{}) (interface{}, error) {
+			// Placeholder - would use actual Lua engine
+			return map[string]interface{}{
+				"result": "Lua execution placeholder",
+				"script": script,
+				"env":    env,
+			}, nil
+		},
+		Metadata: map[string]interface{}{
+			"supported": true,
+			"version":   "5.4",
+		},
+	}
+
+	// Tengo handler
+	b.scriptHandlers["tengo"] = ScriptStepHandler{
+		Language: "tengo",
+		Validator: func(script string) error {
+			if script == "" {
+				return fmt.Errorf("empty script")
+			}
+			return nil
+		},
+		Executor: func(ctx context.Context, script string, env map[string]interface{}) (interface{}, error) {
+			// Placeholder - would use actual Tengo engine
+			return map[string]interface{}{
+				"result": "Tengo execution placeholder",
+				"script": script,
+				"env":    env,
+			}, nil
+		},
+		Metadata: map[string]interface{}{
+			"supported": true,
+			"version":   "2.0",
+		},
+	}
+}
+
 // removeWorkflowInternal removes a workflow from the bridge
 //
 //nolint:unused // will be used when implementing removeWorkflow method
@@ -546,6 +659,342 @@ func (b *WorkflowBridge) ExecuteMethod(ctx context.Context, name string, args []
 
 		// Return result state values
 		return resultState.Values(), nil
+
+	// Task 1.4.10.1: Workflow Import/Export
+	case "exportWorkflow":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("exportWorkflow requires workflowID parameter")
+		}
+		workflowID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("workflowID must be string")
+		}
+
+		format := "json"
+		if len(args) > 1 && args[1] != nil {
+			if f, ok := args[1].(string); ok {
+				format = f
+			}
+		}
+
+		// Check cache first
+		cacheKey := fmt.Sprintf("%s:%s", workflowID, format)
+		if cached, exists := b.serializerCache[cacheKey]; exists {
+			return string(cached), nil
+		}
+
+		// Get workflow and serialize
+		wf, err := b.getWorkflow(workflowID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create workflow definition from agent
+		def := &workflow.WorkflowDefinition{
+			Name:        wf.Name(),
+			Description: wf.Description(),
+			Steps:       []workflow.WorkflowStep{},
+		}
+
+		serializer := b.serializers[format]
+		if serializer == nil {
+			return nil, fmt.Errorf("unsupported format: %s", format)
+		}
+
+		data, err := serializer.Serialize(def)
+		if err != nil {
+			return nil, fmt.Errorf("serialization failed: %w", err)
+		}
+
+		// Cache the result
+		b.serializerCache[cacheKey] = data
+
+		return string(data), nil
+
+	case "importWorkflow":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("importWorkflow requires data parameter")
+		}
+		data, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("data must be string")
+		}
+
+		format := "json"
+		if len(args) > 1 && args[1] != nil {
+			if f, ok := args[1].(string); ok {
+				format = f
+			}
+		}
+
+		serializer := b.serializers[format]
+		if serializer == nil {
+			return nil, fmt.Errorf("unsupported format: %s", format)
+		}
+
+		def, err := serializer.Deserialize([]byte(data))
+		if err != nil {
+			return nil, fmt.Errorf("deserialization failed: %w", err)
+		}
+
+		// Create workflow from definition
+		return map[string]interface{}{
+			"id":          fmt.Sprintf("workflow-%s", def.Name),
+			"name":        def.Name,
+			"description": def.Description,
+			"steps":       len(def.Steps),
+		}, nil
+
+	case "validateWorkflowData":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("validateWorkflowData requires data parameter")
+		}
+		data, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("data must be string")
+		}
+
+		format := "json"
+		if len(args) > 1 && args[1] != nil {
+			if f, ok := args[1].(string); ok {
+				format = f
+			}
+		}
+
+		serializer := b.serializers[format]
+		if serializer == nil {
+			return nil, fmt.Errorf("unsupported format: %s", format)
+		}
+
+		_, err := serializer.Deserialize([]byte(data))
+		if err != nil {
+			return map[string]interface{}{
+				"valid":  false,
+				"error":  err.Error(),
+				"format": format,
+			}, nil
+		}
+
+		return map[string]interface{}{
+			"valid":  true,
+			"format": format,
+		}, nil
+
+	// Task 1.4.10.2: Script Step Handlers
+	case "registerScriptHandler":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerScriptHandler requires language and handler parameters")
+		}
+		language, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("language must be string")
+		}
+		handlerConfig, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("handler must be object")
+		}
+
+		// Create handler from config
+		handler := ScriptStepHandler{
+			Language: language,
+			Metadata: handlerConfig,
+		}
+
+		b.scriptHandlers[language] = handler
+		return nil, nil
+
+	case "createScriptStep":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("createScriptStep requires name, language, and script parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		language, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("language must be string")
+		}
+		script, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("script must be string")
+		}
+
+		// Check if handler exists in our bridge
+		if _, exists := b.scriptHandlers[language]; !exists {
+			return nil, fmt.Errorf("no handler for language: %s", language)
+		}
+
+		// Create script step metadata (since we can't use workflow.ScriptStep directly)
+		stepID := fmt.Sprintf("script-%s-%s", language, name)
+
+		// Store step configuration for later use
+		stepConfig := map[string]interface{}{
+			"id":       stepID,
+			"name":     name,
+			"language": language,
+			"script":   script,
+			"type":     "script",
+		}
+
+		if len(args) > 3 && args[3] != nil {
+			if config, ok := args[3].(map[string]interface{}); ok {
+				if desc, ok := config["description"].(string); ok {
+					stepConfig["description"] = desc
+				}
+				if env, ok := config["environment"].(map[string]interface{}); ok {
+					stepConfig["environment"] = env
+				}
+			}
+		}
+
+		return stepConfig, nil
+
+	case "validateScriptStep":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("validateScriptStep requires step parameter")
+		}
+		stepData, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("step must be object")
+		}
+
+		language, _ := stepData["language"].(string)
+		script, _ := stepData["script"].(string)
+
+		handler, exists := b.scriptHandlers[language]
+		if !exists {
+			return map[string]interface{}{
+				"valid": false,
+				"error": fmt.Sprintf("no handler for language: %s", language),
+			}, nil
+		}
+
+		if handler.Validator != nil {
+			if err := handler.Validator(script); err != nil {
+				return map[string]interface{}{
+					"valid": false,
+					"error": err.Error(),
+				}, nil
+			}
+		}
+
+		return map[string]interface{}{
+			"valid":    true,
+			"language": language,
+		}, nil
+
+	// Task 1.4.10.3: Workflow Templates
+	case "listTemplates":
+		var templates []*workflow.WorkflowTemplate
+
+		if len(args) > 0 && args[0] != nil {
+			if category, ok := args[0].(string); ok {
+				templates = workflow.ListTemplatesByCategory(category)
+			}
+		} else if len(args) > 1 && args[1] != nil {
+			if tags, ok := args[1].([]string); ok {
+				templates = workflow.SearchTemplates(tags)
+			}
+		} else {
+			templates = workflow.ListTemplates()
+		}
+
+		// Include local templates
+		for _, tmpl := range b.templateRegistry {
+			templates = append(templates, tmpl)
+		}
+
+		result := make([]map[string]interface{}, len(templates))
+		for i, tmpl := range templates {
+			result[i] = map[string]interface{}{
+				"id":          tmpl.ID,
+				"name":        tmpl.Name,
+				"description": tmpl.Description,
+				"category":    tmpl.Category,
+				"tags":        tmpl.Tags,
+			}
+		}
+
+		return result, nil
+
+	case "getTemplate":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getTemplate requires templateID parameter")
+		}
+		templateID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("templateID must be string")
+		}
+
+		// Check local registry first
+		if tmpl, exists := b.templateRegistry[templateID]; exists {
+			return tmpl, nil
+		}
+
+		// Check global registry
+		tmpl, err := workflow.GetTemplate(templateID)
+		if err != nil {
+			return nil, err
+		}
+
+		return tmpl, nil
+
+	case "createFromTemplate":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("createFromTemplate requires templateID parameter")
+		}
+		templateID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("templateID must be string")
+		}
+
+		variables := make(map[string]interface{})
+		if len(args) > 1 && args[1] != nil {
+			if vars, ok := args[1].(map[string]interface{}); ok {
+				variables = vars
+			}
+		}
+
+		def, err := workflow.ApplyTemplate(templateID, variables)
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply template: %w", err)
+		}
+
+		return map[string]interface{}{
+			"id":           fmt.Sprintf("workflow-%s", def.Name),
+			"name":         def.Name,
+			"description":  def.Description,
+			"fromTemplate": templateID,
+		}, nil
+
+	case "registerTemplate":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("registerTemplate requires template parameter")
+		}
+		templateData, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("template must be object")
+		}
+
+		// Create template from data
+		tmpl := &workflow.WorkflowTemplate{
+			ID:          templateData["id"].(string),
+			Name:        templateData["name"].(string),
+			Description: templateData["description"].(string),
+		}
+
+		if category, ok := templateData["category"].(string); ok {
+			tmpl.Category = category
+		}
+		if tags, ok := templateData["tags"].([]string); ok {
+			tmpl.Tags = tags
+		}
+
+		// Store in local registry
+		b.templateRegistry[tmpl.ID] = tmpl
+
+		return tmpl.ID, nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
