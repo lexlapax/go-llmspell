@@ -5,7 +5,9 @@ package structured
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -754,5 +756,580 @@ func TestSchemaBridge_ImportExport(t *testing.T) {
 			assert.True(t, ok)
 			assert.Equal(t, s.schema["title"], schema["title"])
 		}
+	})
+}
+
+// Schema Import/Export Tests (Task 1.4.5.3)
+
+func TestSchemaBridge_ImportExport_JSONSchema(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	testSchema := map[string]interface{}{
+		"type":        "object",
+		"title":       "Test Schema",
+		"description": "A test schema for import/export",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+				"type":        "string",
+				"description": "Person name",
+			},
+			"age": map[string]interface{}{
+				"type":    "number",
+				"minimum": 0,
+				"maximum": 120,
+			},
+		},
+		"required": []string{"name"},
+	}
+
+	t.Run("exportToJSONSchema", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "exportToJSONSchema", []interface{}{testSchema})
+		require.NoError(t, err)
+
+		jsonSchemaStr, ok := result.(string)
+		require.True(t, ok)
+		require.NotEmpty(t, jsonSchemaStr)
+
+		// Parse and verify JSON Schema structure
+		var jsonSchema map[string]interface{}
+		err = json.Unmarshal([]byte(jsonSchemaStr), &jsonSchema)
+		require.NoError(t, err)
+
+		assert.Equal(t, "http://json-schema.org/draft-07/schema#", jsonSchema["$schema"])
+		assert.Equal(t, "object", jsonSchema["type"])
+		assert.Equal(t, "Test Schema", jsonSchema["title"])
+		assert.Contains(t, jsonSchema, "properties")
+		assert.Contains(t, jsonSchema, "required")
+	})
+
+	t.Run("exportToJSONSchema_with_draft", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "exportToJSONSchema", []interface{}{testSchema, "draft-2020-12"})
+		require.NoError(t, err)
+
+		jsonSchemaStr, ok := result.(string)
+		require.True(t, ok)
+
+		var jsonSchema map[string]interface{}
+		err = json.Unmarshal([]byte(jsonSchemaStr), &jsonSchema)
+		require.NoError(t, err)
+
+		assert.Equal(t, "https://json-schema.org/draft/2020-12/schema", jsonSchema["$schema"])
+	})
+
+	t.Run("exportToOpenAPI", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "exportToOpenAPI", []interface{}{testSchema})
+		require.NoError(t, err)
+
+		openAPISchema, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "object", openAPISchema["type"])
+		assert.Equal(t, "Test Schema", openAPISchema["title"])
+		assert.Contains(t, openAPISchema, "properties")
+		assert.Contains(t, openAPISchema, "required")
+		// Should not contain $schema in OpenAPI
+		assert.NotContains(t, openAPISchema, "$schema")
+	})
+}
+
+func TestSchemaBridge_ImportExport_FromString(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	jsonSchemaStr := `{
+		"$schema": "http://json-schema.org/draft-07/schema#",
+		"type": "object",
+		"title": "Person",
+		"properties": {
+			"name": {
+				"type": "string",
+				"description": "Full name"
+			},
+			"email": {
+				"type": "string",
+				"format": "email"
+			},
+			"age": {
+				"type": "integer",
+				"minimum": 0
+			}
+		},
+		"required": ["name", "email"]
+	}`
+
+	t.Run("importFromString_jsonschema", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "importFromString", []interface{}{jsonSchemaStr, "jsonschema"})
+		require.NoError(t, err)
+
+		schema, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "object", schema["type"])
+		assert.Equal(t, "Person", schema["title"])
+
+		properties, ok := schema["properties"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, properties, "name")
+		assert.Contains(t, properties, "email")
+		assert.Contains(t, properties, "age")
+
+		required, ok := schema["required"].([]interface{})
+		require.True(t, ok)
+		assert.Len(t, required, 2)
+	})
+
+	t.Run("importFromString_default_format", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "importFromString", []interface{}{jsonSchemaStr})
+		require.NoError(t, err)
+
+		schema, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "Person", schema["title"])
+	})
+}
+
+func TestSchemaBridge_ImportExport_Files(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	// Create test schema file
+	tmpDir := t.TempDir()
+	schemaFile := tmpDir + "/test-schema.json"
+
+	jsonSchemaContent := `{
+		"$schema": "http://json-schema.org/draft-07/schema#",
+		"type": "object",
+		"title": "Product",
+		"properties": {
+			"id": {
+				"type": "string"
+			},
+			"name": {
+				"type": "string"
+			},
+			"price": {
+				"type": "number",
+				"minimum": 0
+			}
+		},
+		"required": ["id", "name"]
+	}`
+
+	err := os.WriteFile(schemaFile, []byte(jsonSchemaContent), 0644)
+	require.NoError(t, err)
+
+	t.Run("importFromFile_auto_detect", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "importFromFile", []interface{}{schemaFile, "auto"})
+		require.NoError(t, err)
+
+		schema, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "Product", schema["title"])
+	})
+
+	t.Run("importFromFile_explicit_format", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "importFromFile", []interface{}{schemaFile, "jsonschema"})
+		require.NoError(t, err)
+
+		schema, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "object", schema["type"])
+	})
+
+	t.Run("importFromFile_nonexistent", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "importFromFile", []interface{}{"/nonexistent/file.json"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to read file")
+	})
+}
+
+func TestSchemaBridge_FormatConversion(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	testSchema := map[string]interface{}{
+		"type":  "object",
+		"title": "Conversion Test",
+		"properties": map[string]interface{}{
+			"field1": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
+	t.Run("convertFormat_to_jsonschema", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "convertFormat", []interface{}{testSchema, "internal", "jsonschema"})
+		require.NoError(t, err)
+
+		jsonSchemaStr, ok := result.(string)
+		require.True(t, ok)
+		require.NotEmpty(t, jsonSchemaStr)
+
+		var parsed map[string]interface{}
+		err = json.Unmarshal([]byte(jsonSchemaStr), &parsed)
+		require.NoError(t, err)
+		assert.Contains(t, parsed, "$schema")
+	})
+
+	t.Run("convertFormat_to_openapi", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "convertFormat", []interface{}{testSchema, "internal", "openapi"})
+		require.NoError(t, err)
+
+		openAPI, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "object", openAPI["type"])
+		assert.NotContains(t, openAPI, "$schema")
+	})
+
+	t.Run("convertFormat_unsupported", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "convertFormat", []interface{}{testSchema, "internal", "yaml"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported target format")
+	})
+}
+
+func TestSchemaBridge_MergeSchemas(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	schema1 := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+				"type": "string",
+			},
+			"age": map[string]interface{}{
+				"type": "number",
+			},
+		},
+	}
+
+	schema2 := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+			"age": map[string]interface{}{
+				"type": "integer", // Different type
+			},
+		},
+	}
+
+	t.Run("mergeSchemas_union", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "mergeSchemas", []interface{}{
+			[]interface{}{schema1, schema2},
+			"union",
+		})
+		require.NoError(t, err)
+
+		merged, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		properties, ok := merged["properties"].(map[string]interface{})
+		require.True(t, ok)
+
+		// Should have all properties from both schemas
+		assert.Contains(t, properties, "name")
+		assert.Contains(t, properties, "age") // Should keep first schema's version
+		assert.Contains(t, properties, "email")
+
+		// Age should be from first schema (number, not integer)
+		age, ok := properties["age"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "number", age["type"])
+	})
+
+	t.Run("mergeSchemas_override", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "mergeSchemas", []interface{}{
+			[]interface{}{schema1, schema2},
+			"override",
+		})
+		require.NoError(t, err)
+
+		merged, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		properties, ok := merged["properties"].(map[string]interface{})
+		require.True(t, ok)
+
+		// Age should be from second schema (integer)
+		age, ok := properties["age"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "integer", age["type"])
+	})
+
+	t.Run("mergeSchemas_single_schema", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "mergeSchemas", []interface{}{
+			[]interface{}{schema1},
+		})
+		require.NoError(t, err)
+
+		merged, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "object", merged["type"])
+	})
+
+	t.Run("mergeSchemas_empty", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "mergeSchemas", []interface{}{
+			[]interface{}{},
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no schemas to merge")
+	})
+}
+
+func TestSchemaBridge_GenerateDiff(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	oldSchema := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+				"type": "string",
+			},
+			"age": map[string]interface{}{
+				"type": "number",
+			},
+			"removed_field": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
+	newSchema := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+				"type": "string",
+			},
+			"age": map[string]interface{}{
+				"type": "integer", // Modified
+			},
+			"email": map[string]interface{}{ // Added
+				"type": "string",
+			},
+		},
+	}
+
+	t.Run("generateDiff_json", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "generateDiff", []interface{}{oldSchema, newSchema, "json"})
+		require.NoError(t, err)
+
+		diff, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		added, ok := diff["added"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, added, "email")
+
+		removed, ok := diff["removed"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, removed, "removed_field")
+
+		modified, ok := diff["modified"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, modified, "age")
+
+		unchanged, ok := diff["unchanged"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, unchanged, "name")
+	})
+
+	t.Run("generateDiff_text", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "generateDiff", []interface{}{oldSchema, newSchema, "text"})
+		require.NoError(t, err)
+
+		diffText, ok := result.(string)
+		require.True(t, ok)
+		assert.Contains(t, diffText, "Added properties:")
+		assert.Contains(t, diffText, "+ email")
+		assert.Contains(t, diffText, "Removed properties:")
+		assert.Contains(t, diffText, "- removed_field")
+		assert.Contains(t, diffText, "Modified properties:")
+		assert.Contains(t, diffText, "~ age")
+	})
+
+	t.Run("generateDiff_detailed", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "generateDiff", []interface{}{oldSchema, newSchema, "detailed"})
+		require.NoError(t, err)
+
+		detailed, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		summary, ok := detailed["summary"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, 1, summary["added"])
+		assert.Equal(t, 1, summary["removed"])
+		assert.Equal(t, 1, summary["modified"])
+		assert.Equal(t, 1, summary["unchanged"])
+	})
+}
+
+func TestSchemaBridge_Collections(t *testing.T) {
+	bridge, ctx, tmpDir := setupTestBridgeWithFileRepo(t)
+
+	// Create test schemas
+	schema1 := map[string]interface{}{
+		"type":  "object",
+		"title": "Schema 1",
+		"properties": map[string]interface{}{
+			"field1": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
+	schema2 := map[string]interface{}{
+		"type":  "object",
+		"title": "Schema 2",
+		"properties": map[string]interface{}{
+			"field2": map[string]interface{}{
+				"type": "number",
+			},
+		},
+	}
+
+	// Save schemas
+	_, err := bridge.ExecuteMethod(ctx, "saveSchemaVersion", []interface{}{"schema1", schema1})
+	require.NoError(t, err)
+	_, err = bridge.ExecuteMethod(ctx, "saveSchemaVersion", []interface{}{"schema2", schema2})
+	require.NoError(t, err)
+
+	t.Run("exportCollection_bundle", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "exportCollection", []interface{}{
+			[]interface{}{"schema1", "schema2"},
+			"bundle",
+		})
+		require.NoError(t, err)
+
+		collection, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "1.0", collection["version"])
+
+		schemas, ok := collection["schemas"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, schemas, "schema1")
+		assert.Contains(t, schemas, "schema2")
+	})
+
+	t.Run("exportCollection_separate", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "exportCollection", []interface{}{
+			[]interface{}{"schema1"},
+			"separate",
+		})
+		require.NoError(t, err)
+
+		collection, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		schemas, ok := collection["schemas"].(map[string]interface{})
+		require.True(t, ok)
+
+		schema1Data, ok := schemas["schema1"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "schema1", schema1Data["id"])
+		assert.Contains(t, schema1Data, "schema")
+	})
+
+	t.Run("importCollection", func(t *testing.T) {
+		// Export first
+		exportResult, err := bridge.ExecuteMethod(ctx, "exportCollection", []interface{}{
+			[]interface{}{"schema1", "schema2"},
+		})
+		require.NoError(t, err)
+
+		// Create new bridge
+		bridge2 := NewSchemaBridge()
+		err = bridge2.Initialize(ctx)
+		require.NoError(t, err)
+		_, err = bridge2.ExecuteMethod(ctx, "initializeFileRepository", []interface{}{tmpDir + "_import"})
+		require.NoError(t, err)
+
+		// Import collection
+		result, err := bridge2.ExecuteMethod(ctx, "importCollection", []interface{}{
+			exportResult,
+			false, // don't overwrite
+		})
+		require.NoError(t, err)
+
+		results, ok := result.([]interface{})
+		require.True(t, ok)
+		assert.Len(t, results, 2)
+
+		// Check import results
+		for _, r := range results {
+			resultMap, ok := r.(map[string]interface{})
+			require.True(t, ok)
+			assert.Equal(t, "imported", resultMap["status"])
+		}
+	})
+
+	t.Run("importCollection_with_overwrite", func(t *testing.T) {
+		collection := map[string]interface{}{
+			"schemas": map[string]interface{}{
+				"schema1": schema1,
+			},
+		}
+
+		// Import again with overwrite
+		result, err := bridge.ExecuteMethod(ctx, "importCollection", []interface{}{
+			collection,
+			true, // overwrite
+		})
+		require.NoError(t, err)
+
+		results, ok := result.([]interface{})
+		require.True(t, ok)
+		assert.Len(t, results, 1)
+
+		resultMap, ok := results[0].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "imported", resultMap["status"])
+	})
+}
+
+func TestSchemaBridge_ImportExport_ErrorCases(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("exportToJSONSchema_invalid_schema", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "exportToJSONSchema", []interface{}{"invalid"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "schema must be object")
+	})
+
+	t.Run("importFromString_invalid_json", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "importFromString", []interface{}{"invalid json"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to parse JSON")
+	})
+
+	t.Run("mergeSchemas_invalid_strategy", func(t *testing.T) {
+		schema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"field": map[string]interface{}{
+					"type": "string",
+				},
+			},
+		}
+		_, err := bridge.ExecuteMethod(ctx, "mergeSchemas", []interface{}{
+			[]interface{}{schema, schema}, // Need at least 2 schemas to trigger merge
+			"invalid_strategy",
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported merge strategy")
+	})
+
+	t.Run("exportCollection_nonexistent_schema", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "exportCollection", []interface{}{
+			[]interface{}{"nonexistent"},
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to get schema")
+	})
+
+	t.Run("importCollection_invalid_format", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "importCollection", []interface{}{
+			map[string]interface{}{}, // missing schemas field
+		})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "collection must contain 'schemas' field")
 	})
 }

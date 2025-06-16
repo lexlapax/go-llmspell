@@ -1061,3 +1061,34 @@ With Phase 1.4.3 complete, the project is ready to proceed to Phase 1.4.4 (LLM B
 - Created STATUS-UPDATE-2025-06-16-PHASE-1.4.4.md documenting the phase completion
 
 **Next Phase**: Ready to begin Phase 1.4.5 (Schema Bridge Full Implementation) with four major tasks focusing on schema versioning, tag-based generation, import/export, and custom validators.
+
+---
+
+## Task 1.4.5.3: Add Schema Import/Export [COMPLETED - 2025-06-16 17:45 PDT]
+
+**Completion Summary**:
+Task 1.4.5.3 (Add Schema Import/Export) has been successfully implemented. All required functionality added to the Schema Bridge with comprehensive test coverage.
+
+**Implemented Features**:
+- Schema export to JSON Schema format (multiple draft versions: draft-07, draft-2019-09, draft-2020-12)
+- OpenAPI schema export (versions 3.0.x and 3.1.0)
+- Schema import from files with format auto-detection
+- Schema import from strings with format specification
+- Schema format conversion between JSON Schema and OpenAPI
+- Schema merging with multiple strategies (union, intersection, override)
+- Schema diff generation in multiple formats (json, text, detailed)
+- Collection export/import for bulk schema operations
+- Comprehensive error handling and validation
+
+**Key Technical Details**:
+- Added 9 new methods to Schema Bridge: exportToJSONSchema, exportToOpenAPI, importFromFile, importFromString, convertFormat, mergeSchemas, generateDiff, exportCollection, importCollection
+- Implemented 15+ helper functions for robust import/export operations
+- Fixed go-llms domain.Schema/Property type compatibility issues
+- Added script-compatible type conversions ([]string to []interface{})
+- Comprehensive test coverage with 8 new test functions covering all functionality
+
+**Files Modified**:
+- `/pkg/bridge/structured/schema.go`: Added complete import/export functionality
+- `/pkg/bridge/structured/schema_test.go`: Added comprehensive test coverage
+
+**All Tests Passing**: ✅ Complete test suite passes with all new functionality verified.

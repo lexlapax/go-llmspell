@@ -305,6 +305,90 @@ func (b *SchemaBridge) Methods() []engine.MethodInfo {
 			},
 			ReturnType: "object",
 		},
+		// Schema Import/Export methods
+		{
+			Name:        "exportToJSONSchema",
+			Description: "Export schema to JSON Schema format",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schema", Type: "object", Description: "Schema object to export", Required: true},
+				{Name: "draft", Type: "string", Description: "JSON Schema draft version (draft-07, draft-2019-09, draft-2020-12)", Required: false},
+			},
+			ReturnType: "string",
+		},
+		{
+			Name:        "exportToOpenAPI",
+			Description: "Export schema to OpenAPI schema format",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schema", Type: "object", Description: "Schema object to export", Required: true},
+				{Name: "version", Type: "string", Description: "OpenAPI version (3.0.0, 3.1.0)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "importFromFile",
+			Description: "Import schema from file (JSON Schema, OpenAPI, etc.)",
+			Parameters: []engine.ParameterInfo{
+				{Name: "filePath", Type: "string", Description: "Path to schema file", Required: true},
+				{Name: "format", Type: "string", Description: "Schema format (auto, jsonschema, openapi)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "importFromString",
+			Description: "Import schema from string content",
+			Parameters: []engine.ParameterInfo{
+				{Name: "content", Type: "string", Description: "Schema content as string", Required: true},
+				{Name: "format", Type: "string", Description: "Schema format (jsonschema, openapi)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "convertFormat",
+			Description: "Convert schema between different formats",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schema", Type: "object", Description: "Source schema object", Required: true},
+				{Name: "fromFormat", Type: "string", Description: "Source format", Required: true},
+				{Name: "toFormat", Type: "string", Description: "Target format", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "mergeSchemas",
+			Description: "Merge multiple schemas into one",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schemas", Type: "array", Description: "Array of schema objects to merge", Required: true},
+				{Name: "strategy", Type: "string", Description: "Merge strategy (union, intersection, override)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "generateDiff",
+			Description: "Generate diff between two schemas",
+			Parameters: []engine.ParameterInfo{
+				{Name: "oldSchema", Type: "object", Description: "Original schema", Required: true},
+				{Name: "newSchema", Type: "object", Description: "New schema", Required: true},
+				{Name: "format", Type: "string", Description: "Diff format (json, text, detailed)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "exportCollection",
+			Description: "Export multiple schemas as a collection",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schemaIds", Type: "array", Description: "Array of schema IDs to export", Required: true},
+				{Name: "format", Type: "string", Description: "Export format (bundle, separate)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "importCollection",
+			Description: "Import a collection of schemas",
+			Parameters: []engine.ParameterInfo{
+				{Name: "collection", Type: "object", Description: "Schema collection object", Required: true},
+				{Name: "overwrite", Type: "boolean", Description: "Whether to overwrite existing schemas", Required: false},
+			},
+			ReturnType: "array",
+		},
 	}
 }
 
@@ -965,6 +1049,281 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []in
 
 		return schemaToScript(schema), nil
 
+	// Schema Import/Export methods
+	case "exportToJSONSchema":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("exportToJSONSchema requires schema parameter")
+		}
+
+		schemaDef, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		draft := "draft-07" // default
+		if len(args) > 1 {
+			if d, ok := args[1].(string); ok {
+				draft = d
+			}
+		}
+
+		schema, err := scriptToSchema(schemaDef)
+		if err != nil {
+			return nil, fmt.Errorf("invalid schema: %w", err)
+		}
+
+		jsonSchema, err := b.exportToJSONSchema(schema, draft)
+		if err != nil {
+			return nil, fmt.Errorf("failed to export to JSON Schema: %w", err)
+		}
+
+		return jsonSchema, nil
+
+	case "exportToOpenAPI":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("exportToOpenAPI requires schema parameter")
+		}
+
+		schemaDef, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		version := "3.1.0" // default
+		if len(args) > 1 {
+			if v, ok := args[1].(string); ok {
+				version = v
+			}
+		}
+
+		schema, err := scriptToSchema(schemaDef)
+		if err != nil {
+			return nil, fmt.Errorf("invalid schema: %w", err)
+		}
+
+		openAPISchema, err := b.exportToOpenAPI(schema, version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to export to OpenAPI: %w", err)
+		}
+
+		return openAPISchema, nil
+
+	case "importFromFile":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("importFromFile requires filePath parameter")
+		}
+
+		filePath, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("filePath must be string")
+		}
+
+		format := "auto" // default - auto-detect
+		if len(args) > 1 {
+			if f, ok := args[1].(string); ok {
+				format = f
+			}
+		}
+
+		schema, err := b.importFromFile(filePath, format)
+		if err != nil {
+			return nil, fmt.Errorf("failed to import from file: %w", err)
+		}
+
+		return schemaToScript(schema), nil
+
+	case "importFromString":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("importFromString requires content parameter")
+		}
+
+		content, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("content must be string")
+		}
+
+		format := "jsonschema" // default
+		if len(args) > 1 {
+			if f, ok := args[1].(string); ok {
+				format = f
+			}
+		}
+
+		schema, err := b.importFromString(content, format)
+		if err != nil {
+			return nil, fmt.Errorf("failed to import from string: %w", err)
+		}
+
+		return schemaToScript(schema), nil
+
+	case "convertFormat":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("convertFormat requires schema, fromFormat, and toFormat parameters")
+		}
+
+		schemaDef, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		fromFormat, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("fromFormat must be string")
+		}
+
+		toFormat, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("toFormat must be string")
+		}
+
+		schema, err := scriptToSchema(schemaDef)
+		if err != nil {
+			return nil, fmt.Errorf("invalid schema: %w", err)
+		}
+
+		converted, err := b.convertFormat(schema, fromFormat, toFormat)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert format: %w", err)
+		}
+
+		return converted, nil
+
+	case "mergeSchemas":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("mergeSchemas requires schemas parameter")
+		}
+
+		schemasArray, ok := args[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schemas must be array")
+		}
+
+		strategy := "union" // default
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				strategy = s
+			}
+		}
+
+		// Convert script schemas to domain schemas
+		schemas := make([]*schemaDomain.Schema, len(schemasArray))
+		for i, schemaData := range schemasArray {
+			schemaDef, ok := schemaData.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("schema at index %d must be object", i)
+			}
+
+			schema, err := scriptToSchema(schemaDef)
+			if err != nil {
+				return nil, fmt.Errorf("invalid schema at index %d: %w", i, err)
+			}
+			schemas[i] = schema
+		}
+
+		merged, err := b.mergeSchemas(schemas, strategy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to merge schemas: %w", err)
+		}
+
+		return schemaToScript(merged), nil
+
+	case "generateDiff":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("generateDiff requires oldSchema and newSchema parameters")
+		}
+
+		oldSchemaDef, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("oldSchema must be object")
+		}
+
+		newSchemaDef, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("newSchema must be object")
+		}
+
+		format := "json" // default
+		if len(args) > 2 {
+			if f, ok := args[2].(string); ok {
+				format = f
+			}
+		}
+
+		oldSchema, err := scriptToSchema(oldSchemaDef)
+		if err != nil {
+			return nil, fmt.Errorf("invalid oldSchema: %w", err)
+		}
+
+		newSchema, err := scriptToSchema(newSchemaDef)
+		if err != nil {
+			return nil, fmt.Errorf("invalid newSchema: %w", err)
+		}
+
+		diff, err := b.generateDiff(oldSchema, newSchema, format)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate diff: %w", err)
+		}
+
+		return diff, nil
+
+	case "exportCollection":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("exportCollection requires schemaIds parameter")
+		}
+
+		schemaIds, ok := args[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schemaIds must be array")
+		}
+
+		format := "bundle" // default
+		if len(args) > 1 {
+			if f, ok := args[1].(string); ok {
+				format = f
+			}
+		}
+
+		// Convert interface{} slice to string slice
+		ids := make([]string, len(schemaIds))
+		for i, id := range schemaIds {
+			if idStr, ok := id.(string); ok {
+				ids[i] = idStr
+			} else {
+				return nil, fmt.Errorf("schema ID at index %d must be string", i)
+			}
+		}
+
+		collection, err := b.exportCollection(ids, format)
+		if err != nil {
+			return nil, fmt.Errorf("failed to export collection: %w", err)
+		}
+
+		return collection, nil
+
+	case "importCollection":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("importCollection requires collection parameter")
+		}
+
+		collection, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("collection must be object")
+		}
+
+		overwrite := false // default
+		if len(args) > 1 {
+			if o, ok := args[1].(bool); ok {
+				overwrite = o
+			}
+		}
+
+		results, err := b.importCollection(collection, overwrite)
+		if err != nil {
+			return nil, fmt.Errorf("failed to import collection: %w", err)
+		}
+
+		return results, nil
+
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
 	}
@@ -1107,7 +1466,12 @@ func schemaToScript(schema *schemaDomain.Schema) map[string]interface{} {
 	}
 
 	if len(schema.Required) > 0 {
-		result["required"] = schema.Required
+		// Convert []string to []interface{} for script compatibility
+		required := make([]interface{}, len(schema.Required))
+		for i, req := range schema.Required {
+			required[i] = req
+		}
+		result["required"] = required
 	}
 
 	if len(schema.Properties) > 0 {
@@ -1522,4 +1886,646 @@ func (b *SchemaBridge) enhanceSchemaDocumentation(t reflect.Type, schema *schema
 
 	// Add version info if available (would come from build tags or constants)
 	schema.Description += " - Generated by go-llmspell tag-based schema generator"
+}
+
+// Schema Import/Export helper methods
+
+// exportToJSONSchema exports a schema to JSON Schema format
+func (b *SchemaBridge) exportToJSONSchema(schema *schemaDomain.Schema, draft string) (string, error) {
+	// Create JSON Schema representation
+	jsonSchema := map[string]interface{}{
+		"$schema": getJSONSchemaDraftURL(draft),
+		"type":    schema.Type,
+	}
+
+	// Add title and description
+	if schema.Title != "" {
+		jsonSchema["title"] = schema.Title
+	}
+	if schema.Description != "" {
+		jsonSchema["description"] = schema.Description
+	}
+
+	// Convert properties
+	if len(schema.Properties) > 0 {
+		properties := make(map[string]interface{})
+
+		for name, prop := range schema.Properties {
+			propSchema := propertyToJSONSchema(&prop)
+			properties[name] = propSchema
+		}
+
+		jsonSchema["properties"] = properties
+		if len(schema.Required) > 0 {
+			jsonSchema["required"] = schema.Required
+		}
+	}
+
+	// Convert to JSON string
+	data, err := json.MarshalIndent(jsonSchema, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal JSON schema: %w", err)
+	}
+
+	return string(data), nil
+}
+
+// exportToOpenAPI exports a schema to OpenAPI format
+func (b *SchemaBridge) exportToOpenAPI(schema *schemaDomain.Schema, version string) (map[string]interface{}, error) {
+	openAPISchema := map[string]interface{}{
+		"type": schema.Type,
+	}
+
+	// Add title and description
+	if schema.Title != "" {
+		openAPISchema["title"] = schema.Title
+	}
+	if schema.Description != "" {
+		openAPISchema["description"] = schema.Description
+	}
+
+	// Convert properties
+	if len(schema.Properties) > 0 {
+		properties := make(map[string]interface{})
+
+		for name, prop := range schema.Properties {
+			propSchema := propertyToOpenAPI(&prop, version)
+			properties[name] = propSchema
+		}
+
+		openAPISchema["properties"] = properties
+		if len(schema.Required) > 0 {
+			openAPISchema["required"] = schema.Required
+		}
+	}
+
+	return openAPISchema, nil
+}
+
+// importFromFile imports a schema from a file
+func (b *SchemaBridge) importFromFile(filePath, format string) (*schemaDomain.Schema, error) {
+	// Read file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	// Auto-detect format if needed
+	if format == "auto" {
+		format = detectSchemaFormat(string(content), filePath)
+	}
+
+	return b.importFromString(string(content), format)
+}
+
+// importFromString imports a schema from string content
+func (b *SchemaBridge) importFromString(content, format string) (*schemaDomain.Schema, error) {
+	var schemaData map[string]interface{}
+
+	// Parse JSON content
+	if err := json.Unmarshal([]byte(content), &schemaData); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	// Convert based on format
+	switch format {
+	case "jsonschema":
+		return b.convertJSONSchemaToInternal(schemaData)
+	case "openapi":
+		return b.convertOpenAPIToInternal(schemaData)
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// convertFormat converts a schema between different formats
+func (b *SchemaBridge) convertFormat(schema *schemaDomain.Schema, fromFormat, toFormat string) (interface{}, error) {
+	switch toFormat {
+	case "jsonschema":
+		return b.exportToJSONSchema(schema, "draft-07")
+	case "openapi":
+		return b.exportToOpenAPI(schema, "3.1.0")
+	case "internal":
+		return schemaToScript(schema), nil
+	default:
+		return nil, fmt.Errorf("unsupported target format: %s", toFormat)
+	}
+}
+
+// mergeSchemas merges multiple schemas using the specified strategy
+func (b *SchemaBridge) mergeSchemas(schemas []*schemaDomain.Schema, strategy string) (*schemaDomain.Schema, error) {
+	if len(schemas) == 0 {
+		return nil, fmt.Errorf("no schemas to merge")
+	}
+
+	if len(schemas) == 1 {
+		return schemas[0], nil
+	}
+
+	// Start with the first schema as base
+	merged := &schemaDomain.Schema{
+		Type:        schemas[0].Type,
+		Title:       schemas[0].Title,
+		Description: schemas[0].Description,
+		Properties:  make(map[string]schemaDomain.Property),
+		Required:    append([]string{}, schemas[0].Required...),
+	}
+
+	// Copy properties from first schema
+	for name, prop := range schemas[0].Properties {
+		merged.Properties[name] = schemaDomain.Property{
+			Type:        prop.Type,
+			Description: prop.Description,
+			Enum:        append([]string{}, prop.Enum...),
+			Format:      prop.Format,
+			Pattern:     prop.Pattern,
+			MinLength:   prop.MinLength,
+			MaxLength:   prop.MaxLength,
+			Minimum:     prop.Minimum,
+			Maximum:     prop.Maximum,
+		}
+	}
+
+	// Merge remaining schemas
+	for i := 1; i < len(schemas); i++ {
+		if err := b.mergeSchemaInto(merged, schemas[i], strategy); err != nil {
+			return nil, fmt.Errorf("failed to merge schema %d: %w", i, err)
+		}
+	}
+
+	return merged, nil
+}
+
+// generateDiff generates a diff between two schemas
+func (b *SchemaBridge) generateDiff(oldSchema, newSchema *schemaDomain.Schema, format string) (interface{}, error) {
+	diff := map[string]interface{}{
+		"added":     make(map[string]interface{}),
+		"removed":   make(map[string]interface{}),
+		"modified":  make(map[string]interface{}),
+		"unchanged": make(map[string]interface{}),
+	}
+
+	// Compare properties
+	added := diff["added"].(map[string]interface{})
+	removed := diff["removed"].(map[string]interface{})
+	modified := diff["modified"].(map[string]interface{})
+	unchanged := diff["unchanged"].(map[string]interface{})
+
+	// Find added and modified properties
+	for name, newProp := range newSchema.Properties {
+		if oldProp, exists := oldSchema.Properties[name]; exists {
+			if !b.propertiesEqual(&oldProp, &newProp) {
+				modified[name] = map[string]interface{}{
+					"old": propertyToScript(&oldProp),
+					"new": propertyToScript(&newProp),
+				}
+			} else {
+				unchanged[name] = propertyToScript(&newProp)
+			}
+		} else {
+			added[name] = propertyToScript(&newProp)
+		}
+	}
+
+	// Find removed properties
+	for name, oldProp := range oldSchema.Properties {
+		if _, exists := newSchema.Properties[name]; !exists {
+			removed[name] = propertyToScript(&oldProp)
+		}
+	}
+
+	// Format the output
+	switch format {
+	case "json":
+		return diff, nil
+	case "text":
+		return b.formatDiffAsText(diff), nil
+	case "detailed":
+		return b.formatDiffDetailed(diff), nil
+	default:
+		return diff, nil
+	}
+}
+
+// exportCollection exports multiple schemas as a collection
+func (b *SchemaBridge) exportCollection(schemaIds []string, format string) (interface{}, error) {
+	repo := b.repository
+	if b.fileRepo != nil {
+		repo = b.fileRepo
+	}
+
+	collection := map[string]interface{}{
+		"version": "1.0",
+		"schemas": make(map[string]interface{}),
+	}
+
+	schemas := collection["schemas"].(map[string]interface{})
+
+	for _, id := range schemaIds {
+		schema, err := repo.Get(id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get schema %s: %w", id, err)
+		}
+
+		switch format {
+		case "bundle":
+			schemas[id] = schemaToScript(schema)
+		case "separate":
+			// For separate format, each schema is in its own entry
+			schemas[id] = map[string]interface{}{
+				"id":     id,
+				"schema": schemaToScript(schema),
+			}
+		default:
+			schemas[id] = schemaToScript(schema)
+		}
+	}
+
+	return collection, nil
+}
+
+// importCollection imports a collection of schemas
+func (b *SchemaBridge) importCollection(collection map[string]interface{}, overwrite bool) ([]interface{}, error) {
+	schemasData, ok := collection["schemas"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("collection must contain 'schemas' field")
+	}
+
+	repo := b.repository
+	if b.fileRepo != nil {
+		repo = b.fileRepo
+	}
+
+	results := make([]interface{}, 0)
+
+	for id, schemaData := range schemasData {
+		// Check if schema already exists
+		if !overwrite {
+			if _, err := repo.Get(id); err == nil {
+				results = append(results, map[string]interface{}{
+					"id":     id,
+					"status": "skipped",
+					"reason": "already exists",
+				})
+				continue
+			}
+		}
+
+		// Convert schema data to internal format
+		schemaDef, ok := schemaData.(map[string]interface{})
+		if !ok {
+			results = append(results, map[string]interface{}{
+				"id":     id,
+				"status": "error",
+				"reason": "invalid schema format",
+			})
+			continue
+		}
+
+		schema, err := scriptToSchema(schemaDef)
+		if err != nil {
+			results = append(results, map[string]interface{}{
+				"id":     id,
+				"status": "error",
+				"reason": fmt.Sprintf("failed to parse schema: %v", err),
+			})
+			continue
+		}
+
+		// Save schema
+		if err := repo.Save(id, schema); err != nil {
+			results = append(results, map[string]interface{}{
+				"id":     id,
+				"status": "error",
+				"reason": fmt.Sprintf("failed to save schema: %v", err),
+			})
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"id":     id,
+			"status": "imported",
+		})
+	}
+
+	return results, nil
+}
+
+// Helper functions for import/export
+
+// getJSONSchemaDraftURL returns the $schema URL for the specified draft
+func getJSONSchemaDraftURL(draft string) string {
+	switch draft {
+	case "draft-07":
+		return "http://json-schema.org/draft-07/schema#"
+	case "draft-2019-09":
+		return "https://json-schema.org/draft/2019-09/schema"
+	case "draft-2020-12":
+		return "https://json-schema.org/draft/2020-12/schema"
+	default:
+		return "http://json-schema.org/draft-07/schema#"
+	}
+}
+
+// propertyToJSONSchema converts a property to JSON Schema format
+func propertyToJSONSchema(prop *schemaDomain.Property) map[string]interface{} {
+	propSchema := map[string]interface{}{
+		"type": prop.Type,
+	}
+
+	if prop.Description != "" {
+		propSchema["description"] = prop.Description
+	}
+	if len(prop.Enum) > 0 {
+		// Convert []string to []interface{} for JSON
+		enumValues := make([]interface{}, len(prop.Enum))
+		for i, v := range prop.Enum {
+			enumValues[i] = v
+		}
+		propSchema["enum"] = enumValues
+	}
+	if prop.Format != "" {
+		propSchema["format"] = prop.Format
+	}
+	if prop.Pattern != "" {
+		propSchema["pattern"] = prop.Pattern
+	}
+	if prop.MinLength != nil {
+		propSchema["minLength"] = *prop.MinLength
+	}
+	if prop.MaxLength != nil {
+		propSchema["maxLength"] = *prop.MaxLength
+	}
+	if prop.Minimum != nil {
+		propSchema["minimum"] = *prop.Minimum
+	}
+	if prop.Maximum != nil {
+		propSchema["maximum"] = *prop.Maximum
+	}
+
+	return propSchema
+}
+
+// propertyToOpenAPI converts a property to OpenAPI format
+func propertyToOpenAPI(prop *schemaDomain.Property, version string) map[string]interface{} {
+	propSchema := propertyToJSONSchema(prop) // Start with JSON Schema format
+
+	// OpenAPI 3.1.0 is JSON Schema compatible, 3.0.x has some differences
+	if version == "3.0.0" || version == "3.0.1" || version == "3.0.2" || version == "3.0.3" {
+		// For OpenAPI 3.0.x, remove JSON Schema specific fields that aren't supported
+		delete(propSchema, "$schema")
+	}
+
+	return propSchema
+}
+
+// detectSchemaFormat auto-detects the schema format from content and filename
+func detectSchemaFormat(content, filePath string) string {
+	// Check for OpenAPI indicators
+	if strings.Contains(content, "openapi") || strings.Contains(content, "swagger") {
+		return "openapi"
+	}
+
+	// Check for JSON Schema indicators
+	if strings.Contains(content, "$schema") || strings.Contains(content, "json-schema.org") {
+		return "jsonschema"
+	}
+
+	// Check file extension
+	if strings.HasSuffix(filePath, ".openapi.json") || strings.HasSuffix(filePath, ".swagger.json") {
+		return "openapi"
+	}
+
+	// Default to JSON Schema
+	return "jsonschema"
+}
+
+// convertJSONSchemaToInternal converts JSON Schema to internal format
+func (b *SchemaBridge) convertJSONSchemaToInternal(data map[string]interface{}) (*schemaDomain.Schema, error) {
+	schema := &schemaDomain.Schema{
+		Properties: make(map[string]schemaDomain.Property),
+	}
+
+	if t, ok := data["type"].(string); ok {
+		schema.Type = t
+	}
+	if title, ok := data["title"].(string); ok {
+		schema.Title = title
+	}
+	if desc, ok := data["description"].(string); ok {
+		schema.Description = desc
+	}
+
+	// Convert required fields
+	if req, ok := data["required"].([]interface{}); ok {
+		schema.Required = make([]string, len(req))
+		for i, r := range req {
+			if name, ok := r.(string); ok {
+				schema.Required[i] = name
+			}
+		}
+	}
+
+	// Convert properties
+	if props, ok := data["properties"].(map[string]interface{}); ok {
+		for name, propData := range props {
+			if propMap, ok := propData.(map[string]interface{}); ok {
+				prop := b.convertJSONSchemaProperty(propMap)
+				schema.Properties[name] = *prop
+			}
+		}
+	}
+
+	return schema, nil
+}
+
+// convertOpenAPIToInternal converts OpenAPI schema to internal format
+func (b *SchemaBridge) convertOpenAPIToInternal(data map[string]interface{}) (*schemaDomain.Schema, error) {
+	// OpenAPI schemas are largely JSON Schema compatible
+	return b.convertJSONSchemaToInternal(data)
+}
+
+// convertJSONSchemaProperty converts a JSON Schema property to internal format
+func (b *SchemaBridge) convertJSONSchemaProperty(data map[string]interface{}) *schemaDomain.Property {
+	prop := &schemaDomain.Property{}
+
+	if t, ok := data["type"].(string); ok {
+		prop.Type = t
+	}
+	if desc, ok := data["description"].(string); ok {
+		prop.Description = desc
+	}
+	if enum, ok := data["enum"].([]interface{}); ok {
+		// Convert []interface{} to []string
+		prop.Enum = make([]string, len(enum))
+		for i, v := range enum {
+			if s, ok := v.(string); ok {
+				prop.Enum[i] = s
+			} else {
+				prop.Enum[i] = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+	if format, ok := data["format"].(string); ok {
+		prop.Format = format
+	}
+	if pattern, ok := data["pattern"].(string); ok {
+		prop.Pattern = pattern
+	}
+	if minLen, ok := data["minLength"].(float64); ok {
+		intVal := int(minLen)
+		prop.MinLength = &intVal
+	}
+	if maxLen, ok := data["maxLength"].(float64); ok {
+		intVal := int(maxLen)
+		prop.MaxLength = &intVal
+	}
+	if min, ok := data["minimum"].(float64); ok {
+		prop.Minimum = &min
+	}
+	if max, ok := data["maximum"].(float64); ok {
+		prop.Maximum = &max
+	}
+
+	return prop
+}
+
+// mergeSchemaInto merges one schema into another based on strategy
+func (b *SchemaBridge) mergeSchemaInto(target *schemaDomain.Schema, source *schemaDomain.Schema, strategy string) error {
+	if target == nil || source == nil {
+		return fmt.Errorf("target and source schemas cannot be nil")
+	}
+
+	switch strategy {
+	case "union":
+		// Add all properties from source, keep existing ones
+		for name, prop := range source.Properties {
+			if _, exists := target.Properties[name]; !exists {
+				target.Properties[name] = prop
+			}
+		}
+	case "intersection":
+		// Keep only properties that exist in both schemas
+		for name := range target.Properties {
+			if _, exists := source.Properties[name]; !exists {
+				delete(target.Properties, name)
+			}
+		}
+	case "override":
+		// Source properties override target properties
+		for name, prop := range source.Properties {
+			target.Properties[name] = prop
+		}
+	default:
+		return fmt.Errorf("unsupported merge strategy: %s", strategy)
+	}
+
+	// Update schema-level fields based on strategy
+	if strategy == "override" || (strategy == "union" && target.Title == "") {
+		if source.Title != "" {
+			target.Title = source.Title
+		}
+	}
+	if strategy == "override" || (strategy == "union" && target.Description == "") {
+		if source.Description != "" {
+			target.Description = source.Description
+		}
+	}
+
+	return nil
+}
+
+// propertiesEqual checks if two properties are equal
+func (br *SchemaBridge) propertiesEqual(a, b *schemaDomain.Property) bool {
+	return a.Type == b.Type &&
+		a.Description == b.Description &&
+		a.Format == b.Format &&
+		a.Pattern == b.Pattern &&
+		equalPointers(a.MinLength, b.MinLength) &&
+		equalPointers(a.MaxLength, b.MaxLength) &&
+		equalFloatPointers(a.Minimum, b.Minimum) &&
+		equalFloatPointers(a.Maximum, b.Maximum) &&
+		equalStringSlices(a.Enum, b.Enum)
+}
+
+// formatDiffAsText formats a diff as human-readable text
+func (b *SchemaBridge) formatDiffAsText(diff map[string]interface{}) string {
+	var result strings.Builder
+
+	if added := diff["added"].(map[string]interface{}); len(added) > 0 {
+		result.WriteString("Added properties:\n")
+		for name := range added {
+			result.WriteString(fmt.Sprintf("  + %s\n", name))
+		}
+		result.WriteString("\n")
+	}
+
+	if removed := diff["removed"].(map[string]interface{}); len(removed) > 0 {
+		result.WriteString("Removed properties:\n")
+		for name := range removed {
+			result.WriteString(fmt.Sprintf("  - %s\n", name))
+		}
+		result.WriteString("\n")
+	}
+
+	if modified := diff["modified"].(map[string]interface{}); len(modified) > 0 {
+		result.WriteString("Modified properties:\n")
+		for name := range modified {
+			result.WriteString(fmt.Sprintf("  ~ %s\n", name))
+		}
+		result.WriteString("\n")
+	}
+
+	return result.String()
+}
+
+// formatDiffDetailed formats a diff with detailed change information
+func (b *SchemaBridge) formatDiffDetailed(diff map[string]interface{}) map[string]interface{} {
+	detailed := make(map[string]interface{})
+
+	// Add summary statistics
+	detailed["summary"] = map[string]interface{}{
+		"added":     len(diff["added"].(map[string]interface{})),
+		"removed":   len(diff["removed"].(map[string]interface{})),
+		"modified":  len(diff["modified"].(map[string]interface{})),
+		"unchanged": len(diff["unchanged"].(map[string]interface{})),
+	}
+
+	// Include full diff
+	detailed["changes"] = diff
+
+	return detailed
+}
+
+// Helper functions for pointer comparison
+func equalPointers(a, b *int) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func equalFloatPointers(a, b *float64) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }

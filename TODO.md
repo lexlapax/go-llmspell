@@ -75,15 +75,15 @@ All LLM Bridge advanced features completed. See TODO-DONE.md for detailed comple
   - [x] Support nested struct generation
   - [x] Check tests to use go-llms pkg/testutils
 
-- [ ] **Task 1.4.5.3: Add Schema Import/Export**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Implement schema export to JSON Schema
-  - [ ] Add OpenAPI schema export
-  - [ ] Support schema import from files
-  - [ ] Add schema format conversion
-  - [ ] Implement schema merging
-  - [ ] Add schema diff generation
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+- [x] **Task 1.4.5.3: Add Schema Import/Export** [COMPLETED - 2025-06-16]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Implement schema export to JSON Schema
+  - [x] Add OpenAPI schema export
+  - [x] Support schema import from files
+  - [x] Add schema format conversion
+  - [x] Implement schema merging
+  - [x] Add schema diff generation
+  - [x] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
 
 - [ ] **Task 1.4.5.4: Add Custom Validators**
   - [ ] Ensure we leverage imports from go-llms pkg
