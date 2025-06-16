@@ -18,8 +18,8 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-func TestNewEventBridgeV2(t *testing.T) {
-	bridge := NewEventBridgeV2()
+func TestNewEventBridge(t *testing.T) {
+	bridge := NewEventBridge()
 	assert.NotNil(t, bridge)
 	assert.Equal(t, "events", bridge.GetID())
 	assert.NotNil(t, bridge.eventBus)
@@ -28,8 +28,8 @@ func TestNewEventBridgeV2(t *testing.T) {
 	assert.NotNil(t, bridge.replayer)
 }
 
-func TestEventBridgeV2Metadata(t *testing.T) {
-	bridge := NewEventBridgeV2()
+func TestEventBridgeMetadata(t *testing.T) {
+	bridge := NewEventBridge()
 	metadata := bridge.GetMetadata()
 
 	assert.Equal(t, "events", metadata.Name)
@@ -42,20 +42,20 @@ func TestEventBridgeV2Metadata(t *testing.T) {
 	assert.NotEmpty(t, metadata.License)
 }
 
-func TestEventBridgeV2Initialization(t *testing.T) {
+func TestEventBridgeInitialization(t *testing.T) {
 	tests := []struct {
 		name    string
-		bridge  *EventBridgeV2
+		bridge  *EventBridge
 		wantErr bool
 	}{
 		{
 			name:    "successful initialization",
-			bridge:  NewEventBridgeV2(),
+			bridge:  NewEventBridge(),
 			wantErr: false,
 		},
 		{
 			name:    "double initialization",
-			bridge:  &EventBridgeV2{initialized: true},
+			bridge:  &EventBridge{initialized: true},
 			wantErr: false,
 		},
 	}
@@ -73,8 +73,8 @@ func TestEventBridgeV2Initialization(t *testing.T) {
 	}
 }
 
-func TestEventBridgeV2Methods(t *testing.T) {
-	bridge := NewEventBridgeV2()
+func TestEventBridgeMethods(t *testing.T) {
+	bridge := NewEventBridge()
 	methods := bridge.Methods()
 
 	// Essential v2.0.0 methods
@@ -136,8 +136,8 @@ func TestEventBridgeV2Methods(t *testing.T) {
 	assert.GreaterOrEqual(t, len(methods), 30, "Should have at least 30 methods in v2.0.0")
 }
 
-func TestEventBridgeV2TypeMappings(t *testing.T) {
-	bridge := NewEventBridgeV2()
+func TestEventBridgeTypeMappings(t *testing.T) {
+	bridge := NewEventBridge()
 	mappings := bridge.TypeMappings()
 
 	expectedTypes := []string{
@@ -160,8 +160,8 @@ func TestEventBridgeV2TypeMappings(t *testing.T) {
 	}
 }
 
-func TestEventBridgeV2RequiredPermissions(t *testing.T) {
-	bridge := NewEventBridgeV2()
+func TestEventBridgeRequiredPermissions(t *testing.T) {
+	bridge := NewEventBridge()
 	permissions := bridge.RequiredPermissions()
 
 	assert.NotEmpty(t, permissions)
@@ -193,9 +193,9 @@ func TestEventBridgeV2RequiredPermissions(t *testing.T) {
 	assert.True(t, hasFilePermission, "Missing file permission")
 }
 
-func TestEventBridgeV2_EventBusOperations(t *testing.T) {
+func TestEventBridge_EventBusOperations(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -245,9 +245,9 @@ func TestEventBridgeV2_EventBusOperations(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_EventStorage(t *testing.T) {
+func TestEventBridge_EventStorage(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -279,9 +279,9 @@ func TestEventBridgeV2_EventStorage(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_EventFiltering(t *testing.T) {
+func TestEventBridge_EventFiltering(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -322,9 +322,9 @@ func TestEventBridgeV2_EventFiltering(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_EventSerialization(t *testing.T) {
+func TestEventBridge_EventSerialization(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -380,9 +380,9 @@ func TestEventBridgeV2_EventSerialization(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_EventReplay(t *testing.T) {
+func TestEventBridge_EventReplay(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -425,9 +425,9 @@ func TestEventBridgeV2_EventReplay(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_EventAggregation(t *testing.T) {
+func TestEventBridge_EventAggregation(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -469,9 +469,9 @@ func TestEventBridgeV2_EventAggregation(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_BridgeEvents(t *testing.T) {
+func TestEventBridge_BridgeEvents(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -489,9 +489,9 @@ func TestEventBridgeV2_BridgeEvents(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_EventStreams(t *testing.T) {
+func TestEventBridge_EventStreams(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -508,9 +508,9 @@ func TestEventBridgeV2_EventStreams(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_Utilities(t *testing.T) {
+func TestEventBridge_Utilities(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(t, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -529,8 +529,8 @@ func TestEventBridgeV2_Utilities(t *testing.T) {
 	})
 }
 
-func TestEventBridgeV2_ConcurrentAccess(t *testing.T) {
-	bridge := NewEventBridgeV2()
+func TestEventBridge_ConcurrentAccess(t *testing.T) {
+	bridge := NewEventBridge()
 	ctx := context.Background()
 
 	// Initialize bridge
@@ -600,8 +600,8 @@ func TestEventBridgeV2_ConcurrentAccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestEventBridgeV2_ErrorHandling(t *testing.T) {
-	bridge := NewEventBridgeV2()
+func TestEventBridge_ErrorHandling(t *testing.T) {
+	bridge := NewEventBridge()
 	ctx := context.Background()
 
 	t.Run("methods fail when not initialized", func(t *testing.T) {
@@ -660,9 +660,9 @@ func TestEventBridgeV2_ErrorHandling(t *testing.T) {
 }
 
 // Benchmark tests
-func BenchmarkEventBridgeV2_PublishEvent(b *testing.B) {
+func BenchmarkEventBridge_PublishEvent(b *testing.B) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(b, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
@@ -683,9 +683,9 @@ func BenchmarkEventBridgeV2_PublishEvent(b *testing.B) {
 	}
 }
 
-func BenchmarkEventBridgeV2_EventSerialization(b *testing.B) {
+func BenchmarkEventBridge_EventSerialization(b *testing.B) {
 	ctx := context.Background()
-	bridge := NewEventBridgeV2()
+	bridge := NewEventBridge()
 	require.NoError(b, bridge.Initialize(ctx))
 	defer func() {
 		_ = bridge.Cleanup(ctx)
