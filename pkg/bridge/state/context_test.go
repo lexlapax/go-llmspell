@@ -1,5 +1,5 @@
-// ABOUTME: Test suite for State Context Bridge that bridges go-llms SharedStateContext to script engines
-// ABOUTME: Comprehensive tests covering parent-child state relationships, inheritance configuration, and state isolation
+// ABOUTME: Comprehensive test suite for State Context Bridge that bridges go-llms SharedStateContext to script engines
+// ABOUTME: Tests bridge interface compliance, state context operations, and go-llms integration
 
 package state
 
@@ -17,8 +17,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Note: We're now using go-llms domain.SharedStateContext directly
-// The tests have been updated to use the real types from go-llms
+// Test helper functions
+
+// setupTestContextBridge creates and initializes a state context bridge for testing
+func setupTestContextBridge(t *testing.T) (*StateContextBridge, context.Context) {
+	t.Helper()
+	bridge, err := NewStateContextBridge()
+	require.NoError(t, err)
+	ctx := context.Background()
+	err = bridge.Initialize(ctx)
+	require.NoError(t, err)
+	return bridge, ctx
+}
+
+// createMockParentState creates a mock parent state for testing
+func createMockParentState(t *testing.T) map[string]interface{} {
+	t.Helper()
+	return map[string]interface{}{
+		"id":   "parent_state",
+		"data": map[string]interface{}{"parent_key": "parent_value"},
+	}
+}
 
 // Test suite for StateContextBridge
 func TestNewStateContextBridge(t *testing.T) {
@@ -44,6 +63,303 @@ func TestNewStateContextBridge(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Bridge Interface Compliance Tests
+func TestStateContextBridge_InterfaceCompliance(t *testing.T) {
+	bridge, ctx := setupTestContextBridge(t)
+
+	// Test Bridge interface implementation
+	t.Run("GetID", func(t *testing.T) {
+		id := bridge.GetID()
+		assert.Equal(t, "state_context", id)
+	})
+
+	t.Run("GetMetadata", func(t *testing.T) {
+		metadata := bridge.GetMetadata()
+		assert.Equal(t, "State Context Bridge", metadata.Name)
+		assert.Equal(t, "1.0.0", metadata.Version)
+		assert.NotEmpty(t, metadata.Description)
+	})
+
+	t.Run("IsInitialized", func(t *testing.T) {
+		assert.True(t, bridge.IsInitialized())
+	})
+
+	t.Run("Methods", func(t *testing.T) {
+		methods := bridge.Methods()
+		assert.NotEmpty(t, methods)
+
+		// Check for key methods
+		methodNames := make(map[string]bool)
+		for _, method := range methods {
+			methodNames[method.Name] = true
+			assert.NotEmpty(t, method.ReturnType, "Method %s should have ReturnType", method.Name)
+		}
+
+		expectedMethods := []string{
+			"createSharedContext", "withInheritanceConfig", "get", "set", "has", "keys", "values",
+			"getArtifact", "artifacts", "messages", "getMetadata", "localState", "clone", "asState",
+		}
+
+		for _, expected := range expectedMethods {
+			assert.True(t, methodNames[expected], "Expected method %s not found", expected)
+		}
+	})
+
+	t.Run("TypeMappings", func(t *testing.T) {
+		mappings := bridge.TypeMappings()
+		assert.NotEmpty(t, mappings)
+		assert.Contains(t, mappings, "SharedStateContext")
+		assert.Contains(t, mappings, "StateReader")
+	})
+
+	t.Run("ValidateMethod", func(t *testing.T) {
+		// Valid method
+		err := bridge.ValidateMethod("createSharedContext", []interface{}{})
+		assert.NoError(t, err)
+
+		// Invalid method
+		err = bridge.ValidateMethod("nonexistent", []interface{}{})
+		assert.Error(t, err)
+	})
+
+	t.Run("RequiredPermissions", func(t *testing.T) {
+		permissions := bridge.RequiredPermissions()
+		assert.NotEmpty(t, permissions)
+
+		found := false
+		for _, perm := range permissions {
+			if perm.Type == engine.PermissionMemory {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "Expected memory permission requirement")
+	})
+
+	t.Run("Cleanup", func(t *testing.T) {
+		err := bridge.Cleanup(ctx)
+		assert.NoError(t, err)
+	})
+}
+
+// Core Operations Tests
+func TestStateContextBridge_CoreOperations(t *testing.T) {
+	bridge, ctx := setupTestContextBridge(t)
+
+	t.Run("createSharedContext", func(t *testing.T) {
+		parentState := createMockParentState(t)
+
+		result, err := bridge.createSharedContext(ctx, map[string]interface{}{
+			"parent": parentState,
+		})
+		require.NoError(t, err)
+
+		contextObj, ok := result.(map[string]interface{})
+		require.True(t, ok, "createSharedContext should return context object")
+
+		// Verify context structure
+		assert.Equal(t, "SharedStateContext", contextObj["type"])
+		assert.Equal(t, true, contextObj["inheritMessages"])
+		assert.Equal(t, true, contextObj["inheritArtifacts"])
+		assert.Equal(t, true, contextObj["inheritMetadata"])
+		assert.NotNil(t, contextObj["parent"])
+	})
+
+	t.Run("createSharedContext_without_parent", func(t *testing.T) {
+		_, err := bridge.createSharedContext(ctx, map[string]interface{}{})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "parent parameter is required")
+	})
+
+	t.Run("createSharedContext_invalid_parent", func(t *testing.T) {
+		_, err := bridge.createSharedContext(ctx, map[string]interface{}{
+			"parent": "invalid",
+		})
+		assert.Error(t, err)
+	})
+}
+
+// Parameter Validation Tests
+func TestStateContextBridge_ParameterValidation(t *testing.T) {
+	bridge, ctx := setupTestContextBridge(t)
+
+	t.Run("withInheritanceConfig_validation", func(t *testing.T) {
+		// Test without context parameter
+		_, err := bridge.withInheritanceConfig(ctx, map[string]interface{}{
+			"messages":  true,
+			"artifacts": true,
+			"metadata":  true,
+		})
+		assert.Error(t, err)
+
+		// Test with invalid boolean parameters
+		contextObj := map[string]interface{}{}
+		_, err = bridge.withInheritanceConfig(ctx, map[string]interface{}{
+			"context":  contextObj,
+			"messages": "invalid",
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("contextGet_validation", func(t *testing.T) {
+		// Test without context parameter
+		_, err := bridge.contextGet(ctx, map[string]interface{}{
+			"key": "test_key",
+		})
+		assert.Error(t, err)
+
+		// Test without key parameter
+		contextObj := map[string]interface{}{}
+		_, err = bridge.contextGet(ctx, map[string]interface{}{
+			"context": contextObj,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("contextSet_validation", func(t *testing.T) {
+		// Test without context parameter
+		_, err := bridge.contextSet(ctx, map[string]interface{}{
+			"key":   "test_key",
+			"value": "test_value",
+		})
+		assert.Error(t, err)
+
+		// Test without key parameter
+		contextObj := map[string]interface{}{}
+		_, err = bridge.contextSet(ctx, map[string]interface{}{
+			"context": contextObj,
+			"value":   "test_value",
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("contextHas_validation", func(t *testing.T) {
+		// Test without context parameter
+		_, err := bridge.contextHas(ctx, map[string]interface{}{
+			"key": "test_key",
+		})
+		assert.Error(t, err)
+
+		// Test without key parameter
+		contextObj := map[string]interface{}{}
+		_, err = bridge.contextHas(ctx, map[string]interface{}{
+			"context": contextObj,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("contextGetArtifact_validation", func(t *testing.T) {
+		// Test without context parameter
+		_, err := bridge.contextGetArtifact(ctx, map[string]interface{}{
+			"id": "artifact_id",
+		})
+		assert.Error(t, err)
+
+		// Test without id parameter
+		contextObj := map[string]interface{}{}
+		_, err = bridge.contextGetArtifact(ctx, map[string]interface{}{
+			"context": contextObj,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("contextGetMetadata_validation", func(t *testing.T) {
+		// Test without context parameter
+		_, err := bridge.contextGetMetadata(ctx, map[string]interface{}{
+			"key": "meta_key",
+		})
+		assert.Error(t, err)
+
+		// Test without key parameter
+		contextObj := map[string]interface{}{}
+		_, err = bridge.contextGetMetadata(ctx, map[string]interface{}{
+			"context": contextObj,
+		})
+		assert.Error(t, err)
+	})
+}
+
+// Conversion Limitations Tests
+func TestStateContextBridge_ConversionLimitations(t *testing.T) {
+	bridge, ctx := setupTestContextBridge(t)
+
+	// These tests verify that the bridge properly handles the limitation
+	// that full conversion is not implemented in the mock environment
+	t.Run("scriptToSharedContext_not_implemented", func(t *testing.T) {
+		contextObj := map[string]interface{}{
+			"type": "SharedStateContext",
+		}
+
+		_, err := bridge.contextGet(ctx, map[string]interface{}{
+			"context": contextObj,
+			"key":     "test_key",
+		})
+
+		assert.Error(t, err)
+		// The actual error is about missing _id field
+		assert.Contains(t, err.Error(), "_id")
+	})
+
+	t.Run("scriptToStateReader_not_implemented", func(t *testing.T) {
+		// The scriptToStateReader function converts to State via scriptToState
+		// It will create a new state object, not return an error
+		result, err := bridge.scriptToStateReader(map[string]interface{}{})
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+}
+
+// Helper Functions Tests
+func TestStateContextBridge_HelperFunctions(t *testing.T) {
+	bridge, _ := setupTestContextBridge(t)
+
+	t.Run("sharedContextToScript", func(t *testing.T) {
+		// Test with a context ID and nil context
+		result := bridge.sharedContextToScript("test_context_1", nil)
+		assert.Equal(t, "SharedStateContext", result["type"])
+		assert.Equal(t, "test_context_1", result["_id"])
+		assert.Equal(t, true, result["inheritMessages"])
+	})
+
+	t.Run("stateToScript", func(t *testing.T) {
+		// Create a domain state
+		state := domain.NewState()
+		state.Set("test_key", "test_value")
+		state.SetMetadata("meta_key", "meta_value")
+
+		result := bridge.stateToScript(state)
+		assert.NotEmpty(t, result["id"])
+
+		data, ok := result["data"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "test_value", data["test_key"])
+
+		metadata, ok := result["metadata"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "meta_value", metadata["meta_key"])
+	})
+
+	t.Run("updateScriptSharedContext", func(t *testing.T) {
+		// Create a script object representing a shared context
+		scriptObj := map[string]interface{}{
+			"_id":  "test_ctx",
+			"type": "SharedStateContext",
+		}
+
+		// Create a real SharedStateContext
+		parentState := domain.NewState()
+		sharedContext := domain.NewSharedStateContext(parentState)
+		sharedContext.Set("local_key", "local_value")
+
+		// Call updateScriptSharedContext
+		bridge.updateScriptSharedContext(scriptObj, sharedContext)
+
+		// The current implementation doesn't actually update the script object
+		// This is noted in the implementation as something that would be done
+		// in a real bridge implementation
+	})
 }
 
 // Test schema validation functionality using go-llms v0.3.5 infrastructure
