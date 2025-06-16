@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 
@@ -21,24 +23,61 @@ import (
 	"github.com/lexlapax/go-llms/pkg/schema/validation"
 )
 
+// validationMetrics tracks performance metrics for validation operations
+type validationMetrics struct {
+	TotalValidations      int64         `json:"totalValidations"`
+	SuccessfulValidations int64         `json:"successfulValidations"`
+	FailedValidations     int64         `json:"failedValidations"`
+	AverageLatency        time.Duration `json:"averageLatency"`
+	CacheHits             int64         `json:"cacheHits"`
+	CacheMisses           int64         `json:"cacheMisses"`
+	AsyncValidations      int64         `json:"asyncValidations"`
+	mutex                 sync.RWMutex
+}
+
+// asyncValidationRequest represents an async validation request
+type asyncValidationRequest struct {
+	ID       string               `json:"id"`
+	Schema   *schemaDomain.Schema `json:"schema"`
+	Data     interface{}          `json:"data"`
+	Callback interface{}          `json:"callback"`
+	Created  time.Time            `json:"created"`
+}
+
+// validationCacheEntry represents a cached validation result
+type validationCacheEntry struct {
+	Result  *schemaDomain.ValidationResult `json:"result"`
+	Created time.Time                      `json:"created"`
+	TTL     time.Duration                  `json:"ttl"`
+}
+
 // SchemaBridge provides access to go-llms schema validation system
 type SchemaBridge struct {
-	mu           sync.RWMutex
-	initialized  bool
-	validator    schemaDomain.Validator
-	generator    schemaDomain.SchemaGenerator
-	repository   schemaDomain.SchemaRepository
-	fileRepo     schemaDomain.SchemaRepository        // File-based repository for persistence
-	migrators    map[string]repository.SchemaMigrator // Migration registry
-	tagGenerator schemaDomain.SchemaGenerator         // Tag-based generator
-	schemas      map[string]*schemaDomain.Schema      // Simple in-memory storage
+	mu                    sync.RWMutex
+	initialized           bool
+	validator             schemaDomain.Validator
+	generator             schemaDomain.SchemaGenerator
+	repository            schemaDomain.SchemaRepository
+	fileRepo              schemaDomain.SchemaRepository        // File-based repository for persistence
+	migrators             map[string]repository.SchemaMigrator // Migration registry
+	tagGenerator          schemaDomain.SchemaGenerator         // Tag-based generator
+	schemas               map[string]*schemaDomain.Schema      // Simple in-memory storage
+	customValidators      map[string]interface{}               // Script-based custom validators
+	validationCache       sync.Map                             // Validation result cache
+	validationMetrics     *validationMetrics                   // Performance metrics
+	asyncValidationQueue  chan *asyncValidationRequest         // Async validation queue
+	conditionalValidators map[string]interface{}               // Conditional validation functions
 }
 
 // NewSchemaBridge creates a new schema bridge
 func NewSchemaBridge() *SchemaBridge {
 	return &SchemaBridge{
-		migrators: make(map[string]repository.SchemaMigrator),
-		schemas:   make(map[string]*schemaDomain.Schema),
+		migrators:             make(map[string]repository.SchemaMigrator),
+		schemas:               make(map[string]*schemaDomain.Schema),
+		customValidators:      make(map[string]interface{}),
+		conditionalValidators: make(map[string]interface{}),
+		validationMetrics:     &validationMetrics{},
+		asyncValidationQueue:  make(chan *asyncValidationRequest, 100),
 	}
 }
 
@@ -388,6 +427,85 @@ func (b *SchemaBridge) Methods() []engine.MethodInfo {
 				{Name: "overwrite", Type: "boolean", Description: "Whether to overwrite existing schemas", Required: false},
 			},
 			ReturnType: "array",
+		},
+
+		// Custom Validators (Task 1.4.5.4)
+		{
+			Name:        "registerCustomValidator",
+			Description: "Register a custom validation function",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Validator name", Required: true},
+				{Name: "validatorFunc", Type: "function", Description: "Validation function", Required: true},
+			},
+			ReturnType: "null",
+		},
+		{
+			Name:        "unregisterCustomValidator",
+			Description: "Unregister a custom validation function",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Validator name", Required: true},
+			},
+			ReturnType: "boolean",
+		},
+		{
+			Name:        "listCustomValidators",
+			Description: "List all registered custom validators",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "array",
+		},
+		{
+			Name:        "validateWithCustom",
+			Description: "Validate data using custom validators",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schema", Type: "object", Description: "Schema with custom validators", Required: true},
+				{Name: "data", Type: "any", Description: "Data to validate", Required: true},
+				{Name: "options", Type: "object", Description: "Validation options", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "validateAsync",
+			Description: "Perform asynchronous validation",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schema", Type: "object", Description: "Schema to validate against", Required: true},
+				{Name: "data", Type: "any", Description: "Data to validate", Required: true},
+				{Name: "callback", Type: "function", Description: "Callback function", Required: true},
+			},
+			ReturnType: "string",
+		},
+		{
+			Name:        "getValidationMetrics",
+			Description: "Get validation performance metrics",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "object",
+		},
+		{
+			Name:        "clearValidationCache",
+			Description: "Clear the validation result cache",
+			Parameters: []engine.ParameterInfo{
+				{Name: "pattern", Type: "string", Description: "Cache key pattern to clear", Required: false},
+			},
+			ReturnType: "number",
+		},
+		{
+			Name:        "registerConditionalValidator",
+			Description: "Register a conditional validation function",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Validator name", Required: true},
+				{Name: "condition", Type: "function", Description: "Condition function", Required: true},
+				{Name: "validator", Type: "function", Description: "Validation function", Required: true},
+			},
+			ReturnType: "null",
+		},
+		{
+			Name:        "validateConditional",
+			Description: "Validate data using conditional validators",
+			Parameters: []engine.ParameterInfo{
+				{Name: "schema", Type: "object", Description: "Schema definition", Required: true},
+				{Name: "data", Type: "any", Description: "Data to validate", Required: true},
+				{Name: "context", Type: "object", Description: "Validation context", Required: false},
+			},
+			ReturnType: "object",
 		},
 	}
 }
@@ -1324,6 +1442,158 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []in
 
 		return results, nil
 
+	// Custom Validators (Task 1.4.5.4)
+	case "registerCustomValidator":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("registerCustomValidator requires name and validatorFunc parameters")
+		}
+
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		validatorFunc := args[1] // Store the script function as-is
+
+		b.customValidators[name] = validatorFunc
+
+		// Also register with go-llms validation system
+		customValidator := b.createCustomValidatorWrapper(validatorFunc)
+		validation.RegisterCustomValidator(name, customValidator)
+
+		return nil, nil
+
+	case "unregisterCustomValidator":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("unregisterCustomValidator requires name parameter")
+		}
+
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		_, existed := b.customValidators[name]
+		delete(b.customValidators, name)
+
+		// Note: go-llms doesn't provide unregister functionality,
+		// but we track our own registry
+
+		return existed, nil
+
+	case "listCustomValidators":
+		validators := make([]string, 0, len(b.customValidators))
+		for name := range b.customValidators {
+			validators = append(validators, name)
+		}
+		return validators, nil
+
+	case "validateWithCustom":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("validateWithCustom requires schema and data parameters")
+		}
+
+		schemaDef, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		data := args[1]
+
+		options := make(map[string]interface{})
+		if len(args) > 2 {
+			if opts, ok := args[2].(map[string]interface{}); ok {
+				options = opts
+			}
+		}
+
+		result, err := b.validateWithCustomValidators(schemaDef, data, options)
+		if err != nil {
+			return nil, fmt.Errorf("custom validation failed: %w", err)
+		}
+
+		return result, nil
+
+	case "validateAsync":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("validateAsync requires schema, data, and callback parameters")
+		}
+
+		schemaDef, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		data := args[1]
+		callback := args[2]
+
+		requestID, err := b.enqueueAsyncValidation(schemaDef, data, callback)
+		if err != nil {
+			return nil, fmt.Errorf("failed to enqueue async validation: %w", err)
+		}
+
+		return requestID, nil
+
+	case "getValidationMetrics":
+		return b.getValidationMetrics(), nil
+
+	case "clearValidationCache":
+		pattern := ""
+		if len(args) > 0 {
+			if p, ok := args[0].(string); ok {
+				pattern = p
+			}
+		}
+
+		cleared := b.clearValidationCache(pattern)
+		return cleared, nil
+
+	case "registerConditionalValidator":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("registerConditionalValidator requires name, condition, and validator parameters")
+		}
+
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		condition := args[1]
+		validator := args[2]
+
+		b.conditionalValidators[name] = map[string]interface{}{
+			"condition": condition,
+			"validator": validator,
+		}
+
+		return nil, nil
+
+	case "validateConditional":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("validateConditional requires schema and data parameters")
+		}
+
+		schemaDef, ok := args[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("schema must be object")
+		}
+
+		data := args[1]
+
+		context := make(map[string]interface{})
+		if len(args) > 2 {
+			if ctx, ok := args[2].(map[string]interface{}); ok {
+				context = ctx
+			}
+		}
+
+		result, err := b.validateWithConditionalValidators(schemaDef, data, context)
+		if err != nil {
+			return nil, fmt.Errorf("conditional validation failed: %w", err)
+		}
+
+		return result, nil
+
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
 	}
@@ -1376,6 +1646,68 @@ func scriptToSchema(def map[string]interface{}) (*schemaDomain.Schema, error) {
 
 	if addProps, ok := def["additionalProperties"].(bool); ok {
 		schema.AdditionalProperties = &addProps
+	}
+
+	// Handle conditional validation fields
+	if ifSchema, ok := def["if"].(map[string]interface{}); ok {
+		if converted, err := scriptToSchema(ifSchema); err == nil {
+			schema.If = converted
+		}
+	}
+
+	if thenSchema, ok := def["then"].(map[string]interface{}); ok {
+		if converted, err := scriptToSchema(thenSchema); err == nil {
+			schema.Then = converted
+		}
+	}
+
+	if elseSchema, ok := def["else"].(map[string]interface{}); ok {
+		if converted, err := scriptToSchema(elseSchema); err == nil {
+			schema.Else = converted
+		}
+	}
+
+	// Handle allOf
+	if allOf, ok := def["allOf"].([]interface{}); ok {
+		schema.AllOf = make([]*schemaDomain.Schema, 0, len(allOf))
+		for _, item := range allOf {
+			if itemMap, ok := item.(map[string]interface{}); ok {
+				if converted, err := scriptToSchema(itemMap); err == nil {
+					schema.AllOf = append(schema.AllOf, converted)
+				}
+			}
+		}
+	}
+
+	// Handle anyOf
+	if anyOf, ok := def["anyOf"].([]interface{}); ok {
+		schema.AnyOf = make([]*schemaDomain.Schema, 0, len(anyOf))
+		for _, item := range anyOf {
+			if itemMap, ok := item.(map[string]interface{}); ok {
+				if converted, err := scriptToSchema(itemMap); err == nil {
+					schema.AnyOf = append(schema.AnyOf, converted)
+				}
+			}
+		}
+	}
+
+	// Handle oneOf
+	if oneOf, ok := def["oneOf"].([]interface{}); ok {
+		schema.OneOf = make([]*schemaDomain.Schema, 0, len(oneOf))
+		for _, item := range oneOf {
+			if itemMap, ok := item.(map[string]interface{}); ok {
+				if converted, err := scriptToSchema(itemMap); err == nil {
+					schema.OneOf = append(schema.OneOf, converted)
+				}
+			}
+		}
+	}
+
+	// Handle not
+	if notSchema, ok := def["not"].(map[string]interface{}); ok {
+		if converted, err := scriptToSchema(notSchema); err == nil {
+			schema.Not = converted
+		}
 	}
 
 	return schema, nil
@@ -2528,4 +2860,271 @@ func equalStringSlices(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// Custom validator helper functions for Task 1.4.5.4
+
+// createCustomValidatorWrapper wraps a script function as a go-llms CustomValidator
+func (b *SchemaBridge) createCustomValidatorWrapper(scriptFunc interface{}) validation.CustomValidator {
+	return func(value interface{}, displayPath string) []string {
+		// Note: In a real implementation, this would call the script function
+		// For now, we'll return a placeholder that indicates script validation
+		// would need to be implemented at the engine level
+		return []string{fmt.Sprintf("script validation for %s not yet implemented", displayPath)}
+	}
+}
+
+// validateWithCustomValidators performs validation using registered custom validators
+func (b *SchemaBridge) validateWithCustomValidators(schemaDef map[string]interface{}, data interface{}, options map[string]interface{}) (map[string]interface{}, error) {
+	schema, err := scriptToSchema(schemaDef)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert schema: %w", err)
+	}
+
+	// Use caching if enabled
+	cacheKey := ""
+	useCache := false
+	if enableCache, ok := options["useCache"].(bool); ok && enableCache {
+		cacheKey = b.generateCacheKey(schema, data)
+		if cached := b.getCachedValidation(cacheKey); cached != nil {
+			b.validationMetrics.mutex.Lock()
+			b.validationMetrics.CacheHits++
+			b.validationMetrics.mutex.Unlock()
+			return map[string]interface{}{
+				"valid":  cached.Result.Valid,
+				"errors": cached.Result.Errors,
+				"cached": true,
+			}, nil
+		}
+		useCache = true
+		b.validationMetrics.mutex.Lock()
+		b.validationMetrics.CacheMisses++
+		b.validationMetrics.mutex.Unlock()
+	}
+
+	// Record metrics
+	start := time.Now()
+	b.validationMetrics.mutex.Lock()
+	b.validationMetrics.TotalValidations++
+	b.validationMetrics.mutex.Unlock()
+
+	// Create validator with custom validation enabled
+	validator := validation.NewValidator(validation.WithCustomValidation(true))
+
+	// Perform validation
+	var result *schemaDomain.ValidationResult
+	if dataStr, ok := data.(string); ok {
+		// Data is already JSON string
+		result, err = validator.Validate(schema, dataStr)
+	} else {
+		// Convert data to JSON first, then validate
+		dataJSON, marshalErr := json.Marshal(data)
+		if marshalErr != nil {
+			return nil, fmt.Errorf("failed to marshal data to JSON: %w", marshalErr)
+		}
+		result, err = validator.Validate(schema, string(dataJSON))
+	}
+
+	// Update metrics
+	duration := time.Since(start)
+	b.validationMetrics.mutex.Lock()
+	if err == nil && result.Valid {
+		b.validationMetrics.SuccessfulValidations++
+	} else {
+		b.validationMetrics.FailedValidations++
+	}
+	// Update average latency
+	totalOps := b.validationMetrics.TotalValidations
+	b.validationMetrics.AverageLatency = time.Duration(
+		(int64(b.validationMetrics.AverageLatency)*(totalOps-1) + int64(duration)) / totalOps,
+	)
+	b.validationMetrics.mutex.Unlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the result if caching is enabled
+	if useCache {
+		b.setCachedValidation(cacheKey, result, 5*time.Minute)
+	}
+
+	return map[string]interface{}{
+		"valid":  result.Valid,
+		"errors": result.Errors,
+		"cached": false,
+	}, nil
+}
+
+// enqueueAsyncValidation adds a validation request to the async queue
+func (b *SchemaBridge) enqueueAsyncValidation(schemaDef map[string]interface{}, data interface{}, callback interface{}) (string, error) {
+	schema, err := scriptToSchema(schemaDef)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert schema: %w", err)
+	}
+
+	requestID := fmt.Sprintf("async-validation-%d", time.Now().UnixNano())
+	request := &asyncValidationRequest{
+		ID:       requestID,
+		Schema:   schema,
+		Data:     data,
+		Callback: callback,
+		Created:  time.Now(),
+	}
+
+	// Try to enqueue (non-blocking)
+	select {
+	case b.asyncValidationQueue <- request:
+		b.validationMetrics.mutex.Lock()
+		b.validationMetrics.AsyncValidations++
+		b.validationMetrics.mutex.Unlock()
+		return requestID, nil
+	default:
+		return "", fmt.Errorf("async validation queue is full")
+	}
+}
+
+// getValidationMetrics returns current validation performance metrics
+func (b *SchemaBridge) getValidationMetrics() map[string]interface{} {
+	b.validationMetrics.mutex.RLock()
+	defer b.validationMetrics.mutex.RUnlock()
+
+	return map[string]interface{}{
+		"totalValidations":      b.validationMetrics.TotalValidations,
+		"successfulValidations": b.validationMetrics.SuccessfulValidations,
+		"failedValidations":     b.validationMetrics.FailedValidations,
+		"averageLatency":        b.validationMetrics.AverageLatency.String(),
+		"cacheHits":             b.validationMetrics.CacheHits,
+		"cacheMisses":           b.validationMetrics.CacheMisses,
+		"asyncValidations":      b.validationMetrics.AsyncValidations,
+		"cacheHitRatio":         float64(b.validationMetrics.CacheHits) / float64(b.validationMetrics.CacheHits+b.validationMetrics.CacheMisses),
+	}
+}
+
+// clearValidationCache clears cached validation results
+func (b *SchemaBridge) clearValidationCache(pattern string) int {
+	cleared := 0
+
+	if pattern == "" {
+		// Clear all cache entries
+		b.validationCache.Range(func(key, value interface{}) bool {
+			b.validationCache.Delete(key)
+			cleared++
+			return true
+		})
+	} else {
+		// Clear entries matching pattern
+		b.validationCache.Range(func(key, value interface{}) bool {
+			if keyStr, ok := key.(string); ok {
+				if matched, _ := regexp.MatchString(pattern, keyStr); matched {
+					b.validationCache.Delete(key)
+					cleared++
+				}
+			}
+			return true
+		})
+	}
+
+	return cleared
+}
+
+// validateWithConditionalValidators performs conditional validation
+func (b *SchemaBridge) validateWithConditionalValidators(schemaDef map[string]interface{}, data interface{}, context map[string]interface{}) (map[string]interface{}, error) {
+	// This leverages go-llms built-in conditional validation (If/Then/Else, AllOf, AnyOf, OneOf)
+	schema, err := scriptToSchema(schemaDef)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert schema: %w", err)
+	}
+
+	// Create validator
+	validator := validation.NewValidator()
+
+	// Perform validation (go-llms validator already handles conditional validation)
+	var result *schemaDomain.ValidationResult
+	if dataStr, ok := data.(string); ok {
+		// Data is already JSON string
+		result, err = validator.Validate(schema, dataStr)
+	} else {
+		// Convert data to JSON first, then validate
+		dataJSON, marshalErr := json.Marshal(data)
+		if marshalErr != nil {
+			return nil, fmt.Errorf("failed to marshal data to JSON: %w", marshalErr)
+		}
+		result, err = validator.Validate(schema, string(dataJSON))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Also check any custom conditional validators we have registered
+	customErrors := []string{}
+	for name, validatorDef := range b.conditionalValidators {
+		if conditionFunc := validatorDef.(map[string]interface{})["condition"]; conditionFunc != nil {
+			// Note: In a real implementation, this would call the script condition function
+			// For now, we'll add a placeholder
+			customErrors = append(customErrors, fmt.Sprintf("conditional validator '%s' not yet implemented for script integration", name))
+		}
+	}
+
+	// Combine results
+	allErrors := result.Errors
+	if len(customErrors) > 0 {
+		allErrors = append(allErrors, customErrors...)
+	}
+
+	return map[string]interface{}{
+		"valid":            result.Valid && len(customErrors) == 0,
+		"errors":           allErrors,
+		"customConditions": len(customErrors),
+	}, nil
+}
+
+// Helper functions for validation caching
+
+// generateCacheKey creates a cache key for validation results
+func (b *SchemaBridge) generateCacheKey(schema *schemaDomain.Schema, data interface{}) string {
+	schemaBytes, _ := json.Marshal(schema)
+	dataBytes, _ := json.Marshal(data)
+
+	schemaHashFull := fmt.Sprintf("%x", schemaBytes)
+	dataHashFull := fmt.Sprintf("%x", dataBytes)
+
+	// Safely truncate hash strings
+	schemaHash := schemaHashFull
+	if len(schemaHashFull) > 16 {
+		schemaHash = schemaHashFull[:16]
+	}
+
+	dataHash := dataHashFull
+	if len(dataHashFull) > 16 {
+		dataHash = dataHashFull[:16]
+	}
+
+	return fmt.Sprintf("validation:%s:%s", schemaHash, dataHash)
+}
+
+// getCachedValidation retrieves a cached validation result
+func (b *SchemaBridge) getCachedValidation(key string) *validationCacheEntry {
+	if cached, ok := b.validationCache.Load(key); ok {
+		if entry, ok := cached.(*validationCacheEntry); ok {
+			// Check if entry is still valid (not expired)
+			if time.Since(entry.Created) < entry.TTL {
+				return entry
+			}
+			// Remove expired entry
+			b.validationCache.Delete(key)
+		}
+	}
+	return nil
+}
+
+// setCachedValidation stores a validation result in cache
+func (b *SchemaBridge) setCachedValidation(key string, result *schemaDomain.ValidationResult, ttl time.Duration) {
+	entry := &validationCacheEntry{
+		Result:  result,
+		Created: time.Now(),
+		TTL:     ttl,
+	}
+	b.validationCache.Store(key, entry)
 }

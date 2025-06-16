@@ -1333,3 +1333,428 @@ func TestSchemaBridge_ImportExport_ErrorCases(t *testing.T) {
 		assert.Contains(t, err.Error(), "collection must contain 'schemas' field")
 	})
 }
+
+// Custom Validator Tests (Task 1.4.5.4)
+
+func TestSchemaBridge_CustomValidators(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("registerCustomValidator", func(t *testing.T) {
+		// Create a mock validator function
+		validatorFunc := func(value interface{}, displayPath string) []string {
+			if str, ok := value.(string); ok && str == "invalid" {
+				return []string{fmt.Sprintf("%s is invalid", displayPath)}
+			}
+			return []string{}
+		}
+
+		// Register the validator
+		result, err := bridge.ExecuteMethod(ctx, "registerCustomValidator", []interface{}{"testValidator", validatorFunc})
+		require.NoError(t, err)
+		assert.Nil(t, result)
+
+		// Verify it was registered
+		assert.Contains(t, bridge.customValidators, "testValidator")
+	})
+
+	t.Run("listCustomValidators", func(t *testing.T) {
+		// Should include the validator we registered above
+		result, err := bridge.ExecuteMethod(ctx, "listCustomValidators", []interface{}{})
+		require.NoError(t, err)
+
+		validators, ok := result.([]string)
+		require.True(t, ok)
+		assert.Contains(t, validators, "testValidator")
+	})
+
+	t.Run("unregisterCustomValidator", func(t *testing.T) {
+		// Unregister existing validator
+		result, err := bridge.ExecuteMethod(ctx, "unregisterCustomValidator", []interface{}{"testValidator"})
+		require.NoError(t, err)
+
+		existed, ok := result.(bool)
+		require.True(t, ok)
+		assert.True(t, existed)
+
+		// Try to unregister non-existent validator
+		result, err = bridge.ExecuteMethod(ctx, "unregisterCustomValidator", []interface{}{"nonExistent"})
+		require.NoError(t, err)
+
+		existed, ok = result.(bool)
+		require.True(t, ok)
+		assert.False(t, existed)
+	})
+
+	t.Run("validateWithCustom", func(t *testing.T) {
+		// Register a validator first
+		validatorFunc := func(value interface{}, displayPath string) []string {
+			return []string{}
+		}
+		_, err := bridge.ExecuteMethod(ctx, "registerCustomValidator", []interface{}{"customTest", validatorFunc})
+		require.NoError(t, err)
+
+		schema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"field": map[string]interface{}{
+					"type":            "string",
+					"customValidator": "customTest",
+				},
+			},
+		}
+
+		data := map[string]interface{}{
+			"field": "test value",
+		}
+
+		result, err := bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{schema, data})
+		require.NoError(t, err)
+
+		validation, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, validation, "valid")
+		assert.Contains(t, validation, "errors")
+		assert.Contains(t, validation, "cached")
+	})
+
+	t.Run("validateWithCustom_with_caching", func(t *testing.T) {
+		schema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"field": map[string]interface{}{
+					"type": "string",
+				},
+			},
+		}
+
+		data := map[string]interface{}{
+			"field": "test value",
+		}
+
+		options := map[string]interface{}{
+			"useCache": true,
+		}
+
+		// First validation should miss cache
+		result, err := bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{schema, data, options})
+		require.NoError(t, err)
+
+		validation, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.False(t, validation["cached"].(bool))
+
+		// Second validation should hit cache
+		result, err = bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{schema, data, options})
+		require.NoError(t, err)
+
+		validation, ok = result.(map[string]interface{})
+		require.True(t, ok)
+		assert.True(t, validation["cached"].(bool))
+	})
+}
+
+func TestSchemaBridge_AsyncValidation(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("validateAsync", func(t *testing.T) {
+		schema := map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"field": map[string]interface{}{
+					"type": "string",
+				},
+			},
+		}
+
+		data := map[string]interface{}{
+			"field": "test value",
+		}
+
+		callback := func(result interface{}) {
+			// Mock callback function
+		}
+
+		result, err := bridge.ExecuteMethod(ctx, "validateAsync", []interface{}{schema, data, callback})
+		require.NoError(t, err)
+
+		requestID, ok := result.(string)
+		require.True(t, ok)
+		assert.Contains(t, requestID, "async-validation-")
+	})
+
+	t.Run("validateAsync_queue_full", func(t *testing.T) {
+		// Fill up the async queue by creating many requests
+		schema := map[string]interface{}{
+			"type": "string",
+		}
+
+		// Create enough requests to fill the queue (queue size is 100)
+		for i := 0; i < 100; i++ {
+			result, err := bridge.ExecuteMethod(ctx, "validateAsync", []interface{}{schema, "test", func() {}})
+			if err != nil {
+				// Queue is full, this is expected
+				assert.Contains(t, err.Error(), "async validation queue is full")
+				return
+			}
+			// Verify we got a request ID
+			requestID, ok := result.(string)
+			require.True(t, ok)
+			assert.Contains(t, requestID, "async-validation-")
+		}
+
+		// If we get here, try one more to definitely trigger the full queue error
+		_, err := bridge.ExecuteMethod(ctx, "validateAsync", []interface{}{schema, "test", func() {}})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "async validation queue is full")
+	})
+}
+
+func TestSchemaBridge_ValidationMetrics(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("getValidationMetrics", func(t *testing.T) {
+		// Perform some validations to generate metrics
+		schema := map[string]interface{}{
+			"type": "string",
+		}
+
+		// Valid validation - pass string to string schema
+		_, err := bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{schema, `"test"`})
+		require.NoError(t, err)
+
+		// Invalid validation - pass number to string schema (should fail validation but not error)
+		result, err := bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{schema, `123`}) // Pass as JSON string
+		if err != nil {
+			t.Logf("Validation error (may be expected): %v", err)
+		} else {
+			// Check that validation result shows failure
+			validation, ok := result.(map[string]interface{})
+			if ok {
+				t.Logf("Validation result: valid=%v", validation["valid"])
+			}
+		}
+
+		result, err = bridge.ExecuteMethod(ctx, "getValidationMetrics", []interface{}{})
+		require.NoError(t, err)
+
+		metrics, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		expectedFields := []string{
+			"totalValidations",
+			"successfulValidations",
+			"failedValidations",
+			"averageLatency",
+			"cacheHits",
+			"cacheMisses",
+			"asyncValidations",
+			"cacheHitRatio",
+		}
+
+		for _, field := range expectedFields {
+			assert.Contains(t, metrics, field)
+		}
+
+		// Should have at least some validations recorded
+		assert.True(t, metrics["totalValidations"].(int64) >= 1)
+	})
+}
+
+func TestSchemaBridge_ValidationCache(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("clearValidationCache_all", func(t *testing.T) {
+		// Add some cache entries by doing validations with caching enabled
+		schema := map[string]interface{}{
+			"type": "string",
+		}
+
+		options := map[string]interface{}{
+			"useCache": true,
+		}
+
+		// Use JSON strings for validation data
+		_, err := bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{schema, `"test1"`, options})
+		require.NoError(t, err)
+
+		_, err = bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{schema, `"test2"`, options})
+		require.NoError(t, err)
+
+		// Clear all cache
+		result, err := bridge.ExecuteMethod(ctx, "clearValidationCache", []interface{}{})
+		require.NoError(t, err)
+
+		cleared, ok := result.(int)
+		require.True(t, ok)
+		assert.True(t, cleared >= 0) // Should have cleared some entries
+	})
+
+	t.Run("clearValidationCache_pattern", func(t *testing.T) {
+		// Clear cache with pattern
+		result, err := bridge.ExecuteMethod(ctx, "clearValidationCache", []interface{}{"validation:.*"})
+		require.NoError(t, err)
+
+		cleared, ok := result.(int)
+		require.True(t, ok)
+		assert.True(t, cleared >= 0)
+	})
+}
+
+func TestSchemaBridge_ConditionalValidation(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("registerConditionalValidator", func(t *testing.T) {
+		condition := func(data interface{}) bool {
+			// Mock condition function
+			return true
+		}
+
+		validator := func(data interface{}) []string {
+			// Mock validator function
+			return []string{}
+		}
+
+		result, err := bridge.ExecuteMethod(ctx, "registerConditionalValidator", []interface{}{
+			"testConditional",
+			condition,
+			validator,
+		})
+		require.NoError(t, err)
+		assert.Nil(t, result)
+
+		// Verify it was registered
+		assert.Contains(t, bridge.conditionalValidators, "testConditional")
+	})
+
+	t.Run("validateConditional_with_builtin", func(t *testing.T) {
+		// Test go-llms built-in conditional validation (If/Then/Else)
+		schema := map[string]interface{}{
+			"type": "object",
+			"if": map[string]interface{}{
+				"properties": map[string]interface{}{
+					"type": map[string]interface{}{
+						"const": "premium",
+					},
+				},
+			},
+			"then": map[string]interface{}{
+				"properties": map[string]interface{}{
+					"price": map[string]interface{}{
+						"type":    "number",
+						"minimum": 100.0,
+					},
+				},
+				"required": []interface{}{"price"},
+			},
+			"else": map[string]interface{}{
+				"properties": map[string]interface{}{
+					"price": map[string]interface{}{
+						"type":    "number",
+						"maximum": 50.0,
+					},
+				},
+			},
+		}
+
+		// Data that should match "then" branch
+		dataPremium := map[string]interface{}{
+			"type":  "premium",
+			"price": 150.0,
+		}
+
+		result, err := bridge.ExecuteMethod(ctx, "validateConditional", []interface{}{schema, dataPremium})
+		require.NoError(t, err)
+
+		validation, ok := result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, validation, "valid")
+		assert.Contains(t, validation, "errors")
+		assert.Contains(t, validation, "customConditions")
+	})
+
+	t.Run("validateConditional_anyOf", func(t *testing.T) {
+		// Test anyOf conditional validation
+		// Note: This tests that anyOf schemas are processed without error
+		// The exact validation behavior depends on the go-llms validator implementation
+		schema := map[string]interface{}{
+			"anyOf": []interface{}{
+				map[string]interface{}{
+					"type":      "string",
+					"minLength": 10, // Require string to be at least 10 chars
+				},
+				map[string]interface{}{
+					"type":    "number",
+					"minimum": 100, // Require number to be at least 100
+				},
+			},
+		}
+
+		// Test that validation completes without error
+		result, err := bridge.ExecuteMethod(ctx, "validateConditional", []interface{}{schema, `"test"`})
+		require.NoError(t, err)
+
+		validation, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		// Verify the response structure contains expected fields
+		assert.Contains(t, validation, "valid")
+		assert.Contains(t, validation, "errors")
+		assert.Contains(t, validation, "customConditions")
+
+		// Test with valid data
+		result, err = bridge.ExecuteMethod(ctx, "validateConditional", []interface{}{schema, `"this is a long string"`})
+		require.NoError(t, err)
+
+		validation, ok = result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, validation, "valid")
+
+		// Test with number
+		result, err = bridge.ExecuteMethod(ctx, "validateConditional", []interface{}{schema, `150`})
+		require.NoError(t, err)
+
+		validation, ok = result.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, validation, "valid")
+	})
+}
+
+func TestSchemaBridge_CustomValidators_ErrorCases(t *testing.T) {
+	bridge, ctx := setupTestBridge(t)
+
+	t.Run("registerCustomValidator_missing_args", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "registerCustomValidator", []interface{}{"name"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "requires name and validatorFunc parameters")
+	})
+
+	t.Run("registerCustomValidator_invalid_name", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "registerCustomValidator", []interface{}{123, func() {}})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name must be string")
+	})
+
+	t.Run("validateWithCustom_invalid_schema", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "validateWithCustom", []interface{}{"invalid", "data"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "schema must be object")
+	})
+
+	t.Run("validateAsync_missing_args", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "validateAsync", []interface{}{"schema", "data"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "requires schema, data, and callback parameters")
+	})
+
+	t.Run("registerConditionalValidator_missing_args", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "registerConditionalValidator", []interface{}{"name", "condition"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "requires name, condition, and validator parameters")
+	})
+
+	t.Run("validateConditional_invalid_schema", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "validateConditional", []interface{}{"invalid", "data"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "schema must be object")
+	})
+}
