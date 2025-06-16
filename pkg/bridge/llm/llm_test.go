@@ -6,6 +6,7 @@ package llm
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -290,6 +291,111 @@ func TestLLMBridgeProviderMetadataMethods(t *testing.T) {
 	for method, found := range metadataMethods {
 		assert.True(t, found, "Provider metadata method %s not found", method)
 	}
+}
+
+func TestLLMBridgeStreamingMethods(t *testing.T) {
+	bridge := NewLLMBridge()
+	methods := bridge.Methods()
+
+	// Check that streaming methods are present
+	streamingMethods := map[string]bool{
+		"streamWithEvents":        false,
+		"streamMessageWithEvents": false,
+		"getStreamMetrics":        false,
+		"cancelStream":            false,
+		"listActiveStreams":       false,
+	}
+
+	for _, method := range methods {
+		if _, ok := streamingMethods[method.Name]; ok {
+			streamingMethods[method.Name] = true
+		}
+	}
+
+	for method, found := range streamingMethods {
+		assert.True(t, found, "Streaming method %s not found", method)
+	}
+}
+
+func TestLLMBridgeStreamingOperations(t *testing.T) {
+	bridge := NewLLMBridge()
+
+	// Use testutils helpers for creating test context
+	testToolContext := helpers.CreateTestToolContext()
+	ctx := testToolContext.Context
+
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test listActiveStreams when no streams exist
+	streams, err := bridge.ExecuteMethod(ctx, "listActiveStreams", []interface{}{})
+	assert.NoError(t, err)
+	assert.NotNil(t, streams)
+	streamList, ok := streams.([]map[string]interface{})
+	assert.True(t, ok)
+	assert.Empty(t, streamList)
+
+	// Test getStreamMetrics with non-existent stream
+	_, err = bridge.ExecuteMethod(ctx, "getStreamMetrics", []interface{}{"nonexistent"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "stream not found")
+
+	// Test cancelStream with non-existent stream
+	canceled, err := bridge.ExecuteMethod(ctx, "cancelStream", []interface{}{"nonexistent"})
+	assert.NoError(t, err)
+	assert.False(t, canceled.(bool))
+
+	// Test streamWithEvents without active provider
+	// Use testutils fixture for test message
+	testMessages := fixtures.CreateSimpleConversation()
+	testPrompt := testMessages[0].Content
+	_, err = bridge.ExecuteMethod(ctx, "streamWithEvents", []interface{}{testPrompt})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no active provider set")
+}
+
+func TestLLMBridgeStreamMetrics(t *testing.T) {
+	bridge := NewLLMBridge()
+
+	// Use testutils for creating test state and context
+	testState := fixtures.BasicTestState()
+	now := time.Now()
+
+	// Create test metrics
+	metrics := &StreamMetrics{
+		StartTime:      now.Add(-5 * time.Second),
+		TokenCount:     100,
+		ByteCount:      500,
+		FirstTokenTime: now.Add(-4 * time.Second),
+		LastTokenTime:  now,
+		Errors:         0,
+	}
+
+	// Add metrics to bridge
+	bridge.streamMetrics["test-stream"] = metrics
+
+	// Test getStreamMetrics using testutils context
+	testToolContext := helpers.CreateTestToolContext(helpers.WithTestState(testState))
+	ctx := testToolContext.Context
+
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	result, err := bridge.ExecuteMethod(ctx, "getStreamMetrics", []interface{}{"test-stream"})
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+
+	metricsMap, ok := result.(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "test-stream", metricsMap["streamId"])
+	assert.Equal(t, 100, metricsMap["tokenCount"])
+	assert.Equal(t, 500, metricsMap["byteCount"])
+	assert.Greater(t, metricsMap["tokensPerSecond"].(float64), 0.0)
+
+	// Assert tokens per second is in expected range
+	tokensPerSecond := metricsMap["tokensPerSecond"].(float64)
+	assert.GreaterOrEqual(t, tokensPerSecond, 10.0)
+	assert.LessOrEqual(t, tokensPerSecond, 30.0)
 }
 
 // Note: Actual provider testing would require real go-llms Provider implementations

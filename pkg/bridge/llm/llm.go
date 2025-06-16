@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -23,6 +24,9 @@ import (
 	"github.com/lexlapax/go-llms/pkg/schema/validation"
 	structuredDomain "github.com/lexlapax/go-llms/pkg/structured/domain"
 	"github.com/lexlapax/go-llms/pkg/structured/processor"
+
+	// go-llms imports for event system
+	agentDomain "github.com/lexlapax/go-llms/pkg/agent/domain"
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.
@@ -44,6 +48,21 @@ type LLMBridge struct {
 	// Provider metadata components from go-llms v0.3.5
 	providerRegistry *provider.DynamicRegistry            // Provider registry
 	providerMetadata map[string]provider.ProviderMetadata // Cached metadata
+
+	// Streaming components
+	eventEmitter  agentDomain.EventEmitter        // Event emitter for stream chunks
+	streamMetrics map[string]*StreamMetrics       // Stream performance metrics
+	activeStreams map[string]chan llmdomain.Token // Active stream channels
+}
+
+// StreamMetrics tracks streaming performance
+type StreamMetrics struct {
+	StartTime      time.Time
+	TokenCount     int
+	ByteCount      int
+	FirstTokenTime time.Time
+	LastTokenTime  time.Time
+	Errors         int
 }
 
 // NewLLMBridge creates a new LLM bridge.
@@ -52,6 +71,8 @@ func NewLLMBridge() *LLMBridge {
 		providers:        make(map[string]bridge.Provider),
 		responseSchemas:  make(map[string]*schemaDomain.Schema),
 		providerMetadata: make(map[string]provider.ProviderMetadata),
+		streamMetrics:    make(map[string]*StreamMetrics),
+		activeStreams:    make(map[string]chan llmdomain.Token),
 	}
 }
 
@@ -303,6 +324,49 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 			},
 			ReturnType: "void",
 		},
+		// Streaming methods with event emission (v0.3.5)
+		{
+			Name:        "streamWithEvents",
+			Description: "Stream text generation with event emission for each chunk",
+			Parameters: []engine.ParameterInfo{
+				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+				{Name: "eventHandler", Type: "function", Description: "Function to handle stream events", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "streamMessageWithEvents",
+			Description: "Stream response from messages with event emission",
+			Parameters: []engine.ParameterInfo{
+				{Name: "messages", Type: "array", Description: "Input messages", Required: true},
+				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+				{Name: "eventHandler", Type: "function", Description: "Function to handle stream events", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "getStreamMetrics",
+			Description: "Get performance metrics for a specific stream",
+			Parameters: []engine.ParameterInfo{
+				{Name: "streamId", Type: "string", Description: "Stream ID", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "cancelStream",
+			Description: "Cancel an active stream",
+			Parameters: []engine.ParameterInfo{
+				{Name: "streamId", Type: "string", Description: "Stream ID to cancel", Required: true},
+			},
+			ReturnType: "boolean",
+		},
+		{
+			Name:        "listActiveStreams",
+			Description: "List all active streaming operations",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "array",
+		},
 	}
 }
 
@@ -351,6 +415,18 @@ func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 		},
 		"HealthStatus": {
 			GoType:     "HealthStatus",
+			ScriptType: "object",
+		},
+		"StreamEvent": {
+			GoType:     "StreamEvent",
+			ScriptType: "object",
+		},
+		"StreamMetrics": {
+			GoType:     "StreamMetrics",
+			ScriptType: "object",
+		},
+		"Token": {
+			GoType:     "Token",
 			ScriptType: "object",
 		},
 	}
@@ -418,6 +494,13 @@ func (b *LLMBridge) ListProviders() []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+// SetEventEmitter sets the event emitter for stream events
+func (b *LLMBridge) SetEventEmitter(emitter agentDomain.EventEmitter) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.eventEmitter = emitter
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
@@ -1006,6 +1089,268 @@ func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []inter
 		}
 
 		return nil, nil
+
+	case "streamWithEvents":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("streamWithEvents requires prompt parameter")
+		}
+
+		// Get active provider
+		if b.activeProvider == "" {
+			return nil, fmt.Errorf("no active provider set")
+		}
+		provider, exists := b.providers[b.activeProvider]
+		if !exists {
+			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
+		}
+
+		// Get prompt
+		prompt, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("prompt must be string")
+		}
+
+		// Generate stream ID
+		streamID := fmt.Sprintf("stream_%d", time.Now().UnixNano())
+
+		// Initialize metrics
+		metrics := &StreamMetrics{
+			StartTime: time.Now(),
+		}
+		b.streamMetrics[streamID] = metrics
+
+		// Start streaming
+		stream, err := provider.Stream(ctx, prompt, nil)
+		if err != nil {
+			return nil, fmt.Errorf("streaming failed: %w", err)
+		}
+
+		// Store active stream (convert ResponseStream to chan Token)
+		tokenChan := make(chan llmdomain.Token)
+		b.activeStreams[streamID] = tokenChan
+
+		// Forward tokens from ResponseStream to our channel
+		go func() {
+			for token := range stream {
+				tokenChan <- token
+			}
+			close(tokenChan)
+		}()
+
+		// Process stream in goroutine
+		go func() {
+			defer delete(b.activeStreams, streamID)
+
+			aggregate := ""
+			for token := range tokenChan {
+				// Update metrics
+				metrics.TokenCount++
+				metrics.ByteCount += len(token.Text)
+				if metrics.TokenCount == 1 {
+					metrics.FirstTokenTime = time.Now()
+				}
+				metrics.LastTokenTime = time.Now()
+
+				// Aggregate text
+				aggregate += token.Text
+
+				// Emit event if we have an event emitter
+				if b.eventEmitter != nil {
+					event := agentDomain.NewEvent(
+						agentDomain.EventMessage,
+						"llm_bridge",
+						"LLM Bridge",
+						map[string]interface{}{
+							"type":      "stream_chunk",
+							"streamId":  streamID,
+							"text":      token.Text,
+							"finished":  token.Finished,
+							"tokenNum":  metrics.TokenCount,
+							"aggregate": aggregate,
+						},
+					)
+					b.eventEmitter.Emit(event.Type, event)
+				}
+
+				if token.Finished {
+					break
+				}
+			}
+		}()
+
+		// Return stream info
+		return map[string]interface{}{
+			"streamId":  streamID,
+			"startTime": metrics.StartTime,
+			"status":    "streaming",
+		}, nil
+
+	case "streamMessageWithEvents":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("streamMessageWithEvents requires messages parameter")
+		}
+
+		// Get active provider
+		if b.activeProvider == "" {
+			return nil, fmt.Errorf("no active provider set")
+		}
+		provider, exists := b.providers[b.activeProvider]
+		if !exists {
+			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
+		}
+
+		// Convert messages
+		var messages []llmdomain.Message
+		if msgList, ok := args[0].([]interface{}); ok {
+			for _, msg := range msgList {
+				if msgMap, ok := msg.(map[string]interface{}); ok {
+					role, _ := msgMap["role"].(string)
+					content, _ := msgMap["content"].(string)
+					messages = append(messages, llmdomain.NewTextMessage(llmdomain.Role(role), content))
+				}
+			}
+		}
+
+		// Generate stream ID
+		streamID := fmt.Sprintf("stream_%d", time.Now().UnixNano())
+
+		// Initialize metrics
+		metrics := &StreamMetrics{
+			StartTime: time.Now(),
+		}
+		b.streamMetrics[streamID] = metrics
+
+		// Start streaming
+		stream, err := provider.StreamMessage(ctx, messages, nil)
+		if err != nil {
+			return nil, fmt.Errorf("streaming failed: %w", err)
+		}
+
+		// Store active stream (convert ResponseStream to chan Token)
+		tokenChan := make(chan llmdomain.Token)
+		b.activeStreams[streamID] = tokenChan
+
+		// Forward tokens from ResponseStream to our channel
+		go func() {
+			for token := range stream {
+				tokenChan <- token
+			}
+			close(tokenChan)
+		}()
+
+		// Process stream in goroutine
+		go func() {
+			defer delete(b.activeStreams, streamID)
+
+			aggregate := ""
+			for token := range tokenChan {
+				// Update metrics
+				metrics.TokenCount++
+				metrics.ByteCount += len(token.Text)
+				if metrics.TokenCount == 1 {
+					metrics.FirstTokenTime = time.Now()
+				}
+				metrics.LastTokenTime = time.Now()
+
+				// Aggregate text
+				aggregate += token.Text
+
+				// Emit event if we have an event emitter
+				if b.eventEmitter != nil {
+					event := agentDomain.NewEvent(
+						agentDomain.EventMessage,
+						"llm_bridge",
+						"LLM Bridge",
+						map[string]interface{}{
+							"type":      "stream_chunk",
+							"streamId":  streamID,
+							"text":      token.Text,
+							"finished":  token.Finished,
+							"tokenNum":  metrics.TokenCount,
+							"aggregate": aggregate,
+						},
+					)
+					b.eventEmitter.Emit(event.Type, event)
+				}
+
+				if token.Finished {
+					break
+				}
+			}
+		}()
+
+		// Return stream info
+		return map[string]interface{}{
+			"streamId":  streamID,
+			"startTime": metrics.StartTime,
+			"status":    "streaming",
+		}, nil
+
+	case "getStreamMetrics":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getStreamMetrics requires streamId parameter")
+		}
+
+		streamID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("streamId must be string")
+		}
+
+		metrics, exists := b.streamMetrics[streamID]
+		if !exists {
+			return nil, fmt.Errorf("stream not found: %s", streamID)
+		}
+
+		// Calculate durations
+		totalDuration := time.Since(metrics.StartTime)
+		var firstTokenLatency time.Duration
+		if !metrics.FirstTokenTime.IsZero() {
+			firstTokenLatency = metrics.FirstTokenTime.Sub(metrics.StartTime)
+		}
+
+		return map[string]interface{}{
+			"streamId":          streamID,
+			"tokenCount":        metrics.TokenCount,
+			"byteCount":         metrics.ByteCount,
+			"totalDuration":     totalDuration.Milliseconds(),
+			"firstTokenLatency": firstTokenLatency.Milliseconds(),
+			"tokensPerSecond":   float64(metrics.TokenCount) / totalDuration.Seconds(),
+			"errors":            metrics.Errors,
+		}, nil
+
+	case "cancelStream":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("cancelStream requires streamId parameter")
+		}
+
+		streamID, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("streamId must be string")
+		}
+
+		// Check if stream exists
+		_, exists := b.activeStreams[streamID]
+		if !exists {
+			return false, nil
+		}
+
+		// Remove from active streams (this will close the goroutine)
+		delete(b.activeStreams, streamID)
+		return true, nil
+
+	case "listActiveStreams":
+		streams := make([]map[string]interface{}, 0, len(b.activeStreams))
+		for streamID := range b.activeStreams {
+			if metrics, exists := b.streamMetrics[streamID]; exists {
+				streams = append(streams, map[string]interface{}{
+					"streamId":   streamID,
+					"startTime":  metrics.StartTime,
+					"tokenCount": metrics.TokenCount,
+					"status":     "active",
+				})
+			}
+		}
+		return streams, nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
