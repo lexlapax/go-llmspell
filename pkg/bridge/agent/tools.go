@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -15,19 +16,60 @@ import (
 	// go-llms imports for tool functionality
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llms/pkg/agent/tools"
+	"github.com/lexlapax/go-llms/pkg/docs"
 	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
 	"github.com/lexlapax/go-llms/pkg/schema/repository"
 	"github.com/lexlapax/go-llms/pkg/schema/validation"
+	"github.com/lexlapax/go-llms/pkg/util/profiling"
 )
 
-// ToolsBridge provides access to go-llms tool discovery system
+// ToolsBridge provides access to go-llms tool discovery system with v2.0.0 enhancements
 type ToolsBridge struct {
 	mu          sync.RWMutex
 	initialized bool
 	discovery   bridge.ToolDiscovery
 	customTools map[string]domain.Tool // For script-registered tools
-	schemaRepo  schemaDomain.SchemaRepository
-	validator   schemaDomain.Validator
+
+	// Schema validation (Task 1.4.9.1)
+	schemaRepo        schemaDomain.SchemaRepository
+	validator         schemaDomain.Validator
+	validationCache   map[string]*schemaDomain.ValidationResult // Cache validation results
+	validationReports map[string]*ValidationReport              // Store validation reports
+
+	// Documentation generation (Task 1.4.9.2)
+	docGenerator *docs.ToolDocumentationIntegrator
+	docConfig    docs.GeneratorConfig
+	docCache     map[string]*docs.Documentation // Cache generated docs
+
+	// Execution analytics (Task 1.4.9.3)
+	profiler         *profiling.Profiler
+	executionMetrics map[string]*ExecutionMetrics // Track tool execution metrics
+	metricsLock      sync.RWMutex
+}
+
+// ValidationReport stores detailed validation results for a tool
+type ValidationReport struct {
+	ToolName         string                         `json:"toolName"`
+	Timestamp        time.Time                      `json:"timestamp"`
+	InputValidation  *schemaDomain.ValidationResult `json:"inputValidation,omitempty"`
+	OutputValidation *schemaDomain.ValidationResult `json:"outputValidation,omitempty"`
+	SchemaIssues     []string                       `json:"schemaIssues,omitempty"`
+	Recommendations  []string                       `json:"recommendations,omitempty"`
+}
+
+// ExecutionMetrics tracks tool execution statistics
+type ExecutionMetrics struct {
+	ToolName        string                 `json:"toolName"`
+	TotalExecutions int64                  `json:"totalExecutions"`
+	SuccessCount    int64                  `json:"successCount"`
+	FailureCount    int64                  `json:"failureCount"`
+	TotalDuration   time.Duration          `json:"totalDuration"`
+	AverageDuration time.Duration          `json:"averageDuration"`
+	MinDuration     time.Duration          `json:"minDuration"`
+	MaxDuration     time.Duration          `json:"maxDuration"`
+	LastExecution   time.Time              `json:"lastExecution"`
+	ErrorTypes      map[string]int         `json:"errorTypes"`
+	ParameterStats  map[string]interface{} `json:"parameterStats"`
 }
 
 // NewToolsBridge creates a new tools bridge
@@ -44,9 +86,10 @@ func (b *ToolsBridge) GetID() string {
 func (b *ToolsBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Tools Bridge",
-		Version:     "2.0.0",
-		Description: "Provides access to go-llms tool discovery system for dynamic tool exploration",
+		Version:     "2.1.0",
+		Description: "Enhanced tools bridge with schema validation, documentation generation, and execution analytics (v0.3.5)",
 		Author:      "go-llmspell",
+		License:     "MIT",
 	}
 }
 
@@ -63,9 +106,24 @@ func (b *ToolsBridge) Initialize(ctx context.Context) error {
 	b.discovery = tools.NewDiscovery()
 	b.customTools = make(map[string]domain.Tool)
 
-	// Initialize schema repository and validator
+	// Initialize schema validation (Task 1.4.9.1)
 	b.schemaRepo = repository.NewInMemorySchemaRepository()
-	b.validator = validation.NewValidator()
+	b.validator = validation.NewValidator(validation.WithCoercion(true))
+	b.validationCache = make(map[string]*schemaDomain.ValidationResult)
+	b.validationReports = make(map[string]*ValidationReport)
+
+	// Initialize documentation generation (Task 1.4.9.2)
+	b.docConfig = docs.GeneratorConfig{
+		Title:       "Tools Documentation",
+		Version:     "1.0.0",
+		Description: "Auto-generated documentation for available tools",
+	}
+	b.docGenerator = docs.NewToolDocumentationIntegrator(b.discovery, b.docConfig)
+	b.docCache = make(map[string]*docs.Documentation)
+
+	// Initialize execution analytics (Task 1.4.9.3)
+	b.profiler = profiling.NewProfiler("tools_bridge")
+	b.executionMetrics = make(map[string]*ExecutionMetrics)
 
 	b.initialized = true
 	return nil
@@ -179,6 +237,116 @@ func (b *ToolsBridge) Methods() []engine.MethodInfo {
 			},
 			ReturnType: "void",
 		},
+		// Schema validation methods (Task 1.4.9.1)
+		{
+			Name:        "executeToolValidated",
+			Description: "Execute a tool with schema validation of inputs and outputs",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+				{Name: "params", Type: "object", Description: "Tool parameters", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "validateToolInput",
+			Description: "Validate tool input parameters against schema",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+				{Name: "params", Type: "object", Description: "Parameters to validate", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "validateToolOutput",
+			Description: "Validate tool output against schema",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+				{Name: "output", Type: "any", Description: "Output to validate", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "getValidationReport",
+			Description: "Get validation report for a tool",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+			},
+			ReturnType: "object",
+		},
+		// Documentation generation methods (Task 1.4.9.2)
+		{
+			Name:        "generateToolDocumentation",
+			Description: "Generate comprehensive documentation for a tool",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+				{Name: "format", Type: "string", Description: "Documentation format (markdown, openapi, json)", Required: false},
+			},
+			ReturnType: "string",
+		},
+		{
+			Name:        "generateAllToolsDocs",
+			Description: "Generate documentation for all available tools",
+			Parameters: []engine.ParameterInfo{
+				{Name: "format", Type: "string", Description: "Documentation format", Required: false},
+			},
+			ReturnType: "string",
+		},
+		{
+			Name:        "generateToolPlayground",
+			Description: "Generate interactive playground HTML for a tool",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+			},
+			ReturnType: "string",
+		},
+		{
+			Name:        "generateSDKSnippet",
+			Description: "Generate SDK code snippet for tool usage",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+				{Name: "language", Type: "string", Description: "Programming language (go, python, javascript)", Required: true},
+			},
+			ReturnType: "string",
+		},
+		// Execution analytics methods (Task 1.4.9.3)
+		{
+			Name:        "getToolMetrics",
+			Description: "Get execution metrics for a specific tool",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "getAllToolsMetrics",
+			Description: "Get execution metrics for all tools",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "array",
+		},
+		{
+			Name:        "getToolUsageReport",
+			Description: "Generate usage report for tools",
+			Parameters: []engine.ParameterInfo{
+				{Name: "period", Type: "string", Description: "Time period (hour, day, week, month)", Required: false},
+			},
+			ReturnType: "object",
+		},
+		{
+			Name:        "enableToolProfiling",
+			Description: "Enable profiling for a specific tool",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: true},
+			},
+			ReturnType: "void",
+		},
+		{
+			Name:        "getToolAnomalies",
+			Description: "Get anomaly alerts for tool execution",
+			Parameters: []engine.ParameterInfo{
+				{Name: "name", Type: "string", Description: "Tool name", Required: false},
+			},
+			ReturnType: "array",
+		},
 	}
 }
 
@@ -203,6 +371,22 @@ func (b *ToolsBridge) TypeMappings() map[string]engine.TypeMapping {
 		},
 		"ToolContext": {
 			GoType:     "ToolContext",
+			ScriptType: "object",
+		},
+		"ValidationResult": {
+			GoType:     "ValidationResult",
+			ScriptType: "object",
+		},
+		"ValidationReport": {
+			GoType:     "ValidationReport",
+			ScriptType: "object",
+		},
+		"ExecutionMetrics": {
+			GoType:     "ExecutionMetrics",
+			ScriptType: "object",
+		},
+		"Documentation": {
+			GoType:     "Documentation",
 			ScriptType: "object",
 		},
 	}
@@ -470,6 +654,392 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 
 		b.customTools[name] = tool
 		return nil, nil
+
+	// Schema validation methods (Task 1.4.9.1)
+	case "executeToolValidated":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("executeToolValidated requires name and params parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		params := args[1]
+
+		// Track execution start time
+		startTime := time.Now()
+
+		// Get the tool
+		var tool domain.Tool
+		var paramSchema, outputSchema *schemaDomain.Schema
+
+		if customTool, exists := b.customTools[name]; exists {
+			tool = customTool
+			paramSchema = customTool.ParameterSchema()
+			outputSchema = customTool.OutputSchema()
+		} else {
+			var err error
+			tool, err = b.discovery.CreateTool(name)
+			if err != nil {
+				return nil, err
+			}
+			// Get schemas from discovery
+			if schemaInfo, err := b.discovery.GetToolSchema(name); err == nil {
+				// Convert bridge.ToolSchema to domain schemas
+				paramSchema = b.convertBridgeSchemaToSchema(schemaInfo.Parameters)
+				outputSchema = b.convertBridgeSchemaToSchema(schemaInfo.Output)
+			}
+		}
+
+		// Validate input parameters
+		var inputValidation *schemaDomain.ValidationResult
+		if paramSchema != nil {
+			inputValidation, _ = b.validator.ValidateStruct(paramSchema, params)
+			if !inputValidation.Valid {
+				// Update metrics
+				b.updateExecutionMetrics(name, false, time.Since(startTime), fmt.Errorf("input validation failed"))
+				return map[string]interface{}{
+					"success":          false,
+					"error":            "Input validation failed",
+					"validationErrors": inputValidation.Errors,
+				}, nil
+			}
+		}
+
+		// Execute the tool
+		toolCtx := &domain.ToolContext{
+			Context: ctx,
+		}
+		result, err := tool.Execute(toolCtx, params)
+
+		// Update metrics
+		b.updateExecutionMetrics(name, err == nil, time.Since(startTime), err)
+
+		if err != nil {
+			return map[string]interface{}{
+				"success": false,
+				"error":   err.Error(),
+			}, nil
+		}
+
+		// Validate output
+		var outputValidation *schemaDomain.ValidationResult
+		if outputSchema != nil {
+			outputValidation, _ = b.validator.ValidateStruct(outputSchema, result)
+			if !outputValidation.Valid {
+				// Still return the result but with validation warnings
+				return map[string]interface{}{
+					"success":                  true,
+					"result":                   result,
+					"outputValidationWarnings": outputValidation.Errors,
+				}, nil
+			}
+		}
+
+		// Store validation report
+		b.storeValidationReport(name, inputValidation, outputValidation)
+
+		return map[string]interface{}{
+			"success": true,
+			"result":  result,
+		}, nil
+
+	case "validateToolInput":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("validateToolInput requires name and params parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		params := args[1]
+
+		// Get parameter schema
+		var paramSchema *schemaDomain.Schema
+		if tool, exists := b.customTools[name]; exists {
+			paramSchema = tool.ParameterSchema()
+		} else {
+			if schemaInfo, err := b.discovery.GetToolSchema(name); err == nil {
+				paramSchema = b.convertBridgeSchemaToSchema(schemaInfo.Parameters)
+			}
+		}
+
+		if paramSchema == nil {
+			return map[string]interface{}{
+				"valid":   true,
+				"message": "No schema available for validation",
+			}, nil
+		}
+
+		result, err := b.validator.ValidateStruct(paramSchema, params)
+		if err != nil {
+			return nil, fmt.Errorf("validation error: %w", err)
+		}
+
+		return map[string]interface{}{
+			"valid":  result.Valid,
+			"errors": result.Errors,
+		}, nil
+
+	case "validateToolOutput":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("validateToolOutput requires name and output parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		output := args[1]
+
+		// Get output schema
+		var outputSchema *schemaDomain.Schema
+		if tool, exists := b.customTools[name]; exists {
+			outputSchema = tool.OutputSchema()
+		} else {
+			if schemaInfo, err := b.discovery.GetToolSchema(name); err == nil {
+				outputSchema = b.convertBridgeSchemaToSchema(schemaInfo.Output)
+			}
+		}
+
+		if outputSchema == nil {
+			return map[string]interface{}{
+				"valid":   true,
+				"message": "No schema available for validation",
+			}, nil
+		}
+
+		result, err := b.validator.ValidateStruct(outputSchema, output)
+		if err != nil {
+			return nil, fmt.Errorf("validation error: %w", err)
+		}
+
+		return map[string]interface{}{
+			"valid":  result.Valid,
+			"errors": result.Errors,
+		}, nil
+
+	case "getValidationReport":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getValidationReport requires name parameter")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		if report, exists := b.validationReports[name]; exists {
+			return map[string]interface{}{
+				"toolName":         report.ToolName,
+				"timestamp":        report.Timestamp.Format(time.RFC3339),
+				"inputValidation":  report.InputValidation,
+				"outputValidation": report.OutputValidation,
+				"schemaIssues":     report.SchemaIssues,
+				"recommendations":  report.Recommendations,
+			}, nil
+		}
+
+		return nil, fmt.Errorf("no validation report found for tool: %s", name)
+
+	// Documentation generation methods (Task 1.4.9.2)
+	case "generateToolDocumentation":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("generateToolDocumentation requires name parameter")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		format := "markdown" // default
+		if len(args) > 1 {
+			if f, ok := args[1].(string); ok {
+				format = f
+			}
+		}
+
+		// Get tool info
+		var toolInfo bridge.ToolInfo
+		found := false
+
+		// Check custom tools first
+		if tool, exists := b.customTools[name]; exists {
+			toolInfo = b.customToolToToolInfo(name, tool)
+			found = true
+		} else {
+			// Get from discovery
+			tools := b.discovery.ListTools()
+			for _, ti := range tools {
+				if ti.Name == name {
+					toolInfo = ti
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
+			return nil, fmt.Errorf("tool not found: %s", name)
+		}
+
+		// Generate documentation based on format
+		switch format {
+		case "markdown":
+			doc, err := docs.GenerateToolMarkdown(ctx, []bridge.ToolInfo{toolInfo}, b.docConfig)
+			if err != nil {
+				return nil, err
+			}
+			return doc, nil
+		case "openapi":
+			spec, err := docs.GenerateToolOpenAPI(ctx, []bridge.ToolInfo{toolInfo}, b.docConfig)
+			if err != nil {
+				return nil, err
+			}
+			// Convert to JSON string
+			jsonBytes, err := json.MarshalIndent(spec, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+			return string(jsonBytes), nil
+		case "json":
+			doc, err := docs.GenerateToolDocumentation(toolInfo)
+			if err != nil {
+				return nil, err
+			}
+			// Convert to JSON
+			jsonBytes, err := json.MarshalIndent(doc, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+			return string(jsonBytes), nil
+		default:
+			return nil, fmt.Errorf("unsupported format: %s", format)
+		}
+
+	case "generateAllToolsDocs":
+		format := "markdown" // default
+		if len(args) > 0 {
+			if f, ok := args[0].(string); ok {
+				format = f
+			}
+		}
+
+		switch format {
+		case "markdown":
+			return b.docGenerator.GenerateMarkdownForAllTools(ctx)
+		case "openapi":
+			spec, err := b.docGenerator.GenerateOpenAPIForAllTools(ctx)
+			if err != nil {
+				return nil, err
+			}
+			jsonBytes, err := json.MarshalIndent(spec, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+			return string(jsonBytes), nil
+		case "json":
+			docs, err := b.docGenerator.GenerateDocsForAllTools(ctx)
+			if err != nil {
+				return nil, err
+			}
+			jsonBytes, err := json.MarshalIndent(docs, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+			return string(jsonBytes), nil
+		default:
+			return nil, fmt.Errorf("unsupported format: %s", format)
+		}
+
+	case "generateToolPlayground":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("generateToolPlayground requires name parameter")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		// Generate interactive HTML playground
+		return b.generatePlaygroundHTML(name)
+
+	case "generateSDKSnippet":
+		if len(args) < 2 {
+			return nil, fmt.Errorf("generateSDKSnippet requires name and language parameters")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+		language, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("language must be string")
+		}
+
+		return b.generateSDKSnippet(name, language)
+
+	// Execution analytics methods (Task 1.4.9.3)
+	case "getToolMetrics":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getToolMetrics requires name parameter")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		b.metricsLock.RLock()
+		metrics, exists := b.executionMetrics[name]
+		b.metricsLock.RUnlock()
+
+		if !exists {
+			return nil, fmt.Errorf("no metrics found for tool: %s", name)
+		}
+
+		return b.metricsToMap(metrics), nil
+
+	case "getAllToolsMetrics":
+		b.metricsLock.RLock()
+		defer b.metricsLock.RUnlock()
+
+		result := make([]map[string]interface{}, 0, len(b.executionMetrics))
+		for _, metrics := range b.executionMetrics {
+			result = append(result, b.metricsToMap(metrics))
+		}
+
+		return result, nil
+
+	case "getToolUsageReport":
+		period := "day" // default
+		if len(args) > 0 {
+			if p, ok := args[0].(string); ok {
+				period = p
+			}
+		}
+
+		return b.generateUsageReport(period)
+
+	case "enableToolProfiling":
+		if len(args) < 1 {
+			return nil, fmt.Errorf("enableToolProfiling requires name parameter")
+		}
+		_, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		// Enable profiling for all tools
+		b.profiler.Enable()
+		return nil, nil
+
+	case "getToolAnomalies":
+		var toolName string
+		if len(args) > 0 {
+			if n, ok := args[0].(string); ok {
+				toolName = n
+			}
+		}
+
+		return b.detectAnomalies(toolName)
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
@@ -822,4 +1392,608 @@ func (b *ToolsBridge) schemaToMap(schema *schemaDomain.Schema) map[string]interf
 	}
 
 	return schemaMap
+}
+
+// Helper methods for enhanced features
+
+// updateExecutionMetrics updates execution metrics for a tool
+func (b *ToolsBridge) updateExecutionMetrics(toolName string, success bool, duration time.Duration, err error) {
+	b.metricsLock.Lock()
+	defer b.metricsLock.Unlock()
+
+	metrics, exists := b.executionMetrics[toolName]
+	if !exists {
+		metrics = &ExecutionMetrics{
+			ToolName:       toolName,
+			ErrorTypes:     make(map[string]int),
+			ParameterStats: make(map[string]interface{}),
+			MinDuration:    duration,
+			MaxDuration:    duration,
+		}
+		b.executionMetrics[toolName] = metrics
+	}
+
+	// Update counters
+	metrics.TotalExecutions++
+	if success {
+		metrics.SuccessCount++
+	} else {
+		metrics.FailureCount++
+		// Track error types
+		if err != nil {
+			errorType := fmt.Sprintf("%T", err)
+			metrics.ErrorTypes[errorType]++
+		}
+	}
+
+	// Update durations
+	metrics.TotalDuration += duration
+	metrics.AverageDuration = metrics.TotalDuration / time.Duration(metrics.TotalExecutions)
+	if duration < metrics.MinDuration {
+		metrics.MinDuration = duration
+	}
+	if duration > metrics.MaxDuration {
+		metrics.MaxDuration = duration
+	}
+	metrics.LastExecution = time.Now()
+}
+
+// storeValidationReport stores a validation report for a tool
+func (b *ToolsBridge) storeValidationReport(toolName string, inputValidation, outputValidation *schemaDomain.ValidationResult) {
+	report := &ValidationReport{
+		ToolName:         toolName,
+		Timestamp:        time.Now(),
+		InputValidation:  inputValidation,
+		OutputValidation: outputValidation,
+		SchemaIssues:     []string{},
+		Recommendations:  []string{},
+	}
+
+	// Add recommendations based on validation results
+	if inputValidation != nil && !inputValidation.Valid {
+		report.Recommendations = append(report.Recommendations,
+			"Consider updating input schema to better match usage patterns")
+	}
+	if outputValidation != nil && !outputValidation.Valid {
+		report.Recommendations = append(report.Recommendations,
+			"Output schema may need adjustment to reflect actual tool outputs")
+	}
+
+	b.validationReports[toolName] = report
+}
+
+// convertBridgeSchemaToSchema converts bridge.ToolSchema fields to domain.Schema
+func (b *ToolsBridge) convertBridgeSchemaToSchema(schemaData interface{}) *schemaDomain.Schema {
+	if schemaData == nil {
+		return nil
+	}
+
+	// If it's already a schema, return it
+	if schema, ok := schemaData.(*schemaDomain.Schema); ok {
+		return schema
+	}
+
+	// Try to convert from map
+	if schemaMap, ok := schemaData.(map[string]interface{}); ok {
+		schema, err := b.convertToSchema(schemaMap)
+		if err != nil {
+			return nil
+		}
+		return schema
+	}
+
+	// Try to convert from JSON
+	if jsonData, ok := schemaData.(json.RawMessage); ok {
+		var schema schemaDomain.Schema
+		if err := json.Unmarshal(jsonData, &schema); err == nil {
+			return &schema
+		}
+	}
+
+	return nil
+}
+
+// customToolToToolInfo converts a custom tool to ToolInfo
+func (b *ToolsBridge) customToolToToolInfo(name string, tool domain.Tool) bridge.ToolInfo {
+	info := bridge.ToolInfo{
+		Name:        name,
+		Description: tool.Description(),
+		Category:    tool.Category(),
+		Tags:        tool.Tags(),
+		Version:     tool.Version(),
+		UsageHint:   tool.UsageInstructions(),
+	}
+
+	// Convert schemas to JSON
+	if paramSchema := tool.ParameterSchema(); paramSchema != nil {
+		if jsonData, err := json.Marshal(paramSchema); err == nil {
+			info.ParameterSchema = jsonData
+		}
+	}
+
+	if outputSchema := tool.OutputSchema(); outputSchema != nil {
+		if jsonData, err := json.Marshal(outputSchema); err == nil {
+			info.OutputSchema = jsonData
+		}
+	}
+
+	// Convert examples
+	examples := tool.Examples()
+	info.Examples = make([]tools.Example, len(examples))
+	for i, ex := range examples {
+		inputJSON, _ := json.Marshal(ex.Input)
+		outputJSON, _ := json.Marshal(ex.Output)
+		info.Examples[i] = tools.Example{
+			Name:        ex.Name,
+			Description: ex.Description,
+			Input:       inputJSON,
+			Output:      outputJSON,
+		}
+	}
+
+	return info
+}
+
+// metricsToMap converts ExecutionMetrics to a map for script consumption
+func (b *ToolsBridge) metricsToMap(metrics *ExecutionMetrics) map[string]interface{} {
+	return map[string]interface{}{
+		"toolName":        metrics.ToolName,
+		"totalExecutions": metrics.TotalExecutions,
+		"successCount":    metrics.SuccessCount,
+		"failureCount":    metrics.FailureCount,
+		"successRate":     float64(metrics.SuccessCount) / float64(metrics.TotalExecutions),
+		"totalDuration":   metrics.TotalDuration.String(),
+		"averageDuration": metrics.AverageDuration.String(),
+		"minDuration":     metrics.MinDuration.String(),
+		"maxDuration":     metrics.MaxDuration.String(),
+		"lastExecution":   metrics.LastExecution.Format(time.RFC3339),
+		"errorTypes":      metrics.ErrorTypes,
+		"parameterStats":  metrics.ParameterStats,
+	}
+}
+
+// generateUsageReport generates a usage report for tools
+func (b *ToolsBridge) generateUsageReport(period string) (map[string]interface{}, error) {
+	b.metricsLock.RLock()
+	defer b.metricsLock.RUnlock()
+
+	// Calculate time window based on period
+	var since time.Time
+	now := time.Now()
+	switch period {
+	case "hour":
+		since = now.Add(-time.Hour)
+	case "day":
+		since = now.Add(-24 * time.Hour)
+	case "week":
+		since = now.Add(-7 * 24 * time.Hour)
+	case "month":
+		since = now.Add(-30 * 24 * time.Hour)
+	default:
+		since = now.Add(-24 * time.Hour) // Default to day
+	}
+
+	// Aggregate metrics
+	totalExecutions := int64(0)
+	totalSuccess := int64(0)
+	totalFailure := int64(0)
+	toolUsage := make([]map[string]interface{}, 0)
+
+	for _, metrics := range b.executionMetrics {
+		if metrics.LastExecution.After(since) {
+			totalExecutions += metrics.TotalExecutions
+			totalSuccess += metrics.SuccessCount
+			totalFailure += metrics.FailureCount
+
+			toolUsage = append(toolUsage, map[string]interface{}{
+				"toolName":    metrics.ToolName,
+				"executions":  metrics.TotalExecutions,
+				"successRate": float64(metrics.SuccessCount) / float64(metrics.TotalExecutions),
+				"avgDuration": metrics.AverageDuration.String(),
+			})
+		}
+	}
+
+	return map[string]interface{}{
+		"period":          period,
+		"since":           since.Format(time.RFC3339),
+		"totalExecutions": totalExecutions,
+		"totalSuccess":    totalSuccess,
+		"totalFailure":    totalFailure,
+		"overallSuccessRate": func() float64 {
+			if totalExecutions == 0 {
+				return 0
+			}
+			return float64(totalSuccess) / float64(totalExecutions)
+		}(),
+		"toolUsage": toolUsage,
+	}, nil
+}
+
+// detectAnomalies detects anomalies in tool execution
+func (b *ToolsBridge) detectAnomalies(toolName string) ([]map[string]interface{}, error) {
+	b.metricsLock.RLock()
+	defer b.metricsLock.RUnlock()
+
+	anomalies := make([]map[string]interface{}, 0)
+
+	checkToolAnomalies := func(metrics *ExecutionMetrics) {
+		// Check for high failure rate
+		if metrics.TotalExecutions > 10 {
+			failureRate := float64(metrics.FailureCount) / float64(metrics.TotalExecutions)
+			if failureRate > 0.3 { // More than 30% failure
+				anomalies = append(anomalies, map[string]interface{}{
+					"toolName": metrics.ToolName,
+					"type":     "high_failure_rate",
+					"severity": "warning",
+					"details": map[string]interface{}{
+						"failureRate": failureRate,
+						"failures":    metrics.FailureCount,
+						"total":       metrics.TotalExecutions,
+					},
+				})
+			}
+		}
+
+		// Check for performance degradation
+		if metrics.TotalExecutions > 5 && metrics.MaxDuration > 10*metrics.AverageDuration {
+			anomalies = append(anomalies, map[string]interface{}{
+				"toolName": metrics.ToolName,
+				"type":     "performance_outlier",
+				"severity": "info",
+				"details": map[string]interface{}{
+					"maxDuration": metrics.MaxDuration.String(),
+					"avgDuration": metrics.AverageDuration.String(),
+					"ratio":       float64(metrics.MaxDuration) / float64(metrics.AverageDuration),
+				},
+			})
+		}
+
+		// Check for recent spike in errors
+		recentWindow := time.Now().Add(-time.Hour)
+		if metrics.LastExecution.After(recentWindow) && metrics.FailureCount > metrics.SuccessCount {
+			anomalies = append(anomalies, map[string]interface{}{
+				"toolName": metrics.ToolName,
+				"type":     "error_spike",
+				"severity": "critical",
+				"details": map[string]interface{}{
+					"recentFailures":  metrics.FailureCount,
+					"recentSuccesses": metrics.SuccessCount,
+					"errorTypes":      metrics.ErrorTypes,
+				},
+			})
+		}
+	}
+
+	if toolName != "" {
+		// Check specific tool
+		if metrics, exists := b.executionMetrics[toolName]; exists {
+			checkToolAnomalies(metrics)
+		}
+	} else {
+		// Check all tools
+		for _, metrics := range b.executionMetrics {
+			checkToolAnomalies(metrics)
+		}
+	}
+
+	return anomalies, nil
+}
+
+// generatePlaygroundHTML generates an interactive HTML playground for a tool
+func (b *ToolsBridge) generatePlaygroundHTML(toolName string) (string, error) {
+	// Get tool info
+	var toolInfo bridge.ToolInfo
+	var paramSchema interface{}
+
+	if tool, exists := b.customTools[toolName]; exists {
+		toolInfo = b.customToolToToolInfo(toolName, tool)
+		if ps := tool.ParameterSchema(); ps != nil {
+			paramSchema = ps
+		}
+	} else {
+		tools := b.discovery.ListTools()
+		found := false
+		for _, ti := range tools {
+			if ti.Name == toolName {
+				toolInfo = ti
+				found = true
+				break
+			}
+		}
+		if !found {
+			return "", fmt.Errorf("tool not found: %s", toolName)
+		}
+
+		// Get parameter schema
+		if schemaInfo, err := b.discovery.GetToolSchema(toolName); err == nil && schemaInfo.Parameters != nil {
+			paramSchema = schemaInfo.Parameters
+		}
+	}
+
+	// Generate HTML with form based on schema
+	html := fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <title>%s Tool Playground</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .tool-info { background: #f0f0f0; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea, select { width: 100%%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .output { background: #f8f9fa; padding: 15px; margin-top: 20px; border-radius: 5px; white-space: pre-wrap; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>%s Tool Playground</h1>
+        <div class="tool-info">
+            <h2>Description</h2>
+            <p>%s</p>
+            <p><strong>Category:</strong> %s</p>
+            <p><strong>Version:</strong> %s</p>
+        </div>
+        
+        <form id="toolForm">
+            <h2>Parameters</h2>
+            <div id="formFields"></div>
+            <button type="submit">Execute Tool</button>
+        </form>
+        
+        <div id="output" class="output" style="display:none;"></div>
+    </div>
+    
+    <script>
+        const paramSchema = %s;
+        
+        // Generate form fields based on schema
+        function generateFormFields(schema, container, prefix = '') {
+            if (!schema || !schema.properties) return;
+            
+            for (const [key, prop] of Object.entries(schema.properties)) {
+                const fieldId = prefix + key;
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                
+                const label = document.createElement('label');
+                label.textContent = key + (schema.required && schema.required.includes(key) ? ' *' : '');
+                label.htmlFor = fieldId;
+                div.appendChild(label);
+                
+                let input;
+                switch (prop.type) {
+                    case 'string':
+                        if (prop.enum) {
+                            input = document.createElement('select');
+                            input.id = fieldId;
+                            prop.enum.forEach(val => {
+                                const option = document.createElement('option');
+                                option.value = val;
+                                option.textContent = val;
+                                input.appendChild(option);
+                            });
+                        } else {
+                            input = document.createElement('input');
+                            input.type = 'text';
+                            input.id = fieldId;
+                        }
+                        break;
+                    case 'number':
+                    case 'integer':
+                        input = document.createElement('input');
+                        input.type = 'number';
+                        input.id = fieldId;
+                        if (prop.minimum !== undefined) input.min = prop.minimum;
+                        if (prop.maximum !== undefined) input.max = prop.maximum;
+                        break;
+                    case 'boolean':
+                        input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.id = fieldId;
+                        break;
+                    case 'array':
+                    case 'object':
+                        input = document.createElement('textarea');
+                        input.id = fieldId;
+                        input.placeholder = 'Enter JSON';
+                        input.rows = 5;
+                        break;
+                    default:
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.id = fieldId;
+                }
+                
+                if (prop.description) {
+                    const desc = document.createElement('small');
+                    desc.textContent = prop.description;
+                    desc.style.color = '#666';
+                    div.appendChild(desc);
+                    div.appendChild(document.createElement('br'));
+                }
+                
+                div.appendChild(input);
+                container.appendChild(div);
+            }
+        }
+        
+        // Initialize form
+        const formFields = document.getElementById('formFields');
+        generateFormFields(paramSchema, formFields);
+        
+        // Handle form submission
+        document.getElementById('toolForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const params = {};
+            const inputs = formFields.querySelectorAll('input, textarea, select');
+            
+            inputs.forEach(input => {
+                const key = input.id;
+                let value = input.value;
+                
+                if (input.type === 'checkbox') {
+                    value = input.checked;
+                } else if (input.type === 'number') {
+                    value = parseFloat(value);
+                } else if (input.tagName === 'TEXTAREA') {
+                    try {
+                        value = JSON.parse(value);
+                    } catch (e) {
+                        // Keep as string if not valid JSON
+                    }
+                }
+                
+                if (value !== '' && value !== null) {
+                    params[key] = value;
+                }
+            });
+            
+            const output = document.getElementById('output');
+            output.style.display = 'block';
+            output.innerHTML = '<div>Executing tool...</div>';
+            
+            // Note: In a real implementation, this would call your tool execution endpoint
+            output.innerHTML = '<div class="success">Tool execution would happen here with parameters:</div>' +
+                              '<pre>' + JSON.stringify(params, null, 2) + '</pre>';
+        });
+    </script>
+</body>
+</html>`, toolInfo.Name, toolInfo.Name, toolInfo.Description, toolInfo.Category, toolInfo.Version,
+		func() string {
+			if paramSchema != nil {
+				jsonBytes, _ := json.Marshal(paramSchema)
+				return string(jsonBytes)
+			}
+			return "{}"
+		}())
+
+	return html, nil
+}
+
+// generateSDKSnippet generates SDK code snippets for tool usage
+func (b *ToolsBridge) generateSDKSnippet(toolName string, language string) (string, error) {
+	// Get tool info
+	var toolInfo bridge.ToolInfo
+	found := false
+
+	if tool, exists := b.customTools[toolName]; exists {
+		toolInfo = b.customToolToToolInfo(toolName, tool)
+		found = true
+	} else {
+		tools := b.discovery.ListTools()
+		for _, ti := range tools {
+			if ti.Name == toolName {
+				toolInfo = ti
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		return "", fmt.Errorf("tool not found: %s", toolName)
+	}
+
+	// Generate code snippet based on language
+	switch language {
+	case "go":
+		return fmt.Sprintf(`// Using %s tool
+import (
+    "context"
+    "fmt"
+    "github.com/lexlapax/go-llms/pkg/agent/tools"
+)
+
+// Create tool discovery
+discovery := tools.NewDiscovery()
+
+// Create the tool
+tool, err := discovery.CreateTool("%s")
+if err != nil {
+    return fmt.Errorf("failed to create tool: %%w", err)
+}
+
+// Prepare parameters
+params := map[string]interface{}{
+    // Add your parameters here based on the tool's schema
+}
+
+// Create tool context
+ctx := &domain.ToolContext{
+    Context: context.Background(),
+}
+
+// Execute the tool
+result, err := tool.Execute(ctx, params)
+if err != nil {
+    return fmt.Errorf("tool execution failed: %%w", err)
+}
+
+fmt.Printf("Result: %%v\n", result)`, toolInfo.Name, toolInfo.Name), nil
+
+	case "python":
+		return fmt.Sprintf(`# Using %s tool
+from go_llms import ToolDiscovery, ToolContext
+
+# Create tool discovery
+discovery = ToolDiscovery()
+
+# Create the tool
+tool = discovery.create_tool("%s")
+
+# Prepare parameters
+params = {
+    # Add your parameters here based on the tool's schema
+}
+
+# Create tool context
+ctx = ToolContext()
+
+# Execute the tool
+try:
+    result = tool.execute(ctx, params)
+    print(f"Result: {result}")
+except Exception as e:
+    print(f"Tool execution failed: {e}")`, toolInfo.Name, toolInfo.Name), nil
+
+	case "javascript":
+		return fmt.Sprintf(`// Using %s tool
+const { ToolDiscovery, ToolContext } = require('go-llms');
+
+async function useTool() {
+    // Create tool discovery
+    const discovery = new ToolDiscovery();
+    
+    // Create the tool
+    const tool = await discovery.createTool("%s");
+    
+    // Prepare parameters
+    const params = {
+        // Add your parameters here based on the tool's schema
+    };
+    
+    // Create tool context
+    const ctx = new ToolContext();
+    
+    try {
+        // Execute the tool
+        const result = await tool.execute(ctx, params);
+        console.log('Result:', result);
+    } catch (error) {
+        console.error('Tool execution failed:', error);
+    }
+}
+
+useTool();`, toolInfo.Name, toolInfo.Name), nil
+
+	default:
+		return "", fmt.Errorf("unsupported language: %s", language)
+	}
 }

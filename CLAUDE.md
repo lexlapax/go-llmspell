@@ -19,7 +19,8 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 ⏸️ **Phase 1.4.6 Deferred**: Model Info Bridge Intelligence (features not in go-llms)
 ✅ **Phase 1.4.7 Complete**: Agent Bridge Advanced Features [2025-06-16]
 ✅ **Phase 1.4.8 Complete**: Event Bridge Replacement [2025-06-16]
-🚧 **Phase 1.4.9 Next**: Tools Bridge Enhancement
+✅ **Phase 1.4.9 Complete**: Tools Bridge Enhancement [2025-06-16]
+🚧 **Phase 1.4.10 Next**: Workflow Bridge Serialization
 🎯 **Target**: Pure bridge architecture exposing go-llms to scripts
 
 ### Completed Components
@@ -29,11 +30,12 @@ go-llmspell is a Go library providing **scriptable LLM interactions** using embe
 - Bridge Manager with lifecycle management, events, documentation, and state serialization
 - State bridges: Manager, Context with schema validation and event emission
 - Utility bridges: Auth (v2.0), JSON (v2.0), LLM (v2.0), Errors (v2.0)
-- Agent bridges: Agent (v2.0), Workflow, Events (v2.0), Tools, Hooks
+- Agent bridges: Agent (v2.0), Workflow, Events (v2.0), Tools (v2.1), Hooks
 - LLM bridge: Schema validation, provider metadata, streaming with events
 - Schema bridge: Versioning, migration, tag generation, import/export, custom validators
 - Event bridge v2.0: Complete event system with bus, storage, filtering, serialization, aggregation, and replay
 - Agent bridge v2.0: State serialization, event replay, performance profiling
+- Tools bridge v2.1: Schema validation, documentation generation, execution analytics
 - v0.3.5 integration: schemas, structured outputs, events, docs, errors
 - Event-driven bridge lifecycle with metrics and monitoring
 - Multi-format documentation generation (OpenAPI, Markdown, JSON)

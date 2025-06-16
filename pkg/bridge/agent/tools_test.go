@@ -5,6 +5,8 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -939,4 +941,340 @@ func TestToolsBridge_WithFixtures(t *testing.T) {
 	fileData := fileResult.(map[string]interface{})
 	assert.Equal(t, "read", fileData["operation"])
 	assert.Contains(t, fileData["content"], "Configuration file")
+}
+
+// Test enhanced validation features (Task 1.4.9.1)
+func TestToolsBridge_SchemaValidation(t *testing.T) {
+	// Create bridge
+	bridge := NewToolsBridge()
+	ctx := context.Background()
+
+	// Initialize bridge
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Register a tool with schema
+	toolDef := map[string]interface{}{
+		"name":        "validation_test_tool",
+		"description": "Tool for testing validation",
+		"category":    "test",
+		"parameterSchema": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"required_field": map[string]interface{}{
+					"type":        "string",
+					"description": "A required field",
+				},
+				"number_field": map[string]interface{}{
+					"type":    "number",
+					"minimum": 0,
+					"maximum": 100,
+				},
+			},
+			"required": []string{"required_field"},
+		},
+		"outputSchema": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"result": map[string]interface{}{
+					"type": "string",
+				},
+			},
+			"required": []string{"result"},
+		},
+		"execute": func(ctx interface{}, params interface{}) (interface{}, error) {
+			return map[string]interface{}{
+				"result": "success",
+			}, nil
+		},
+	}
+
+	_, err = bridge.ExecuteMethod(ctx, "registerCustomTool", []interface{}{toolDef})
+	require.NoError(t, err)
+
+	t.Run("validateToolInput", func(t *testing.T) {
+		// Valid input
+		result, err := bridge.ExecuteMethod(ctx, "validateToolInput", []interface{}{
+			"validation_test_tool",
+			map[string]interface{}{
+				"required_field": "test",
+				"number_field":   50,
+			},
+		})
+		require.NoError(t, err)
+		validation := result.(map[string]interface{})
+		assert.True(t, validation["valid"].(bool))
+
+		// Invalid input - missing required field
+		result, err = bridge.ExecuteMethod(ctx, "validateToolInput", []interface{}{
+			"validation_test_tool",
+			map[string]interface{}{
+				"number_field": 50,
+			},
+		})
+		require.NoError(t, err)
+		validation = result.(map[string]interface{})
+		assert.False(t, validation["valid"].(bool))
+		assert.NotEmpty(t, validation["errors"])
+	})
+
+	t.Run("executeToolValidated", func(t *testing.T) {
+		// Valid execution
+		result, err := bridge.ExecuteMethod(ctx, "executeToolValidated", []interface{}{
+			"validation_test_tool",
+			map[string]interface{}{
+				"required_field": "test",
+				"number_field":   50,
+			},
+		})
+		require.NoError(t, err)
+		execResult := result.(map[string]interface{})
+		assert.True(t, execResult["success"].(bool))
+		assert.NotNil(t, execResult["result"])
+
+		// Invalid input
+		result, err = bridge.ExecuteMethod(ctx, "executeToolValidated", []interface{}{
+			"validation_test_tool",
+			map[string]interface{}{
+				"number_field": 150, // exceeds maximum
+			},
+		})
+		require.NoError(t, err)
+		execResult = result.(map[string]interface{})
+		assert.False(t, execResult["success"].(bool))
+		assert.Contains(t, execResult["error"].(string), "validation failed")
+	})
+
+	t.Run("getValidationReport", func(t *testing.T) {
+		// Execute to generate a report
+		_, _ = bridge.ExecuteMethod(ctx, "executeToolValidated", []interface{}{
+			"validation_test_tool",
+			map[string]interface{}{
+				"required_field": "test",
+			},
+		})
+
+		// Get the report
+		result, err := bridge.ExecuteMethod(ctx, "getValidationReport", []interface{}{
+			"validation_test_tool",
+		})
+		require.NoError(t, err)
+		report := result.(map[string]interface{})
+		assert.Equal(t, "validation_test_tool", report["toolName"])
+		assert.NotEmpty(t, report["timestamp"])
+	})
+}
+
+// Test documentation generation features (Task 1.4.9.2)
+func TestToolsBridge_DocumentationGeneration(t *testing.T) {
+	// Create bridge
+	bridge := NewToolsBridge()
+	ctx := context.Background()
+
+	// Initialize bridge
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Register a test tool
+	toolDef := map[string]interface{}{
+		"name":              "doc_test_tool",
+		"description":       "A tool for documentation testing",
+		"category":          "test",
+		"version":           "1.0.0",
+		"tags":              []string{"test", "documentation"},
+		"usageInstructions": "Use this tool to test documentation generation",
+		"parameterSchema": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"input": map[string]interface{}{
+					"type":        "string",
+					"description": "Input parameter",
+				},
+			},
+		},
+		"execute": func(ctx interface{}, params interface{}) (interface{}, error) {
+			return map[string]interface{}{
+				"output": "test result",
+			}, nil
+		},
+	}
+
+	_, err = bridge.ExecuteMethod(ctx, "registerCustomTool", []interface{}{toolDef})
+	require.NoError(t, err)
+
+	t.Run("generateToolDocumentation markdown", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "generateToolDocumentation", []interface{}{
+			"doc_test_tool",
+			"markdown",
+		})
+		require.NoError(t, err)
+		doc := result.(string)
+		assert.Contains(t, doc, "doc_test_tool")
+		assert.Contains(t, doc, "A tool for documentation testing")
+	})
+
+	t.Run("generateToolDocumentation json", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "generateToolDocumentation", []interface{}{
+			"doc_test_tool",
+			"json",
+		})
+		require.NoError(t, err)
+		jsonDoc := result.(string)
+
+		// Verify it's valid JSON
+		var parsed map[string]interface{}
+		err = json.Unmarshal([]byte(jsonDoc), &parsed)
+		assert.NoError(t, err)
+		assert.Equal(t, "doc_test_tool", parsed["name"])
+	})
+
+	t.Run("generateToolPlayground", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "generateToolPlayground", []interface{}{
+			"doc_test_tool",
+		})
+		require.NoError(t, err)
+		html := result.(string)
+		assert.Contains(t, html, "<!DOCTYPE html>")
+		assert.Contains(t, html, "doc_test_tool Tool Playground")
+		assert.Contains(t, html, "paramSchema")
+	})
+
+	t.Run("generateSDKSnippet", func(t *testing.T) {
+		languages := []string{"go", "python", "javascript"}
+		for _, lang := range languages {
+			result, err := bridge.ExecuteMethod(ctx, "generateSDKSnippet", []interface{}{
+				"doc_test_tool",
+				lang,
+			})
+			require.NoError(t, err)
+			snippet := result.(string)
+			assert.Contains(t, snippet, "doc_test_tool")
+			assert.NotEmpty(t, snippet)
+		}
+	})
+}
+
+// Test execution analytics features (Task 1.4.9.3)
+func TestToolsBridge_ExecutionAnalytics(t *testing.T) {
+	// Create bridge
+	bridge := NewToolsBridge()
+	ctx := context.Background()
+
+	// Initialize bridge
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Register a test tool
+	successCount := 0
+	toolDef := map[string]interface{}{
+		"name":        "analytics_test_tool",
+		"description": "Tool for testing analytics",
+		"category":    "test",
+		"execute": func(ctx interface{}, params interface{}) (interface{}, error) {
+			p := params.(map[string]interface{})
+			if shouldFail, ok := p["fail"].(bool); ok && shouldFail {
+				return nil, fmt.Errorf("intentional failure")
+			}
+			successCount++
+			return map[string]interface{}{
+				"success": true,
+				"count":   successCount,
+			}, nil
+		},
+	}
+
+	_, err = bridge.ExecuteMethod(ctx, "registerCustomTool", []interface{}{toolDef})
+	require.NoError(t, err)
+
+	// Execute the tool multiple times
+	for i := 0; i < 5; i++ {
+		_, _ = bridge.ExecuteMethod(ctx, "executeToolValidated", []interface{}{
+			"analytics_test_tool",
+			map[string]interface{}{
+				"fail": i%3 == 0, // Fail every 3rd execution
+			},
+		})
+	}
+
+	t.Run("getToolMetrics", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "getToolMetrics", []interface{}{
+			"analytics_test_tool",
+		})
+		require.NoError(t, err)
+		metrics := result.(map[string]interface{})
+
+		assert.Equal(t, "analytics_test_tool", metrics["toolName"])
+		assert.Equal(t, int64(5), metrics["totalExecutions"])
+		assert.Equal(t, int64(3), metrics["successCount"])
+		assert.Equal(t, int64(2), metrics["failureCount"])
+		assert.NotEmpty(t, metrics["averageDuration"])
+	})
+
+	t.Run("getAllToolsMetrics", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "getAllToolsMetrics", []interface{}{})
+		require.NoError(t, err)
+		allMetrics := result.([]map[string]interface{})
+
+		assert.GreaterOrEqual(t, len(allMetrics), 1)
+
+		// Find our test tool
+		found := false
+		for _, m := range allMetrics {
+			if m["toolName"] == "analytics_test_tool" {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found)
+	})
+
+	t.Run("getToolUsageReport", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "getToolUsageReport", []interface{}{
+			"hour",
+		})
+		require.NoError(t, err)
+		report := result.(map[string]interface{})
+
+		assert.Equal(t, "hour", report["period"])
+		assert.NotNil(t, report["totalExecutions"])
+		assert.NotNil(t, report["overallSuccessRate"])
+		assert.NotNil(t, report["toolUsage"])
+	})
+
+	t.Run("getToolAnomalies", func(t *testing.T) {
+		// Execute more failures to trigger anomaly detection
+		for i := 0; i < 10; i++ {
+			_, _ = bridge.ExecuteMethod(ctx, "executeToolValidated", []interface{}{
+				"analytics_test_tool",
+				map[string]interface{}{
+					"fail": true,
+				},
+			})
+		}
+
+		result, err := bridge.ExecuteMethod(ctx, "getToolAnomalies", []interface{}{})
+		require.NoError(t, err)
+		anomalies := result.([]map[string]interface{})
+
+		// Should detect high failure rate
+		assert.NotEmpty(t, anomalies)
+
+		foundHighFailureRate := false
+		for _, anomaly := range anomalies {
+			if anomaly["type"] == "high_failure_rate" {
+				foundHighFailureRate = true
+				assert.Equal(t, "analytics_test_tool", anomaly["toolName"])
+				break
+			}
+		}
+		assert.True(t, foundHighFailureRate, "Should detect high failure rate anomaly")
+	})
+
+	t.Run("enableToolProfiling", func(t *testing.T) {
+		// This should not error
+		_, err := bridge.ExecuteMethod(ctx, "enableToolProfiling", []interface{}{
+			"analytics_test_tool",
+		})
+		assert.NoError(t, err)
+	})
 }
