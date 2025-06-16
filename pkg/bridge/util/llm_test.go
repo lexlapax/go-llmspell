@@ -22,8 +22,8 @@ func TestUtilLLMBridgeMetadata(t *testing.T) {
 	metadata := bridge.GetMetadata()
 
 	assert.Equal(t, "util_llm", metadata.Name)
-	assert.Equal(t, "1.0.0", metadata.Version)
-	assert.Contains(t, metadata.Description, "LLM utilities")
+	assert.Equal(t, "2.0.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "Enhanced LLM utilities")
 	assert.Equal(t, "go-llmspell", metadata.Author)
 	assert.Equal(t, "MIT", metadata.License)
 }

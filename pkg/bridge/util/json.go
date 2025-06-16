@@ -5,7 +5,6 @@ package util
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -19,13 +18,6 @@ import (
 	"github.com/lexlapax/go-llms/pkg/structured/domain"
 	"github.com/lexlapax/go-llms/pkg/structured/processor"
 	llmjson "github.com/lexlapax/go-llms/pkg/util/json"
-)
-
-var (
-	// Common bridge errors
-	ErrBridgeNotInitialized = errors.New("bridge not initialized")
-	ErrInvalidArguments     = errors.New("invalid arguments")
-	ErrMethodNotFound       = errors.New("method not found")
 )
 
 // UtilJSONBridge provides script access to go-llms structured output capabilities.

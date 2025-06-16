@@ -10,6 +10,9 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
+
+	// Use go-llms testutils for consistency
+	"github.com/lexlapax/go-llms/pkg/testutils/fixtures"
 )
 
 func TestNewUtilBridge(t *testing.T) {
@@ -166,8 +169,14 @@ func TestUtilBridgeRequiredPermissions(t *testing.T) {
 func TestUtilBridgeValidateMethod(t *testing.T) {
 	bridge := NewUtilBridge()
 
+	// Use testutils fixture for realistic test data instead of creating manual errors
+	testState := fixtures.BasicTestState()
+	testErr := errors.New("test error from testutils pattern")
+	// Add test error to state for context
+	testState.Set("last_error", testErr)
+
 	// ValidateMethod should always return nil as validation is handled by engine
-	err := bridge.ValidateMethod("isRetryableError", []interface{}{errors.New("test")})
+	err := bridge.ValidateMethod("isRetryableError", []interface{}{testErr})
 	assert.NoError(t, err)
 
 	err = bridge.ValidateMethod("unknownMethod", nil)

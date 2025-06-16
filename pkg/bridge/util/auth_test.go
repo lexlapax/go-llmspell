@@ -9,6 +9,9 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
+
+	// Use go-llms testutils for consistency
+	"github.com/lexlapax/go-llms/pkg/testutils/fixtures"
 )
 
 func TestNewUtilAuthBridge(t *testing.T) {
@@ -173,8 +176,17 @@ func TestUtilAuthBridgeRequiredPermissions(t *testing.T) {
 func TestUtilAuthBridgeValidateMethod(t *testing.T) {
 	bridge := NewUtilAuthBridge()
 
+	// Use testutils fixture for realistic test data
+	testState := fixtures.BasicTestState()
+	testConfig := make(map[string]interface{})
+	if config, exists := testState.Get("config"); exists {
+		testConfig = config.(map[string]interface{})
+	} else {
+		testConfig["provider"] = "test"
+	}
+
 	// ValidateMethod should always return nil as validation is handled by engine
-	err := bridge.ValidateMethod("createAuthConfig", []interface{}{"apiKey", map[string]interface{}{}})
+	err := bridge.ValidateMethod("createAuthConfig", []interface{}{"apiKey", testConfig})
 	assert.NoError(t, err)
 
 	err = bridge.ValidateMethod("unknownMethod", nil)

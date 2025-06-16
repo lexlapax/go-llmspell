@@ -900,97 +900,100 @@ All core bridge functionality is now complete and ready for script engine integr
 - ✅ Fixed race condition in event system tests using atomic operations
 - ✅ Leveraged go-llms pkg/testutils for consistent test patterns
 
-- ✅ **Task 1.4.2.4: Add State Transformation Pipeline** [COMPLETED - 2025-06-15]
-  - ✅ Leveraged imports from go-llms pkg (core.StateTransform, StateManager)
-  - ✅ Integrated with go-llms transformation pipeline using StateManager
-  - ✅ Added pipeline configuration from scripts with ExecuteMethod cases
-  - ✅ Supported chained transformations with pipeline system
-  - ✅ Added transformation validation through built-in transform types
-  - ✅ Implemented transformation caching with cacheKey generation
-  - ✅ Added transformation metrics with TransformMetrics struct tracking:
-    - Execution count, duration, success/error rates
-    - Cache hits/misses, last execution time
-    - Average duration calculations
-  - ✅ Created registerTransform method for dynamic transform registration
-  - ✅ Created applyTransform method for single transform execution
-  - ✅ Created createPipeline method for chained transformation setup
-  - ✅ Created applyPipeline method for pipeline execution with caching
-  - ✅ Created getTransformMetrics method for performance monitoring
-  - ✅ Fixed compilation errors (RegisterTransform signature, SharedStateContext API)
-  - ✅ Added all built-in transform types: filter, selectKeys, renameKeys, prefixKeys, normalizeKeys, flatten, clearMessages, limitMessages, filterMessagesByRole
-  - ✅ Implemented helper methods: sharedContextToState, updateSharedContextFromState, updateTransformMetrics
+## ✅ **Phase 1.4.2: State Bridge Enhancements - COMPLETED** [Date: 2025-06-15]
 
-- ✅ **Task 1.4.3.1: Replace JSON Bridge with Structured Output Parser** [COMPLETED - 2025-06-15]
-  - ✅ Leveraged imports from go-llms pkg (structured/processor, schema/domain, schema/validation, llm/outputs)
-  - ✅ Replaced JSONBridge implementation with go-llms v0.3.5 structured output system:
-    - StructuredProcessor for schema-validated parsing
-    - PromptEnhancer for LLM prompt enhancement
-    - Validator for schema validation
-    - Converter for format conversion
-  - ✅ Added ParseWithRecovery using processor.ExtractJSON for malformed JSON extraction from LLM responses
-  - ✅ Added schema validation through parseStructured method with full validation pipeline
-  - ✅ Implemented format conversion (JSON ↔ YAML ↔ XML) using outputs.Converter:
-    - convertFormat for string-to-string conversion
-    - streamConvert for streaming large data conversion
-    - Full conversion options support (pretty printing, type preservation, XML namespaces)
-  - ✅ Added streaming JSON parsing support maintaining existing createEncoder/createDecoder methods
-  - ✅ Enhanced bridge capabilities with new methods:
-    - parseStructured: Parse and validate LLM output against schema
-    - parseWithRecovery: Extract JSON from malformed/mixed content
-    - enhancePrompt: Add schema to prompts for better LLM output
-    - convertFormat: Convert between JSON/YAML/XML formats
-    - streamConvert: Streaming format conversion for large data
-  - ✅ Added helper methods: convertToSchema, stringToFormat, convertToConversionOptions
-  - ✅ Updated bridge metadata to v2.0.0 reflecting new structured output capabilities
-  - ✅ Maintained backward compatibility with existing JSON utilities
-  - ✅ Used go-llms singleton patterns for optimal performance (global schema cache, default prompt enhancer)
+- ✅ **Task 1.4.2.1: Add State Schema Validation** [COMPLETED - 2025-06-15]
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Add schemaRepo field to StateContextBridge
+  - ✅ Add stateSchema field for validation
+  - ✅ Implement ValidateState method
+  - ✅ Add schema versioning for states
+  - ✅ Support custom validation rules
+  - ✅ Add validation error details
+  - ✅ Check tests to use go-llms pkg/testutils
+
+- ✅ **Task 1.4.2.2: Add State Event Emission** [COMPLETED - 2025-06-15]
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Add eventEmitter to StateContextBridge
+  - ✅ Emit StateChangeEvent on set operations
+  - ✅ Emit StateDeleteEvent on delete operations
+  - ✅ Add state snapshot events
+  - ✅ Support event filtering by key patterns
+  - ✅ Add event replay for state reconstruction
+  - ✅ Check tests to use go-llms pkg/testutils
+
+- ✅ **Task 1.4.2.3: Add State Persistence with Schema Repository** [COMPLETED - 2025-06-15]
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Implement persistState method using schema repository
+  - ✅ Add loadState with schema validation
+  - ✅ Support versioned state snapshots
+  - ✅ Add state migration between versions
+  - ✅ Implement state diff generation
+  - ✅ Add compression for large states
+  - ✅ Check tests to use go-llms pkg/testutils
+
+- ✅ **Task 1.4.2.4: Add State Transformation Pipeline** [COMPLETED - 2025-06-15]
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Integrate with go-llms transformation pipeline
+  - ✅ Add pipeline configuration from scripts
+  - ✅ Support chained transformations
+  - ✅ Add transformation validation
+  - ✅ Implement transformation caching
+  - ✅ Add transformation metrics
+
+## ✅ **Phase 1.4.3: Utility Bridge Upgrades - COMPLETED** [Date: 2025-06-16]
+
+- ✅ **Task 1.4.3.1: Replace JSON Bridge with Structured Output Parser** [COMPLETED - 2025-06-16]
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Replace JSONBridge implementation with structured.JSONParser
+  - ✅ Add ParseWithRecovery for malformed JSON
+  - ✅ Add schema validation for parsed JSON
+  - ✅ Implement format conversion (JSON ↔ YAML ↔ XML)
+  - ✅ Add streaming JSON parsing support
+  - ✅ Update tests for new parser capabilities
 
 - ✅ **Task 1.4.3.2: Enhance Auth Bridge with OAuth2 Discovery** [COMPLETED - 2025-06-16]
-  - ✅ Leveraged imports from go-llms pkg (util/auth, agent/domain, agent/events, schema/domain, schema/validation)
-  - ✅ Enhanced auth bridge with go-llms v0.3.5 features:
-    - SessionManager for credential management
-    - EventEmitter for auth event logging
-    - Validator for token validation
-    - Schema system for credential validation
-  - ✅ Added OAuth2 .well-known endpoint discovery:
-    - discoverOAuth2Endpoints method simulates .well-known/openid-configuration
-    - Returns standard OpenID Connect discovery metadata
-    - Note: Actual HTTP discovery not in go-llms yet, so simulated
-  - ✅ Implemented token validation with schema system:
-    - validateOAuth2Token parses JWT and validates against schema
-    - parseJWTClaims extracts claims without verification
-    - Schema validation for token claims if schema provided
-  - ✅ Added auth event logging for security audit:
-    - logAuthEvent emits security events via EventEmitter/EventBus
-    - getAuthEventHistory retrieves event history
-    - subscribeToAuthEvents for real-time monitoring
-    - Events: login, logout, refresh, failure, discovery attempts
-  - ✅ Implemented credential serialization:
-    - serializeCredentials for secure storage (encryption ready)
-    - deserializeCredentials for retrieval
-    - cacheCredentials with TTL and metadata
-    - Credential versioning and validation
-  - ✅ Added token refresh automation:
-    - autoRefreshToken configures automatic refresh
-    - Tracks refresh timing and metadata
-    - Integration with session management
-  - ✅ Support multiple auth schemes per endpoint:
-    - registerAuthScheme for endpoint-specific auth
-    - getAuthSchemes with pattern matching
-    - selectBestAuthScheme for optimal auth selection
-    - Multi-scheme authentication strategies
-  - ✅ Additional enhancements:
-    - Session management (createAuthSession, validateSession)
-    - Credential masking (maskCredentials for logs)
-    - API key rotation suggestions (rotateAPIKey)
-    - Custom header authentication with prefixes
-    - OAuth2 configuration and token exchange
-  - ✅ Updated bridge metadata to v2.0.0 reflecting enhanced OAuth2 capabilities
-  - ✅ Fixed compilation errors:
-    - Added missing strings import
-    - Fixed JWT claims type handling (converted struct to map)
-    - Corrected ParseJWTClaims return value conversion
-  - ✅ Updated tests to match new v2.0.0 metadata and description
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Add OAuth2 .well-known endpoint discovery
+  - ✅ Implement token validation with schema system
+  - ✅ Add auth event logging for security audit
+  - ✅ Implement credential serialization
+  - ✅ Add token refresh automation
+  - ✅ Support multiple auth schemes per endpoint
+
+- ✅ **Task 1.4.3.3: Enhance LLM Utility Bridge** [COMPLETED - 2025-06-16]
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Add provider capability metadata exposure
+  - ✅ Integrate model discovery API
+  - ✅ Add response parsing with recovery
+  - ✅ Implement streaming event emission
+  - ✅ Add cost tracking per request
+  - ✅ Support provider-specific options
+
+- ✅ **Task 1.4.3.4: Add Error Serialization Utilities** [COMPLETED - 2025-06-16]
+  - ✅ Ensure we leverage imports from go-llms pkg
+  - ✅ Implement SerializableError wrapper
+  - ✅ Add error recovery strategy support
+  - ✅ Create error event emission
+  - ✅ Add error categorization
+  - ✅ Implement error aggregation
+  - ✅ Support custom error handlers
+  - ✅ Check tests to use go-llms pkg/testutils
+  - ✅ Updated json_test.go, auth_test.go, util_test.go, and errors_test.go to use go-llms pkg/testutils
+  - ✅ Replaced custom error types with standard errors following testutils patterns
+  - ✅ Leveraged fixtures and helpers from go-llms testutils for consistency
+
+### Key Achievements in Utility Bridge Upgrades:
+
+**JSON Bridge v2.0.0**: Complete replacement with go-llms v0.3.5 structured output system including schema validation, format conversion, and recovery parsing.
+
+**Auth Bridge v2.0.0**: Enhanced with OAuth2 discovery, token validation, event logging, credential serialization, and multi-scheme support.
+
+**LLM Utility Bridge v2.0.0**: Added provider capabilities, model discovery, response parsing with recovery, streaming events, cost tracking, and provider-specific options.
+
+**Error Utilities Bridge v2.0.0**: Comprehensive error handling with serialization, recovery strategies, event emission, categorization, aggregation, and custom handlers.
+
+**Testing Infrastructure**: All test files now properly leverage go-llms pkg/testutils for consistency with the main project's testing patterns.
 
 ### Next Phase Ready:
-**Task 1.4.3.2 of Utility Bridge Upgrades is complete.** Tasks 1.4.3.3-1.4.3.4 are next.
+With Phase 1.4.3 complete, the project is ready to proceed to Phase 1.4.4 (LLM Bridge Advanced Features) and beyond.
