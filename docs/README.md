@@ -107,10 +107,25 @@ Welcome to the comprehensive go-llmspell documentation. This directory contains 
   - Event system bridge with real-time streaming
   - Tools bridge with enhanced custom tool support (v0.3.5)
   - Hook system bridge with priority-based execution
+- **Phase 1.4** - v0.3.5 Feature Integration complete [2025-06-16]
+  - Foundation updates with event system and documentation generation
+  - State bridge enhancements with schema validation and persistence
+  - Utility bridge upgrades (v2.0) with structured output parsing
+  - LLM bridge advanced features (schema validation, metadata, streaming)
+  - Schema bridge full implementation with versioning and validation
+  - Agent bridge v2.0 with state serialization and performance profiling
+  - Event bridge v2.0 with complete event system capabilities
+  - Tools bridge v2.1 with enhanced execution analytics
+  - Workflow bridge v2.0 with serialization and script steps
+  - Engine Integration with event bus, type registry, profiling, and API export
+- **Phase 1.5** - Additional Original Bridges complete [2025-06-16]
+  - Observability bridges: Tracing, Guardrails, Metrics
+  - Provider bridges: Provider System, Provider Pool
+  - Tools Registry bridge: Discovery, filtering, MCP export
+  - Complete go-llms v0.3.5 bridge ecosystem achieved
 - **Documentation** - Comprehensive architecture and guide structure
 
 ### 🚧 **In Progress**
-- **Phase 1.4** - v0.3.5 Feature Integration
 - **Lua Engine** - First scripting language implementation
 - **User Guides** - Spell writing tutorials and examples
 - **API Documentation** - Complete scripting interface reference

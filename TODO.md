@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1.4.7: Agent Bridge Advanced Features [COMPLETED - 2025-06-16]
 - ✅ Phase 1.4.8: Event Bridge Replacement [COMPLETED - 2025-06-16]
 - ✅ Phase 1.4.11: Engine Integration [COMPLETED - 2025-06-16]
-- 🚧 Phase 1.5: Additional Original Bridges - NEXT
+- ✅ Phase 1.5: Additional Original Bridges [COMPLETED - 2025-06-16]
 - 🚧 Phase 2-5: Engine Implementations - NOT STARTED
 
 ---
@@ -100,74 +100,11 @@ All workflow bridge serialization features completed. See TODO-DONE.md for detai
 
 Enhanced engine capabilities for advanced scripting needs. Bridge go-llms core functionality for profiling, events, and API generation. See TODO-DONE.md for detailed completion summary.
 
-### 1.5 Additional Original Bridges
+### ✅ 1.5 Additional Original Bridges [COMPLETED - 2025-06-16]
 
-- ✅ **Task 1.5.1: Tracing Bridge** [COMPLETED - 2025-06-16]
-  - ✅ Leveraged imports from go-llms pkg/agent/core
-  - ✅ Created `/pkg/bridge/observability/tracing.go`
-  - ✅ Bridged go-llms distributed tracing infrastructure
-  - ✅ Implemented OpenTelemetry-compatible interfaces
-  - ✅ Enabled trace correlation with context management
-  - ✅ Added span attributes, error recording, and status setting
-  - ✅ Implemented tracing hooks for agents, tools, and events
-  - ✅ Comprehensive tests with go-llms integration
+All additional original bridges completed. See TODO-DONE.md for detailed completion summary.
 
-- ✅ **Task 1.5.2: Guardrails Bridge** [COMPLETED - 2025-06-16]
-  - ✅ Leveraged imports from go-llms pkg/agent/domain and pkg/agent/guardrails
-  - ✅ Created `/pkg/bridge/observability/guardrails.go`
-  - ✅ Bridged go-llms guardrails safety system
-  - ✅ Implemented content filtering with keyword and regex support
-  - ✅ Enabled behavioral constraints with function-based validation
-  - ✅ Added custom guardrail rules and chain composition
-  - ✅ Implemented guardrail analytics with validation tracking
-  - ✅ Comprehensive tests with go-llms integration and async validation
-  - ✅ Thread-safe operations with proper state conversion
-
-- ✅ **Task 1.5.3: Metrics Bridge** [COMPLETED - 2025-06-16]
-  - ✅ Leveraged imports from go-llms pkg/util/metrics
-  - ✅ Created `/pkg/bridge/observability/metrics.go`
-  - ✅ Bridged go-llms performance metrics system
-  - ✅ Implemented custom metric collection (counters, gauges, timers, ratio counters)
-  - ✅ Enabled metric aggregation with registry-based management
-  - ✅ Added metric export formats through getAllMetrics API
-  - ✅ Implemented metric reset and management operations
-  - ✅ Comprehensive tests with go-llms integration and concurrency testing
-  - ✅ Thread-safe operations with proper locking mechanisms
-
-- [ ] **Task 1.5.4: Provider System Bridge**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Create `/pkg/bridge/llm/providers.go`
-  - [ ] Bridge all provider implementations (Anthropic, OpenAI, etc.)
-  - [ ] Bridge consensus provider for multi-LLM voting
-  - [ ] Bridge multi-provider with strategies (primary/fallback, sequential)
-  - [ ] Expose provider configuration and options
-  - [ ] Add provider-specific optimizations
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- [ ] **Task 1.5.5: Provider Pool Bridge**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Create `/pkg/bridge/llm/pool.go`
-  - [ ] Bridge connection pooling from go-llms
-  - [ ] Expose pool metrics and management
-  - [ ] Support connection limits and timeouts
-  - [ ] Add pool health monitoring
-  - [ ] Implement adaptive pooling
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- [ ] **Task 1.5.6: Built-in Tools Registry Bridge**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Create `/pkg/bridge/agent/tools/registry.go`
-  - [ ] Bridge the tool registry system
-  - [ ] Expose tool discovery and metadata
-  - [ ] Support dynamic tool loading
-  - [ ] Add tool versioning support
-  - [ ] Implement tool deprecation handling
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- [ ] **Task 1.5.7: Profiling Bridge** ✅ **[COMPLETED - Already implemented in Tasks 1.4.7.3 and 1.4.11.3]**
-  - [ ] Performance profiling already available through Agent Bridge and Engine Integration
-  - [ ] go-llms profiling infrastructure already bridged
-  - [ ] CPU and memory profiling already implemented
+#### Items for revisit:
 
 - [ ] **Task 1.5.8: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
   - [ ] Will implement when available in go-llms
