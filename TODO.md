@@ -79,17 +79,16 @@ All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.m
   - [x] Add transformation validation
   - [x] Implement transformation caching
   - [x] Add transformation metrics
-  - [ ] Check tests to use go-llms pkg/testutils
 
 #### 1.4.3 Utility Bridge Upgrades
 
-- [ ] **Task 1.4.3.1: Replace JSON Bridge with Structured Output Parser**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Replace JSONBridge implementation with structured.JSONParser
-  - [ ] Add ParseWithRecovery for malformed JSON
-  - [ ] Add schema validation for parsed JSON
-  - [ ] Implement format conversion (JSON ↔ YAML ↔ XML)
-  - [ ] Add streaming JSON parsing support
+- [x] **Task 1.4.3.1: Replace JSON Bridge with Structured Output Parser** [COMPLETED - 2025-06-15]
+  - [x] Ensure we leverage imports from go-llms pkg
+  - [x] Replace JSONBridge implementation with structured.JSONParser
+  - [x] Add ParseWithRecovery for malformed JSON
+  - [x] Add schema validation for parsed JSON
+  - [x] Implement format conversion (JSON ↔ YAML ↔ XML)
+  - [x] Add streaming JSON parsing support
   - [ ] Update tests for new parser capabilities
   - [ ] Check tests to use go-llms pkg/testutils
 

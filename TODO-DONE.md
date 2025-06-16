@@ -920,5 +920,30 @@ All core bridge functionality is now complete and ready for script engine integr
   - ✅ Added all built-in transform types: filter, selectKeys, renameKeys, prefixKeys, normalizeKeys, flatten, clearMessages, limitMessages, filterMessagesByRole
   - ✅ Implemented helper methods: sharedContextToState, updateSharedContextFromState, updateTransformMetrics
 
+- ✅ **Task 1.4.3.1: Replace JSON Bridge with Structured Output Parser** [COMPLETED - 2025-06-15]
+  - ✅ Leveraged imports from go-llms pkg (structured/processor, schema/domain, schema/validation, llm/outputs)
+  - ✅ Replaced JSONBridge implementation with go-llms v0.3.5 structured output system:
+    - StructuredProcessor for schema-validated parsing
+    - PromptEnhancer for LLM prompt enhancement
+    - Validator for schema validation
+    - Converter for format conversion
+  - ✅ Added ParseWithRecovery using processor.ExtractJSON for malformed JSON extraction from LLM responses
+  - ✅ Added schema validation through parseStructured method with full validation pipeline
+  - ✅ Implemented format conversion (JSON ↔ YAML ↔ XML) using outputs.Converter:
+    - convertFormat for string-to-string conversion
+    - streamConvert for streaming large data conversion
+    - Full conversion options support (pretty printing, type preservation, XML namespaces)
+  - ✅ Added streaming JSON parsing support maintaining existing createEncoder/createDecoder methods
+  - ✅ Enhanced bridge capabilities with new methods:
+    - parseStructured: Parse and validate LLM output against schema
+    - parseWithRecovery: Extract JSON from malformed/mixed content
+    - enhancePrompt: Add schema to prompts for better LLM output
+    - convertFormat: Convert between JSON/YAML/XML formats
+    - streamConvert: Streaming format conversion for large data
+  - ✅ Added helper methods: convertToSchema, stringToFormat, convertToConversionOptions
+  - ✅ Updated bridge metadata to v2.0.0 reflecting new structured output capabilities
+  - ✅ Maintained backward compatibility with existing JSON utilities
+  - ✅ Used go-llms singleton patterns for optimal performance (global schema cache, default prompt enhancer)
+
 ### Next Phase Ready:
-**Tasks 1.4.2.1-1.4.2.4 of State Bridge Enhancements are complete.** Phase 1.4.3: Utility Bridge Upgrades is next.
+**Task 1.4.3.1 of Utility Bridge Upgrades is complete.** Tasks 1.4.3.2-1.4.3.4 are next.
