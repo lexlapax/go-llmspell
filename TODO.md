@@ -70,19 +70,19 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 #### 2.3.2: Async/Coroutine Support
 **Note**: This section moved before Bridge Adapters to provide async foundation for bridge operations.
 
-- [ ] **Task 2.3.2.1: Async Runtime** (`/pkg/engine/gopherlua/async.go`)
-  - [ ] Implement `AsyncRuntime` for coroutine management
-  - [ ] Add promise-coroutine integration
-  - [ ] Create async execution context
-  - [ ] Implement cancellation support
-  - [ ] Add timeout handling
+- ✅ **Task 2.3.2.1: Async Runtime** (`/pkg/engine/gopherlua/async.go`) [COMPLETED - 2025-06-19]
+  - ✅ Implement `AsyncRuntime` for coroutine management
+  - ✅ Add promise-coroutine integration
+  - ✅ Create async execution context
+  - ✅ Implement cancellation support
+  - ✅ Add timeout handling
 
-- [ ] **Task 2.3.2.2: Channel Integration** (`/pkg/engine/gopherlua/channels.go`)
-  - [ ] Implement Go channel ↔ LChannel bridge
-  - [ ] Add select operation support
-  - [ ] Create buffered channel support
-  - [ ] Implement channel closing
-  - [ ] Add deadlock detection
+- ✅ **Task 2.3.2.2: Channel Integration** (`/pkg/engine/gopherlua/channels.go`) [COMPLETED - 2025-06-19]
+  - ✅ Implement Go channel ↔ LChannel bridge
+  - ✅ Add select operation support
+  - ✅ Create buffered channel support
+  - ✅ Implement channel closing
+  - ✅ Add deadlock detection
 
 - [ ] **Task 2.3.2.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`)
   - [ ] Wrap bridge methods for async execution

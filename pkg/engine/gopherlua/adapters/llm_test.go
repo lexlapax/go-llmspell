@@ -500,10 +500,10 @@ func TestLLMAdapter_ChainedOperations(t *testing.T) {
 
 // Mock LLM bridge for testing
 type mockLLMBridge struct {
-	id           string
-	metadata     engine.BridgeMetadata
-	initialized  bool
-	callFunc     func(string, ...interface{}) (interface{}, error)
+	id          string
+	metadata    engine.BridgeMetadata
+	initialized bool
+	callFunc    func(string, ...interface{}) (interface{}, error)
 }
 
 func (m *mockLLMBridge) GetID() string {

@@ -621,6 +621,53 @@ Phase 2.2 (Core Engine Components) is now complete with all fundamental componen
 
 ---
 
+## Phase 2.3: Bridge Integration Layer
+
+### 2.3.2: Async/Coroutine Support
+
+- ✅ **Task 2.3.2.1: Async Runtime** [COMPLETED - 2025-06-19]
+  - ✅ Implemented `AsyncRuntime` struct for coroutine management
+  - ✅ Added promise-coroutine integration with `Promise` type
+  - ✅ Created async execution context with `AsyncExecutionContext`
+  - ✅ Implemented cancellation support via Go contexts
+  - ✅ Added timeout handling for coroutine operations
+  - ✅ Created thread-safe coroutine tracking with mutex protection
+  - ✅ Implemented coroutine lifecycle management (spawn, wait, cleanup)
+  - ✅ Added coroutine result storage and retrieval
+  - ✅ Fixed race condition in coroutine execution
+  - ✅ Comprehensive test coverage with 8 test suites covering:
+    - Runtime creation and validation
+    - Coroutine spawning and management
+    - Cancellation and timeout handling
+    - Promise integration
+    - Execution context creation
+    - Resource cleanup
+  - ✅ All tests passing with race condition detection enabled
+
+- ✅ **Task 2.3.2.2: Channel Integration** [COMPLETED - 2025-06-19]
+  - ✅ Implemented `ChannelManager` for Go channel ↔ LChannel bridge
+  - ✅ Added select operation support using Go's reflect.Select
+  - ✅ Created buffered channel support with configurable buffer sizes
+  - ✅ Implemented channel closing with proper lifecycle management
+  - ✅ Added deadlock detection via context timeouts
+  - ✅ Created thread-safe channel management with mutex protection
+  - ✅ Implemented channel limits and active channel counting
+  - ✅ Added comprehensive channel information and listing methods
+  - ✅ Fixed channel lifecycle to handle closed channels properly
+  - ✅ Comprehensive test coverage with 9 test suites covering:
+    - Channel manager creation and validation
+    - Channel creation (unbuffered, buffered, large buffer)
+    - Send/receive operations with multiple value types
+    - Select operations with multiple channels
+    - Timeout handling and context cancellation
+    - Channel closing and lifecycle management
+    - Deadlock detection scenarios
+    - Channel limits and capacity management
+    - Resource cleanup and concurrent operations
+  - ✅ All tests passing with race condition detection enabled
+
+---
+
 ## Phase 3: JavaScript Engine Implementation
 - [ ] Tasks will be moved here as they are completed
 
