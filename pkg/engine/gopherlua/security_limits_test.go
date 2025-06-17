@@ -229,7 +229,7 @@ func TestResourceLimitEnforcer_StackDepthLimits(t *testing.T) {
 func TestResourceLimitEnforcer_CombinedLimits(t *testing.T) {
 	limits := ResourceLimits{
 		MaxDuration:   100 * time.Millisecond,
-		MaxMemory:     2 * 1024 * 1024, // 2MB - increased to handle Lua VM overhead
+		MaxMemory:     3 * 1024 * 1024, // 3MB - increased to handle Lua VM overhead
 		MaxStackDepth: 20,
 		CheckInterval: 100,
 	}

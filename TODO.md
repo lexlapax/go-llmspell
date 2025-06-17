@@ -84,19 +84,73 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - ✅ Implement channel closing
   - ✅ Add deadlock detection
 
-- [ ] **Task 2.3.2.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`)
-  - [ ] Wrap bridge methods for async execution
-  - [ ] Add automatic promisification
-  - [ ] Implement streaming support
-  - [ ] Add progress callbacks
-  - [ ] Create cancellation tokens
+- [ ] **Task 2.3.2.0: ScriptValue Type System Refactoring** [CRITICAL - Foundation for all bridge operations]
+  - ✅ **Phase 1: Define ScriptValue Types** (`/pkg/engine/value_types.go`) [COMPLETED - 2025-06-19]
+    - ✅ Create ScriptValue interface with Type(), IsNil(), String(), ToGo(), Equals()
+    - ✅ Define ScriptValueType enum (Nil, Bool, Number, String, Array, Object, Function, Error, Channel, Custom)
+    - ✅ Implement concrete types: NilValue, BoolValue, NumberValue, StringValue
+    - ✅ Implement collection types: ArrayValue, ObjectValue
+    - ✅ Implement special types: FunctionValue, ErrorValue, ChannelValue
+    - ✅ Add constructor functions: NewStringValue(), NewNumberValue(), etc.
+  
+  - [ ] **Phase 2: Update Core Interfaces** (`/pkg/engine/interface.go`)
+    - [ ] Change ToNative(interface{}) to ToNative(ScriptValue) 
+    - [ ] Change FromNative return to (ScriptValue, error)
+    - [ ] Update Bridge.ValidateMethod to use []ScriptValue
+    - [ ] Update Bridge.ExecuteMethod to use ScriptValue params/returns
+    - [ ] Update Execute methods to use ScriptValue in params map
+  
+  - [ ] **Phase 3: Refactor LuaEngine Converters** (`/pkg/engine/gopherlua/converter_scriptvalue.go`)
+    - [ ] Create LValueToScriptValue(lua.LValue) ScriptValue converter
+    - [ ] Create ScriptValueToLValue(ScriptValue) lua.LValue converter
+    - [ ] Update existing converter.go to use ScriptValue internally
+    - [ ] Maintain circular reference detection
+    - [ ] Update caching to work with ScriptValue
+  
+  - [ ] **Phase 4: Update Engine Implementations**
+    - [ ] Refactor engine.go ToNative/FromNative to use ScriptValue
+    - [ ] Update Execute to convert map[string]interface{} to map[string]ScriptValue
+    - [ ] Update ExecuteFile to use ScriptValue
+    - [ ] Update ExecuteScript to return ScriptValue in ExecutionResult
+    - [ ] Fix engine_bridge.go to use ScriptValue for method calls
+  
+  - [ ] **Phase 5: Refactor Bridge Adapter**
+    - [ ] Update bridge_adapter.go to use ScriptValue throughout
+    - [ ] Fix convertArgs to work with ScriptValue
+    - [ ] Update all method wrappers to handle ScriptValue
+    - [ ] Ensure error propagation with ErrorValue
+  
+  - [ ] **Phase 6: Update All Bridge Implementations**
+    - [ ] Update all pkg/bridge implementations to accept/return ScriptValue
+    - [ ] Start with simple bridges (util, debug) for testing
+    - [ ] Move to complex bridges (llm, agent, workflow)
+    - [ ] Ensure backward compatibility during transition
+  
+  - [ ] **Phase 7: Fix Tests and Examples**
+    - [ ] Update all test files to use ScriptValue
+    - [ ] Fix mock implementations in tests
+    - [ ] Update example scripts to demonstrate new type system
+    - [ ] Add comprehensive ScriptValue conversion tests
+  
+  - [ ] **Phase 8: Documentation and Migration Guide**
+    - [ ] Document ScriptValue type system
+    - [ ] Create migration guide for bridge authors
+    - [ ] Update architecture documentation
+    - [ ] Add performance benchmarks comparing old vs new
 
-- [ ] **Task 2.3.2.4: Async Testing** (`/pkg/engine/gopherlua/async_test.go`)
-  - [ ] Test coroutine lifecycle
-  - [ ] Test promise integration
-  - [ ] Test channel operations
-  - [ ] Test cancellation and timeouts
-  - [ ] Test concurrent async operations
+- ✅ **Task 2.3.2.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`) [COMPLETED - 2025-06-19]
+  - ✅ Wrap bridge methods for async execution
+  - ✅ Add automatic promisification
+  - ✅ Implement streaming support
+  - ✅ Add progress callbacks
+  - ✅ Create cancellation tokens
+
+- ✅ **Task 2.3.2.4: Async Testing** (`/pkg/engine/gopherlua/async_test.go`) [COMPLETED - 2025-06-19]
+  - ✅ Test coroutine lifecycle
+  - ✅ Test promise integration
+  - ✅ Test channel operations
+  - ✅ Test cancellation and timeouts
+  - ✅ Test concurrent async operations
 
 #### 2.3.3: Bridge Adapters
 - ✅ **Task 2.3.3.1: Bridge Adapter Base** (`/pkg/engine/gopherlua/bridge_adapter.go`) [COMPLETED - 2025-06-19]

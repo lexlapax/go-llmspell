@@ -199,6 +199,34 @@ func (ar *AsyncRuntime) CreatePromise(ctx context.Context, L *lua.LState, script
 	}, nil
 }
 
+// CreateEmptyPromise creates a promise that can be resolved manually
+func (ar *AsyncRuntime) CreateEmptyPromise(ctx context.Context) (*Promise, error) {
+	ar.mu.Lock()
+	defer ar.mu.Unlock()
+
+	if ar.closed {
+		return nil, fmt.Errorf("async runtime is closed")
+	}
+
+	coroID := uuid.New().String()
+	coroCtx, cancel := context.WithCancel(ctx)
+
+	info := &coroutineInfo{
+		ID:        coroID,
+		StartTime: time.Now(),
+		Context:   coroCtx,
+		Cancel:    cancel,
+		Done:      make(chan struct{}),
+	}
+
+	ar.activeRoutines[coroID] = info
+
+	return &Promise{
+		coroID:  coroID,
+		runtime: ar,
+	}, nil
+}
+
 // CreateExecutionContext creates an async execution context
 func (ar *AsyncRuntime) CreateExecutionContext(ctx context.Context, L *lua.LState) (*AsyncExecutionContext, error) {
 	if ar.closed {
@@ -251,6 +279,21 @@ func (ar *AsyncRuntime) IsCoroutineActive(coroID string) bool {
 	return exists
 }
 
+// SetCoroutineResult sets the result for a coroutine (used by async bridge)
+func (ar *AsyncRuntime) SetCoroutineResult(coroID string, value lua.LValue, err error) {
+	ar.mu.Lock()
+	defer ar.mu.Unlock()
+
+	if info, exists := ar.activeRoutines[coroID]; exists {
+		ar.routineResults[coroID] = &coroutineResult{
+			Value: value,
+			Error: err,
+		}
+		close(info.Done)
+		delete(ar.activeRoutines, coroID)
+	}
+}
+
 // Promise methods
 
 // Await waits for the promise to resolve
@@ -275,4 +318,9 @@ func (p *Promise) Cancel() {
 	if exists {
 		info.Cancel()
 	}
+}
+
+// GetCoroID returns the coroutine ID (for async bridge)
+func (p *Promise) GetCoroID() string {
+	return p.coroID
 }

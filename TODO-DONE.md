@@ -664,7 +664,77 @@ Phase 2.2 (Core Engine Components) is now complete with all fundamental componen
     - Deadlock detection scenarios
     - Channel limits and capacity management
     - Resource cleanup and concurrent operations
+
+- ✅ **Task 2.3.2.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`) [COMPLETED - 2025-06-19]
+  - ✅ Implemented `AsyncBridgeWrapper` for wrapping bridges with async execution
+  - ✅ Added automatic promisification using CreateEmptyPromise and goroutines
+  - ✅ Implemented streaming support with ExecuteMethodStream returning Stream objects
+  - ✅ Added progress callbacks with ticker-based progress estimation
+  - ✅ Created cancellation tokens with context propagation and Cancel() support
+  - ✅ Implemented AwaitAll for waiting on multiple promises concurrently
+  - ✅ Implemented AwaitRace for getting the first resolved promise result
+  - ✅ Created temporary ScriptValue types to enable bridge method wrapping
+  - ✅ Added temporary bridge interfaces extending for ScriptValue support
+  - ✅ Implemented comprehensive error handling and context cancellation
+  - ✅ Fixed race conditions in progress callback tests with mutex protection
+  - ✅ Comprehensive test coverage with 8 test suites covering:
+    - Async bridge wrapper creation and initialization
+    - Promisification of fast and slow methods
+    - Timeout handling with context cancellation
+    - Streaming method execution with channel forwarding
+    - Progress callbacks with concurrent updates
+    - Cancellation token creation and usage
+    - Error propagation from bridge methods
+    - Multiple promise management with AwaitAll
+    - Promise racing with AwaitRace
   - ✅ All tests passing with race condition detection enabled
+
+- ✅ **Task 2.3.2.4: Async Testing** (`/pkg/engine/gopherlua/async_test.go`) [COMPLETED - 2025-06-19]
+  - ✅ Implemented comprehensive coroutine lifecycle tests
+    - State tracking from spawn to completion
+    - Error propagation (runtime, syntax, nil operation errors)
+    - Multiple return value handling
+    - Result caching for completed coroutines
+  - ✅ Deep promise integration testing
+    - Promise await functionality with state checking
+    - Promise cancellation with timeout handling
+    - Empty promise manual resolution
+    - Error resolution and propagation
+  - ✅ Channel operations with async integration
+    - Async send/receive operations with goroutines
+    - Select operations with timeout contexts
+    - Channel creation and lifecycle management
+  - ✅ Complex cancellation and timeout scenarios
+    - Cascading cancellation with nested contexts
+    - Selective cancellation of specific coroutines
+    - Context timeout propagation
+  - ✅ Comprehensive concurrent async operations
+    - Concurrent coroutine spawning (50 goroutines × 10 operations)
+    - Concurrent promise operations with result verification
+    - Stress testing with max coroutine limits
+    - Race condition testing with concurrent state modifications
+  - ✅ Bridge integration with async operations
+    - Async bridge method execution with promises
+    - Streaming support with channel forwarding
+    - Multiple promise handling with AwaitAll
+  - ✅ Extended existing tests with 800+ lines of comprehensive coverage
+  - ✅ All tests pass with race detection enabled (-race flag)
+
+- ✅ **Task 2.3.2.0: ScriptValue Type System Refactoring - Phase 1** (`/pkg/engine/value_types.go`) [COMPLETED - 2025-06-19]
+  - ✅ Created ScriptValue interface with Type(), IsNil(), String(), ToGo(), Equals() methods
+  - ✅ Defined ScriptValueType enum with all required types
+  - ✅ Implemented NilValue, BoolValue, NumberValue, StringValue concrete types
+  - ✅ Implemented ArrayValue with element access and iteration support
+  - ✅ Implemented ObjectValue with field access and map operations
+  - ✅ Implemented FunctionValue with name and function pointer storage
+  - ✅ Implemented ErrorValue wrapping Go errors
+  - ✅ Implemented ChannelValue for script-side channel operations
+  - ✅ Implemented CustomValue for user-defined types
+  - ✅ Added all constructor functions (NewXxxValue) for type creation
+  - ✅ Added helper functions: IsTrue, ConvertToString, ConvertToNumber, ConvertToBool
+  - ✅ Fixed async_bridges.go to use ObjectValue instead of MapValue
+  - ✅ Fixed async_bridges_test.go to provide correct arguments to NewChannelValue
+  - ✅ Removed temporary value_types_temp.go file
 
 ---
 
