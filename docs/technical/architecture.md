@@ -134,7 +134,7 @@ go-llmspell/
 │   │   ├── interface.go # Core interfaces (ScriptEngine, Bridge, TypeConverter)
 │   │   ├── registry.go  # Engine registry and discovery
 │   │   ├── types.go     # Type system and conversions
-│   │   ├── lua/        # Lua engine implementation
+│   │   ├── gopherlua/   # Lua engine implementation
 │   │   ├── javascript/ # JavaScript engine implementation
 │   │   └── tengo/      # Tengo engine implementation
 │   │

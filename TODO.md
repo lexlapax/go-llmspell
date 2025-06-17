@@ -60,15 +60,14 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - [x] 2.1.4. Plan goroutine and channel integration
 - [x] 2.1.5. Design security sandboxing approach
 - [x] 2.1.6. Research compiled chunk caching for performance
-- [ ] 2.1.7. Investigate instruction count limits and timeout mechanisms
-- [ ] 2.1.8. Study memory limits via registry configuration
-- [ ] 2.1.9. Research module preloading and lazy initialization
-- [ ] 2.1.10. Design error handling and stack trace preservation
-- [ ] 2.1.11. Plan LState lifecycle management (creation, pooling, cleanup)
-- [ ] 2.1.12. Research UserData vs Table for bridge object representation
-- [ ] 2.1.13. Investigate coroutine support for async bridge operations
-- [ ] 2.1.14. Combine all research documents and re-synthesize into one lua_engine_architecture.md document
-- [ ] 2.1.15. Create detailed implementation roadmap
+- [x] 2.1.7. Investigate instruction count limits and timeout mechanisms
+- [x] 2.1.8. Study memory limits via registry configuration
+- [x] 2.1.9. Research module preloading and lazy initialization
+- [x] 2.1.10. Design error handling and stack trace preservation
+- [x] 2.1.11. Plan LState lifecycle management (creation, pooling, cleanup)
+- [x] 2.1.12. Research UserData vs Table for bridge object representation
+- [x] 2.1.13. Investigate coroutine support for async bridge operations
+- [ ] 2.1.14. Combine all research documents `docs/technical/lua*.md` and re-synthesize into one gopherlua_engine_architecture_design.md  based on `docs/technical/architecture.md`, requires megathink
 
 ### 2.2 Lua Engine Core
 - [ ] **Task 2.2.1: Engine Implementation**
@@ -154,17 +153,18 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ## Phase 3: JavaScript Engine Implementation
 
 ### 3.1 JavaScript Engine Research and Planning
-- [ ] 3.1.1. Research goja (https://github.com/dop251/goja) integration with go. Find the best javascript engine to work with in go-llmspell (There are others). add additional TODO.md entries as needed 
-- [ ] 3.1.2. Analyze state management and memory integration
-- [ ] 3.1.3. Design ScriptValue ↔ javascript type conversion system 
-- [ ] 3.1.4. Plan goroutine integration for async operations
-- [ ] 3.1.5. Design security sandboxing approach
-- [ ] 3.1.6. Create detailed implementation roadmap
-- [ ] 3.1.7. Research  bytecode validation and security implications - may not apply to gopher-lua
-- [ ] 3.1.8. Investigate warning system integration 
-- [ ] 3.1.9. Study generational GC vs incremental GC trade-offs if it applies
-- [ ] 3.1.10. Research goja debug introspection capabilities for development tools
-- [ ] 3.1.11. Combine all research documents and re-synthesize into one lua_engine_architecture.md document
+- [ ] 3.1.1. Research goja (https://github.com/dop251/goja) go. Find the best javascript engine to work with in go-llmspell (There are others). 
+- [ ] 3.1.2. Research how to integrate the chosen javascript engine into this go-llmspell library. add additional TODO.md entries as needed 
+- [ ] 3.1.3. Analyze state management and memory integration
+- [ ] 3.1.4. Design ScriptValue ↔ javascript type conversion system 
+- [ ] 3.1.5. Plan goroutine integration for async operations
+- [ ] 3.1.6. Design security sandboxing approach
+- [ ] 3.1.7. Create detailed implementation roadmap
+- [ ] 3.1.8. Research  bytecode validation and security implications - may not apply to gopher-lua
+- [ ] 3.1.9. Investigate warning system integration 
+- [ ] 3.1.10. Study generational GC vs incremental GC trade-offs if it applies
+- [ ] 3.1.11. Research goja debug introspection capabilities for development tools
+- [ ] 3.1.12. Combine all research documents and re-synthesize into one javascript_engine_architecture.md based on `docs/technical/architecture.md` and a detailed implementation roadmap
 
 ### 3.2 JavaScript Engine Core
 - [ ] **Task 3.2.1: Engine Implementation**
