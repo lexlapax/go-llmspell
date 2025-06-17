@@ -19,27 +19,6 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
   - ✅ Identified type system: LValue interface with all Lua types + LChannel
   - ✅ Documented security features: library restrictions, resource limits
 
-### 2.2 Core Engine Components
-
-#### 2.2.3: Security Sandbox [COMPLETED - 2025-06-17]
-- ✅ **Task 2.2.3.1: Security Manager** [COMPLETED - 2025-06-17]
-  - ✅ Implemented SecurityManager with configurable policies in `/pkg/engine/gopherlua/security.go`
-  - ✅ Added security level presets (minimal, standard, strict, custom)
-  - ✅ Implemented library whitelist/blacklist system
-  - ✅ Added function filtering with custom denied functions
-  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/security_test.go`
-
-- ✅ **Task 2.2.3.2: Library Restrictions** [COMPLETED - 2025-06-17]
-  - ✅ Implemented SafeLibraryLoader in `/pkg/engine/gopherlua/security_libraries.go`
-  - ✅ Added safe library loading with security level enforcement
-  - ✅ Implemented dangerous function removal from os/io libraries
-  - ✅ Added safe replacements for common functions (print, require, load, etc.)
-  - ✅ Integrated SafeLibraryLoader into SecurityManager
-  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/security_libraries_test.go`
-  - ✅ Created `/docs/technical/lua_engine_research.md`
-  - ✅ Added 14 additional research tasks based on findings
-  - ✅ Expanded implementation tasks with specific technical requirements
-
 - ✅ **Task 2.1.2: Analyze LState management and pooling strategies** [COMPLETED - 2025-06-17]
   - ✅ Confirmed LState is NOT thread-safe - each goroutine needs own instance
   - ✅ Researched pooling patterns from official docs and community
@@ -194,11 +173,90 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
   - ✅ Complete API reference for both engine and script APIs
   - ✅ Document serves as implementation blueprint for Phase 2.2-2.4
 
-### 2.2 Lua Engine Core
-- [ ] Tasks will be moved here as they are completed
 
-### 2.3 Lua Standard Library
-- [ ] Tasks will be moved here as they are completed
+### 2.2 Core Engine Components
+
+#### 2.2.2: Type Converter System [COMPLETED - 2025-06-18]
+- ✅ **Task 2.2.2.1: Core Type Converter** [COMPLETED - 2025-06-18]
+  - ✅ Implemented LuaTypeConverter with engine.TypeConverter interface compliance in `/pkg/engine/gopherlua/converter.go`
+  - ✅ Added ToLua() for Go → Lua conversions with full type support
+  - ✅ Added FromLua() for Lua → Go conversions with array/map detection
+  - ✅ Implemented circular reference detection for maps and slices
+  - ✅ Created conversion caching infrastructure with LRU cache
+  - ✅ Added custom type registration system with type name resolution
+  - ✅ Comprehensive test suite with 100+ test cases covering primitive types, collections, complex types
+  - ✅ Key Features: Full engine.TypeConverter compliance, robust Go ↔ Lua conversion, smart table detection
+
+- ✅ **Task 2.2.2.2: Primitive Type Handling** [COMPLETED - 2025-06-18]
+  - ✅ Implemented PrimitiveConverter in `/pkg/engine/gopherlua/converter_primitives.go`
+  - ✅ Added bool ↔ LBool conversion with comprehensive string handling ("true"/"false", "yes"/"no", "1"/"0")
+  - ✅ Added number ↔ LNumber conversion supporting all int/uint/float types + string parsing
+  - ✅ Added string ↔ LString conversion with proper formatting for all Go types
+  - ✅ Added nil ↔ LNil handling with type validation
+  - ✅ Comprehensive test suite in `/pkg/engine/gopherlua/converter_primitives_test.go`
+  - ✅ Key Features: Smart string conversion, unicode support, special float values (NaN, ±Inf)
+
+- ✅ **Task 2.2.2.3: Complex Type Handling** [COMPLETED - 2025-06-18]
+  - ✅ Implemented ComplexConverter in `/pkg/engine/gopherlua/converter_complex.go`
+  - ✅ Added map ↔ LTable conversion with any key types (string, int, float, bool)
+  - ✅ Added slice/array ↔ LTable conversion with 1-based Lua indexing
+  - ✅ Added struct ↔ LTable conversion with field visibility rules
+  - ✅ Implemented comprehensive struct tag support: `lua:"name,omitempty,required"` and `lua:"-"`
+  - ✅ Added interface{} handling with concrete type detection
+  - ✅ Comprehensive test suite in `/pkg/engine/gopherlua/converter_complex_test.go`
+  - ✅ Key Features: Circular reference detection, bidirectional conversion, performance optimized
+
+- ✅ **Task 2.2.2.4: Bridge Type Integration** [COMPLETED - 2025-06-18]
+  - ✅ Implemented BridgeConverter in `/pkg/engine/gopherlua/converter_bridge.go`
+  - ✅ Added Bridge → LUserData conversion with automatic metatable generation
+  - ✅ Added comprehensive metatable generation exposing all bridge methods as Lua functions
+  - ✅ Implemented method wrapping with argument validation and error propagation
+  - ✅ Added type safety checks at all conversion boundaries
+  - ✅ Created thread-safe bridge type registry with concurrent access support
+  - ✅ Comprehensive test suite in `/pkg/engine/gopherlua/converter_bridge_test.go`
+  - ✅ Key Features: Auto-metatable generation, thread-safe registry, integration ready
+
+- ✅ **Task 2.2.2.5: Function Wrapping** [COMPLETED - 2025-06-18]
+  - ✅ Implemented FunctionConverter in `/pkg/engine/gopherlua/converter_function.go`
+  - ✅ Added Go function → LFunction wrapper with full signature analysis
+  - ✅ Added comprehensive argument conversion and validation with type checking
+  - ✅ Implemented multiple return value handling including error return support
+  - ✅ Added robust panic recovery and error propagation to Lua
+  - ✅ Added support for variadic functions with proper slice handling
+  - ✅ Comprehensive test suite in `/pkg/engine/gopherlua/converter_function_test.go`
+  - ✅ Key Features: Signature validation, panic recovery, variadic support, performance focused
+
+- ✅ **Task 2.2.2.6: Converter Testing** [COMPLETED - 2025-06-18]
+  - ✅ Comprehensive test coverage across all converter components
+  - ✅ PrimitiveConverter: 100+ test cases covering bool, number, string, nil conversions
+  - ✅ ComplexConverter: 80+ test cases covering maps, slices, structs, interfaces
+  - ✅ BridgeConverter: 60+ test cases covering bridge registration, method wrapping, type safety
+  - ✅ FunctionConverter: 70+ test cases covering function wrapping, variadic, error handling
+  - ✅ Integration tests: All converters working together with cross-component validation
+  - ✅ Concurrent testing: Thread-safety validation for all components
+  - ✅ Performance testing: Bulk operations and large data structure handling
+  - ✅ Edge cases: Unicode, special values, empty collections, circular references
+
+#### 2.2.3: Security Sandbox [COMPLETED - 2025-06-17]
+- ✅ **Task 2.2.3.1: Security Manager** [COMPLETED - 2025-06-17]
+  - ✅ Implemented SecurityManager with configurable policies in `/pkg/engine/gopherlua/security.go`
+  - ✅ Added security level presets (minimal, standard, strict, custom)
+  - ✅ Implemented library whitelist/blacklist system
+  - ✅ Added function filtering with custom denied functions
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/security_test.go`
+
+- ✅ **Task 2.2.3.2: Library Restrictions** [COMPLETED - 2025-06-17]
+  - ✅ Implemented SafeLibraryLoader in `/pkg/engine/gopherlua/security_libraries.go`
+  - ✅ Added safe library loading with security level enforcement
+  - ✅ Implemented dangerous function removal from os/io libraries
+  - ✅ Added safe replacements for common functions (print, require, load, etc.)
+  - ✅ Integrated SafeLibraryLoader into SecurityManager
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/security_libraries_test.go`
+  - ✅ Created `/docs/technical/lua_engine_research.md`
+  - ✅ Added 14 additional research tasks based on findings
+  - ✅ Expanded implementation tasks with specific technical requirements
+
+
 
 ---
 

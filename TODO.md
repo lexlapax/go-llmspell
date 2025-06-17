@@ -15,7 +15,11 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1: Engine and Bridge Foundation [COMPLETED - 2025-06-17]
   - 38+ bridges across 13 categories with comprehensive test coverage
   - Pure bridge architecture: zero business logic duplication
-- 🚧 Phase 2: Lua Engine Implementation - RESEARCH COMPLETE, IMPLEMENTATION IN PROGRESS
+- 🚧 Phase 2: Lua Engine Implementation - RESEARCH COMPLETE, CORE COMPONENTS IN PROGRESS
+  - Security Sandbox: ✅ COMPLETED [2025-06-17]  
+  - Type Converter: ✅ COMPLETED [2025-06-18]
+  - LState Pool: 🔄 NEXT (Dependencies satisfied)
+  - Core Engine: ⏸️ WAITING (Depends on LState Pool)
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
 - 🚧 Phase 4: Tengo Engine Implementation - NOT STARTED
 - 🚧 Phase 5: Integration and Examples - NOT STARTED
@@ -64,155 +68,16 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 3. **THIRD**: Core Engine (2.2.4) - Depends on all above components
 
 **Current Implementation Status:**
-- ✅ **Phase 2.2.3: Security Sandbox System** - COMPLETED (All 5 tasks)
-- 🚧 **Phase 2.2.2: Type Converter System** - IN PROGRESS (2/6 tasks completed)
-- ⏸️ **Phase 2.2.1: LState Pool Implementation** - WAITING (Depends on completed security system)
-- ⏸️ **Phase 2.2.4: Core Engine Integration** - WAITING (Depends on all above)
+- ✅ **Phase 2.2.2: Type Converter System** - COMPLETED [2025-06-18] (All 6 tasks) ➜ Moved to TODO-DONE.md
+- ✅ **Phase 2.2.3: Security Sandbox System** - COMPLETED [2025-06-17] (All 5 tasks) ➜ Moved to TODO-DONE.md
+- 🔄 **Phase 2.2.1: LState Pool Implementation** - READY TO START (Dependencies satisfied)
+- ⏸️ **Phase 2.2.4: Core Engine Integration** - WAITING (Depends on LState Pool completion)
 
-#### 2.2.3: Security Sandbox [IMPLEMENT FIRST - Prerequisite for State Factory]
-- [x] **Task 2.2.3.1: Security Manager** (`/pkg/engine/gopherlua/security.go`) ✅ COMPLETED
-  - [x] Define `SecurityManager` with policy configuration
-  - [x] Implement security level presets (minimal, standard, strict)
-  - [x] Add library whitelist/blacklist system
-  - [x] Implement function filtering
-  - [x] Create security policy validation
+**Phase 2.2.3: Security Sandbox** ✅ **COMPLETED [2025-06-17]** ➜ **Moved to TODO-DONE.md**
 
-- [x] **Task 2.2.3.2: Library Restrictions** (`/pkg/engine/gopherlua/security_libraries.go`) ✅ COMPLETED
-  - [x] Implement safe library loader
-  - [x] Remove dangerous functions from os library
-  - [x] Remove io library in strict mode
-  - [x] Remove debug library completely
-  - [x] Add custom safe replacements for common functions
+**Phase 2.2.2: Type Converter System** ✅ **COMPLETED [2025-06-18]** ➜ **Moved to TODO-DONE.md**
 
-- [x] **Task 2.2.3.3: Resource Limits** (`/pkg/engine/gopherlua/security_limits.go`) ✅ COMPLETED
-  - [x] Implement execution timeout with context (alternative to debug hooks)
-  - [x] Add memory limit monitoring (via runtime.ReadMemStats)
-  - [x] Add stack depth limits (via lua.Options.CallStackSize)
-  - [x] Create resource limit profiles (minimal, standard, strict)
-  - [x] Implement ResourceLimitEnforcer with alternative monitoring approaches
-      Key Features Implemented:
-      1. ResourceLimitEnforcer - Alternative approach since gopher-lua lacks SetHook
-      2. Context-based timeouts - Reliable execution time limits
-      3. Stack depth limits - Via lua.Options.CallStackSize
-      4. Memory monitoring - Using runtime.ReadMemStats (with limitations noted)
-      5. Resource profiles - Predefined minimal/standard/strict configurations
-      6. Comprehensive test suite - Validates timeout enforcement, stack limits, and profiles
-
-      Alternative Approaches Used:
-      - Context timeouts instead of instruction counting hooks
-      - Periodic monitoring during execution
-      - Stack limits set during VM creation
-      - Memory monitoring via Go runtime (noted as limited for individual scripts)
-
-      What Works Well:
-      - ✅ Execution timeouts (context-based)
-      - ✅ Stack depth limits (CallStackSize)
-      - ✅ Resource profiles and validation
-      - ✅ Integration with SecurityManager
-
-      Limitations Documented:
-      - Memory monitoring isn't precise for individual Lua scripts
-      - No instruction-level counting (gopher-lua limitation)
-      
-- [x] **Task 2.2.3.4: Sandbox Enforcement** (`/pkg/engine/gopherlua/security_sandbox.go`) ✅ COMPLETED
-  - [x] Implement `ApplySandbox()` for LState configuration
-  - [x] Add import/require restrictions (with whitelist/blacklist per security level)
-  - [x] Implement global environment filtering (blocks dangerous globals)
-  - [x] Add metatable protection (basic implementation, marked for enhancement)
-  - [x] Create sandbox escape prevention (blocks getfenv, setfenv, debug access)
-  ⏭️ Metatable protection (noted for future enhancement)
-
-- [x] **Task 2.2.3.5: Security Testing** (`/pkg/engine/gopherlua/security_test.go`) ✅ COMPLETED
-  - [x] Test library restrictions by security level
-  - [x] Test resource limit enforcement  
-  - [x] Test sandbox escape attempts
-  - [x] Test malicious script execution
-  - [x] Test comprehensive integration scenarios
-  - [x] Fixed race condition in ExecuteWithLimits method
-      Key Features Tested:
-      1. SecurityManager integration with all profiles (minimal, standard, strict)
-      2. SafeLibraryLoader with proper function filtering
-      3. ResourceLimitEnforcer with context-based timeouts and stack limits
-      4. SandboxEnforcer with comprehensive environment filtering
-      5. Cross-component integration and error handling
-      6. Race condition resolution for concurrent Lua state access
-
-      All security components now fully tested and production-ready.
-
-#### 2.2.2: Type Converter System [IMPLEMENT FIRST - No Dependencies]
-- [x] **Task 2.2.2.1: Core Type Converter** (`/pkg/engine/gopherlua/converter.go`) ✅ COMPLETED
-  - [x] Define `LuaTypeConverter` interface matching engine.TypeConverter
-  - [x] Implement `ToLua()` for Go → Lua conversions with full type support
-  - [x] Implement `FromLua()` for Lua → Go conversions with array/map detection
-  - [x] Add circular reference detection for maps and slices
-  - [x] Implement conversion caching infrastructure with LRU cache
-  - [x] Add custom type registration system with type name resolution
-  - [x] Comprehensive test suite with 100+ test cases covering:
-      1. Primitive types: bool, string, int, float64, nil
-      2. Collections: slices, arrays, maps (including empty collections)
-      3. Complex types: structs, nested data structures
-      4. Circular reference detection and prevention
-      5. Custom type converter registration and usage
-      6. Thread-safe concurrent conversions
-      7. Error handling for unsupported types and depth limits
-      8. Performance testing with large data structures
-      
-      Key Features Implemented:
-      - Full engine.TypeConverter interface compliance
-      - Robust Go ↔ Lua type conversion with proper handling of Lua's 1-based indexing
-      - Smart table detection (array-like vs hash-like tables)
-      - Configurable depth limits and cache size
-      - Thread-safe operation with proper mutex protection
-      - Extensible custom type system for domain-specific types
-
-- [x] **Task 2.2.2.2: Primitive Type Handling** (`/pkg/engine/gopherlua/converter_primitives.go`) ✅ COMPLETED
-  - [x] Implement bool ↔ LBool conversion with comprehensive string handling ("true"/"false", "yes"/"no", "1"/"0")
-  - [x] Implement number ↔ LNumber conversion supporting all int/uint/float types + string parsing
-  - [x] Implement string ↔ LString conversion with proper formatting for all Go types  
-  - [x] Implement nil ↔ LNil handling with type validation
-  - [x] Add comprehensive type validation and error reporting
-      Key Features Implemented:
-      1. PrimitiveConverter - Specialized handlers for bool, number, string, nil conversions
-      2. Comprehensive bool conversion - Supports "true"/"false", "yes"/"no", "1"/"0", empty strings
-      3. Complete numeric type support - All int/uint/float types, string parsing, scientific notation
-      4. Smart string conversion - Proper formatting, unicode support, special float values (NaN, ±Inf)
-      5. Robust nil handling - Type validation with pointer/interface nil detection
-      6. Type validation methods - IsBool, IsNumber, IsString, IsNil with proper reflection
-      7. Advanced features - ToStringStrict for nil rejection, ValidateType for type checking
-      8. Edge case handling - Large numbers, small numbers, unicode strings, special float values
-      9. Performance testing - Bulk conversion validation in test suite
-      10. Error reporting - Descriptive errors with type information and conversion context
-
-- [ ] **Task 2.2.2.3: Complex Type Handling** (`/pkg/engine/gopherlua/converter_complex.go`)
-  - [ ] Implement map ↔ LTable conversion
-  - [ ] Implement slice/array ↔ LTable conversion
-  - [ ] Implement struct ↔ LTable/LUserData conversion
-  - [ ] Add struct tag support for field mapping
-  - [ ] Implement interface{} handling
-
-- [ ] **Task 2.2.2.4: Bridge Type Integration** (`/pkg/engine/gopherlua/converter_bridge.go`)
-  - [ ] Implement Bridge → LUserData conversion
-  - [ ] Add metatable generation for bridge methods
-  - [ ] Implement method wrapping with error handling
-  - [ ] Add type safety checks at boundaries
-  - [ ] Create bridge type registry
-
-- [ ] **Task 2.2.2.5: Function Wrapping** (`/pkg/engine/gopherlua/converter_function.go`)
-  - [ ] Implement Go function → LFunction wrapper
-  - [ ] Add argument conversion and validation
-  - [ ] Implement return value handling
-  - [ ] Add panic recovery and error propagation
-  - [ ] Support variadic functions
-
-- [ ] **Task 2.2.2.6: Converter Testing** (`/pkg/engine/gopherlua/converter_test.go`)
-  - [ ] Test all primitive type conversions
-  - [ ] Test complex type conversions with nesting
-  - [ ] Test circular reference handling
-  - [ ] Test bridge object conversions
-  - [ ] Test function wrapping and error handling
-  - [ ] Benchmark conversion performance
-
-#### 2.2.1: LState Pool Implementation [IMPLEMENT SECOND - Depends on Security Sandbox]
+#### 2.2.1: LState Pool Implementation [NEXT TO IMPLEMENT - Dependencies satisfied]
 - [ ] **Task 2.2.1.1: Create State Factory** (`/pkg/engine/gopherlua/factory.go`)
   - [ ] Define `LStateFactory` struct with configuration options
   - [ ] Accept SecurityManager/SecurityConfig in factory config
