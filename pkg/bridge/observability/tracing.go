@@ -203,7 +203,7 @@ func (tb *TracingBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method calls
-func (tb *TracingBridge) ValidateMethod(name string, args []interface{}) error {
+func (tb *TracingBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !tb.IsInitialized() {
 		return fmt.Errorf("tracing bridge not initialized")
 	}
@@ -224,6 +224,80 @@ func (tb *TracingBridge) ValidateMethod(name string, args []interface{}) error {
 		}
 	}
 	return fmt.Errorf("unknown method: %s", name)
+}
+
+// ExecuteMethod executes a bridge method
+func (tb *TracingBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	switch name {
+	case "createTracer":
+		result, err := tb.createTracer(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "startSpan":
+		result, err := tb.startSpan(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "endSpan":
+		err := tb.endSpan(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "setSpanAttributes":
+		err := tb.setSpanAttributes(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "recordSpanError":
+		err := tb.recordSpanError(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "setSpanStatus":
+		err := tb.setSpanStatus(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "createAgentTracingHook":
+		result, err := tb.createAgentTracingHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createToolCallTracingHook":
+		result, err := tb.createToolCallTracingHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createEventTracingHook":
+		result, err := tb.createEventTracingHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createCompositeTracingHook":
+		result, err := tb.createCompositeTracingHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "spanFromContext":
+		result, err := tb.spanFromContext(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 // TypeMappings returns type conversion mappings
@@ -283,15 +357,15 @@ func (tb *TracingBridge) RequiredPermissions() []engine.Permission {
 // Bridge method implementations
 
 // createTracer creates a new tracer
-func (tb *TracingBridge) createTracer(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *TracingBridge) createTracer(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createTracer", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("tracer name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -301,28 +375,28 @@ func (tb *TracingBridge) createTracer(ctx context.Context, args []interface{}) (
 	tracerID := fmt.Sprintf("tracer-%s-%d", name, time.Now().UnixNano())
 	tb.tracers[tracerID] = tracer
 
-	return map[string]interface{}{
-		"id":      tracerID,
-		"name":    name,
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(tracerID),
+		"name":    engine.NewStringValue(name),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // startSpan starts a new tracing span
-func (tb *TracingBridge) startSpan(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *TracingBridge) startSpan(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("startSpan", args); err != nil {
 		return nil, err
 	}
 
-	tracerID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("tracer ID must be a string")
 	}
+	tracerID := args[0].(engine.StringValue).Value()
 
-	name, ok := args[1].(string)
-	if !ok {
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeString {
 		return nil, fmt.Errorf("span name must be a string")
 	}
+	name := args[1].(engine.StringValue).Value()
 
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -334,40 +408,40 @@ func (tb *TracingBridge) startSpan(ctx context.Context, args []interface{}) (int
 
 	// Build span options
 	var opts []core.SpanOption
-	if len(args) > 2 {
-		if attributes, ok := args[2].(map[string]interface{}); ok {
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		if objValue, ok := args[2].(engine.ObjectValue); ok {
+			attributes := objValue.Fields()
 			var attrs []core.Attribute
 			for key, value := range attributes {
-				attrs = append(attrs, core.Attribute{Key: key, Value: value})
+				attrs = append(attrs, core.Attribute{Key: key, Value: value.ToGo()})
 			}
 			opts = append(opts, core.WithAttributes(attrs...))
 		}
 	}
 
 	// Start the span
-	newCtx, span := tracer.Start(ctx, name, opts...)
+	_, span := tracer.Start(ctx, name, opts...)
 	spanID := fmt.Sprintf("span-%s-%d", name, time.Now().UnixNano())
 	tb.spans[spanID] = span
 
-	return map[string]interface{}{
-		"id":      spanID,
-		"name":    name,
-		"tracer":  tracerID,
-		"started": time.Now(),
-		"context": newCtx,
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(spanID),
+		"name":    engine.NewStringValue(name),
+		"tracer":  engine.NewStringValue(tracerID),
+		"started": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // endSpan ends a tracing span
-func (tb *TracingBridge) endSpan(ctx context.Context, args []interface{}) error {
+func (tb *TracingBridge) endSpan(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("endSpan", args); err != nil {
 		return err
 	}
 
-	spanID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("span ID must be a string")
 	}
+	spanID := args[0].(engine.StringValue).Value()
 
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -384,20 +458,20 @@ func (tb *TracingBridge) endSpan(ctx context.Context, args []interface{}) error 
 }
 
 // setSpanAttributes sets attributes on a span
-func (tb *TracingBridge) setSpanAttributes(ctx context.Context, args []interface{}) error {
+func (tb *TracingBridge) setSpanAttributes(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("setSpanAttributes", args); err != nil {
 		return err
 	}
 
-	spanID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("span ID must be a string")
 	}
+	spanID := args[0].(engine.StringValue).Value()
 
-	attributes, ok := args[1].(map[string]interface{})
-	if !ok {
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeObject {
 		return fmt.Errorf("attributes must be an object")
 	}
+	attributes := args[1].(engine.ObjectValue).Fields()
 
 	tb.mu.RLock()
 	span, exists := tb.spans[spanID]
@@ -410,7 +484,7 @@ func (tb *TracingBridge) setSpanAttributes(ctx context.Context, args []interface
 	// Convert to go-llms attributes
 	var attrs []core.Attribute
 	for key, value := range attributes {
-		attrs = append(attrs, core.Attribute{Key: key, Value: value})
+		attrs = append(attrs, core.Attribute{Key: key, Value: value.ToGo()})
 	}
 
 	span.SetAttributes(attrs...)
@@ -419,20 +493,20 @@ func (tb *TracingBridge) setSpanAttributes(ctx context.Context, args []interface
 }
 
 // recordSpanError records an error on a span
-func (tb *TracingBridge) recordSpanError(ctx context.Context, args []interface{}) error {
+func (tb *TracingBridge) recordSpanError(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("recordSpanError", args); err != nil {
 		return err
 	}
 
-	spanID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("span ID must be a string")
 	}
+	spanID := args[0].(engine.StringValue).Value()
 
-	errorMsg, ok := args[1].(string)
-	if !ok {
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeString {
 		return fmt.Errorf("error message must be a string")
 	}
+	errorMsg := args[1].(engine.StringValue).Value()
 
 	tb.mu.RLock()
 	span, exists := tb.spans[spanID]
@@ -448,20 +522,20 @@ func (tb *TracingBridge) recordSpanError(ctx context.Context, args []interface{}
 }
 
 // setSpanStatus sets span status
-func (tb *TracingBridge) setSpanStatus(ctx context.Context, args []interface{}) error {
+func (tb *TracingBridge) setSpanStatus(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("setSpanStatus", args); err != nil {
 		return err
 	}
 
-	spanID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("span ID must be a string")
 	}
+	spanID := args[0].(engine.StringValue).Value()
 
-	statusStr, ok := args[1].(string)
-	if !ok {
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeString {
 		return fmt.Errorf("status must be a string")
 	}
+	statusStr := args[1].(engine.StringValue).Value()
 
 	// Convert string to status code
 	var status core.StatusCode
@@ -477,10 +551,8 @@ func (tb *TracingBridge) setSpanStatus(ctx context.Context, args []interface{}) 
 	}
 
 	description := ""
-	if len(args) > 2 {
-		if desc, ok := args[2].(string); ok {
-			description = desc
-		}
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
+		description = args[2].(engine.StringValue).Value()
 	}
 
 	tb.mu.RLock()
@@ -497,15 +569,15 @@ func (tb *TracingBridge) setSpanStatus(ctx context.Context, args []interface{}) 
 }
 
 // createAgentTracingHook creates a tracing hook for agent lifecycle
-func (tb *TracingBridge) createAgentTracingHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *TracingBridge) createAgentTracingHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createAgentTracingHook", args); err != nil {
 		return nil, err
 	}
 
-	tracerName, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("tracer name must be a string")
 	}
+	tracerName := args[0].(engine.StringValue).Value()
 
 	// Create a tracer for the hook
 	tracer := &core.NoOpTracer{}
@@ -517,24 +589,24 @@ func (tb *TracingBridge) createAgentTracingHook(ctx context.Context, args []inte
 	tb.hooks[hookID] = hook
 	tb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      hookID,
-		"type":    "agent",
-		"tracer":  tracerName,
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(hookID),
+		"type":    engine.NewStringValue("agent"),
+		"tracer":  engine.NewStringValue(tracerName),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // createToolCallTracingHook creates a tracing hook for tool calls
-func (tb *TracingBridge) createToolCallTracingHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *TracingBridge) createToolCallTracingHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createToolCallTracingHook", args); err != nil {
 		return nil, err
 	}
 
-	tracerName, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("tracer name must be a string")
 	}
+	tracerName := args[0].(engine.StringValue).Value()
 
 	tracer := &core.NoOpTracer{}
 	hook := core.NewToolCallTracingHook(tracerName, tracer)
@@ -545,24 +617,24 @@ func (tb *TracingBridge) createToolCallTracingHook(ctx context.Context, args []i
 	tb.hooks[hookID] = hook
 	tb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      hookID,
-		"type":    "tool_call",
-		"tracer":  tracerName,
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(hookID),
+		"type":    engine.NewStringValue("tool_call"),
+		"tracer":  engine.NewStringValue(tracerName),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // createEventTracingHook creates a tracing hook for events
-func (tb *TracingBridge) createEventTracingHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *TracingBridge) createEventTracingHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createEventTracingHook", args); err != nil {
 		return nil, err
 	}
 
-	tracerName, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("tracer name must be a string")
 	}
+	tracerName := args[0].(engine.StringValue).Value()
 
 	tracer := &core.NoOpTracer{}
 	hook := core.NewEventTracingHook(tracerName, tracer)
@@ -573,24 +645,24 @@ func (tb *TracingBridge) createEventTracingHook(ctx context.Context, args []inte
 	tb.hooks[hookID] = hook
 	tb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      hookID,
-		"type":    "event",
-		"tracer":  tracerName,
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(hookID),
+		"type":    engine.NewStringValue("event"),
+		"tracer":  engine.NewStringValue(tracerName),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // createCompositeTracingHook creates a comprehensive tracing hook
-func (tb *TracingBridge) createCompositeTracingHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *TracingBridge) createCompositeTracingHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createCompositeTracingHook", args); err != nil {
 		return nil, err
 	}
 
-	tracerName, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("tracer name must be a string")
 	}
+	tracerName := args[0].(engine.StringValue).Value()
 
 	tracer := &core.NoOpTracer{}
 	hook := core.NewCompositeTracingHook(tracerName, tracer)
@@ -601,16 +673,16 @@ func (tb *TracingBridge) createCompositeTracingHook(ctx context.Context, args []
 	tb.hooks[hookID] = hook
 	tb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      hookID,
-		"type":    "composite",
-		"tracer":  tracerName,
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(hookID),
+		"type":    engine.NewStringValue("composite"),
+		"tracer":  engine.NewStringValue(tracerName),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // spanFromContext gets the current span from context
-func (tb *TracingBridge) spanFromContext(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *TracingBridge) spanFromContext(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	span := core.SpanFromContext(ctx)
 	if span == nil {
 		return nil, nil
@@ -622,16 +694,16 @@ func (tb *TracingBridge) spanFromContext(ctx context.Context, args []interface{}
 
 	for spanID, registeredSpan := range tb.spans {
 		if registeredSpan == span {
-			return map[string]interface{}{
-				"id":        spanID,
-				"recording": span.IsRecording(),
+			return map[string]engine.ScriptValue{
+				"id":        engine.NewStringValue(spanID),
+				"recording": engine.NewBoolValue(span.IsRecording()),
 			}, nil
 		}
 	}
 
 	// Span exists in context but not in our registry
-	return map[string]interface{}{
-		"recording": span.IsRecording(),
-		"external":  true,
+	return map[string]engine.ScriptValue{
+		"recording": engine.NewBoolValue(span.IsRecording()),
+		"external":  engine.NewBoolValue(true),
 	}, nil
 }

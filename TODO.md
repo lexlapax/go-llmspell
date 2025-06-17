@@ -93,50 +93,72 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ Implement special types: FunctionValue, ErrorValue, ChannelValue
     - ✅ Add constructor functions: NewStringValue(), NewNumberValue(), etc.
   
-  - [ ] **Phase 2: Update Core Interfaces** (`/pkg/engine/interface.go`)
-    - [ ] Change ToNative(interface{}) to ToNative(ScriptValue) 
-    - [ ] Change FromNative return to (ScriptValue, error)
-    - [ ] Update Bridge.ValidateMethod to use []ScriptValue
-    - [ ] Update Bridge.ExecuteMethod to use ScriptValue params/returns
+  - ✅ **Phase 2: Update Core Interfaces** (`/pkg/engine/interface.go`) [COMPLETED - 2025-06-19]
+    - ✅ Change ToNative(interface{}) to ToNative(ScriptValue) 
+    - ✅ Change FromNative return to (ScriptValue, error)
+    - ✅ Update Bridge.ValidateMethod to use []ScriptValue
+    - ✅ Update Bridge.ExecuteMethod to use ScriptValue params/returns
     - [ ] Update Execute methods to use ScriptValue in params map
   
-  - [ ] **Phase 3: Refactor LuaEngine Converters** (`/pkg/engine/gopherlua/converter_scriptvalue.go`)
+  - ✅ **Phase 3: Update TypeConverter** [COMPLETED - 2025-06-19]
+    - ✅ Changed Convert() to accept and return ScriptValue
+    - ✅ Updated TypeMapping definitions
+    - ✅ Added ScriptValue-aware conversion functions
+  
+  - [ ] **Phase 4: Update Bridge Package** [IN PROGRESS - 2025-06-19]
+    - [ ] Update all bridge implementations to use ScriptValue (no backward compatibility needed)
+    - [ ] Replace []interface{} with []ScriptValue in method args
+    - [ ] Convert return values to appropriate ScriptValue types
+    - [ ] Update type mappings for each bridge
+    - ✅ ModelInfoBridge - Updated ValidateMethod and ExecuteMethod
+    - ✅ SchemaBridge - Already had updated signatures 
+    - ✅ GuardrailsBridge - Updated ValidateMethod, added ExecuteMethod, updated all methods
+    - ✅ MetricsBridge - ValidateMethod and ExecuteMethod updated, all methods converted
+    - ✅ TracingBridge - ValidateMethod and ExecuteMethod updated, all methods converted
+    - [ ] Agent package bridges (6 bridges)
+      - ✅ agent.go - Already updated signatures
+      - [ ] tools.go - Partially updated, needs method implementation fixes
+      - [ ] hooks.go - Needs update
+      - [ ] events.go - Needs update
+      - [ ] workflow.go - Needs update
+      - [ ] tool_registry.go - Needs update
+    - [ ] LLM package bridges (3 bridges) - Need updates
+    - [ ] State package bridges (2 bridges) - Need updates
+    - [ ] Util package bridges (8 bridges) - Need updates
+  
+  - [ ] **Phase 5: Update GopherLua Engine**
     - [ ] Create LValueToScriptValue(lua.LValue) ScriptValue converter
     - [ ] Create ScriptValueToLValue(ScriptValue) lua.LValue converter
     - [ ] Update existing converter.go to use ScriptValue internally
     - [ ] Maintain circular reference detection
     - [ ] Update caching to work with ScriptValue
-  
-  - [ ] **Phase 4: Update Engine Implementations**
     - [ ] Refactor engine.go ToNative/FromNative to use ScriptValue
     - [ ] Update Execute to convert map[string]interface{} to map[string]ScriptValue
     - [ ] Update ExecuteFile to use ScriptValue
     - [ ] Update ExecuteScript to return ScriptValue in ExecutionResult
     - [ ] Fix engine_bridge.go to use ScriptValue for method calls
-  
-  - [ ] **Phase 5: Refactor Bridge Adapter**
     - [ ] Update bridge_adapter.go to use ScriptValue throughout
     - [ ] Fix convertArgs to work with ScriptValue
     - [ ] Update all method wrappers to handle ScriptValue
     - [ ] Ensure error propagation with ErrorValue
   
-  - [ ] **Phase 6: Update All Bridge Implementations**
-    - [ ] Update all pkg/bridge implementations to accept/return ScriptValue
-    - [ ] Start with simple bridges (util, debug) for testing
-    - [ ] Move to complex bridges (llm, agent, workflow)
-    - [ ] Ensure backward compatibility during transition
+  - [ ] **Phase 6: Update Other Engines**
+    - [ ] Update JavaScript engine when implemented
+    - [ ] Update Tengo engine when implemented
+    - [ ] Ensure consistency across all engines
   
-  - [ ] **Phase 7: Fix Tests and Examples**
+  - [ ] **Phase 7: Update Tests**
     - [ ] Update all test files to use ScriptValue
     - [ ] Fix mock implementations in tests
     - [ ] Update example scripts to demonstrate new type system
     - [ ] Add comprehensive ScriptValue conversion tests
   
-  - [ ] **Phase 8: Documentation and Migration Guide**
+  - [ ] **Phase 8: Cleanup and Documentation**
     - [ ] Document ScriptValue type system
     - [ ] Create migration guide for bridge authors
     - [ ] Update architecture documentation
     - [ ] Add performance benchmarks comparing old vs new
+    - [ ] Remove old interface{} based code where possible
 
 - ✅ **Task 2.3.2.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`) [COMPLETED - 2025-06-19]
   - ✅ Wrap bridge methods for async execution

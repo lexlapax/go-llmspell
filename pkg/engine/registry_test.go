@@ -117,7 +117,7 @@ func (m *mockRegistryScriptEngine) Initialize(config EngineConfig) error {
 	return nil
 }
 
-func (m *mockRegistryScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
+func (m *mockRegistryScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (ScriptValue, error) {
 	if !m.initialized {
 		return nil, errors.New("engine not initialized")
 	}
@@ -127,14 +127,14 @@ func (m *mockRegistryScriptEngine) Execute(ctx context.Context, script string, p
 			Message: "runtime error",
 		}
 	}
-	return "executed: " + script, nil
+	return NewStringValue("executed: " + script), nil
 }
 
-func (m *mockRegistryScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
+func (m *mockRegistryScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (ScriptValue, error) {
 	if !m.initialized {
 		return nil, errors.New("engine not initialized")
 	}
-	return "executed file: " + path, nil
+	return NewStringValue("executed file: " + path), nil
 }
 
 func (m *mockRegistryScriptEngine) Shutdown() error {
@@ -178,12 +178,27 @@ func (m *mockRegistryScriptEngine) ListBridges() []string {
 	return names
 }
 
-func (m *mockRegistryScriptEngine) ToNative(scriptValue interface{}) (interface{}, error) {
-	return scriptValue, nil
+func (m *mockRegistryScriptEngine) ToNative(scriptValue ScriptValue) (interface{}, error) {
+	if scriptValue == nil {
+		return nil, nil
+	}
+	return scriptValue.ToGo(), nil
 }
 
-func (m *mockRegistryScriptEngine) FromNative(goValue interface{}) (interface{}, error) {
-	return goValue, nil
+func (m *mockRegistryScriptEngine) FromNative(goValue interface{}) (ScriptValue, error) {
+	switch v := goValue.(type) {
+	case nil:
+		return NewNilValue(), nil
+	case bool:
+		return NewBoolValue(v), nil
+	case string:
+		return NewStringValue(v), nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		floatVal, _ := toFloat64(v)
+		return NewNumberValue(floatVal), nil
+	default:
+		return NewCustomValue("unknown", v), nil
+	}
 }
 
 func (m *mockRegistryScriptEngine) Name() string {
@@ -252,7 +267,7 @@ func (m *mockRegistryScriptEngine) DestroyContext(ctx ScriptContext) error {
 func (m *mockRegistryScriptEngine) ExecuteScript(ctx context.Context, script string, options ExecutionOptions) (*ExecutionResult, error) {
 	start := time.Now()
 	result := &ExecutionResult{
-		Value:    "executed: " + script,
+		Value:    NewStringValue("executed: " + script),
 		Duration: time.Since(start),
 		Metadata: make(map[string]interface{}),
 	}

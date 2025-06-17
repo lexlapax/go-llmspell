@@ -139,7 +139,7 @@ func (b *ModelInfoBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls
-func (b *ModelInfoBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *ModelInfoBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -186,7 +186,7 @@ func (b *ModelInfoBridge) GetRegistry(name string) llmdomain.ModelRegistry {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -204,24 +204,25 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 		}
 
 		// Convert to script-friendly format
-		return map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"version":       inventory.Metadata.Version,
-				"lastUpdated":   inventory.Metadata.LastUpdated,
-				"description":   inventory.Metadata.Description,
-				"schemaVersion": inventory.Metadata.SchemaVersion,
-			},
-			"models": convertModelsToScript(inventory.Models),
-		}, nil
+		metadata := map[string]engine.ScriptValue{
+			"version":       engine.NewStringValue(inventory.Metadata.Version),
+			"lastUpdated":   engine.NewStringValue(inventory.Metadata.LastUpdated),
+			"description":   engine.NewStringValue(inventory.Metadata.Description),
+			"schemaVersion": engine.NewStringValue(inventory.Metadata.SchemaVersion),
+		}
+		models := convertModelsToScriptValue(inventory.Models)
+		
+		result := map[string]engine.ScriptValue{
+			"metadata": engine.NewObjectValue(metadata),
+			"models":   models,
+		}
+		return engine.NewObjectValue(result), nil
 
 	case "fetchProviderModels":
-		if len(args) < 1 {
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("fetchProviderModels requires provider parameter")
 		}
-		provider, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("provider must be string")
-		}
+		provider := args[0].(engine.StringValue).Value()
 
 		// Create service and fetch models for specific provider
 		service := modelinfo.NewModelInfoServiceFunc()
@@ -242,24 +243,36 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 			return nil, fmt.Errorf("provider %s not found", provider)
 		}
 
-		return convertModelsToScript(providerModels), nil
+		return convertModelsToScriptValue(providerModels), nil
 
 	case "listRegistries":
-		return b.ListRegistries(), nil
+		registries := b.ListRegistries()
+		values := make([]engine.ScriptValue, len(registries))
+		for i, reg := range registries {
+			values[i] = engine.NewStringValue(reg)
+		}
+		return engine.NewArrayValue(values), nil
 
 	case "registerModelRegistry":
-		if len(args) < 2 {
+		if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("registerModelRegistry requires name and registry parameters")
 		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
+		name := args[0].(engine.StringValue).Value()
+		// Note: registry parameter would need special handling as it's a Go type
+		// For now, this would need to be passed as a custom value
+		if args[1] == nil || args[1].Type() != engine.TypeCustom {
+			return nil, fmt.Errorf("registry must be ModelRegistry")
 		}
-		registry, ok := args[1].(llmdomain.ModelRegistry)
+		customVal := args[1].(engine.CustomValue)
+		registry, ok := customVal.Value().(llmdomain.ModelRegistry)
 		if !ok {
 			return nil, fmt.Errorf("registry must be ModelRegistry")
 		}
-		return nil, b.RegisterModelRegistry(name, registry)
+		err := b.RegisterModelRegistry(name, registry)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
 
 	case "listModels":
 		// List all models from all registries
@@ -268,34 +281,35 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 			models := registry.ListModels()
 			allModels = append(allModels, models...)
 		}
-		return allModels, nil
+		values := make([]engine.ScriptValue, len(allModels))
+		for i, model := range allModels {
+			values[i] = engine.NewStringValue(model)
+		}
+		return engine.NewArrayValue(values), nil
 
 	case "listModelsByRegistry":
-		if len(args) < 1 {
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("listModelsByRegistry requires registryName parameter")
 		}
-		registryName, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("registryName must be string")
-		}
+		registryName := args[0].(engine.StringValue).Value()
 		registry := b.GetRegistry(registryName)
 		if registry == nil {
 			return nil, fmt.Errorf("registry not found: %s", registryName)
 		}
-		return registry.ListModels(), nil
+		models := registry.ListModels()
+		values := make([]engine.ScriptValue, len(models))
+		for i, model := range models {
+			values[i] = engine.NewStringValue(model)
+		}
+		return engine.NewArrayValue(values), nil
 
 	case "getModel":
-		if len(args) < 2 {
+		if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString || 
+			args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("getModel requires registryName and modelID parameters")
 		}
-		registryName, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("registryName must be string")
-		}
-		modelID, ok := args[1].(string)
-		if !ok {
-			return nil, fmt.Errorf("modelID must be string")
-		}
+		registryName := args[0].(engine.StringValue).Value()
+		modelID := args[1].(engine.StringValue).Value()
 		registry := b.GetRegistry(registryName)
 		if registry == nil {
 			return nil, fmt.Errorf("registry not found: %s", registryName)
@@ -304,24 +318,58 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 		if err != nil {
 			return nil, fmt.Errorf("failed to get model: %w", err)
 		}
-		// Return provider as a map for script compatibility
-		return map[string]interface{}{
-			"provider": provider,
-			"modelID":  modelID,
-		}, nil
+		// Return provider as a custom value wrapped in an object
+		result := map[string]engine.ScriptValue{
+			"provider": engine.NewCustomValue("Provider", provider),
+			"modelID":  engine.NewStringValue(modelID),
+		}
+		return engine.NewObjectValue(result), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
 	}
 }
 
-// Helper function to convert models to script format
+// Helper function to convert models to ScriptValue
+func convertModelsToScriptValue(models []domain.Model) engine.ScriptValue {
+	values := make([]engine.ScriptValue, len(models))
+	for i, m := range models {
+		values[i] = convertModelToScriptValue(m)
+	}
+	return engine.NewArrayValue(values)
+}
+
+// Helper function to convert models to script format (kept for compatibility)
 func convertModelsToScript(models []domain.Model) []map[string]interface{} {
 	result := make([]map[string]interface{}, len(models))
 	for i, m := range models {
 		result[i] = convertModelToScript(m)
 	}
 	return result
+}
+
+// Helper function to convert a single model to ScriptValue
+func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
+	pricingFields := map[string]engine.ScriptValue{
+		"inputPer1kTokens":  engine.NewNumberValue(m.Pricing.InputPer1kTokens),
+		"outputPer1kTokens": engine.NewNumberValue(m.Pricing.OutputPer1kTokens),
+	}
+	
+	fields := map[string]engine.ScriptValue{
+		"provider":         engine.NewStringValue(m.Provider),
+		"name":             engine.NewStringValue(m.Name),
+		"displayName":      engine.NewStringValue(m.DisplayName),
+		"description":      engine.NewStringValue(m.Description),
+		"documentationURL": engine.NewStringValue(m.DocumentationURL),
+		"contextWindow":    engine.NewNumberValue(float64(m.ContextWindow)),
+		"maxOutputTokens":  engine.NewNumberValue(float64(m.MaxOutputTokens)),
+		"trainingCutoff":   engine.NewStringValue(m.TrainingCutoff),
+		"modelFamily":      engine.NewStringValue(m.ModelFamily),
+		"lastUpdated":      engine.NewStringValue(m.LastUpdated),
+		"pricing":          engine.NewObjectValue(pricingFields),
+		"capabilities":     convertCapabilitiesToScriptValue(m.Capabilities),
+	}
+	return engine.NewObjectValue(fields)
 }
 
 // Helper function to convert a single model to script format
@@ -343,6 +391,41 @@ func convertModelToScript(m domain.Model) map[string]interface{} {
 		},
 		"capabilities": convertCapabilitiesToScript(m.Capabilities),
 	}
+}
+
+// Helper function to convert capabilities to ScriptValue
+func convertCapabilitiesToScriptValue(c domain.Capabilities) engine.ScriptValue {
+	textFields := map[string]engine.ScriptValue{
+		"read":  engine.NewBoolValue(c.Text.Read),
+		"write": engine.NewBoolValue(c.Text.Write),
+	}
+	imageFields := map[string]engine.ScriptValue{
+		"read":  engine.NewBoolValue(c.Image.Read),
+		"write": engine.NewBoolValue(c.Image.Write),
+	}
+	audioFields := map[string]engine.ScriptValue{
+		"read":  engine.NewBoolValue(c.Audio.Read),
+		"write": engine.NewBoolValue(c.Audio.Write),
+	}
+	videoFields := map[string]engine.ScriptValue{
+		"read":  engine.NewBoolValue(c.Video.Read),
+		"write": engine.NewBoolValue(c.Video.Write),
+	}
+	fileFields := map[string]engine.ScriptValue{
+		"read":  engine.NewBoolValue(c.File.Read),
+		"write": engine.NewBoolValue(c.File.Write),
+	}
+	
+	fields := map[string]engine.ScriptValue{
+		"text":            engine.NewObjectValue(textFields),
+		"image":           engine.NewObjectValue(imageFields),
+		"audio":           engine.NewObjectValue(audioFields),
+		"video":           engine.NewObjectValue(videoFields),
+		"file":            engine.NewObjectValue(fileFields),
+		"functionCalling": engine.NewBoolValue(c.FunctionCalling),
+		"streaming":       engine.NewBoolValue(c.Streaming),
+	}
+	return engine.NewObjectValue(fields)
 }
 
 // Helper function to convert capabilities to script format

@@ -393,7 +393,7 @@ func (b *ToolsBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls
-func (b *ToolsBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *ToolsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -423,7 +423,7 @@ func (b *ToolsBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -434,79 +434,67 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 	switch name {
 	case "listTools":
 		tools := b.discovery.ListTools()
-		result := make([]map[string]interface{}, 0, len(tools))
+		result := make([]engine.ScriptValue, 0, len(tools))
 		for _, tool := range tools {
-			result = append(result, toolInfoToMap(tool))
+			result = append(result, engine.NewObjectValue(toolInfoToScriptValue(tool)))
 		}
-		return result, nil
+		return engine.NewArrayValue(result), nil
 
 	case "searchTools":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("searchTools requires query parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("searchTools requires query parameter as string")
 		}
-		query, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("query must be string")
-		}
+		query := args[0].(engine.StringValue).Value()
 
 		tools := b.discovery.SearchTools(query)
-		result := make([]map[string]interface{}, 0, len(tools))
+		result := make([]engine.ScriptValue, 0, len(tools))
 		for _, tool := range tools {
-			result = append(result, toolInfoToMap(tool))
+			result = append(result, engine.NewObjectValue(toolInfoToScriptValue(tool)))
 		}
-		return result, nil
+		return engine.NewArrayValue(result), nil
 
 	case "listByCategory":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("listByCategory requires category parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("listByCategory requires category parameter as string")
 		}
-		category, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("category must be string")
-		}
+		category := args[0].(engine.StringValue).Value()
 
 		tools := b.discovery.ListByCategory(category)
-		result := make([]map[string]interface{}, 0, len(tools))
+		result := make([]engine.ScriptValue, 0, len(tools))
 		for _, tool := range tools {
-			result = append(result, toolInfoToMap(tool))
+			result = append(result, engine.NewObjectValue(toolInfoToScriptValue(tool)))
 		}
-		return result, nil
+		return engine.NewArrayValue(result), nil
 
 	case "getToolInfo":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getToolInfo requires name parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("getToolInfo requires name parameter as string")
 		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
+		name := args[0].(engine.StringValue).Value()
 
 		// Check custom tools first
 		if tool, exists := b.customTools[name]; exists {
-			return customToolToInfo(name, tool), nil
+			return engine.NewObjectValue(customToolToScriptValue(name, tool)), nil
 		}
 
 		// Get from discovery
 		tools := b.discovery.ListTools()
 		for _, tool := range tools {
 			if tool.Name == name {
-				return toolInfoToMap(tool), nil
+				return engine.NewObjectValue(toolInfoToScriptValue(tool)), nil
 			}
 		}
 		return nil, fmt.Errorf("tool not found: %s", name)
 
 	case "getToolSchema":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getToolSchema requires name parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("getToolSchema requires name parameter as string")
 		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
+		name := args[0].(engine.StringValue).Value()
 
 		// Check custom tools first
 		if tool, exists := b.customTools[name]; exists {
-			return b.toolToSchemaMap(tool), nil
+			return engine.NewObjectValue(b.toolToSchemaScriptValue(tool)), nil
 		}
 
 		// Get from discovery
@@ -515,20 +503,17 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 			return nil, err
 		}
 
-		return toolSchemaToMap(schema), nil
+		return engine.NewObjectValue(toolSchemaToScriptValue(schema)), nil
 
 	case "getToolHelp":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getToolHelp requires name parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("getToolHelp requires name parameter as string")
 		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
+		name := args[0].(engine.StringValue).Value()
 
 		// Check custom tools first
 		if tool, exists := b.customTools[name]; exists {
-			return tool.UsageInstructions(), nil
+			return engine.NewStringValue(tool.UsageInstructions()), nil
 		}
 
 		// Get from discovery
@@ -537,7 +522,7 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 			return nil, err
 		}
 
-		return help, nil
+		return engine.NewStringValue(help), nil
 
 	case "getToolExamples":
 		if len(args) < 1 {
@@ -1048,6 +1033,75 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []int
 
 // Helper functions
 
+func toolInfoToScriptValue(info bridge.ToolInfo) map[string]engine.ScriptValue {
+	result := map[string]engine.ScriptValue{
+		"name":        engine.NewStringValue(info.Name),
+		"description": engine.NewStringValue(info.Description),
+		"category":    engine.NewStringValue(info.Category),
+		"tags":        convertStringSliceToScriptValue(info.Tags),
+		"version":     engine.NewStringValue(info.Version),
+		"usageHint":   engine.NewStringValue(info.UsageHint),
+		"package":     engine.NewStringValue(info.Package),
+	}
+
+	// Parse schemas if available
+	if len(info.ParameterSchema) > 0 {
+		var params interface{}
+		if err := json.Unmarshal(info.ParameterSchema, &params); err == nil {
+			result["parameterSchema"] = convertInterfaceToScriptValue(params)
+		}
+	}
+
+	if len(info.OutputSchema) > 0 {
+		var output interface{}
+		if err := json.Unmarshal(info.OutputSchema, &output); err == nil {
+			result["outputSchema"] = convertInterfaceToScriptValue(output)
+		}
+	}
+
+	return result
+}
+
+func convertStringSliceToScriptValue(slice []string) engine.ScriptValue {
+	values := make([]engine.ScriptValue, len(slice))
+	for i, s := range slice {
+		values[i] = engine.NewStringValue(s)
+	}
+	return engine.NewArrayValue(values)
+}
+
+func convertInterfaceToScriptValue(v interface{}) engine.ScriptValue {
+	switch val := v.(type) {
+	case string:
+		return engine.NewStringValue(val)
+	case float64:
+		return engine.NewNumberValue(val)
+	case int:
+		return engine.NewNumberValue(float64(val))
+	case int64:
+		return engine.NewNumberValue(float64(val))
+	case bool:
+		return engine.NewBoolValue(val)
+	case nil:
+		return engine.NewNilValue()
+	case []interface{}:
+		values := make([]engine.ScriptValue, len(val))
+		for i, item := range val {
+			values[i] = convertInterfaceToScriptValue(item)
+		}
+		return engine.NewArrayValue(values)
+	case map[string]interface{}:
+		values := make(map[string]engine.ScriptValue)
+		for k, v := range val {
+			values[k] = convertInterfaceToScriptValue(v)
+		}
+		return engine.NewObjectValue(values)
+	default:
+		// Fallback to string representation
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+}
+
 func toolInfoToMap(info bridge.ToolInfo) map[string]interface{} {
 	result := map[string]interface{}{
 		"name":        info.Name,
@@ -1077,6 +1131,18 @@ func toolInfoToMap(info bridge.ToolInfo) map[string]interface{} {
 	return result
 }
 
+func toolSchemaToScriptValue(schema *bridge.ToolSchema) map[string]engine.ScriptValue {
+	return map[string]engine.ScriptValue{
+		"name":          engine.NewStringValue(schema.Name),
+		"description":   engine.NewStringValue(schema.Description),
+		"parameters":    convertInterfaceToScriptValue(schema.Parameters),
+		"output":        convertInterfaceToScriptValue(schema.Output),
+		"examples":      convertInterfaceToScriptValue(schema.Examples),
+		"constraints":   convertInterfaceToScriptValue(schema.Constraints),
+		"errorGuidance": convertInterfaceToScriptValue(schema.ErrorGuidance),
+	}
+}
+
 func toolSchemaToMap(schema *bridge.ToolSchema) map[string]interface{} {
 	return map[string]interface{}{
 		"name":          schema.Name,
@@ -1102,6 +1168,24 @@ func toolToWrapper(name string, tool domain.Tool) map[string]interface{} {
 		"estimatedLatency":     tool.EstimatedLatency(),
 		"usageInstructions":    tool.UsageInstructions(),
 		"constraints":          tool.Constraints(),
+	}
+}
+
+func customToolToScriptValue(name string, tool domain.Tool) map[string]engine.ScriptValue {
+	return map[string]engine.ScriptValue{
+		"name":                 engine.NewStringValue(name),
+		"description":          engine.NewStringValue(tool.Description()),
+		"category":             engine.NewStringValue(tool.Category()),
+		"tags":                 convertStringSliceToScriptValue(tool.Tags()),
+		"version":              engine.NewStringValue(tool.Version()),
+		"custom":               engine.NewBoolValue(true),
+		"isDeterministic":      engine.NewBoolValue(tool.IsDeterministic()),
+		"isDestructive":        engine.NewBoolValue(tool.IsDestructive()),
+		"requiresConfirmation": engine.NewBoolValue(tool.RequiresConfirmation()),
+		"estimatedLatency":     engine.NewStringValue(tool.EstimatedLatency().String()),
+		"usageInstructions":    engine.NewStringValue(tool.UsageInstructions()),
+		"constraints":          convertInterfaceToScriptValue(tool.Constraints()),
+		"errorGuidance":        convertInterfaceToScriptValue(tool.ErrorGuidance()),
 	}
 }
 
@@ -1342,6 +1426,19 @@ func getBoolField(m map[string]interface{}, field string, defaultValue bool) boo
 }
 
 // toolToSchemaMap converts a tool's schemas to a map
+func (b *ToolsBridge) toolToSchemaScriptValue(tool domain.Tool) map[string]engine.ScriptValue {
+	schema := &bridge.ToolSchema{
+		Name:          tool.Name(),
+		Description:   tool.Description(),
+		Parameters:    tool.ParameterSchema(),
+		Output:        tool.OutputSchema(), 
+		Examples:      tool.Examples(),
+		Constraints:   tool.Constraints(),
+		ErrorGuidance: tool.ErrorGuidance(),
+	}
+	return toolSchemaToScriptValue(schema)
+}
+
 func (b *ToolsBridge) toolToSchemaMap(tool domain.Tool) map[string]interface{} {
 	result := map[string]interface{}{
 		"name":          tool.Name(),

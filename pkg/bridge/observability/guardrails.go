@@ -196,7 +196,7 @@ func (gb *GuardrailsBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method calls
-func (gb *GuardrailsBridge) ValidateMethod(name string, args []interface{}) error {
+func (gb *GuardrailsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !gb.IsInitialized() {
 		return fmt.Errorf("guardrails bridge not initialized")
 	}
@@ -261,23 +261,91 @@ func (gb *GuardrailsBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
+// ExecuteMethod executes a bridge method
+func (gb *GuardrailsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	switch name {
+	case "createGuardrailFunc":
+		result, err := gb.createGuardrailFunc(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createGuardrailChain":
+		result, err := gb.createGuardrailChain(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "addGuardrailToChain":
+		err := gb.addGuardrailToChain(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "validateGuardrail":
+		err := gb.validateGuardrail(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "validateGuardrailAsync":
+		result, err := gb.validateGuardrailAsync(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "validateChain":
+		err := gb.validateChain(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "createRequiredKeysGuardrail":
+		result, err := gb.createRequiredKeysGuardrail(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createContentModerationGuardrail":
+		result, err := gb.createContentModerationGuardrail(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createMessageCountGuardrail":
+		result, err := gb.createMessageCountGuardrail(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createMaxStateSizeGuardrail":
+		result, err := gb.createMaxStateSizeGuardrail(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
+}
+
 // Bridge method implementations
 
 // createGuardrailFunc creates a guardrail from a validation function
-func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []interface{}) (interface{}, error) {
+func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createGuardrailFunc", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 3 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("guardrail name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
-	typeStr, ok := args[1].(string)
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeString {
 		return nil, fmt.Errorf("guardrail type must be a string")
 	}
+	typeStr := args[1].(engine.StringValue).Value()
 
 	// Convert string to GuardrailType
 	var guardType domain.GuardrailType
@@ -292,10 +360,22 @@ func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []inte
 		return nil, fmt.Errorf("invalid guardrail type: %s", typeStr)
 	}
 
-	// Extract validation function (this would be adapted based on script engine)
-	validationFunc, ok := args[2].(func(interface{}) bool)
-	if !ok {
+	// Extract validation function
+	if args[2] == nil || args[2].Type() != engine.TypeFunction {
 		return nil, fmt.Errorf("validation function must be a callable function")
+	}
+	funcValue := args[2].(engine.FunctionValue)
+	validationFunc := func(data interface{}) bool {
+		// Convert data to ScriptValue and call the function
+		dataValue := engine.NewObjectValue(data.(map[string]engine.ScriptValue))
+		result, err := funcValue.Call([]engine.ScriptValue{dataValue})
+		if err != nil {
+			return false
+		}
+		if result != nil && result.Type() == engine.TypeBool {
+			return result.(engine.BoolValue).Value()
+		}
+		return false
 	}
 
 	// Create the guardrail function wrapper
@@ -323,34 +403,34 @@ func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []inte
 	gb.guardrails[guardrailID] = guardrail
 	gb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      guardrailID,
-		"name":    name,
-		"type":    typeStr,
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(guardrailID),
+		"name":    engine.NewStringValue(name),
+		"type":    engine.NewStringValue(typeStr),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // createGuardrailChain creates a new guardrail chain
-func (gb *GuardrailsBridge) createGuardrailChain(ctx context.Context, args []interface{}) (interface{}, error) {
+func (gb *GuardrailsBridge) createGuardrailChain(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createGuardrailChain", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 3 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("chain name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
-	typeStr, ok := args[1].(string)
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeString {
 		return nil, fmt.Errorf("chain type must be a string")
 	}
+	typeStr := args[1].(engine.StringValue).Value()
 
-	failFast, ok := args[2].(bool)
-	if !ok {
+	if args[2] == nil || args[2].Type() != engine.TypeBool {
 		return nil, fmt.Errorf("fail fast must be a boolean")
 	}
+	failFast := args[2].(engine.BoolValue).Value()
 
 	// Convert string to GuardrailType
 	var guardType domain.GuardrailType
@@ -374,30 +454,30 @@ func (gb *GuardrailsBridge) createGuardrailChain(ctx context.Context, args []int
 	gb.chains[chainID] = chain
 	gb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":        chainID,
-		"name":      name,
-		"type":      typeStr,
-		"fail_fast": failFast,
-		"created":   time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":        engine.NewStringValue(chainID),
+		"name":      engine.NewStringValue(name),
+		"type":      engine.NewStringValue(typeStr),
+		"fail_fast": engine.NewBoolValue(failFast),
+		"created":   engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // addGuardrailToChain adds a guardrail to a chain
-func (gb *GuardrailsBridge) addGuardrailToChain(ctx context.Context, args []interface{}) error {
+func (gb *GuardrailsBridge) addGuardrailToChain(ctx context.Context, args []engine.ScriptValue) error {
 	if err := gb.ValidateMethod("addGuardrailToChain", args); err != nil {
 		return err
 	}
 
-	chainID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("chain ID must be a string")
 	}
+	chainID := args[0].(engine.StringValue).Value()
 
-	guardrailID, ok := args[1].(string)
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeString {
 		return fmt.Errorf("guardrail ID must be a string")
 	}
+	guardrailID := args[1].(engine.StringValue).Value()
 
 	gb.mu.Lock()
 	defer gb.mu.Unlock()
@@ -418,20 +498,20 @@ func (gb *GuardrailsBridge) addGuardrailToChain(ctx context.Context, args []inte
 }
 
 // validateGuardrail validates state against a guardrail
-func (gb *GuardrailsBridge) validateGuardrail(ctx context.Context, args []interface{}) error {
+func (gb *GuardrailsBridge) validateGuardrail(ctx context.Context, args []engine.ScriptValue) error {
 	if err := gb.ValidateMethod("validateGuardrail", args); err != nil {
 		return err
 	}
 
-	guardrailID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("guardrail ID must be a string")
 	}
+	guardrailID := args[0].(engine.StringValue).Value()
 
-	stateData, ok := args[1].(map[string]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
 		return fmt.Errorf("state must be an object")
 	}
+	stateData := convertScriptObjectToMap(args[1].(engine.ObjectValue))
 
 	gb.mu.RLock()
 	guardrail, exists := gb.guardrails[guardrailID]
@@ -452,25 +532,25 @@ func (gb *GuardrailsBridge) validateGuardrail(ctx context.Context, args []interf
 }
 
 // validateGuardrailAsync validates state asynchronously
-func (gb *GuardrailsBridge) validateGuardrailAsync(ctx context.Context, args []interface{}) (interface{}, error) {
+func (gb *GuardrailsBridge) validateGuardrailAsync(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("validateGuardrailAsync", args); err != nil {
 		return nil, err
 	}
 
-	guardrailID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 3 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("guardrail ID must be a string")
 	}
+	guardrailID := args[0].(engine.StringValue).Value()
 
-	stateData, ok := args[1].(map[string]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
 		return nil, fmt.Errorf("state must be an object")
 	}
+	stateData := convertScriptObjectToMap(args[1].(engine.ObjectValue))
 
-	timeoutSeconds, ok := args[2].(float64)
-	if !ok {
+	if args[2] == nil || args[2].Type() != engine.TypeNumber {
 		return nil, fmt.Errorf("timeout must be a number")
 	}
+	timeoutSeconds := args[2].(engine.NumberValue).Value()
 
 	gb.mu.RLock()
 	guardrail, exists := gb.guardrails[guardrailID]
@@ -495,10 +575,10 @@ func (gb *GuardrailsBridge) validateGuardrailAsync(ctx context.Context, args []i
 	gb.asyncChannels[channelID] = errCh
 	gb.mu.Unlock()
 
-	return map[string]interface{}{
-		"channel_id": channelID,
-		"timeout":    timeoutSeconds,
-		"started":    time.Now(),
+	return map[string]engine.ScriptValue{
+		"channel_id": engine.NewStringValue(channelID),
+		"timeout":    engine.NewNumberValue(timeoutSeconds),
+		"started":    engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
@@ -506,20 +586,20 @@ func (gb *GuardrailsBridge) validateGuardrailAsync(ctx context.Context, args []i
 // Used via bridge reflection system, not directly called in Go code
 //
 //nolint:unused // Bridge method called via reflection
-func (gb *GuardrailsBridge) validateChain(ctx context.Context, args []interface{}) error {
+func (gb *GuardrailsBridge) validateChain(ctx context.Context, args []engine.ScriptValue) error {
 	if err := gb.ValidateMethod("validateChain", args); err != nil {
 		return err
 	}
 
-	chainID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("chain ID must be a string")
 	}
+	chainID := args[0].(engine.StringValue).Value()
 
-	stateData, ok := args[1].(map[string]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
 		return fmt.Errorf("state must be an object")
 	}
+	stateData := convertScriptObjectToMap(args[1].(engine.ObjectValue))
 
 	gb.mu.RLock()
 	chain, exists := gb.chains[chainID]
@@ -542,29 +622,28 @@ func (gb *GuardrailsBridge) validateChain(ctx context.Context, args []interface{
 // Built-in guardrail creation methods
 
 // createRequiredKeysGuardrail creates a guardrail that requires specific keys
-func (gb *GuardrailsBridge) createRequiredKeysGuardrail(ctx context.Context, args []interface{}) (interface{}, error) {
+func (gb *GuardrailsBridge) createRequiredKeysGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createRequiredKeysGuardrail", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("guardrail name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
-	keysInterface, ok := args[1].([]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeArray {
 		return nil, fmt.Errorf("keys must be an array")
 	}
+	keysArray := args[1].(engine.ArrayValue).Elements()
 
 	// Convert to string slice
-	keys := make([]string, len(keysInterface))
-	for i, key := range keysInterface {
-		keyStr, ok := key.(string)
-		if !ok {
+	keys := make([]string, len(keysArray))
+	for i, key := range keysArray {
+		if key == nil || key.Type() != engine.TypeString {
 			return nil, fmt.Errorf("key %d must be a string", i)
 		}
-		keys[i] = keyStr
+		keys[i] = key.(engine.StringValue).Value()
 	}
 
 	// Create the guardrail
@@ -576,40 +655,43 @@ func (gb *GuardrailsBridge) createRequiredKeysGuardrail(ctx context.Context, arg
 	gb.guardrails[guardrailID] = guardrail
 	gb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":           guardrailID,
-		"name":         name,
-		"type":         "input",
-		"builtin_type": "required_keys",
-		"keys":         keys,
-		"created":      time.Now(),
+	keysValues := make([]engine.ScriptValue, len(keys))
+	for i, k := range keys {
+		keysValues[i] = engine.NewStringValue(k)
+	}
+	return map[string]engine.ScriptValue{
+		"id":           engine.NewStringValue(guardrailID),
+		"name":         engine.NewStringValue(name),
+		"type":         engine.NewStringValue("input"),
+		"builtin_type": engine.NewStringValue("required_keys"),
+		"keys":         engine.NewArrayValue(keysValues),
+		"created":      engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // createContentModerationGuardrail creates a content moderation guardrail
-func (gb *GuardrailsBridge) createContentModerationGuardrail(ctx context.Context, args []interface{}) (interface{}, error) {
+func (gb *GuardrailsBridge) createContentModerationGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createContentModerationGuardrail", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("guardrail name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
-	wordsInterface, ok := args[1].([]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeArray {
 		return nil, fmt.Errorf("prohibited words must be an array")
 	}
+	wordsArray := args[1].(engine.ArrayValue).Elements()
 
 	// Convert to string slice
-	words := make([]string, len(wordsInterface))
-	for i, word := range wordsInterface {
-		wordStr, ok := word.(string)
-		if !ok {
+	words := make([]string, len(wordsArray))
+	for i, word := range wordsArray {
+		if word == nil || word.Type() != engine.TypeString {
 			return nil, fmt.Errorf("word %d must be a string", i)
 		}
-		words[i] = wordStr
+		words[i] = word.(engine.StringValue).Value()
 	}
 
 	// Create the guardrail
@@ -621,31 +703,35 @@ func (gb *GuardrailsBridge) createContentModerationGuardrail(ctx context.Context
 	gb.guardrails[guardrailID] = guardrail
 	gb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":               guardrailID,
-		"name":             name,
-		"type":             "both",
-		"builtin_type":     "content_moderation",
-		"prohibited_words": words,
-		"created":          time.Now(),
+	wordsValues := make([]engine.ScriptValue, len(words))
+	for i, w := range words {
+		wordsValues[i] = engine.NewStringValue(w)
+	}
+	return map[string]engine.ScriptValue{
+		"id":               engine.NewStringValue(guardrailID),
+		"name":             engine.NewStringValue(name),
+		"type":             engine.NewStringValue("both"),
+		"builtin_type":     engine.NewStringValue("content_moderation"),
+		"prohibited_words": engine.NewArrayValue(wordsValues),
+		"created":          engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // createMessageCountGuardrail creates a message count guardrail
-func (gb *GuardrailsBridge) createMessageCountGuardrail(ctx context.Context, args []interface{}) (interface{}, error) {
+func (gb *GuardrailsBridge) createMessageCountGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createMessageCountGuardrail", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("guardrail name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
-	maxMessagesFloat, ok := args[1].(float64)
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeNumber {
 		return nil, fmt.Errorf("max messages must be a number")
 	}
+	maxMessagesFloat := args[1].(engine.NumberValue).Value()
 
 	maxMessages := int(maxMessagesFloat)
 
@@ -658,31 +744,31 @@ func (gb *GuardrailsBridge) createMessageCountGuardrail(ctx context.Context, arg
 	gb.guardrails[guardrailID] = guardrail
 	gb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":           guardrailID,
-		"name":         name,
-		"type":         "both",
-		"builtin_type": "message_count",
-		"max_messages": maxMessages,
-		"created":      time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":           engine.NewStringValue(guardrailID),
+		"name":         engine.NewStringValue(name),
+		"type":         engine.NewStringValue("both"),
+		"builtin_type": engine.NewStringValue("message_count"),
+		"max_messages": engine.NewNumberValue(float64(maxMessages)),
+		"created":      engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // createMaxStateSizeGuardrail creates a max state size guardrail
-func (gb *GuardrailsBridge) createMaxStateSizeGuardrail(ctx context.Context, args []interface{}) (interface{}, error) {
+func (gb *GuardrailsBridge) createMaxStateSizeGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createMaxStateSizeGuardrail", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("guardrail name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
-	maxBytesFloat, ok := args[1].(float64)
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeNumber {
 		return nil, fmt.Errorf("max bytes must be a number")
 	}
+	maxBytesFloat := args[1].(engine.NumberValue).Value()
 
 	maxBytes := int64(maxBytesFloat)
 
@@ -695,14 +781,23 @@ func (gb *GuardrailsBridge) createMaxStateSizeGuardrail(ctx context.Context, arg
 	gb.guardrails[guardrailID] = guardrail
 	gb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":           guardrailID,
-		"name":         name,
-		"type":         "both",
-		"builtin_type": "max_state_size",
-		"max_bytes":    maxBytes,
-		"created":      time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":           engine.NewStringValue(guardrailID),
+		"name":         engine.NewStringValue(name),
+		"type":         engine.NewStringValue("both"),
+		"builtin_type": engine.NewStringValue("max_state_size"),
+		"max_bytes":    engine.NewNumberValue(float64(maxBytes)),
+		"created":      engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
+}
+
+// convertScriptObjectToMap converts a ScriptValue object to a map
+func convertScriptObjectToMap(obj engine.ObjectValue) map[string]interface{} {
+	result := make(map[string]interface{})
+	for key, value := range obj.Fields() {
+		result[key] = value.ToGo()
+	}
+	return result
 }
 
 // Helper methods for state conversion

@@ -565,7 +565,7 @@ func (b *SchemaBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls
-func (b *SchemaBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *SchemaBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -583,7 +583,7 @@ func (b *SchemaBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method
-func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 

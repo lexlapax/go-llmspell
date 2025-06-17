@@ -292,7 +292,7 @@ func (mb *MetricsBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method calls
-func (mb *MetricsBridge) ValidateMethod(name string, args []interface{}) error {
+func (mb *MetricsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !mb.IsInitialized() {
 		return fmt.Errorf("metrics bridge not initialized")
 	}
@@ -345,6 +345,142 @@ func (mb *MetricsBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
+// ExecuteMethod executes a bridge method
+func (mb *MetricsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	switch name {
+	case "createCounter":
+		result, err := mb.createCounter(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "incrementCounter":
+		err := mb.incrementCounter(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "incrementCounterBy":
+		err := mb.incrementCounterBy(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "getCounterValue":
+		result, err := mb.getCounterValue(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNumberValue(result.(float64)), nil
+	case "createGauge":
+		result, err := mb.createGauge(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "setGaugeValue":
+		err := mb.setGaugeValue(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "addToGaugeValue":
+		err := mb.addToGauge(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "getGaugeValue":
+		result, err := mb.getGaugeValue(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNumberValue(result.(float64)), nil
+	// Note: Histogram methods not implemented in current MetricsBridge
+	// These would need to be added if histogram support is required
+	case "createTimer":
+		result, err := mb.createTimer(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "recordTimerDuration":
+		err := mb.recordTimerDuration(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "getAllMetrics":
+		result, err := mb.getAllMetrics(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "resetAllMetrics":
+		err := mb.resetAllMetrics(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "startTimer":
+		err := mb.startTimer(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "stopTimer":
+		result, err := mb.stopTimer(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNumberValue(result.(float64)), nil
+	case "getTimerStats":
+		result, err := mb.getTimerStats(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "createRatioCounter":
+		result, err := mb.createRatioCounter(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "incrementRatioNumerator":
+		err := mb.incrementRatioNumerator(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "incrementRatioDenominator":
+		err := mb.incrementRatioDenominator(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	case "getRatio":
+		result, err := mb.getRatio(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNumberValue(result.(float64)), nil
+	case "getRatioValues":
+		result, err := mb.getRatioValues(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
+	case "incrementGauge":
+		err := mb.incrementGauge(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
+}
+
 // RequiredPermissions returns required permissions
 func (mb *MetricsBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
@@ -368,15 +504,15 @@ func (mb *MetricsBridge) RequiredPermissions() []engine.Permission {
 // Counter methods
 
 // createCounter creates a new counter
-func (mb *MetricsBridge) createCounter(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) createCounter(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createCounter", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("counter name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
 	// Create counter through registry
 	counter := mb.registry.GetOrCreateCounter(name)
@@ -387,24 +523,24 @@ func (mb *MetricsBridge) createCounter(ctx context.Context, args []interface{}) 
 	mb.counters[counterID] = counter
 	mb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      counterID,
-		"name":    name,
-		"type":    "counter",
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(counterID),
+		"name":    engine.NewStringValue(name),
+		"type":    engine.NewStringValue("counter"),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // incrementCounter increments a counter by 1
-func (mb *MetricsBridge) incrementCounter(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) incrementCounter(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("incrementCounter", args); err != nil {
 		return err
 	}
 
-	counterID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("counter ID must be a string")
 	}
+	counterID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	counter, exists := mb.counters[counterID]
@@ -419,20 +555,20 @@ func (mb *MetricsBridge) incrementCounter(ctx context.Context, args []interface{
 }
 
 // incrementCounterBy increments a counter by a specific value
-func (mb *MetricsBridge) incrementCounterBy(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) incrementCounterBy(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("incrementCounterBy", args); err != nil {
 		return err
 	}
 
-	counterID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("counter ID must be a string")
 	}
+	counterID := args[0].(engine.StringValue).Value()
 
-	valueFloat, ok := args[1].(float64)
-	if !ok {
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeNumber {
 		return fmt.Errorf("increment value must be a number")
 	}
+	valueFloat := args[1].(engine.NumberValue).Value()
 
 	value := int64(valueFloat)
 
@@ -449,15 +585,15 @@ func (mb *MetricsBridge) incrementCounterBy(ctx context.Context, args []interfac
 }
 
 // getCounterValue gets the current counter value
-func (mb *MetricsBridge) getCounterValue(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) getCounterValue(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("getCounterValue", args); err != nil {
 		return nil, err
 	}
 
-	counterID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("counter ID must be a string")
 	}
+	counterID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	counter, exists := mb.counters[counterID]
@@ -473,15 +609,15 @@ func (mb *MetricsBridge) getCounterValue(ctx context.Context, args []interface{}
 // Gauge methods
 
 // createGauge creates a new gauge
-func (mb *MetricsBridge) createGauge(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) createGauge(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createGauge", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("gauge name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
 	// Create gauge through registry
 	gauge := mb.registry.GetOrCreateGauge(name)
@@ -492,29 +628,29 @@ func (mb *MetricsBridge) createGauge(ctx context.Context, args []interface{}) (i
 	mb.gauges[gaugeID] = gauge
 	mb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      gaugeID,
-		"name":    name,
-		"type":    "gauge",
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(gaugeID),
+		"name":    engine.NewStringValue(name),
+		"type":    engine.NewStringValue("gauge"),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // setGaugeValue sets the gauge value
-func (mb *MetricsBridge) setGaugeValue(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) setGaugeValue(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("setGaugeValue", args); err != nil {
 		return err
 	}
 
-	gaugeID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("gauge ID must be a string")
 	}
+	gaugeID := args[0].(engine.StringValue).Value()
 
-	value, ok := args[1].(float64)
-	if !ok {
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeNumber {
 		return fmt.Errorf("gauge value must be a number")
 	}
+	value := args[1].(engine.NumberValue).Value()
 
 	mb.mu.RLock()
 	gauge, exists := mb.gauges[gaugeID]
@@ -529,15 +665,15 @@ func (mb *MetricsBridge) setGaugeValue(ctx context.Context, args []interface{}) 
 }
 
 // incrementGauge increments the gauge by 1
-func (mb *MetricsBridge) incrementGauge(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) incrementGauge(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("incrementGauge", args); err != nil {
 		return err
 	}
 
-	gaugeID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("gauge ID must be a string")
 	}
+	gaugeID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	gauge, exists := mb.gauges[gaugeID]
@@ -552,20 +688,20 @@ func (mb *MetricsBridge) incrementGauge(ctx context.Context, args []interface{})
 }
 
 // addToGauge adds a value to the gauge
-func (mb *MetricsBridge) addToGauge(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) addToGauge(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("addToGauge", args); err != nil {
 		return err
 	}
 
-	gaugeID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("gauge ID must be a string")
 	}
+	gaugeID := args[0].(engine.StringValue).Value()
 
-	value, ok := args[1].(float64)
-	if !ok {
-		return fmt.Errorf("add value must be a number")
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeNumber {
+		return fmt.Errorf("value must be a number")
 	}
+	value := args[1].(engine.NumberValue).Value()
 
 	mb.mu.RLock()
 	gauge, exists := mb.gauges[gaugeID]
@@ -580,15 +716,15 @@ func (mb *MetricsBridge) addToGauge(ctx context.Context, args []interface{}) err
 }
 
 // getGaugeValue gets the current gauge value
-func (mb *MetricsBridge) getGaugeValue(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) getGaugeValue(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("getGaugeValue", args); err != nil {
 		return nil, err
 	}
 
-	gaugeID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("gauge ID must be a string")
 	}
+	gaugeID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	gauge, exists := mb.gauges[gaugeID]
@@ -604,15 +740,15 @@ func (mb *MetricsBridge) getGaugeValue(ctx context.Context, args []interface{}) 
 // Ratio counter methods
 
 // createRatioCounter creates a new ratio counter
-func (mb *MetricsBridge) createRatioCounter(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) createRatioCounter(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createRatioCounter", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("ratio counter name must be a string")
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
 	// Create ratio counter through registry
 	ratioCounter := mb.registry.GetOrCreateRatioCounter(name)
@@ -623,24 +759,24 @@ func (mb *MetricsBridge) createRatioCounter(ctx context.Context, args []interfac
 	mb.ratioCounters[ratioID] = ratioCounter
 	mb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      ratioID,
-		"name":    name,
-		"type":    "ratio_counter",
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(ratioID),
+		"name":    engine.NewStringValue(name),
+		"type":    engine.NewStringValue("ratio_counter"),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // incrementRatioNumerator increments the ratio numerator
-func (mb *MetricsBridge) incrementRatioNumerator(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) incrementRatioNumerator(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("incrementRatioNumerator", args); err != nil {
 		return err
 	}
 
-	ratioID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("ratio ID must be a string")
 	}
+	ratioID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	ratio, exists := mb.ratioCounters[ratioID]
@@ -655,15 +791,15 @@ func (mb *MetricsBridge) incrementRatioNumerator(ctx context.Context, args []int
 }
 
 // incrementRatioDenominator increments the ratio denominator
-func (mb *MetricsBridge) incrementRatioDenominator(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) incrementRatioDenominator(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("incrementRatioDenominator", args); err != nil {
 		return err
 	}
 
-	ratioID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("ratio ID must be a string")
 	}
+	ratioID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	ratio, exists := mb.ratioCounters[ratioID]
@@ -678,15 +814,15 @@ func (mb *MetricsBridge) incrementRatioDenominator(ctx context.Context, args []i
 }
 
 // getRatio gets the current ratio value
-func (mb *MetricsBridge) getRatio(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) getRatio(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("getRatio", args); err != nil {
 		return nil, err
 	}
 
-	ratioID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("ratio ID must be a string")
 	}
+	ratioID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	ratio, exists := mb.ratioCounters[ratioID]
@@ -700,15 +836,15 @@ func (mb *MetricsBridge) getRatio(ctx context.Context, args []interface{}) (inte
 }
 
 // getRatioValues gets the raw numerator and denominator values
-func (mb *MetricsBridge) getRatioValues(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) getRatioValues(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("getRatioValues", args); err != nil {
 		return nil, err
 	}
 
-	ratioID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("ratio ID must be a string")
 	}
+	ratioID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	ratio, exists := mb.ratioCounters[ratioID]
@@ -719,24 +855,24 @@ func (mb *MetricsBridge) getRatioValues(ctx context.Context, args []interface{})
 	}
 
 	numerator, denominator := ratio.GetValues()
-	return map[string]interface{}{
-		"numerator":   numerator,
-		"denominator": denominator,
+	return map[string]engine.ScriptValue{
+		"numerator":   engine.NewNumberValue(float64(numerator)),
+		"denominator": engine.NewNumberValue(float64(denominator)),
 	}, nil
 }
 
 // Timer methods
 
 // createTimer creates a new timer
-func (mb *MetricsBridge) createTimer(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) createTimer(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createTimer", args); err != nil {
 		return nil, err
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("timer name must be a string")
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("name must be a string")
 	}
+	name := args[0].(engine.StringValue).Value()
 
 	// Create timer through registry
 	timer := mb.registry.GetOrCreateTimer(name)
@@ -747,24 +883,24 @@ func (mb *MetricsBridge) createTimer(ctx context.Context, args []interface{}) (i
 	mb.timers[timerID] = timer
 	mb.mu.Unlock()
 
-	return map[string]interface{}{
-		"id":      timerID,
-		"name":    name,
-		"type":    "timer",
-		"created": time.Now(),
+	return map[string]engine.ScriptValue{
+		"id":      engine.NewStringValue(timerID),
+		"name":    engine.NewStringValue(name),
+		"type":    engine.NewStringValue("timer"),
+		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
 	}, nil
 }
 
 // startTimer starts a timer
-func (mb *MetricsBridge) startTimer(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) startTimer(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("startTimer", args); err != nil {
 		return err
 	}
 
-	timerID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("timer ID must be a string")
 	}
+	timerID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	timer, exists := mb.timers[timerID]
@@ -779,15 +915,15 @@ func (mb *MetricsBridge) startTimer(ctx context.Context, args []interface{}) err
 }
 
 // stopTimer stops a timer and returns the duration
-func (mb *MetricsBridge) stopTimer(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) stopTimer(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("stopTimer", args); err != nil {
 		return nil, err
 	}
 
-	timerID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("timer ID must be a string")
 	}
+	timerID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	timer, exists := mb.timers[timerID]
@@ -802,20 +938,20 @@ func (mb *MetricsBridge) stopTimer(ctx context.Context, args []interface{}) (int
 }
 
 // recordTimerDuration manually records a duration
-func (mb *MetricsBridge) recordTimerDuration(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) recordTimerDuration(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("recordTimerDuration", args); err != nil {
 		return err
 	}
 
-	timerID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("timer ID must be a string")
 	}
+	timerID := args[0].(engine.StringValue).Value()
 
-	durationSeconds, ok := args[1].(float64)
-	if !ok {
+	if len(args) < 2 || args[1] == nil || args[1].Type() != engine.TypeNumber {
 		return fmt.Errorf("duration must be a number")
 	}
+	durationSeconds := args[1].(engine.NumberValue).Value()
 
 	mb.mu.RLock()
 	timer, exists := mb.timers[timerID]
@@ -831,15 +967,15 @@ func (mb *MetricsBridge) recordTimerDuration(ctx context.Context, args []interfa
 }
 
 // getTimerStats gets timer statistics
-func (mb *MetricsBridge) getTimerStats(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) getTimerStats(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("getTimerStats", args); err != nil {
 		return nil, err
 	}
 
-	timerID, ok := args[0].(string)
-	if !ok {
+	if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("timer ID must be a string")
 	}
+	timerID := args[0].(engine.StringValue).Value()
 
 	mb.mu.RLock()
 	timer, exists := mb.timers[timerID]
@@ -849,18 +985,18 @@ func (mb *MetricsBridge) getTimerStats(ctx context.Context, args []interface{}) 
 		return nil, fmt.Errorf("timer not found: %s", timerID)
 	}
 
-	return map[string]interface{}{
-		"count":            timer.GetCount(),
-		"last_duration":    timer.GetLastDuration().Seconds(),
-		"total_duration":   timer.GetTotalDuration().Seconds(),
-		"average_duration": timer.GetAverageDuration().Seconds(),
+	return map[string]engine.ScriptValue{
+		"count":            engine.NewNumberValue(float64(timer.GetCount())),
+		"last_duration":    engine.NewNumberValue(timer.GetLastDuration().Seconds()),
+		"total_duration":   engine.NewNumberValue(timer.GetTotalDuration().Seconds()),
+		"average_duration": engine.NewNumberValue(timer.GetAverageDuration().Seconds()),
 	}, nil
 }
 
 // Registry methods
 
 // getAllMetrics gets all metrics from the registry
-func (mb *MetricsBridge) getAllMetrics(ctx context.Context, args []interface{}) (interface{}, error) {
+func (mb *MetricsBridge) getAllMetrics(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("getAllMetrics", args); err != nil {
 		return nil, err
 	}
@@ -868,52 +1004,52 @@ func (mb *MetricsBridge) getAllMetrics(ctx context.Context, args []interface{}) 
 	mb.mu.RLock()
 	defer mb.mu.RUnlock()
 
-	result := map[string]interface{}{
-		"counters":       make(map[string]interface{}),
-		"gauges":         make(map[string]interface{}),
-		"ratio_counters": make(map[string]interface{}),
-		"timers":         make(map[string]interface{}),
-	}
-
 	// Collect counter values
-	counters := result["counters"].(map[string]interface{})
+	counters := make(map[string]engine.ScriptValue)
 	for id, counter := range mb.counters {
-		counters[id] = counter.GetValue()
+		counters[id] = engine.NewNumberValue(float64(counter.GetValue()))
 	}
 
 	// Collect gauge values
-	gauges := result["gauges"].(map[string]interface{})
+	gauges := make(map[string]engine.ScriptValue)
 	for id, gauge := range mb.gauges {
-		gauges[id] = gauge.GetValue()
+		gauges[id] = engine.NewNumberValue(gauge.GetValue())
 	}
 
 	// Collect ratio counter values
-	ratios := result["ratio_counters"].(map[string]interface{})
+	ratios := make(map[string]engine.ScriptValue)
 	for id, ratio := range mb.ratioCounters {
 		num, den := ratio.GetValues()
-		ratios[id] = map[string]interface{}{
-			"ratio":       ratio.GetRatio(),
-			"numerator":   num,
-			"denominator": den,
-		}
+		ratios[id] = engine.NewObjectValue(map[string]engine.ScriptValue{
+			"ratio":       engine.NewNumberValue(ratio.GetRatio()),
+			"numerator":   engine.NewNumberValue(float64(num)),
+			"denominator": engine.NewNumberValue(float64(den)),
+		})
 	}
 
 	// Collect timer values
-	timers := result["timers"].(map[string]interface{})
+	timers := make(map[string]engine.ScriptValue)
 	for id, timer := range mb.timers {
-		timers[id] = map[string]interface{}{
-			"count":            timer.GetCount(),
-			"last_duration":    timer.GetLastDuration().Seconds(),
-			"total_duration":   timer.GetTotalDuration().Seconds(),
-			"average_duration": timer.GetAverageDuration().Seconds(),
-		}
+		timers[id] = engine.NewObjectValue(map[string]engine.ScriptValue{
+			"count":            engine.NewNumberValue(float64(timer.GetCount())),
+			"last_duration":    engine.NewNumberValue(timer.GetLastDuration().Seconds()),
+			"total_duration":   engine.NewNumberValue(timer.GetTotalDuration().Seconds()),
+			"average_duration": engine.NewNumberValue(timer.GetAverageDuration().Seconds()),
+		})
+	}
+
+	result := map[string]engine.ScriptValue{
+		"counters":       engine.NewObjectValue(counters),
+		"gauges":         engine.NewObjectValue(gauges),
+		"ratio_counters": engine.NewObjectValue(ratios),
+		"timers":         engine.NewObjectValue(timers),
 	}
 
 	return result, nil
 }
 
 // resetAllMetrics resets all metrics
-func (mb *MetricsBridge) resetAllMetrics(ctx context.Context, args []interface{}) error {
+func (mb *MetricsBridge) resetAllMetrics(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("resetAllMetrics", args); err != nil {
 		return err
 	}

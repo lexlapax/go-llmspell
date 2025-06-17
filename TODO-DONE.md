@@ -10,6 +10,33 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
 
 ---
 
+## Phase 2.3: Bridge Integration Layer
+
+### 2.3.2 Bridge Adapters
+
+- 🚧 **Task 2.3.2.0: ScriptValue Type System Refactoring** [STARTED - 2025-06-19]
+  - ✅ Phase 1: Create ScriptValue Type System - Created comprehensive value types in value_types.go
+  - ✅ Phase 2: Update Core Interfaces - Updated engine.go interfaces to use ScriptValue
+  - ✅ Phase 3: Update TypeConverter - Modified converter interfaces to use ScriptValue
+  - 🚧 Phase 4: Update Bridge Package - In progress [2025-06-19], completed:
+    - ✅ ModelInfoBridge - Updated ValidateMethod and ExecuteMethod signatures, added conversion helpers
+    - ✅ SchemaBridge - Already had updated signatures
+    - ✅ GuardrailsBridge - Updated ValidateMethod, added ExecuteMethod, updated all method implementations
+    - 🚧 MetricsBridge - Updated ValidateMethod signature, added ExecuteMethod framework
+      - Note: Individual method implementations need conversion from []interface{} to []ScriptValue
+      - Due to the large number of methods (20+), this is deferred for batch update
+    - ⏳ TracingBridge - Needs updating
+    - ⏳ Agent package bridges (6 bridges) - Need updates
+    - ⏳ LLM package bridges (3 bridges) - Need updates
+    - ⏳ State package bridges (2 bridges) - Need updates  
+    - ⏳ Util package bridges (8 bridges) - Need updates
+  - ⏳ Phase 5: Update GopherLua Engine - Not started
+  - ⏳ Phase 6: Update Other Engines - Not started
+  - ⏳ Phase 7: Update Tests - Not started
+  - ⏳ Phase 8: Cleanup and Documentation - Not started
+
+---
+
 ## Phase 2: Lua Engine Implementation
 
 ### 2.1 Lua Engine Research and Planning
@@ -736,6 +763,23 @@ Phase 2.2 (Core Engine Components) is now complete with all fundamental componen
   - ✅ Fixed async_bridges_test.go to provide correct arguments to NewChannelValue
   - ✅ Removed temporary value_types_temp.go file
 
+- ✅ **Task 2.3.2.0: ScriptValue Type System Refactoring - Phase 2** (`/pkg/engine/interface.go`) [COMPLETED - 2025-06-19]
+  - ✅ Updated ToNative method signature to accept ScriptValue parameter
+  - ✅ Updated FromNative method signature to return ScriptValue
+  - ✅ Updated Bridge.ValidateMethod to accept []ScriptValue for args
+  - ✅ Added Bridge.ExecuteMethod with ScriptValue params and returns
+  - ✅ Updated TypeConverter interface methods to use ScriptValue
+  - ✅ Added FromInterface and ToInterface methods to TypeConverter
+  - ✅ Updated Function interface to use ScriptValue for Call and Bind
+  - ✅ Updated ExecutionResult to use ScriptValue for Value field
+  - ✅ Updated ScriptEngine Execute and ExecuteFile to return ScriptValue
+  - ✅ Fixed all test mock implementations in interface_test.go
+  - ✅ Fixed all test mock implementations in integration_test.go
+  - ✅ Fixed all test mock implementations in registry_test.go
+  - ✅ Fixed mockFunction in types_test.go
+  - ✅ Added toFloat64 helper function for numeric conversions
+  - ✅ Updated all test assertions to work with ScriptValue types
+
 ---
 
 ## Phase 3: JavaScript Engine Implementation
@@ -757,3 +801,38 @@ Phase 2.2 (Core Engine Components) is now complete with all fundamental componen
 - This file was created after Phase 1 completion to keep TODO-DONE.md manageable
 - Phase 1 completion details are archived in TODO-DONE-ARCHIVE.md
 - Each completed task should include completion date and key implementation details
+
+## Progress Log
+
+### 2025-06-19
+- **Task 2.3.2.1**: Async Runtime - Fixed race condition in async_test.go
+- **Task 2.3.2.2**: Channel Integration - Implemented complete ChannelManager for Go channel ↔ LChannel bridge
+- **Task 2.3.2.0**: ScriptValue Type System Refactoring - Major refactoring initiative:
+  - Phase 1-3 completed: Created ScriptValue type system, updated core interfaces
+  - Phase 4 in progress: Updated ModelInfoBridge, GuardrailsBridge, partial MetricsBridge
+  - Added FunctionValue.Call method (placeholder for engine-specific implementation)
+  - Important decision: No backward compatibility needed - change bridges in place
+  - Updated GuardrailsBridge:
+    - ✅ Updated ValidateMethod to use []engine.ScriptValue
+    - ✅ Added ExecuteMethod with proper ScriptValue routing
+    - ✅ Updated all method implementations to use ScriptValue
+    - ✅ Updated guardrails_test.go to use ScriptValue
+    - ✅ Added convertScriptObjectToMap helper function
+  - ✅ MetricsBridge fully updated:
+    - ✅ Updated ValidateMethod and ExecuteMethod signatures
+    - ✅ Converted all 20+ methods to use ScriptValue
+    - ✅ Added helper functions: toolInfoToScriptValue, convertStringSliceToScriptValue, convertInterfaceToScriptValue
+    - ✅ Fixed all return value conversions
+  - ✅ TracingBridge fully updated:
+    - ✅ Updated ValidateMethod and ExecuteMethod signatures
+    - ✅ Converted all method implementations to use ScriptValue
+    - ✅ Fixed ObjectValue.Value() → ObjectValue.Fields() method calls
+    - ✅ Fixed unused variable warnings
+  - Started tools.go bridge update (partial):
+    - ✅ Updated method signatures
+    - ✅ Added helper functions for ScriptValue conversions
+    - ⏳ Many methods still need conversion (extensive work required)
+  - Remaining bridges to update:
+    - Agent package (5 remaining), LLM package (3), State package (2), Util package (8)
+- **Task 2.3.2.3**: Async Bridge Methods - Implemented AsyncBridgeWrapper with promisification
+- **Task 2.3.2.4**: Async Testing - Added comprehensive async test coverage (800+ lines)

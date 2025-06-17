@@ -13,6 +13,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// toFloat64 converts numeric types to float64
+func toFloat64(v interface{}) (float64, bool) {
+	switch n := v.(type) {
+	case int:
+		return float64(n), true
+	case int8:
+		return float64(n), true
+	case int16:
+		return float64(n), true
+	case int32:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	case uint:
+		return float64(n), true
+	case uint8:
+		return float64(n), true
+	case uint16:
+		return float64(n), true
+	case uint32:
+		return float64(n), true
+	case uint64:
+		return float64(n), true
+	case float32:
+		return float64(n), true
+	case float64:
+		return n, true
+	default:
+		return 0, false
+	}
+}
+
 // Mock implementation of ScriptEngine for testing
 type mockScriptEngine struct {
 	name           string
@@ -45,7 +77,7 @@ func (m *mockScriptEngine) Initialize(config EngineConfig) error {
 	return nil
 }
 
-func (m *mockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
+func (m *mockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (ScriptValue, error) {
 	if !m.initialized {
 		return nil, errors.New("engine not initialized")
 	}
@@ -55,14 +87,14 @@ func (m *mockScriptEngine) Execute(ctx context.Context, script string, params ma
 			Message: "runtime error",
 		}
 	}
-	return "executed: " + script, nil
+	return NewStringValue("executed: " + script), nil
 }
 
-func (m *mockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
+func (m *mockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (ScriptValue, error) {
 	if !m.initialized {
 		return nil, errors.New("engine not initialized")
 	}
-	return "executed file: " + path, nil
+	return NewStringValue("executed file: " + path), nil
 }
 
 func (m *mockScriptEngine) Shutdown() error {
@@ -106,12 +138,47 @@ func (m *mockScriptEngine) ListBridges() []string {
 	return names
 }
 
-func (m *mockScriptEngine) ToNative(scriptValue interface{}) (interface{}, error) {
-	return scriptValue, nil
+func (m *mockScriptEngine) ToNative(scriptValue ScriptValue) (interface{}, error) {
+	if scriptValue == nil {
+		return nil, nil
+	}
+	return scriptValue.ToGo(), nil
 }
 
-func (m *mockScriptEngine) FromNative(goValue interface{}) (interface{}, error) {
-	return goValue, nil
+func (m *mockScriptEngine) FromNative(goValue interface{}) (ScriptValue, error) {
+	switch v := goValue.(type) {
+	case nil:
+		return NewNilValue(), nil
+	case bool:
+		return NewBoolValue(v), nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		floatVal, _ := toFloat64(v)
+		return NewNumberValue(floatVal), nil
+	case string:
+		return NewStringValue(v), nil
+	case []interface{}:
+		elems := make([]ScriptValue, len(v))
+		for i, elem := range v {
+			sv, err := m.FromNative(elem)
+			if err != nil {
+				return nil, err
+			}
+			elems[i] = sv
+		}
+		return NewArrayValue(elems), nil
+	case map[string]interface{}:
+		fields := make(map[string]ScriptValue)
+		for k, val := range v {
+			sv, err := m.FromNative(val)
+			if err != nil {
+				return nil, err
+			}
+			fields[k] = sv
+		}
+		return NewObjectValue(fields), nil
+	default:
+		return NewCustomValue("unknown", v), nil
+	}
 }
 
 func (m *mockScriptEngine) Name() string {
@@ -180,7 +247,7 @@ func (m *mockScriptEngine) DestroyContext(ctx ScriptContext) error {
 func (m *mockScriptEngine) ExecuteScript(ctx context.Context, script string, options ExecutionOptions) (*ExecutionResult, error) {
 	start := time.Now()
 	result := &ExecutionResult{
-		Value:    "executed: " + script,
+		Value:    NewStringValue("executed: " + script),
 		Duration: time.Since(start),
 		Metadata: make(map[string]interface{}),
 	}
@@ -301,13 +368,29 @@ func (m *mockBridge) TypeMappings() map[string]TypeMapping {
 	}
 }
 
-func (m *mockBridge) ValidateMethod(name string, args []interface{}) error {
+func (m *mockBridge) ValidateMethod(name string, args []ScriptValue) error {
 	for _, method := range m.methods {
 		if method.Name == name {
 			return nil
 		}
 	}
 	return errors.New("method not found")
+}
+
+func (m *mockBridge) ExecuteMethod(ctx context.Context, name string, args []ScriptValue) (ScriptValue, error) {
+	if !m.initialized {
+		return nil, errors.New("bridge not initialized")
+	}
+	for _, method := range m.methods {
+		if method.Name == name {
+			// Simple mock implementation
+			if len(args) > 0 {
+				return NewStringValue("result: " + args[0].String()), nil
+			}
+			return NewStringValue("result"), nil
+		}
+	}
+	return nil, errors.New("method not found")
 }
 
 func (m *mockBridge) RequiredPermissions() []Permission {
@@ -324,69 +407,103 @@ func (m *mockBridge) RequiredPermissions() []Permission {
 // Mock implementation of TypeConverter for testing
 type mockTypeConverter struct{}
 
-func (m *mockTypeConverter) ToBoolean(v interface{}) (bool, error) {
-	switch val := v.(type) {
-	case bool:
-		return val, nil
-	case string:
-		return val == "true", nil
-	default:
-		return false, errors.New("cannot convert to boolean")
+func (m *mockTypeConverter) ToBoolean(v ScriptValue) (bool, error) {
+	if v == nil || v.IsNil() {
+		return false, nil
 	}
+	switch v.Type() {
+	case TypeBool:
+		if bv, ok := v.(BoolValue); ok {
+			return bv.Value(), nil
+		}
+	case TypeString:
+		if sv, ok := v.(StringValue); ok {
+			return sv.Value() == "true", nil
+		}
+	}
+	return false, errors.New("cannot convert to boolean")
 }
 
-func (m *mockTypeConverter) ToNumber(v interface{}) (float64, error) {
-	switch val := v.(type) {
-	case float64:
-		return val, nil
-	case int:
-		return float64(val), nil
-	default:
-		return 0, errors.New("cannot convert to number")
+func (m *mockTypeConverter) ToNumber(v ScriptValue) (float64, error) {
+	if v == nil || v.IsNil() {
+		return 0, nil
 	}
+	if v.Type() == TypeNumber {
+		if nv, ok := v.(NumberValue); ok {
+			return nv.Value(), nil
+		}
+	}
+	return 0, errors.New("cannot convert to number")
 }
 
-func (m *mockTypeConverter) ToString(v interface{}) (string, error) {
-	switch val := v.(type) {
-	case string:
-		return val, nil
-	default:
-		return "", errors.New("cannot convert to string")
+func (m *mockTypeConverter) ToString(v ScriptValue) (string, error) {
+	if v == nil || v.IsNil() {
+		return "", nil
 	}
+	return v.String(), nil
 }
 
-func (m *mockTypeConverter) ToArray(v interface{}) ([]interface{}, error) {
-	switch val := v.(type) {
-	case []interface{}:
-		return val, nil
-	default:
-		return nil, errors.New("cannot convert to array")
+func (m *mockTypeConverter) ToArray(v ScriptValue) ([]ScriptValue, error) {
+	if v == nil || v.IsNil() {
+		return nil, nil
 	}
+	if v.Type() == TypeArray {
+		if av, ok := v.(ArrayValue); ok {
+			return av.Elements(), nil
+		}
+	}
+	return nil, errors.New("cannot convert to array")
 }
 
-func (m *mockTypeConverter) ToMap(v interface{}) (map[string]interface{}, error) {
-	switch val := v.(type) {
-	case map[string]interface{}:
-		return val, nil
-	default:
-		return nil, errors.New("cannot convert to map")
+func (m *mockTypeConverter) ToMap(v ScriptValue) (map[string]ScriptValue, error) {
+	if v == nil || v.IsNil() {
+		return nil, nil
 	}
+	if v.Type() == TypeObject {
+		if ov, ok := v.(ObjectValue); ok {
+			return ov.Fields(), nil
+		}
+	}
+	return nil, errors.New("cannot convert to map")
 }
 
-func (m *mockTypeConverter) ToStruct(v interface{}, target interface{}) error {
+func (m *mockTypeConverter) ToStruct(v ScriptValue, target interface{}) error {
 	return errors.New("not implemented")
 }
 
-func (m *mockTypeConverter) FromStruct(v interface{}) (map[string]interface{}, error) {
+func (m *mockTypeConverter) FromStruct(v interface{}) (ScriptValue, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockTypeConverter) ToFunction(v interface{}) (Function, error) {
+func (m *mockTypeConverter) ToFunction(v ScriptValue) (Function, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockTypeConverter) FromFunction(fn Function) (interface{}, error) {
+func (m *mockTypeConverter) FromFunction(fn Function) (ScriptValue, error) {
 	return nil, errors.New("not implemented")
+}
+
+func (m *mockTypeConverter) FromInterface(v interface{}) (ScriptValue, error) {
+	switch val := v.(type) {
+	case nil:
+		return NewNilValue(), nil
+	case bool:
+		return NewBoolValue(val), nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		floatVal, _ := toFloat64(val)
+		return NewNumberValue(floatVal), nil
+	case string:
+		return NewStringValue(val), nil
+	default:
+		return NewCustomValue("unknown", val), nil
+	}
+}
+
+func (m *mockTypeConverter) ToInterface(v ScriptValue) (interface{}, error) {
+	if v == nil {
+		return nil, nil
+	}
+	return v.ToGo(), nil
 }
 
 func (m *mockTypeConverter) SupportsType(typeName string) bool {
@@ -473,7 +590,9 @@ func TestScriptEngine(t *testing.T) {
 
 		result, err := engine.Execute(context.Background(), "test script", nil)
 		assert.NoError(t, err)
-		assert.Equal(t, "executed: test script", result)
+		assert.NotNil(t, result)
+		assert.Equal(t, TypeString, result.Type())
+		assert.Equal(t, "executed: test script", result.String())
 
 		// Test error case
 		_, err = engine.Execute(context.Background(), "error", nil)
@@ -518,14 +637,17 @@ func TestScriptEngine(t *testing.T) {
 		engine := newMockScriptEngine("test")
 
 		// Test ToNative
-		native, err := engine.ToNative("test value")
+		scriptVal := NewStringValue("test value")
+		native, err := engine.ToNative(scriptVal)
 		assert.NoError(t, err)
 		assert.Equal(t, "test value", native)
 
 		// Test FromNative
 		script, err := engine.FromNative("go value")
 		assert.NoError(t, err)
-		assert.Equal(t, "go value", script)
+		assert.NotNil(t, script)
+		assert.Equal(t, TypeString, script.Type())
+		assert.Equal(t, "go value", script.String())
 	})
 
 	t.Run("Metadata", func(t *testing.T) {
@@ -653,11 +775,11 @@ func TestBridge(t *testing.T) {
 		bridge := newMockBridge("test")
 
 		// Valid method
-		err := bridge.ValidateMethod("testMethod", []interface{}{"arg"})
+		err := bridge.ValidateMethod("testMethod", []ScriptValue{NewStringValue("arg")})
 		assert.NoError(t, err)
 
 		// Invalid method
-		err = bridge.ValidateMethod("unknownMethod", []interface{}{})
+		err = bridge.ValidateMethod("unknownMethod", []ScriptValue{})
 		assert.Error(t, err)
 	})
 
@@ -679,72 +801,75 @@ func TestTypeConverter(t *testing.T) {
 
 	t.Run("ToBoolean", func(t *testing.T) {
 		// Test bool input
-		result, err := converter.ToBoolean(true)
+		result, err := converter.ToBoolean(NewBoolValue(true))
 		assert.NoError(t, err)
 		assert.True(t, result)
 
 		// Test string input
-		result, err = converter.ToBoolean("true")
+		result, err = converter.ToBoolean(NewStringValue("true"))
 		assert.NoError(t, err)
 		assert.True(t, result)
 
-		result, err = converter.ToBoolean("false")
+		result, err = converter.ToBoolean(NewStringValue("false"))
 		assert.NoError(t, err)
 		assert.False(t, result)
 
 		// Test unsupported type
-		_, err = converter.ToBoolean(123)
+		_, err = converter.ToBoolean(NewNumberValue(123))
 		assert.Error(t, err)
 	})
 
 	t.Run("ToNumber", func(t *testing.T) {
-		// Test float64 input
-		result, err := converter.ToNumber(3.14)
+		// Test number input
+		result, err := converter.ToNumber(NewNumberValue(3.14))
 		assert.NoError(t, err)
 		assert.Equal(t, 3.14, result)
 
-		// Test int input
-		result, err = converter.ToNumber(42)
+		// Test another number
+		result, err = converter.ToNumber(NewNumberValue(42))
 		assert.NoError(t, err)
 		assert.Equal(t, 42.0, result)
 
 		// Test unsupported type
-		_, err = converter.ToNumber("not a number")
+		_, err = converter.ToNumber(NewStringValue("not a number"))
 		assert.Error(t, err)
 	})
 
 	t.Run("ToString", func(t *testing.T) {
 		// Test string input
-		result, err := converter.ToString("hello")
+		result, err := converter.ToString(NewStringValue("hello"))
 		assert.NoError(t, err)
 		assert.Equal(t, "hello", result)
 
-		// Test unsupported type
-		_, err = converter.ToString(123)
-		assert.Error(t, err)
+		// Test number type (should work since ToString returns v.String())
+		result, err = converter.ToString(NewNumberValue(123))
+		assert.NoError(t, err)
+		assert.Equal(t, "123", result)
 	})
 
 	t.Run("ToArray", func(t *testing.T) {
 		// Test array input
-		input := []interface{}{"a", "b", "c"}
+		elements := []ScriptValue{NewStringValue("a"), NewStringValue("b"), NewStringValue("c")}
+		input := NewArrayValue(elements)
 		result, err := converter.ToArray(input)
 		assert.NoError(t, err)
-		assert.Equal(t, input, result)
+		assert.Equal(t, elements, result)
 
 		// Test unsupported type
-		_, err = converter.ToArray("not an array")
+		_, err = converter.ToArray(NewStringValue("not an array"))
 		assert.Error(t, err)
 	})
 
 	t.Run("ToMap", func(t *testing.T) {
 		// Test map input
-		input := map[string]interface{}{"key": "value"}
+		fields := map[string]ScriptValue{"key": NewStringValue("value")}
+		input := NewObjectValue(fields)
 		result, err := converter.ToMap(input)
 		assert.NoError(t, err)
-		assert.Equal(t, input, result)
+		assert.Equal(t, fields, result)
 
 		// Test unsupported type
-		_, err = converter.ToMap("not a map")
+		_, err = converter.ToMap(NewStringValue("not a map"))
 		assert.Error(t, err)
 	})
 

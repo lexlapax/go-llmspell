@@ -15,6 +15,7 @@ import (
 	// go-llms imports for guardrails functionality
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llms/pkg/testutils/mocks"
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
 // Test GuardrailsBridge core functionality
@@ -45,25 +46,32 @@ func TestGuardrailsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create a simple validation function
-				validationFunc := func(state interface{}) bool {
-					if stateMap, ok := state.(map[string]interface{}); ok {
-						if value, exists := stateMap["test_key"]; exists {
-							return value == "valid_value"
+				validationFunc := func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					if len(args) > 0 && args[0].Type() == engine.TypeObject {
+						obj := args[0].(engine.ObjectValue)
+						if val, exists := obj.Fields()["test_key"]; exists {
+							if val.Type() == engine.TypeString && val.(engine.StringValue).Value() == "valid_value" {
+								return engine.NewBoolValue(true), nil
+							}
 						}
 					}
-					return false
+					return engine.NewBoolValue(false), nil
 				}
 
-				params := []interface{}{"test_guardrail", "input", validationFunc}
+				params := []engine.ScriptValue{
+					engine.NewStringValue("test_guardrail"),
+					engine.NewStringValue("input"),
+					engine.NewFunctionValue("validationFunc", validationFunc),
+				}
 				result, err := bridge.createGuardrailFunc(ctx, params)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
-				guardrailInfo, ok := result.(map[string]interface{})
+				guardrailInfo, ok := result.(map[string]engine.ScriptValue)
 				require.True(t, ok)
-				assert.Equal(t, "test_guardrail", guardrailInfo["name"])
-				assert.Equal(t, "input", guardrailInfo["type"])
-				assert.NotEmpty(t, guardrailInfo["id"])
+				assert.Equal(t, "test_guardrail", guardrailInfo["name"].(engine.StringValue).Value())
+				assert.Equal(t, "input", guardrailInfo["type"].(engine.StringValue).Value())
+				assert.NotEmpty(t, guardrailInfo["id"].(engine.StringValue).Value())
 			},
 		},
 		{
@@ -73,16 +81,20 @@ func TestGuardrailsBridge(t *testing.T) {
 				err := bridge.Initialize(ctx)
 				require.NoError(t, err)
 
-				params := []interface{}{"test_chain", "both", true}
+				params := []engine.ScriptValue{
+					engine.NewStringValue("test_chain"),
+					engine.NewStringValue("both"),
+					engine.NewBoolValue(true),
+				}
 				result, err := bridge.createGuardrailChain(ctx, params)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
-				chainInfo, ok := result.(map[string]interface{})
+				chainInfo, ok := result.(map[string]engine.ScriptValue)
 				require.True(t, ok)
-				assert.Equal(t, "test_chain", chainInfo["name"])
-				assert.Equal(t, "both", chainInfo["type"])
-				assert.Equal(t, true, chainInfo["fail_fast"])
+				assert.Equal(t, "test_chain", chainInfo["name"].(engine.StringValue).Value())
+				assert.Equal(t, "both", chainInfo["type"].(engine.StringValue).Value())
+				assert.Equal(t, true, chainInfo["fail_fast"].(engine.BoolValue).Value())
 			},
 		},
 		{
@@ -93,20 +105,36 @@ func TestGuardrailsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create chain
-				chainResult, err := bridge.createGuardrailChain(ctx, []interface{}{"test_chain", "both", true})
+				chainParams := []engine.ScriptValue{
+					engine.NewStringValue("test_chain"),
+					engine.NewStringValue("both"),
+					engine.NewBoolValue(true),
+				}
+				chainResult, err := bridge.createGuardrailChain(ctx, chainParams)
 				require.NoError(t, err)
-				chainInfo := chainResult.(map[string]interface{})
-				chainID := chainInfo["id"].(string)
+				chainInfo := chainResult.(map[string]engine.ScriptValue)
+				chainID := chainInfo["id"].(engine.StringValue).Value()
 
 				// Create guardrail
-				validationFunc := func(state interface{}) bool { return true }
-				guardrailResult, err := bridge.createGuardrailFunc(ctx, []interface{}{"test_guardrail", "input", validationFunc})
+				validationFunc := func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewBoolValue(true), nil
+				}
+				guardrailParams := []engine.ScriptValue{
+					engine.NewStringValue("test_guardrail"),
+					engine.NewStringValue("input"),
+					engine.NewFunctionValue("validationFunc", validationFunc),
+				}
+				guardrailResult, err := bridge.createGuardrailFunc(ctx, guardrailParams)
 				require.NoError(t, err)
-				guardrailInfo := guardrailResult.(map[string]interface{})
-				guardrailID := guardrailInfo["id"].(string)
+				guardrailInfo := guardrailResult.(map[string]engine.ScriptValue)
+				guardrailID := guardrailInfo["id"].(engine.StringValue).Value()
 
 				// Add to chain
-				err = bridge.addGuardrailToChain(ctx, []interface{}{chainID, guardrailID})
+				addParams := []engine.ScriptValue{
+					engine.NewStringValue(chainID),
+					engine.NewStringValue(guardrailID),
+				}
+				err = bridge.addGuardrailToChain(ctx, addParams)
 				require.NoError(t, err)
 			},
 		},
@@ -118,27 +146,41 @@ func TestGuardrailsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create guardrail that validates presence of test_key
-				validationFunc := func(state interface{}) bool {
-					if stateMap, ok := state.(map[string]interface{}); ok {
-						_, exists := stateMap["test_key"]
-						return exists
+				validationFunc := func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					if len(args) > 0 && args[0].Type() == engine.TypeObject {
+						obj := args[0].(engine.ObjectValue)
+						_, exists := obj.Fields()["test_key"]
+						return engine.NewBoolValue(exists), nil
 					}
-					return false
+					return engine.NewBoolValue(false), nil
 				}
 
-				guardrailResult, err := bridge.createGuardrailFunc(ctx, []interface{}{"test_guardrail", "input", validationFunc})
+				guardrailParams := []engine.ScriptValue{
+					engine.NewStringValue("test_guardrail"),
+					engine.NewStringValue("input"),
+					engine.NewFunctionValue("validationFunc", validationFunc),
+				}
+				guardrailResult, err := bridge.createGuardrailFunc(ctx, guardrailParams)
 				require.NoError(t, err)
-				guardrailInfo := guardrailResult.(map[string]interface{})
-				guardrailID := guardrailInfo["id"].(string)
+				guardrailInfo := guardrailResult.(map[string]engine.ScriptValue)
+				guardrailID := guardrailInfo["id"].(engine.StringValue).Value()
 
 				// Test valid state
-				validState := map[string]interface{}{"test_key": "some_value"}
-				err = bridge.validateGuardrail(ctx, []interface{}{guardrailID, validState})
+				validState := map[string]engine.ScriptValue{"test_key": engine.NewStringValue("some_value")}
+				validateParams := []engine.ScriptValue{
+					engine.NewStringValue(guardrailID),
+					engine.NewObjectValue(validState),
+				}
+				err = bridge.validateGuardrail(ctx, validateParams)
 				require.NoError(t, err)
 
 				// Test invalid state
-				invalidState := map[string]interface{}{"other_key": "some_value"}
-				err = bridge.validateGuardrail(ctx, []interface{}{guardrailID, invalidState})
+				invalidState := map[string]engine.ScriptValue{"other_key": engine.NewStringValue("some_value")}
+				invalidParams := []engine.ScriptValue{
+					engine.NewStringValue(guardrailID),
+					engine.NewObjectValue(invalidState),
+				}
+				err = bridge.validateGuardrail(ctx, invalidParams)
 				assert.Error(t, err)
 			},
 		},
@@ -150,22 +192,40 @@ func TestGuardrailsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Test required keys guardrail
-				result, err := bridge.createRequiredKeysGuardrail(ctx, []interface{}{"required_keys", []interface{}{"key1", "key2"}})
+				keysArray := []engine.ScriptValue{engine.NewStringValue("key1"), engine.NewStringValue("key2")}
+				requiredKeysParams := []engine.ScriptValue{
+					engine.NewStringValue("required_keys"),
+					engine.NewArrayValue(keysArray),
+				}
+				result, err := bridge.createRequiredKeysGuardrail(ctx, requiredKeysParams)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
 				// Test content moderation guardrail
-				result, err = bridge.createContentModerationGuardrail(ctx, []interface{}{"content_filter", []interface{}{"bad_word", "prohibited"}})
+				wordsArray := []engine.ScriptValue{engine.NewStringValue("bad_word"), engine.NewStringValue("prohibited")}
+				contentParams := []engine.ScriptValue{
+					engine.NewStringValue("content_filter"),
+					engine.NewArrayValue(wordsArray),
+				}
+				result, err = bridge.createContentModerationGuardrail(ctx, contentParams)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
 				// Test message count guardrail
-				result, err = bridge.createMessageCountGuardrail(ctx, []interface{}{"message_limit", float64(10)})
+				messageParams := []engine.ScriptValue{
+					engine.NewStringValue("message_limit"),
+					engine.NewNumberValue(10),
+				}
+				result, err = bridge.createMessageCountGuardrail(ctx, messageParams)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
 				// Test max state size guardrail
-				result, err = bridge.createMaxStateSizeGuardrail(ctx, []interface{}{"state_size_limit", float64(1024)})
+				sizeParams := []engine.ScriptValue{
+					engine.NewStringValue("state_size_limit"),
+					engine.NewNumberValue(1024),
+				}
+				result, err = bridge.createMaxStateSizeGuardrail(ctx, sizeParams)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 			},
@@ -178,22 +238,32 @@ func TestGuardrailsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create guardrail
-				validationFunc := func(state interface{}) bool {
+				validationFunc := func(args []engine.ScriptValue) (engine.ScriptValue, error) {
 					// Simulate some processing time
 					time.Sleep(10 * time.Millisecond)
-					return true
+					return engine.NewBoolValue(true), nil
 				}
 
-				guardrailResult, err := bridge.createGuardrailFunc(ctx, []interface{}{"async_guardrail", "input", validationFunc})
+				guardrailParams := []engine.ScriptValue{
+					engine.NewStringValue("async_guardrail"),
+					engine.NewStringValue("input"),
+					engine.NewFunctionValue("validationFunc", validationFunc),
+				}
+				guardrailResult, err := bridge.createGuardrailFunc(ctx, guardrailParams)
 				require.NoError(t, err)
-				guardrailInfo := guardrailResult.(map[string]interface{})
-				guardrailID := guardrailInfo["id"].(string)
+				guardrailInfo := guardrailResult.(map[string]engine.ScriptValue)
+				guardrailID := guardrailInfo["id"].(engine.StringValue).Value()
 
 				// Test async validation
-				state := map[string]interface{}{"test": "data"}
+				state := map[string]engine.ScriptValue{"test": engine.NewStringValue("data")}
 				timeout := 1 * time.Second
 
-				result, err := bridge.validateGuardrailAsync(ctx, []interface{}{guardrailID, state, timeout.Seconds()})
+				asyncParams := []engine.ScriptValue{
+					engine.NewStringValue(guardrailID),
+					engine.NewObjectValue(state),
+					engine.NewNumberValue(timeout.Seconds()),
+				}
+				result, err := bridge.validateGuardrailAsync(ctx, asyncParams)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
@@ -251,7 +321,15 @@ func TestGuardrailsBridgeErrors(t *testing.T) {
 	ctx := context.Background()
 
 	// Test methods without initialization
-	_, err := bridge.createGuardrailFunc(ctx, []interface{}{"test", "input", func(interface{}) bool { return true }})
+	funcValue := engine.NewFunctionValue("test", func([]engine.ScriptValue) (engine.ScriptValue, error) {
+		return engine.NewBoolValue(true), nil
+	})
+	params := []engine.ScriptValue{
+		engine.NewStringValue("test"),
+		engine.NewStringValue("input"),
+		funcValue,
+	}
+	_, err := bridge.createGuardrailFunc(ctx, params)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not initialized")
 
@@ -260,16 +338,29 @@ func TestGuardrailsBridgeErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test invalid parameters
-	_, err = bridge.createGuardrailFunc(ctx, []interface{}{})
+	_, err = bridge.createGuardrailFunc(ctx, []engine.ScriptValue{})
 	assert.Error(t, err)
 
-	_, err = bridge.createGuardrailFunc(ctx, []interface{}{"name", "invalid_type", func(interface{}) bool { return true }})
+	invalidParams := []engine.ScriptValue{
+		engine.NewStringValue("name"),
+		engine.NewStringValue("invalid_type"),
+		funcValue,
+	}
+	_, err = bridge.createGuardrailFunc(ctx, invalidParams)
 	assert.Error(t, err)
 
-	err = bridge.validateGuardrail(ctx, []interface{}{"invalid-id", map[string]interface{}{}})
+	validateParams := []engine.ScriptValue{
+		engine.NewStringValue("invalid-id"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+	}
+	err = bridge.validateGuardrail(ctx, validateParams)
 	assert.Error(t, err)
 
-	err = bridge.addGuardrailToChain(ctx, []interface{}{"invalid-chain", "invalid-guardrail"})
+	addParams := []engine.ScriptValue{
+		engine.NewStringValue("invalid-chain"),
+		engine.NewStringValue("invalid-guardrail"),
+	}
+	err = bridge.addGuardrailToChain(ctx, addParams)
 	assert.Error(t, err)
 }
 
@@ -286,12 +377,16 @@ func TestGuardrailsBridgeConcurrency(t *testing.T) {
 
 	for i := 0; i < numGuardrails; i++ {
 		go func(guardrailNum int) {
-			validationFunc := func(state interface{}) bool {
-				return true // Always pass
+			validationFunc := func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewBoolValue(true), nil // Always pass
 			}
 
 			guardrailName := fmt.Sprintf("concurrent_guardrail_%d", guardrailNum)
-			params := []interface{}{guardrailName, "input", validationFunc}
+			params := []engine.ScriptValue{
+				engine.NewStringValue(guardrailName),
+				engine.NewStringValue("input"),
+				engine.NewFunctionValue("validationFunc", validationFunc),
+			}
 
 			result, err := bridge.createGuardrailFunc(ctx, params)
 			assert.NoError(t, err)

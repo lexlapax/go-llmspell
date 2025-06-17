@@ -474,11 +474,11 @@ type MockScriptEngine struct {
 }
 
 func (m *MockScriptEngine) Initialize(config EngineConfig) error { return nil }
-func (m *MockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
-	return nil, nil
+func (m *MockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (ScriptValue, error) {
+	return NewNilValue(), nil
 }
-func (m *MockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
-	return nil, nil
+func (m *MockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (ScriptValue, error) {
+	return NewNilValue(), nil
 }
 func (m *MockScriptEngine) Shutdown() error { return nil }
 func (m *MockScriptEngine) RegisterBridge(bridge Bridge) error {
@@ -494,18 +494,35 @@ func (m *MockScriptEngine) ListBridges() []string {
 	}
 	return names
 }
-func (m *MockScriptEngine) ToNative(scriptValue interface{}) (interface{}, error) {
-	return scriptValue, nil
+func (m *MockScriptEngine) ToNative(scriptValue ScriptValue) (interface{}, error) {
+	if scriptValue == nil {
+		return nil, nil
+	}
+	return scriptValue.ToGo(), nil
 }
-func (m *MockScriptEngine) FromNative(goValue interface{}) (interface{}, error) { return goValue, nil }
-func (m *MockScriptEngine) Name() string                                        { return "MockEngine" }
-func (m *MockScriptEngine) Version() string                                     { return "1.0.0" }
-func (m *MockScriptEngine) FileExtensions() []string                            { return []string{".mock"} }
-func (m *MockScriptEngine) Features() []EngineFeature                           { return []EngineFeature{} }
-func (m *MockScriptEngine) SetMemoryLimit(bytes int64) error                    { return nil }
-func (m *MockScriptEngine) SetTimeout(duration time.Duration) error             { return nil }
-func (m *MockScriptEngine) SetResourceLimits(limits ResourceLimits) error       { return nil }
-func (m *MockScriptEngine) GetMetrics() EngineMetrics                           { return EngineMetrics{} }
+func (m *MockScriptEngine) FromNative(goValue interface{}) (ScriptValue, error) {
+	switch v := goValue.(type) {
+	case nil:
+		return NewNilValue(), nil
+	case bool:
+		return NewBoolValue(v), nil
+	case string:
+		return NewStringValue(v), nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		floatVal, _ := toFloat64(v)
+		return NewNumberValue(floatVal), nil
+	default:
+		return NewCustomValue("unknown", v), nil
+	}
+}
+func (m *MockScriptEngine) Name() string                                  { return "MockEngine" }
+func (m *MockScriptEngine) Version() string                               { return "1.0.0" }
+func (m *MockScriptEngine) FileExtensions() []string                      { return []string{".mock"} }
+func (m *MockScriptEngine) Features() []EngineFeature                     { return []EngineFeature{} }
+func (m *MockScriptEngine) SetMemoryLimit(bytes int64) error              { return nil }
+func (m *MockScriptEngine) SetTimeout(duration time.Duration) error       { return nil }
+func (m *MockScriptEngine) SetResourceLimits(limits ResourceLimits) error { return nil }
+func (m *MockScriptEngine) GetMetrics() EngineMetrics                     { return EngineMetrics{} }
 func (m *MockScriptEngine) CreateContext(options ContextOptions) (ScriptContext, error) {
 	return nil, nil
 }
@@ -543,6 +560,9 @@ func (m *MockBridge) Cleanup(ctx context.Context) error                    { ret
 func (m *MockBridge) IsInitialized() bool                                  { return true }
 func (m *MockBridge) RegisterWithEngine(engine ScriptEngine) error         { return nil }
 func (m *MockBridge) Methods() []MethodInfo                                { return m.methods }
-func (m *MockBridge) ValidateMethod(name string, args []interface{}) error { return nil }
-func (m *MockBridge) TypeMappings() map[string]TypeMapping                 { return make(map[string]TypeMapping) }
-func (m *MockBridge) RequiredPermissions() []Permission                    { return []Permission{} }
+func (m *MockBridge) ValidateMethod(name string, args []ScriptValue) error { return nil }
+func (m *MockBridge) ExecuteMethod(ctx context.Context, name string, args []ScriptValue) (ScriptValue, error) {
+	return NewStringValue("mock result"), nil
+}
+func (m *MockBridge) TypeMappings() map[string]TypeMapping { return make(map[string]TypeMapping) }
+func (m *MockBridge) RequiredPermissions() []Permission    { return []Permission{} }

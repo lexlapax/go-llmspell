@@ -14,8 +14,8 @@ import (
 type ScriptEngine interface {
 	// Lifecycle management
 	Initialize(config EngineConfig) error
-	Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error)
-	ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (interface{}, error)
+	Execute(ctx context.Context, script string, params map[string]interface{}) (ScriptValue, error)
+	ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (ScriptValue, error)
 	Shutdown() error
 
 	// Bridge management - allows engines to register functionality from Go
@@ -25,8 +25,8 @@ type ScriptEngine interface {
 	ListBridges() []string
 
 	// Type system - handles conversion between engine types and Go types
-	ToNative(scriptValue interface{}) (interface{}, error)
-	FromNative(goValue interface{}) (interface{}, error)
+	ToNative(scriptValue ScriptValue) (interface{}, error)
+	FromNative(goValue interface{}) (ScriptValue, error)
 
 	// Metadata and capabilities
 	Name() string
@@ -80,7 +80,8 @@ type Bridge interface {
 
 	// Method exposure
 	Methods() []MethodInfo
-	ValidateMethod(name string, args []interface{}) error
+	ValidateMethod(name string, args []ScriptValue) error
+	ExecuteMethod(ctx context.Context, name string, args []ScriptValue) (ScriptValue, error)
 
 	// Type conversion hints for engines
 	TypeMappings() map[string]TypeMapping
@@ -102,20 +103,24 @@ type BridgeMetadata struct {
 // TypeConverter handles conversion between Go types and script engine types.
 // Each engine implements this interface to handle its specific type system.
 type TypeConverter interface {
-	// Basic type conversions
-	ToBoolean(v interface{}) (bool, error)
-	ToNumber(v interface{}) (float64, error)
-	ToString(v interface{}) (string, error)
-	ToArray(v interface{}) ([]interface{}, error)
-	ToMap(v interface{}) (map[string]interface{}, error)
+	// Basic type conversions from ScriptValue
+	ToBoolean(v ScriptValue) (bool, error)
+	ToNumber(v ScriptValue) (float64, error)
+	ToString(v ScriptValue) (string, error)
+	ToArray(v ScriptValue) ([]ScriptValue, error)
+	ToMap(v ScriptValue) (map[string]ScriptValue, error)
 
 	// Complex type handling
-	ToStruct(v interface{}, target interface{}) error
-	FromStruct(v interface{}) (map[string]interface{}, error)
+	ToStruct(v ScriptValue, target interface{}) error
+	FromStruct(v interface{}) (ScriptValue, error)
 
 	// Function and callback handling
-	ToFunction(v interface{}) (Function, error)
-	FromFunction(fn Function) (interface{}, error)
+	ToFunction(v ScriptValue) (Function, error)
+	FromFunction(fn Function) (ScriptValue, error)
+
+	// ScriptValue creation from Go types
+	FromInterface(v interface{}) (ScriptValue, error)
+	ToInterface(v ScriptValue) (interface{}, error)
 
 	// Engine-specific type support
 	SupportsType(typeName string) bool
@@ -166,7 +171,7 @@ type ExecutionOptions struct {
 
 // ExecutionResult contains the result of script execution.
 type ExecutionResult struct {
-	Value    interface{}            `json:"value"`
+	Value    ScriptValue            `json:"value"`
 	Output   string                 `json:"output"`
 	Error    error                  `json:"-"`
 	Duration time.Duration          `json:"duration"`
@@ -251,8 +256,8 @@ type TypeInfo struct {
 
 // Function represents a callable function in the script engine.
 type Function interface {
-	Call(args ...interface{}) (interface{}, error)
-	Bind(thisArg interface{}) Function
+	Call(args ...ScriptValue) (ScriptValue, error)
+	Bind(thisArg ScriptValue) Function
 	GetSignature() FunctionSignature
 }
 

@@ -498,9 +498,65 @@ func (b *AgentBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls
-func (b *AgentBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *AgentBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
+}
+
+// ExecuteMethod executes a bridge method
+func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	switch name {
+	case "createAgent":
+		// TODO: Implement createAgent
+		return nil, fmt.Errorf("createAgent not yet implemented")
+	case "createMinimalAgent":
+		// TODO: Implement createMinimalAgent
+		return nil, fmt.Errorf("createMinimalAgent not yet implemented")
+	case "registerAgent":
+		// TODO: Implement registerAgent
+		return nil, fmt.Errorf("registerAgent not yet implemented")
+	case "executeAgent":
+		// TODO: Implement executeAgent
+		return nil, fmt.Errorf("executeAgent not yet implemented")
+	case "getAgentState":
+		// TODO: Implement getAgentState
+		return nil, fmt.Errorf("getAgentState not yet implemented")
+	case "setAgentHook":
+		// TODO: Implement setAgentHook
+		return nil, fmt.Errorf("setAgentHook not yet implemented")
+	case "clearAgentHooks":
+		// TODO: Implement clearAgentHooks
+		return nil, fmt.Errorf("clearAgentHooks not yet implemented")
+	case "listAgents":
+		// TODO: Implement listAgents
+		return nil, fmt.Errorf("listAgents not yet implemented")
+	case "destroyAgent":
+		// TODO: Implement destroyAgent
+		return nil, fmt.Errorf("destroyAgent not yet implemented")
+	case "serializeAgentState":
+		// TODO: Implement serializeAgentState
+		return nil, fmt.Errorf("serializeAgentState not yet implemented")
+	case "deserializeAgentState":
+		// TODO: Implement deserializeAgentState
+		return nil, fmt.Errorf("deserializeAgentState not yet implemented")
+	case "replayEvents":
+		// TODO: Implement replayEvents
+		return nil, fmt.Errorf("replayEvents not yet implemented")
+	case "exportAgentEvents":
+		// TODO: Implement exportAgentEvents
+		return nil, fmt.Errorf("exportAgentEvents not yet implemented")
+	case "startProfiling":
+		// TODO: Implement startProfiling
+		return nil, fmt.Errorf("startProfiling not yet implemented")
+	case "stopProfiling":
+		// TODO: Implement stopProfiling
+		return nil, fmt.Errorf("stopProfiling not yet implemented")
+	case "getProfilingReport":
+		// TODO: Implement getProfilingReport
+		return nil, fmt.Errorf("getProfilingReport not yet implemented")
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 // RequiredPermissions returns required permissions

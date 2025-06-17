@@ -494,11 +494,11 @@ func TestFunctionConversions(t *testing.T) {
 // Mock Function implementation
 type mockFunction struct{}
 
-func (m *mockFunction) Call(args ...interface{}) (interface{}, error) {
-	return "result", nil
+func (m *mockFunction) Call(args ...ScriptValue) (ScriptValue, error) {
+	return NewStringValue("result"), nil
 }
 
-func (m *mockFunction) Bind(thisArg interface{}) Function {
+func (m *mockFunction) Bind(thisArg ScriptValue) Function {
 	return m
 }
 

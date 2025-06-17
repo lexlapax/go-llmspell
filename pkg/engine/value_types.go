@@ -265,6 +265,14 @@ func (f FunctionValue) Equals(other ScriptValue) bool {
 	return false
 }
 
+// Call invokes the function with the given arguments
+// The actual implementation depends on the underlying function type
+func (f FunctionValue) Call(args []ScriptValue) (ScriptValue, error) {
+	// This is a placeholder - actual implementation would depend on the engine
+	// For now, return an error indicating this needs engine-specific implementation
+	return nil, fmt.Errorf("FunctionValue.Call must be implemented by the specific engine")
+}
+
 // ErrorValue represents an error value
 type ErrorValue struct {
 	error error
