@@ -125,8 +125,14 @@ Welcome to the comprehensive go-llmspell documentation. This directory contains 
   - Complete go-llms v0.3.5 bridge ecosystem achieved
 - **Documentation** - Comprehensive architecture and guide structure
 
+### ✅ **Recently Completed**
+- **Phase 2.1** - Lua Engine Research and Design [2025-06-17]
+  - 14 comprehensive research documents created
+  - Architecture design synthesized and documented
+  - Research documents archived to `/docs/archives/research/`
+
 ### 🚧 **In Progress**
-- **Lua Engine** - First scripting language implementation
+- **Phase 2.2** - Lua Engine Core implementation
 - **User Guides** - Spell writing tutorials and examples
 - **API Documentation** - Complete scripting interface reference
 

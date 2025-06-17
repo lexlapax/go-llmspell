@@ -9,7 +9,14 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 ## Current Status
 
 ✅ **Phase 1 COMPLETE** [2025-06-17]: 38+ bridges, zero business logic duplication  
-🚧 **Phase 2 NEXT**: Lua Engine Implementation
+✅ **Phase 2.1 COMPLETE** [2025-06-17]: Lua engine research and architecture design  
+🚀 **Phase 2.2 ACTIVE** [2025-06-17]: Lua Engine Core Implementation - READY TO START
+
+### Current Focus: Phase 2.2 - Core Engine Components
+- 2.2.1: LState Pool Implementation
+- 2.2.2: Type Converter System  
+- 2.2.3: Security Sandbox
+- 2.2.4: Core Engine Integration
 
 ## Architecture
 
@@ -45,9 +52,20 @@ make lint  # Check code quality
 
 ## Important Files
 
-- **TODO.md** - Current tasks (Phase 2+)
+- **TODO.md** - Current tasks (Phase 2.2+ detailed implementation tasks)
 - **TODO-DONE.md** - Completed Phase 2+ tasks
 - **TODO-DONE-ARCHIVE.md** - Phase 1 history
+- **docs/technical/gopherlua_engine_architecture_design.md** - Lua implementation blueprint
+- **docs/technical/gopherlua_engine_implementation_plan.md** - Detailed implementation roadmap
+- **docs/archives/research/** - Archived research documents
+
+## Implementation Guidance
+
+### Phase 2.2 Starting Points
+1. Begin with **Task 2.2.1.1**: Create State Factory (`/pkg/engine/gopherlua/factory.go`)
+2. Follow TDD: Write tests first, then implement
+3. Use architecture design as reference for all implementations
+4. Each component should be independently testable
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

@@ -161,6 +161,21 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
   - ✅ Built coroutine pooling for performance
   - ✅ Integrated with Go's concurrency model
 
+- ✅ **Task 2.1.14: Combine all research documents and synthesize architecture design** [COMPLETED - 2025-06-17]
+  - ✅ Read and analyzed all 13 lua research/example documents created in tasks 2.1.1-2.1.13
+  - ✅ Reviewed existing architecture.md to align with project principles
+  - ✅ Created comprehensive `/docs/technical/gopherlua_engine_architecture_design.md`
+  - ✅ Synthesized research into 10-section architectural blueprint
+  - ✅ Executive summary with key design decisions: GopherLua, UserData, Adaptive pooling
+  - ✅ Component architecture: LState Management, Type Conversion, Module System
+  - ✅ Security model with multi-layer approach and profiles
+  - ✅ Bridge integration patterns maintaining "bridge, don't build" philosophy
+  - ✅ Performance optimizations: chunk caching, state pooling, lazy loading
+  - ✅ Implementation roadmap with phased approach
+  - ✅ Testing strategy covering unit, integration, performance, and security
+  - ✅ Complete API reference for both engine and script APIs
+  - ✅ Document serves as implementation blueprint for Phase 2.2-2.4
+
 ### 2.2 Lua Engine Core
 - [ ] Tasks will be moved here as they are completed
 
