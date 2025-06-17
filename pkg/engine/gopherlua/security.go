@@ -128,21 +128,37 @@ var securityProfiles = map[string]SecurityConfig{
 
 // NewSecurityManager creates a new security manager with the given config
 func NewSecurityManager(config SecurityConfig) *SecurityManager {
-	// Apply defaults if needed
+	// Apply defaults based on security level if not provided
+	if config.Level != SecurityLevelCustom {
+		var profileName string
+		switch config.Level {
+		case SecurityLevelMinimal:
+			profileName = SecurityProfileMinimal
+		case SecurityLevelStandard:
+			profileName = SecurityProfileStandard
+		case SecurityLevelStrict:
+			profileName = SecurityProfileStrict
+		default:
+			profileName = SecurityProfileStandard
+		}
+
+		if profile, ok := securityProfiles[profileName]; ok {
+			// Apply profile defaults only if not explicitly set
+			if config.ResourceLimits.CheckInterval == 0 {
+				config.ResourceLimits = profile.ResourceLimits
+			}
+			if len(config.AllowedLibraries) == 0 {
+				config.AllowedLibraries = profile.AllowedLibraries
+			}
+			if len(config.DeniedFunctions) == 0 {
+				config.DeniedFunctions = profile.DeniedFunctions
+			}
+		}
+	}
+
+	// Apply minimum defaults
 	if config.ResourceLimits.CheckInterval == 0 {
 		config.ResourceLimits.CheckInterval = 1000
-	}
-	if config.ResourceLimits.MaxInstructions == 0 && config.Level != SecurityLevelCustom {
-		// Use standard profile defaults
-		if profile, ok := securityProfiles[SecurityProfileStandard]; ok {
-			config.ResourceLimits = profile.ResourceLimits
-		}
-	}
-	if len(config.AllowedLibraries) == 0 && config.Level != SecurityLevelCustom {
-		// Use standard profile libraries
-		if profile, ok := securityProfiles[SecurityProfileStandard]; ok {
-			config.AllowedLibraries = profile.AllowedLibraries
-		}
 	}
 
 	return &SecurityManager{

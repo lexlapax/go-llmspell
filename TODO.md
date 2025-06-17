@@ -15,11 +15,11 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1: Engine and Bridge Foundation [COMPLETED - 2025-06-17]
   - 38+ bridges across 13 categories with comprehensive test coverage
   - Pure bridge architecture: zero business logic duplication
-- 🚧 Phase 2: Lua Engine Implementation - RESEARCH COMPLETE, CORE COMPONENTS IN PROGRESS
+- 🚧 Phase 2: Lua Engine Implementation - RESEARCH COMPLETE, CORE COMPONENTS COMPLETE
   - Security Sandbox: ✅ COMPLETED [2025-06-17]  
   - Type Converter: ✅ COMPLETED [2025-06-18]
-  - LState Pool: 🔄 NEXT (Dependencies satisfied)
-  - Core Engine: ⏸️ WAITING (Depends on LState Pool)
+  - LState Pool: ✅ COMPLETED [2025-06-18]
+  - Core Engine: 🔄 NEXT (All dependencies satisfied)
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
 - 🚧 Phase 4: Tengo Engine Implementation - NOT STARTED
 - 🚧 Phase 5: Integration and Examples - NOT STARTED
@@ -68,50 +68,12 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 3. **THIRD**: Core Engine (2.2.4) - Depends on all above components
 
 **Current Implementation Status:**
+- ✅ **Phase 2.2.1: LState Pool Implementation** - COMPLETED [2025-06-18] (All 4 tasks) ➜ Moved to TODO-DONE.md
 - ✅ **Phase 2.2.2: Type Converter System** - COMPLETED [2025-06-18] (All 6 tasks) ➜ Moved to TODO-DONE.md
 - ✅ **Phase 2.2.3: Security Sandbox System** - COMPLETED [2025-06-17] (All 5 tasks) ➜ Moved to TODO-DONE.md
-- 🔄 **Phase 2.2.1: LState Pool Implementation** - READY TO START (Dependencies satisfied)
-- ⏸️ **Phase 2.2.4: Core Engine Integration** - WAITING (Depends on LState Pool completion)
+- 🔄 **Phase 2.2.4: Core Engine Integration** - READY TO START (Dependencies satisfied)
 
-**Phase 2.2.3: Security Sandbox** ✅ **COMPLETED [2025-06-17]** ➜ **Moved to TODO-DONE.md**
-
-**Phase 2.2.2: Type Converter System** ✅ **COMPLETED [2025-06-18]** ➜ **Moved to TODO-DONE.md**
-
-#### 2.2.1: LState Pool Implementation [NEXT TO IMPLEMENT - Dependencies satisfied]
-- [ ] **Task 2.2.1.1: Create State Factory** (`/pkg/engine/gopherlua/factory.go`)
-  - [ ] Define `LStateFactory` struct with configuration options
-  - [ ] Accept SecurityManager/SecurityConfig in factory config
-  - [ ] Use SecurityManager to determine library loading
-  - [ ] Implement `Create()` method with security sandbox application
-  - [ ] Add initialization script execution
-  - [ ] Add warmup strategy for JIT optimization
-  - [ ] Create factory configuration with sensible defaults
-
-- [ ] **Task 2.2.1.2: Implement State Pool** (`/pkg/engine/gopherlua/pool.go`)
-  - [ ] Define `LStatePool` struct with adaptive parameters
-  - [ ] Implement `Get()` with health checking
-  - [ ] Implement `Put()` with cleanup validation
-  - [ ] Add pool metrics tracking (usage, health, performance)
-  - [ ] Implement adaptive scaling logic
-  - [ ] Add graceful shutdown with timeout
-  - [ ] Create pool configuration options
-
-- [ ] **Task 2.2.1.3: State Health Management** (`/pkg/engine/gopherlua/health.go`)
-  - [ ] Define health metrics (memory, errors, execution time)
-  - [ ] Implement health scoring algorithm
-  - [ ] Add state recycling based on health
-  - [ ] Create health monitoring goroutine
-  - [ ] Implement state quarantine for unhealthy instances
-
-- [ ] **Task 2.2.1.4: Pool Testing** (`/pkg/engine/gopherlua/pool_test.go`)
-  - [ ] Test concurrent state acquisition/release
-  - [ ] Test pool scaling under load
-  - [ ] Test health-based recycling
-  - [ ] Test graceful shutdown
-  - [ ] Benchmark pool performance
-  - [ ] Test resource leak prevention
-
-#### 2.2.4: Core Engine Integration [IMPLEMENT THIRD - Depends on all above]
+#### 2.2.4: Core Engine Integration [READY TO IMPLEMENT - All dependencies completed]
 - [ ] **Task 2.2.4.1: Engine Implementation** (`/pkg/engine/gopherlua/engine.go`)
   - [ ] Define `LuaEngine` struct implementing engine.ScriptEngine
   - [ ] Implement `Initialize()` with component setup
