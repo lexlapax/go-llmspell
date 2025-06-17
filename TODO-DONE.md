@@ -18,6 +18,24 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
   - ✅ Analyzed LState management - not thread-safe, requires pooling
   - ✅ Identified type system: LValue interface with all Lua types + LChannel
   - ✅ Documented security features: library restrictions, resource limits
+
+### 2.2 Core Engine Components
+
+#### 2.2.3: Security Sandbox [COMPLETED - 2025-06-17]
+- ✅ **Task 2.2.3.1: Security Manager** [COMPLETED - 2025-06-17]
+  - ✅ Implemented SecurityManager with configurable policies in `/pkg/engine/gopherlua/security.go`
+  - ✅ Added security level presets (minimal, standard, strict, custom)
+  - ✅ Implemented library whitelist/blacklist system
+  - ✅ Added function filtering with custom denied functions
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/security_test.go`
+
+- ✅ **Task 2.2.3.2: Library Restrictions** [COMPLETED - 2025-06-17]
+  - ✅ Implemented SafeLibraryLoader in `/pkg/engine/gopherlua/security_libraries.go`
+  - ✅ Added safe library loading with security level enforcement
+  - ✅ Implemented dangerous function removal from os/io libraries
+  - ✅ Added safe replacements for common functions (print, require, load, etc.)
+  - ✅ Integrated SafeLibraryLoader into SecurityManager
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/security_libraries_test.go`
   - ✅ Created `/docs/technical/lua_engine_research.md`
   - ✅ Added 14 additional research tasks based on findings
   - ✅ Expanded implementation tasks with specific technical requirements

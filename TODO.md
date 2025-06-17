@@ -64,27 +64,50 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 3. **THIRD**: Core Engine (2.2.4) - Depends on all above components
 
 #### 2.2.3: Security Sandbox [IMPLEMENT FIRST - Prerequisite for State Factory]
-- [ ] **Task 2.2.3.1: Security Manager** (`/pkg/engine/gopherlua/security.go`)
-  - [ ] Define `SecurityManager` with policy configuration
-  - [ ] Implement security level presets (minimal, standard, strict)
-  - [ ] Add library whitelist/blacklist system
-  - [ ] Implement function filtering
-  - [ ] Create security policy validation
+- [x] **Task 2.2.3.1: Security Manager** (`/pkg/engine/gopherlua/security.go`) ✅ COMPLETED
+  - [x] Define `SecurityManager` with policy configuration
+  - [x] Implement security level presets (minimal, standard, strict)
+  - [x] Add library whitelist/blacklist system
+  - [x] Implement function filtering
+  - [x] Create security policy validation
 
-- [ ] **Task 2.2.3.2: Library Restrictions** (`/pkg/engine/gopherlua/security_libraries.go`)
-  - [ ] Implement safe library loader
-  - [ ] Remove dangerous functions from os library
-  - [ ] Remove io library in strict mode
-  - [ ] Remove debug library completely
-  - [ ] Add custom safe replacements for common functions
+- [x] **Task 2.2.3.2: Library Restrictions** (`/pkg/engine/gopherlua/security_libraries.go`) ✅ COMPLETED
+  - [x] Implement safe library loader
+  - [x] Remove dangerous functions from os library
+  - [x] Remove io library in strict mode
+  - [x] Remove debug library completely
+  - [x] Add custom safe replacements for common functions
 
-- [ ] **Task 2.2.3.3: Resource Limits** (`/pkg/engine/gopherlua/security_limits.go`)
-  - [ ] Implement instruction count limiting via debug hooks
-  - [ ] Add memory limit monitoring
-  - [ ] Implement execution timeout with context
-  - [ ] Add stack depth limits
-  - [ ] Create resource limit profiles
+- [x] **Task 2.2.3.3: Resource Limits** (`/pkg/engine/gopherlua/security_limits.go`) ✅ COMPLETED
+  - [x] Implement execution timeout with context (alternative to debug hooks)
+  - [x] Add memory limit monitoring (via runtime.ReadMemStats)
+  - [x] Add stack depth limits (via lua.Options.CallStackSize)
+  - [x] Create resource limit profiles (minimal, standard, strict)
+  - [x] Implement ResourceLimitEnforcer with alternative monitoring approaches
+      Key Features Implemented:
+      1. ResourceLimitEnforcer - Alternative approach since gopher-lua lacks SetHook
+      2. Context-based timeouts - Reliable execution time limits
+      3. Stack depth limits - Via lua.Options.CallStackSize
+      4. Memory monitoring - Using runtime.ReadMemStats (with limitations noted)
+      5. Resource profiles - Predefined minimal/standard/strict configurations
+      6. Comprehensive test suite - Validates timeout enforcement, stack limits, and profiles
 
+      Alternative Approaches Used:
+      - Context timeouts instead of instruction counting hooks
+      - Periodic monitoring during execution
+      - Stack limits set during VM creation
+      - Memory monitoring via Go runtime (noted as limited for individual scripts)
+
+      What Works Well:
+      - ✅ Execution timeouts (context-based)
+      - ✅ Stack depth limits (CallStackSize)
+      - ✅ Resource profiles and validation
+      - ✅ Integration with SecurityManager
+
+      Limitations Documented:
+      - Memory monitoring isn't precise for individual Lua scripts
+      - No instruction-level counting (gopher-lua limitation)
+      
 - [ ] **Task 2.2.3.4: Sandbox Enforcement** (`/pkg/engine/gopherlua/security_sandbox.go`)
   - [ ] Implement `ApplySandbox()` for LState configuration
   - [ ] Add import/require restrictions
