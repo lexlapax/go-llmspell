@@ -42,12 +42,12 @@ type customTypeConverter struct {
 
 // conversionCache implements LRU cache for conversion results
 type conversionCache struct {
-	mu       sync.RWMutex
-	data     map[string]interface{}
-	order    []string
-	maxSize  int
-	hits     int64
-	misses   int64
+	mu        sync.RWMutex
+	data      map[string]interface{}
+	order     []string
+	maxSize   int
+	hits      int64
+	misses    int64
 	evictions int64
 }
 
@@ -199,7 +199,7 @@ func (ltc *LuaTypeConverter) toLuaWithDepth(L *lua.LState, value interface{}, de
 // sliceToLuaTable converts a Go slice/array to a Lua table
 func (ltc *LuaTypeConverter) sliceToLuaTable(L *lua.LState, rv reflect.Value, depth int, visited map[uintptr]bool) (*lua.LTable, error) {
 	table := L.NewTable()
-	
+
 	for i := 0; i < rv.Len(); i++ {
 		elem := rv.Index(i).Interface()
 		luaValue, err := ltc.toLuaWithDepth(L, elem, depth+1, visited)
@@ -208,26 +208,26 @@ func (ltc *LuaTypeConverter) sliceToLuaTable(L *lua.LState, rv reflect.Value, de
 		}
 		table.RawSetInt(i+1, luaValue) // Lua arrays are 1-indexed
 	}
-	
+
 	return table, nil
 }
 
 // mapToLuaTable converts a Go map to a Lua table
 func (ltc *LuaTypeConverter) mapToLuaTable(L *lua.LState, rv reflect.Value, depth int, visited map[uintptr]bool) (*lua.LTable, error) {
 	table := L.NewTable()
-	
+
 	for _, key := range rv.MapKeys() {
 		keyStr := fmt.Sprintf("%v", key.Interface())
 		value := rv.MapIndex(key).Interface()
-		
+
 		luaValue, err := ltc.toLuaWithDepth(L, value, depth+1, visited)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert map value for key %s: %w", keyStr, err)
 		}
-		
+
 		table.RawSetString(keyStr, luaValue)
 	}
-	
+
 	return table, nil
 }
 
@@ -235,24 +235,24 @@ func (ltc *LuaTypeConverter) mapToLuaTable(L *lua.LState, rv reflect.Value, dept
 func (ltc *LuaTypeConverter) structToLuaTable(L *lua.LState, rv reflect.Value, depth int, visited map[uintptr]bool) (*lua.LTable, error) {
 	table := L.NewTable()
 	rt := rv.Type()
-	
+
 	for i := 0; i < rv.NumField(); i++ {
 		field := rt.Field(i)
-		
+
 		// Skip unexported fields
 		if !field.IsExported() {
 			continue
 		}
-		
+
 		fieldValue := rv.Field(i).Interface()
 		luaValue, err := ltc.toLuaWithDepth(L, fieldValue, depth+1, visited)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert struct field %s: %w", field.Name, err)
 		}
-		
+
 		table.RawSetString(field.Name, luaValue)
 	}
-	
+
 	return table, nil
 }
 
@@ -310,7 +310,7 @@ func (ltc *LuaTypeConverter) luaTableToGo(table *lua.LTable, depth int, visited 
 	if ltc.isArrayLikeTable(table) {
 		return ltc.luaTableToSlice(table, depth, visited)
 	}
-	
+
 	// Otherwise, treat as a map
 	return ltc.luaTableToMap(table, depth, visited)
 }
@@ -328,14 +328,14 @@ func (ltc *LuaTypeConverter) isArrayLikeTable(table *lua.LTable) bool {
 		})
 		return !hasStringKeys
 	}
-	
+
 	// Check if all keys from 1 to length exist
 	for i := 1; i <= length; i++ {
 		if table.RawGetInt(i) == lua.LNil {
 			return false
 		}
 	}
-	
+
 	// Check if there are any non-integer keys
 	hasNonIntegerKeys := false
 	table.ForEach(func(key, value lua.LValue) {
@@ -347,7 +347,7 @@ func (ltc *LuaTypeConverter) isArrayLikeTable(table *lua.LTable) bool {
 			hasNonIntegerKeys = true
 		}
 	})
-	
+
 	return !hasNonIntegerKeys
 }
 
@@ -355,7 +355,7 @@ func (ltc *LuaTypeConverter) isArrayLikeTable(table *lua.LTable) bool {
 func (ltc *LuaTypeConverter) luaTableToSlice(table *lua.LTable, depth int, visited map[*lua.LTable]bool) ([]interface{}, error) {
 	length := table.Len()
 	result := make([]interface{}, length)
-	
+
 	for i := 1; i <= length; i++ {
 		luaValue := table.RawGetInt(i)
 		goValue, err := ltc.fromLuaWithDepth(luaValue, depth+1, visited)
@@ -364,14 +364,14 @@ func (ltc *LuaTypeConverter) luaTableToSlice(table *lua.LTable, depth int, visit
 		}
 		result[i-1] = goValue // Convert from 1-indexed to 0-indexed
 	}
-	
+
 	return result, nil
 }
 
 // luaTableToMap converts a Lua table to a Go map
 func (ltc *LuaTypeConverter) luaTableToMap(table *lua.LTable, depth int, visited map[*lua.LTable]bool) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
-	
+
 	table.ForEach(func(key, value lua.LValue) {
 		keyStr := fmt.Sprintf("%v", key)
 		goValue, err := ltc.fromLuaWithDepth(value, depth+1, visited)
@@ -381,7 +381,7 @@ func (ltc *LuaTypeConverter) luaTableToMap(table *lua.LTable, depth int, visited
 		}
 		result[keyStr] = goValue
 	})
-	
+
 	return result, nil
 }
 
@@ -393,16 +393,16 @@ func (ltc *LuaTypeConverter) RegisterCustomType(
 ) error {
 	ltc.mu.Lock()
 	defer ltc.mu.Unlock()
-	
+
 	if _, exists := ltc.customTypes[typeName]; exists {
 		return fmt.Errorf("type converter for %s is already registered", typeName)
 	}
-	
+
 	ltc.customTypes[typeName] = &customTypeConverter{
 		toLua:   toLua,
 		fromLua: fromLua,
 	}
-	
+
 	return nil
 }
 
@@ -410,7 +410,7 @@ func (ltc *LuaTypeConverter) RegisterCustomType(
 func (ltc *LuaTypeConverter) GetCacheStats() CacheStats {
 	ltc.conversionCache.mu.RLock()
 	defer ltc.conversionCache.mu.RUnlock()
-	
+
 	return CacheStats{
 		Hits:      ltc.conversionCache.hits,
 		Misses:    ltc.conversionCache.misses,
@@ -424,12 +424,12 @@ func (ltc *LuaTypeConverter) isCacheable(value interface{}) bool {
 	if value == nil {
 		return true
 	}
-	
+
 	rv := reflect.ValueOf(value)
 	switch rv.Kind() {
-	case reflect.Bool, reflect.String, reflect.Int, reflect.Int8, reflect.Int16, 
-		 reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
-		 reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+	case reflect.Bool, reflect.String, reflect.Int, reflect.Int8, reflect.Int16,
+		reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
 		return true
 	default:
 		return false // Don't cache complex types
@@ -444,37 +444,6 @@ func (cc *conversionCache) get(key string) interface{} {
 	cc.mu.RLock()
 	defer cc.mu.RUnlock()
 	return cc.data[key]
-}
-
-func (cc *conversionCache) put(key string, value interface{}) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	
-	// Remove existing entry if present
-	if _, exists := cc.data[key]; exists {
-		cc.removeFromOrder(key)
-	}
-	
-	// Add new entry
-	cc.data[key] = value
-	cc.order = append(cc.order, key)
-	
-	// Evict if over capacity
-	if len(cc.data) > cc.maxSize {
-		oldest := cc.order[0]
-		delete(cc.data, oldest)
-		cc.order = cc.order[1:]
-		cc.evictions++
-	}
-}
-
-func (cc *conversionCache) removeFromOrder(key string) {
-	for i, k := range cc.order {
-		if k == key {
-			cc.order = append(cc.order[:i], cc.order[i+1:]...)
-			break
-		}
-	}
 }
 
 func (cc *conversionCache) recordHit() {
@@ -496,7 +465,7 @@ func (ltc *LuaTypeConverter) ToBoolean(v interface{}) (bool, error) {
 	if v == nil {
 		return false, nil
 	}
-	
+
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Bool:
@@ -522,7 +491,7 @@ func (ltc *LuaTypeConverter) ToNumber(v interface{}) (float64, error) {
 	if v == nil {
 		return 0, nil
 	}
-	
+
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -561,7 +530,7 @@ func (ltc *LuaTypeConverter) ToArray(v interface{}) ([]interface{}, error) {
 	if v == nil {
 		return nil, nil
 	}
-	
+
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Array:
@@ -580,7 +549,7 @@ func (ltc *LuaTypeConverter) ToMap(v interface{}) (map[string]interface{}, error
 	if v == nil {
 		return nil, nil
 	}
-	
+
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
 	case reflect.Map:
@@ -590,7 +559,7 @@ func (ltc *LuaTypeConverter) ToMap(v interface{}) (map[string]interface{}, error
 			result[keyStr] = rv.MapIndex(key).Interface()
 		}
 		return result, nil
-		
+
 	case reflect.Struct:
 		result := make(map[string]interface{})
 		rt := rv.Type()
@@ -601,7 +570,7 @@ func (ltc *LuaTypeConverter) ToMap(v interface{}) (map[string]interface{}, error
 			}
 		}
 		return result, nil
-		
+
 	default:
 		return map[string]interface{}{"value": v}, nil
 	}
@@ -635,31 +604,31 @@ func (ltc *LuaTypeConverter) SupportsType(typeName string) bool {
 	ltc.mu.RLock()
 	_, exists := ltc.customTypes[typeName]
 	ltc.mu.RUnlock()
-	
+
 	if exists {
 		return true
 	}
-	
+
 	// Check built-in types
 	supportedTypes := map[string]bool{
-		"bool":        true,
-		"int":         true,
-		"int8":        true,
-		"int16":       true,
-		"int32":       true,
-		"int64":       true,
-		"uint":        true,
-		"uint8":       true,
-		"uint16":      true,
-		"uint32":      true,
-		"uint64":      true,
-		"float32":     true,
-		"float64":     true,
-		"string":      true,
-		"[]interface{}": true,
+		"bool":                   true,
+		"int":                    true,
+		"int8":                   true,
+		"int16":                  true,
+		"int32":                  true,
+		"int64":                  true,
+		"uint":                   true,
+		"uint8":                  true,
+		"uint16":                 true,
+		"uint32":                 true,
+		"uint64":                 true,
+		"float32":                true,
+		"float64":                true,
+		"string":                 true,
+		"[]interface{}":          true,
 		"map[string]interface{}": true,
 	}
-	
+
 	return supportedTypes[typeName]
 }
 
@@ -675,4 +644,3 @@ func (ltc *LuaTypeConverter) GetTypeInfo(typeName string) engine.TypeInfo {
 		Metadata:    make(map[string]interface{}),
 	}
 }
-

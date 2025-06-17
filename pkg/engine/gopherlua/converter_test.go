@@ -42,7 +42,7 @@ func TestLuaTypeConverter_Creation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			converter := NewLuaTypeConverter()
 			require.NotNil(t, converter)
-			
+
 			if tt.validate != nil {
 				tt.validate(t, converter)
 			}
@@ -177,7 +177,7 @@ func TestLuaTypeConverter_ToLua_Collections(t *testing.T) {
 			result, err := converter.ToLua(L, tt.input)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedType, result.Type())
-			
+
 			if tt.validate != nil {
 				tt.validate(t, result)
 			}
@@ -224,7 +224,7 @@ func TestLuaTypeConverter_FromLua_Primitives(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := converter.FromLua(tt.input)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
@@ -290,7 +290,7 @@ func TestLuaTypeConverter_FromLua_Collections(t *testing.T) {
 			validate: func(t *testing.T, result interface{}) {
 				m, ok := result.(map[string]interface{})
 				require.True(t, ok)
-				assert.Equal(t, "indexed", m["1"])  // Numeric indices become string keys
+				assert.Equal(t, "indexed", m["1"]) // Numeric indices become string keys
 				assert.Equal(t, "named", m["key"])
 			},
 		},
@@ -300,7 +300,7 @@ func TestLuaTypeConverter_FromLua_Collections(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			table := tt.setupTable()
 			result, err := converter.FromLua(table)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
@@ -377,7 +377,7 @@ func TestLuaTypeConverter_ConversionCaching(t *testing.T) {
 
 		// Results should be equivalent
 		assert.Equal(t, result1.Type(), result2.Type())
-		
+
 		// Verify cache was accessed (internal state check)
 		stats := converter.GetCacheStats()
 		assert.True(t, stats.Hits >= 0 && stats.Misses >= 0) // Cache tracking is working
@@ -509,7 +509,7 @@ func TestLuaTypeConverter_ErrorHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := converter.ToLua(L, tt.input)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.errorText != "" {
