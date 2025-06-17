@@ -447,13 +447,72 @@ Phase 2.2 (Core Engine Components) is now complete with all fundamental componen
   - ✅ Added type conversion integration with LuaTypeConverter
   - ✅ Created Lua module generation from bridge metadata
   - ✅ Implemented method validation support with configurable enable/disable
-  - ✅ Added error handling with proper Lua error propagation
-  - ✅ Implemented panic recovery for bridge methods
-  - ✅ Added support for multiple return values
-  - ✅ Created method caching for performance optimization
-  - ✅ Integrated with ModuleSystem for automatic registration
-  - ✅ Key Features: Extension point for bridges with Call method, thread-safe operations, comprehensive test coverage
-  - ✅ Created comprehensive test suite with 100+ test cases
+
+- ✅ **Task 2.3.2.2: Reorganize LLM Bridge Adapter Tasks** [COMPLETED - 2025-06-20]
+  - ✅ Analyzed existing bridge implementations (providers.go and pool.go)
+  - ✅ Reorganized Task 2.3.2.2 to focus on LLM and Provider functionality
+  - ✅ Moved Agent-specific functionality to Task 2.3.2.6
+  - ✅ Added detailed subtasks for provider registry integration
+  - ✅ Added detailed subtasks for provider pool integration
+  - ✅ Updated all bridge adapter tasks with comprehensive subtasks
+
+- ✅ **Task 2.3.2.X: Complete Bridge Adapter Research and Task Addition** [COMPLETED - 2025-06-20]
+  - ✅ Researched pkg/bridge/observability/ and identified 3 bridges (guardrails, metrics, tracing)
+  - ✅ Researched pkg/bridge/structured/ and identified 1 bridge (schema)
+  - ✅ Researched pkg/bridge/util/ and identified 8 bridges (auth, debug, errors, json, llm_utils, script_logger, slog, util)
+  - ✅ Researched main pkg/bridge/ directory and identified 1 bridge (modelinfo)
+  - ✅ Added Task 2.3.2.10: Observability Bridge Adapters with detailed subtasks for all 3 bridges
+  - ✅ Added Task 2.3.2.11: Schema Bridge Adapter with validation, tools, and versioning subtasks
+  - ✅ Added Task 2.3.2.12: ModelInfo Bridge Adapter with discovery and capability query subtasks
+  - ✅ Added Task 2.3.2.13: Utility Bridge Adapters with detailed subtasks for all 8 utility bridges
+  - ✅ Updated Task 2.3.2.14: Adapter Testing with comprehensive cross-adapter testing
+  - ✅ Total additions: 13 new bridge adapters with 60+ detailed subtasks covering all missing bridges
+
+- ✅ **Task 2.3.3.X: Comprehensive Lua Standard Library Research and Design** [COMPLETED - 2025-06-20]
+  - ✅ **Mega Research Phase**: Conducted comprehensive analysis of all bridge requirements and Lua engine philosophy
+    - ✅ Analyzed technical documentation for bridge-first design philosophy and script-friendly API principles
+    - ✅ Researched existing Lua patterns in 10+ example spells (async-llm, chat-assistant, tool-example, etc.)
+    - ✅ Analyzed all 13+ bridge adapters to identify stdlib function requirements
+    - ✅ Studied spirit of multi-language script engine and security-first approach
+  - ✅ **Feature-Oriented Design**: Designed 15 comprehensive stdlib modules grouped by functionality
+    - ✅ **Promise & Async Library**: Full async/await support with Promise.all/race, coroutine integration
+    - ✅ **LLM Operations Library**: High-level LLM helpers, provider management, model discovery
+    - ✅ **Agent Management Library**: Agent lifecycle, communication, tool integration helpers  
+    - ✅ **State Management Library**: Context utilities, persistence, transformation helpers
+    - ✅ **Event & Workflow Library**: Event system, workflow orchestration, hook utilities
+    - ✅ **Structured Data Library**: JSON processing, schema validation, data transformation
+    - ✅ **Tools & Registry Library**: Tool registration, execution, validation utilities
+    - ✅ **Observability & Monitoring Library**: Metrics, tracing, guardrails utilities
+    - ✅ **Authentication & Security Library**: Auth flows, OAuth, permission management
+    - ✅ **Error Handling & Recovery Library**: Try-catch-finally, retry mechanisms, categorization
+    - ✅ **Logging & Debug Library**: Unified logging, structured logs, diagnostics
+    - ✅ **Testing & Validation Library**: Test framework, mocking, performance testing
+    - ✅ **Core Utilities Library**: String/collection utils, crypto, time utilities
+    - ✅ **Spell Framework Library**: Spell lifecycle, composition, execution context
+    - ✅ **Documentation & Examples**: Comprehensive docs, tutorials, best practices
+  - ✅ **Script-Friendly API Design**: Created intuitive, high-level functions that hide go-llms complexity
+    - ✅ Designed functions following existing patterns (llm.quick_prompt, agent.create, etc.)
+    - ✅ Added comprehensive error handling and validation support
+    - ✅ Integrated async/promise patterns throughout all modules
+    - ✅ Ensured bridge integration for all 13+ bridge adapters
+  - ✅ **Total Scope**: 15 stdlib modules with 150+ specific functions and 300+ detailed subtasks
+  - ✅ **Philosophy Alignment**: All modules follow bridge-first, security-first, script-friendly principles
+
+- ✅ **Task 2.3.X: Section Reordering for Optimal Implementation Dependencies** [COMPLETED - 2025-06-20]
+  - ✅ **Critical Dependency Analysis**: Identified that async/coroutines must come before bridge adapters
+    - ✅ Async operations are foundational for bridge operations (streaming, timeouts, concurrency)
+    - ✅ Example spells already expect promise-based APIs from bridges
+    - ✅ Architecture docs emphasize "Coroutine-Based Async: Non-blocking bridge operations"
+  - ✅ **Section Reordering Completed**: Moved async foundation before bridge implementation
+    - ✅ **2.3.2: Async/Coroutine Support** (moved from 2.3.4) - Foundation layer
+    - ✅ **2.3.3: Bridge Adapters** (renumbered from 2.3.2) - Uses async foundation
+    - ✅ **2.3.4: Lua Standard Library** (renumbered from 2.3.3) - Uses bridges + async
+  - ✅ **Benefits**: Avoids retrofitting async to bridges, enables promise-based bridge APIs from day one
+  - ✅ **Alignment**: Matches architecture's async-first philosophy and existing example spell patterns
+
+---
+
+## Previous Completed Tasks
 
 - ✅ **Task 2.3.1.2: Module Loader** [COMPLETED - 2025-06-19]
   - ✅ Implemented ModuleLoader in `/pkg/engine/gopherlua/modules_loader.go`
@@ -476,6 +535,89 @@ Phase 2.2 (Core Engine Components) is now complete with all fundamental componen
   - ✅ Tested initialization callbacks and error handling
   - ✅ Tested version management and constraints
   - ✅ Tested concurrent registration and loading
+
+### ✅ **Task 2.3.2.1: Bridge Adapter Base** (`/pkg/engine/gopherlua/bridge_adapter.go`) [COMPLETED - 2025-06-19]
+- ✅ Defined `BridgeAdapter` struct with engine.Bridge wrapping
+- ✅ Implemented base adapter with common functionality:
+  - Bridge wrapping and metadata exposure
+  - Method discovery and caching
+  - Type converter integration
+  - Lua module creation
+  - Method wrapping with automatic type conversion
+  - Error handling and panic recovery
+  - Module system registration
+  - Validation support
+- ✅ Added method discovery and wrapping:
+  - Automatic discovery of bridge methods
+  - Method info retrieval
+  - Lazy method wrapper creation with caching
+  - Support for multiple return values
+- ✅ Created error handling standards:
+  - Panic recovery in wrapped methods
+  - Consistent error return pattern (nil, error)
+  - Argument and result conversion error handling
+- ✅ Implemented type conversion integration:
+  - Automatic Go→Lua conversion for arguments
+  - Automatic Lua→Go conversion for results
+  - Support for complex types via LuaTypeConverter
+- ✅ Created comprehensive test coverage:
+  - Adapter creation and metadata exposure
+  - Method discovery and info retrieval
+  - Lua module creation
+  - Method wrapping with various types
+  - Error handling and panic recovery
+  - Module system registration
+  - Method validation
+  - Performance optimizations (caching)
+- ✅ Handled special case for bridges with Call method:
+  - Interface assertion to check for Call support
+  - Fallback error for bridges without Call method
+
+### ✅ **Task 2.3.2.2: LLM Bridge Adapter** (`/pkg/engine/gopherlua/adapters/llm.go`) [COMPLETED - 2025-06-19]
+- ✅ Created LLM module with agent creation:
+  - Extends BridgeAdapter for LLM-specific functionality
+  - Provides createAgent method with config support
+  - Enhances agent objects with convenience methods
+- ✅ Implemented completion methods:
+  - Simple completion with prompt
+  - Completion with options (temperature, maxTokens, etc.)
+  - Agent-specific completion via agentComplete
+  - Quick completion convenience method
+  - Batch completion for multiple prompts
+- ✅ Added streaming support:
+  - Stream method with callback support
+  - Default chunk collection when no callback provided
+  - Stream handle returns for management
+- ✅ Implemented model selection:
+  - listModels returning available models
+  - selectModel for choosing active model
+  - Model metadata with capabilities
+- ✅ Added token counting utilities:
+  - countTokens method for text analysis
+  - Returns token count with model info
+- ✅ Created LLM-specific enhancements:
+  - Constructor alias (Agent = createAgent)
+  - Model constants (GPT4, GPT35_TURBO, CLAUDE3, etc.)
+  - Default options (temperature, maxTokens, topP)
+  - Error code constants for common failures
+  - Agent object enhancement with complete() and info() methods
+- ✅ Implemented method wrapping enhancements:
+  - createAgent: Auto-adds empty config if missing, enhances returned agents
+  - complete: Validates prompt requirement, adds empty options if missing
+  - stream: Ensures callback or provides default chunk collector
+- ✅ Created comprehensive test coverage (550+ lines):
+  - Adapter creation and method exposure
+  - Agent creation (simple and with tools)
+  - Completion operations (simple and with options)
+  - Streaming functionality
+  - Model management (listing and selection)
+  - Token counting
+  - Error handling with proper error messages
+  - Chained operations with agent methods
+- ✅ Fixed test issues:
+  - Handled []interface{} unpacking in bridge adapter
+  - Fixed Lua pattern matching for hyphens
+  - Ensured proper 1-based array indexing for Lua
 
 ---
 
