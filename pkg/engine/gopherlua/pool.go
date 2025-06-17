@@ -52,11 +52,14 @@ type PoolMetrics struct {
 
 // pooledState wraps an LState with metadata for pool management
 type pooledState struct {
-	state    *lua.LState
-	lastUsed time.Time
-	useCount int64
-	health   float64
-	id       int64
+	state     *lua.LState
+	lastUsed  time.Time
+	useCount  int64
+	health    float64
+	id        int64
+	executing bool          // true when state is being executed
+	done      chan struct{} // closed when execution completes
+	mu        sync.Mutex    // protects executing flag
 }
 
 // LStatePool manages a pool of Lua VM instances
@@ -139,6 +142,12 @@ func (p *LStatePool) Get(ctx context.Context) (*lua.LState, error) {
 		atomic.AddInt64(&p.metrics.Available, -1)
 		atomic.AddInt64(&p.metrics.InUse, 1)
 
+		// Mark as executing
+		pooledState.mu.Lock()
+		pooledState.executing = true
+		pooledState.done = make(chan struct{})
+		pooledState.mu.Unlock()
+
 		p.mu.Lock()
 		p.inUse[pooledState.state] = pooledState
 		p.mu.Unlock()
@@ -164,6 +173,13 @@ func (p *LStatePool) Get(ctx context.Context) (*lua.LState, error) {
 			}
 
 			atomic.AddInt64(&p.metrics.InUse, 1)
+
+			// Mark as executing
+			state.mu.Lock()
+			state.executing = true
+			state.done = make(chan struct{})
+			state.mu.Unlock()
+
 			p.mu.Lock()
 			p.inUse[state.state] = state
 			p.mu.Unlock()
@@ -176,6 +192,12 @@ func (p *LStatePool) Get(ctx context.Context) (*lua.LState, error) {
 		case pooledState := <-p.states:
 			atomic.AddInt64(&p.metrics.Available, -1)
 			atomic.AddInt64(&p.metrics.InUse, 1)
+
+			// Mark as executing
+			pooledState.mu.Lock()
+			pooledState.executing = true
+			pooledState.done = make(chan struct{})
+			pooledState.mu.Unlock()
 
 			p.mu.Lock()
 			p.inUse[pooledState.state] = pooledState
@@ -209,6 +231,14 @@ func (p *LStatePool) Put(state *lua.LState) {
 
 	atomic.AddInt64(&p.metrics.InUse, -1)
 
+	// Mark as not executing
+	pooledState.mu.Lock()
+	pooledState.executing = false
+	if pooledState.done != nil {
+		close(pooledState.done)
+	}
+	pooledState.mu.Unlock()
+
 	// Update state metadata
 	pooledState.lastUsed = time.Now()
 	pooledState.useCount++
@@ -229,6 +259,36 @@ func (p *LStatePool) Put(state *lua.LState) {
 		// Pool is full, discard this state
 		state.Close()
 	}
+}
+
+// AbandonState marks a state as abandoned due to timeout
+// The state is removed from tracking but not closed immediately
+func (p *LStatePool) AbandonState(state *lua.LState) {
+	if state == nil {
+		return
+	}
+
+	p.mu.Lock()
+	pooledState, exists := p.inUse[state]
+	if !exists {
+		p.mu.Unlock()
+		return
+	}
+	delete(p.inUse, state)
+	p.mu.Unlock()
+
+	atomic.AddInt64(&p.metrics.InUse, -1)
+	atomic.AddInt64(&p.metrics.TotalRecycled, 1)
+
+	// Mark as not executing and signal done
+	pooledState.mu.Lock()
+	pooledState.executing = false
+	if pooledState.done != nil {
+		close(pooledState.done)
+	}
+	pooledState.mu.Unlock()
+
+	// Don't return to pool, don't close - let it be GC'd when execution completes
 }
 
 // GetMetrics returns current pool metrics
@@ -283,10 +343,47 @@ func (p *LStatePool) Shutdown(ctx context.Context) error {
 			pooledState.state.Close()
 		}
 
-		// Force close any remaining in-use states
+		// Wait for executing states to finish
 		p.mu.Lock()
-		for state := range p.inUse {
-			state.Close()
+		var executingStates []*pooledState
+		for _, ps := range p.inUse {
+			ps.mu.Lock()
+			if ps.executing {
+				executingStates = append(executingStates, ps)
+			}
+			ps.mu.Unlock()
+		}
+		p.mu.Unlock()
+
+		// Wait for executing states with timeout
+		if len(executingStates) > 0 {
+			waitCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			for _, ps := range executingStates {
+				ps.mu.Lock()
+				done := ps.done
+				ps.mu.Unlock()
+
+				if done != nil {
+					select {
+					case <-done:
+						// State finished executing
+					case <-waitCtx.Done():
+						// Timeout waiting, but don't close - let it finish
+					}
+				}
+			}
+		}
+
+		// Now close all states that are not executing
+		p.mu.Lock()
+		for state, ps := range p.inUse {
+			ps.mu.Lock()
+			if !ps.executing {
+				state.Close()
+			}
+			ps.mu.Unlock()
 		}
 		p.inUse = nil
 		p.mu.Unlock()
@@ -303,11 +400,13 @@ func (p *LStatePool) createState() (*pooledState, error) {
 	}
 
 	pooledState := &pooledState{
-		state:    state,
-		lastUsed: time.Now(),
-		useCount: 0,
-		health:   1.0,
-		id:       atomic.AddInt64(&p.nextStateID, 1),
+		state:     state,
+		lastUsed:  time.Now(),
+		useCount:  0,
+		health:    1.0,
+		id:        atomic.AddInt64(&p.nextStateID, 1),
+		executing: false,
+		done:      nil,
 	}
 
 	atomic.AddInt64(&p.metrics.TotalCreated, 1)

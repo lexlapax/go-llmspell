@@ -307,6 +307,101 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
   - ✅ Resource Management: Memory cleanup, state lifecycle, leak prevention
 
 
+#### 2.2.4: Core Engine Integration [COMPLETED - 2025-06-18]
+- ✅ **Task 2.2.4.1: Engine Implementation** [COMPLETED - 2025-06-18]
+  - ✅ Implemented LuaEngine struct in `/pkg/engine/gopherlua/engine.go` implementing engine.ScriptEngine interface
+  - ✅ Implemented Initialize() with SecurityManager creation, LStateFactory setup, and LStatePool initialization
+  - ✅ Implemented Execute() delegating to ExecutionPipeline for clean separation of concerns
+  - ✅ Implemented ExecuteFile() with proper file validation and extension checking
+  - ✅ Implemented Shutdown() with graceful pool shutdown, cache cleanup, and bridge cleanup
+  - ✅ Added comprehensive engine configuration system with EngineConfig support
+  - ✅ Integrated all core components: pool, factory, converter, bridge manager, chunk cache
+  - ✅ Added metrics tracking with atomic operations for thread-safe performance monitoring
+  - ✅ Implemented resource limits: memory limits, timeout limits, comprehensive ResourceLimits
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/engine_test.go` with 40+ test cases
+
+- ✅ **Task 2.2.4.2: Bridge Registration** [COMPLETED - 2025-06-18]
+  - ✅ Implemented BridgeManager in `/pkg/engine/gopherlua/engine_bridge.go` for bridge lifecycle management
+  - ✅ Implemented RegisterBridge() with duplicate detection and automatic initialization
+  - ✅ Implemented UnregisterBridge() with proper cleanup and resource deallocation
+  - ✅ Added complete bridge lifecycle management with Initialize/Cleanup coordination
+  - ✅ Created bridge method wrapping with automatic Lua ↔ Go type conversion
+  - ✅ Implemented bridge metadata handling with full metadata exposure to Lua
+  - ✅ Added CreateLuaModule() for dynamic Lua module generation from bridges
+  - ✅ Implemented LoadBridgeModules() for batch loading all bridges into Lua state
+  - ✅ Added thread-safe bridge registry with concurrent access support
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/engine_bridge_test.go`
+
+- ✅ **Task 2.2.4.3: Execution Pipeline** [COMPLETED - 2025-06-18]
+  - ✅ Implemented ExecutionPipeline in `/pkg/engine/gopherlua/engine_execute.go`
+  - ✅ Implemented state acquisition from pool with timeout handling
+  - ✅ Added security sandbox application through SecurityManager integration
+  - ✅ Implemented parameter injection with automatic type conversion
+  - ✅ Added script compilation with chunk caching for performance
+  - ✅ Implemented result extraction with proper Lua → Go conversion
+  - ✅ Added comprehensive error handling with stack trace preservation
+  - ✅ Created ExecutionContext for tracking execution state and metrics
+  - ✅ Implemented staged execution: prepare → compile → setup → execute → extract
+  - ✅ Added resource limit enforcement with instruction counting and memory monitoring
+  - ✅ Created execution metrics tracking: compilation time, execution time, cache hits
+
+- ✅ **Task 2.2.4.4: Chunk Caching** [COMPLETED - 2025-06-18]
+  - ✅ Renamed cache.go to chunkcache.go for better clarity per user request
+  - ✅ Implemented ChunkCache in `/pkg/engine/gopherlua/chunkcache.go` with LRU eviction
+  - ✅ Added secure cache key generation using SHA-256 hashing
+  - ✅ Implemented size-based eviction with configurable max cache size
+  - ✅ Added TTL support for cache entries with automatic expiration
+  - ✅ Created comprehensive cache metrics tracking: hits, misses, evictions
+  - ✅ Implemented thread-safe operations with read/write mutex
+  - ✅ Added doubly-linked list for efficient LRU operations
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/chunkcache_test.go`
+  - ✅ Key features: Thread-safe, LRU+TTL eviction, size limits, metrics, disk cache support
+
+- ✅ **Task 2.2.4.5: Engine Testing** [COMPLETED - 2025-06-18]
+  - ✅ Created comprehensive test suite in `/pkg/engine/gopherlua/engine_test.go`
+  - ✅ Tested engine initialization and shutdown with various configurations
+  - ✅ Tested script execution with primitive types, collections, and complex data
+  - ✅ Tested bridge registration and usage through BridgeManager
+  - ✅ Tested error handling and recovery for syntax errors, runtime errors, panics
+  - ✅ Tested concurrent execution with race detection (fixed data races with atomic operations)
+  - ✅ Added benchmark tests for execution performance analysis
+  - ✅ Created integration tests validating full system operation
+  - ✅ Added resource limit tests for memory and timeout enforcement
+  - ✅ Tested file execution with extension validation and error cases
+  - ✅ Total test coverage: 100+ test cases across all engine components
+
+
+### ✅ PHASE 2.2 COMPLETE - CORE ENGINE COMPONENTS [2025-06-18]
+
+Phase 2.2 (Core Engine Components) is now complete with all fundamental components implemented and tested:
+- **Phase 2.2.1: LState Pool** - Thread-safe Lua state management with health monitoring
+- **Phase 2.2.2: Type Converter** - Comprehensive Go ↔ Lua type conversion system
+- **Phase 2.2.3: Security Sandbox** - Multi-level security with library restrictions
+- **Phase 2.2.4: Core Engine Integration** - Complete LuaEngine implementation with:
+  - ScriptEngine interface implementation
+  - Bridge registration system with lifecycle management
+  - Execution pipeline with caching and error handling
+  - Chunk caching (renamed cache.go → chunkcache.go)
+  - 100+ comprehensive tests with full coverage
+
+**Next:** Phase 2.3 - Bridge Integration Layer (Module system, bridge adapters, Lua stdlib)
+
+### Post-Phase 2.2 Fixes [COMPLETED - 2025-06-18]
+
+#### Race Condition Fix in Timeout Handling
+- ✅ **Issue**: Data race when script execution timed out - goroutine was still running PCall() while pool shutdown was closing the state
+- ✅ **Root Cause**: LState is not thread-safe and cannot be closed while PCall() is executing
+- ✅ **Solution Implemented**:
+  - ✅ Enhanced pooledState struct with `executing` flag and `done` channel to track execution state
+  - ✅ Modified pool.Get() to mark states as executing with proper synchronization
+  - ✅ Modified pool.Put() to mark states as not executing and signal completion
+  - ✅ Created pool.AbandonState() method for safe timeout handling without closing states
+  - ✅ Updated pool.Shutdown() to wait for executing states before closing (max 2s timeout)
+  - ✅ Modified ExecutionPipeline to use AbandonState() on timeout instead of closing
+  - ✅ Added comprehensive tests validating all scenarios (later consolidated into pool_test.go)
+- ✅ **Key Design Decision**: Let abandoned states complete naturally instead of forcing closure
+- ✅ **Result**: Clean timeout handling with no race conditions, respecting GopherLua's thread safety model
+- ✅ **Test Organization**: Consolidated pool_abandon_test.go into pool_test.go for better maintainability
 
 ---
 

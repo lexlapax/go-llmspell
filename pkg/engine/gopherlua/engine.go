@@ -33,8 +33,7 @@ type LuaEngine struct {
 	mu           sync.RWMutex
 
 	// Bridge management
-	bridges   map[string]engine.Bridge
-	bridgesMu sync.RWMutex
+	bridgeManager *BridgeManager
 
 	// Resource limits
 	memoryLimit    int64
@@ -68,9 +67,10 @@ type EngineMetrics struct {
 
 // NewLuaEngine creates a new Lua script engine
 func NewLuaEngine() *LuaEngine {
+	converter := NewLuaTypeConverter()
 	return &LuaEngine{
-		bridges:   make(map[string]engine.Bridge),
-		converter: NewLuaTypeConverter(),
+		converter:     converter,
+		bridgeManager: NewBridgeManager(converter),
 		chunkCache: NewChunkCache(ChunkCacheConfig{
 			MaxSize:         100,
 			TTL:             30 * time.Minute,
@@ -186,124 +186,8 @@ func (e *LuaEngine) Initialize(config engine.EngineConfig) error {
 
 // Execute executes a Lua script with the given parameters
 func (e *LuaEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
-	if !e.initialized {
-		return nil, fmt.Errorf("engine not initialized")
-	}
-
-	if e.shuttingDown {
-		return nil, fmt.Errorf("engine is shutting down")
-	}
-
-	startTime := time.Now()
-	defer func() {
-		atomic.AddInt64(&e.metrics.scriptsExecuted, 1)
-		atomic.AddInt64(&e.metrics.totalExecTime, time.Since(startTime).Nanoseconds())
-	}()
-
-	// Apply timeout from context or engine default
-	execCtx := ctx
-	if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > e.timeoutLimit {
-		var cancel context.CancelFunc
-		execCtx, cancel = context.WithTimeout(ctx, e.timeoutLimit)
-		defer cancel()
-	}
-
-	// Get LState from pool
-	state, err := e.pool.Get(execCtx)
-	if err != nil {
-		atomic.AddInt64(&e.metrics.errorCount, 1)
-		return nil, fmt.Errorf("failed to get Lua state: %w", err)
-	}
-	defer e.pool.Put(state)
-
-	// Set parameters in state
-	for key, value := range params {
-		luaValue, err := e.converter.ToLua(state, value)
-		if err != nil {
-			atomic.AddInt64(&e.metrics.errorCount, 1)
-			return nil, fmt.Errorf("failed to convert parameter %s: %w", key, err)
-		}
-		state.SetGlobal(key, luaValue)
-	}
-
-	// Try to get compiled chunk from cache
-	var compiledChunk *lua.FunctionProto
-	cacheKey := e.chunkCache.GenerateKey(script, "")
-
-	if cached := e.chunkCache.Get(cacheKey); cached != nil {
-		compiledChunk = cached
-		atomic.AddInt64(&e.metrics.cacheHits, 1)
-	} else {
-		// Compile script
-		compileStart := time.Now()
-		chunk, err := state.LoadString(script)
-		if err != nil {
-			atomic.AddInt64(&e.metrics.errorCount, 1)
-			return nil, e.wrapLuaError(err, engine.ErrorTypeSyntax)
-		}
-		compiledChunk = chunk.Proto
-		atomic.AddInt64(&e.metrics.compilationTime, time.Since(compileStart).Nanoseconds())
-		atomic.AddInt64(&e.metrics.cacheMisses, 1)
-
-		// Cache compiled chunk
-		e.chunkCache.Put(cacheKey, compiledChunk)
-	}
-
-	// Execute with timeout
-	resultChan := make(chan executionResult, 1)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				resultChan <- executionResult{
-					error: fmt.Errorf("panic during execution: %v", r),
-				}
-			}
-		}()
-
-		// Push compiled function and call it
-		state.Push(state.NewFunctionFromProto(compiledChunk))
-		err := state.PCall(0, lua.MultRet, nil)
-		if err != nil {
-			resultChan <- executionResult{
-				error: e.wrapLuaError(err, engine.ErrorTypeRuntime),
-			}
-			return
-		}
-
-		// Get return value (top of stack)
-		var result interface{}
-		if state.GetTop() > 0 {
-			luaValue := state.Get(-1)
-			goValue, err := e.converter.FromLua(luaValue)
-			if err != nil {
-				resultChan <- executionResult{
-					error: fmt.Errorf("failed to convert result: %w", err),
-				}
-				return
-			}
-			result = goValue
-		}
-
-		resultChan <- executionResult{
-			value: result,
-		}
-	}()
-
-	// Wait for execution or timeout
-	select {
-	case result := <-resultChan:
-		if result.error != nil {
-			atomic.AddInt64(&e.metrics.errorCount, 1)
-		}
-		return result.value, result.error
-	case <-execCtx.Done():
-		atomic.AddInt64(&e.metrics.errorCount, 1)
-		return nil, &engine.EngineError{
-			Type:    engine.ErrorTypeTimeout,
-			Message: "script execution timed out",
-			Cause:   execCtx.Err(),
-		}
-	}
+	// Use the execution pipeline for cleaner, more maintainable code
+	return e.ExecuteWithPipeline(ctx, script, params)
 }
 
 // ExecuteFile executes a Lua script from a file
@@ -371,15 +255,9 @@ func (e *LuaEngine) Shutdown() error {
 	}
 
 	// Cleanup bridges
-	e.bridgesMu.Lock()
-	for _, bridge := range e.bridges {
-		if bridge.IsInitialized() {
-			ctx := context.Background()
-			_ = bridge.Cleanup(ctx)
-		}
+	if e.bridgeManager != nil {
+		_ = e.bridgeManager.Cleanup()
 	}
-	e.bridges = make(map[string]engine.Bridge)
-	e.bridgesMu.Unlock()
 
 	e.initialized = false
 	e.shuttingDown = false
@@ -392,76 +270,27 @@ func (e *LuaEngine) RegisterBridge(bridge engine.Bridge) error {
 		return fmt.Errorf("engine not initialized")
 	}
 
-	e.bridgesMu.Lock()
-	defer e.bridgesMu.Unlock()
-
-	id := bridge.GetID()
-	if _, exists := e.bridges[id]; exists {
-		return fmt.Errorf("bridge %s already registered", id)
-	}
-
-	// Initialize bridge if needed
-	if !bridge.IsInitialized() {
-		ctx := context.Background()
-		if err := bridge.Initialize(ctx); err != nil {
-			return fmt.Errorf("failed to initialize bridge %s: %w", id, err)
-		}
-	}
-
 	// Register with engine
 	if err := bridge.RegisterWithEngine(e); err != nil {
-		return fmt.Errorf("failed to register bridge %s with engine: %w", id, err)
+		return fmt.Errorf("failed to register bridge %s with engine: %w", bridge.GetID(), err)
 	}
 
-	e.bridges[id] = bridge
-	return nil
+	return e.bridgeManager.RegisterBridge(bridge)
 }
 
 // UnregisterBridge unregisters a bridge from the engine
 func (e *LuaEngine) UnregisterBridge(name string) error {
-	e.bridgesMu.Lock()
-	defer e.bridgesMu.Unlock()
-
-	bridge, exists := e.bridges[name]
-	if !exists {
-		return fmt.Errorf("bridge %s not found", name)
-	}
-
-	// Cleanup bridge
-	if bridge.IsInitialized() {
-		ctx := context.Background()
-		if err := bridge.Cleanup(ctx); err != nil {
-			return fmt.Errorf("failed to cleanup bridge %s: %w", name, err)
-		}
-	}
-
-	delete(e.bridges, name)
-	return nil
+	return e.bridgeManager.UnregisterBridge(name)
 }
 
 // GetBridge retrieves a bridge by name
 func (e *LuaEngine) GetBridge(name string) (engine.Bridge, error) {
-	e.bridgesMu.RLock()
-	defer e.bridgesMu.RUnlock()
-
-	bridge, exists := e.bridges[name]
-	if !exists {
-		return nil, fmt.Errorf("bridge %s not found", name)
-	}
-
-	return bridge, nil
+	return e.bridgeManager.GetBridge(name)
 }
 
 // ListBridges returns a list of registered bridge names
 func (e *LuaEngine) ListBridges() []string {
-	e.bridgesMu.RLock()
-	defer e.bridgesMu.RUnlock()
-
-	names := make([]string, 0, len(e.bridges))
-	for name := range e.bridges {
-		names = append(names, name)
-	}
-	return names
+	return e.bridgeManager.ListBridges()
 }
 
 // ToNative converts a Lua value to a Go value
@@ -566,12 +395,6 @@ func (e *LuaEngine) GetMetrics() engine.EngineMetrics {
 		CompilationTime:  compilationTime,
 		GCCollections:    atomic.LoadInt64(&e.metrics.gcCollections),
 	}
-}
-
-// executionResult holds the result of script execution
-type executionResult struct {
-	value interface{}
-	error error
 }
 
 // wrapLuaError wraps a Lua error into an EngineError

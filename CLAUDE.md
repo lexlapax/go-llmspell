@@ -9,14 +9,8 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 ## Current Status
 
 ✅ **Phase 1 COMPLETE** [2025-06-17]: 38+ bridges, zero business logic duplication  
-✅ **Phase 2.1 COMPLETE** [2025-06-17]: Lua engine research and architecture design  
-✅ **Phase 2.2 CORE COMPLETE** [2025-06-18]: LState Pool, Type Converter, Security Sandbox
-
-### Current Status: Phase 2.2 - Core Engine Components  
-- ✅ 2.2.1: LState Pool Implementation [COMPLETED - 2025-06-18]
-- ✅ 2.2.2: Type Converter System [COMPLETED - 2025-06-18]  
-- ✅ 2.2.3: Security Sandbox [COMPLETED - 2025-06-17]
-- 🔄 2.2.4: Core Engine Integration [NEXT - All dependencies satisfied]
+✅ **Phase 2.2 COMPLETE** [2025-06-18]: Core Engine Components - LuaEngine fully implemented  
+🚧 **Phase 2.3 NEXT**: Bridge Integration Layer - Module system and adapters
 
 ## Architecture
 
@@ -52,24 +46,9 @@ make lint  # Check code quality
 
 ## Important Files
 
-- **TODO.md** - Current tasks (Phase 2.2+ detailed implementation tasks)
+- **TODO.md** - Current tasks (Phase 2.3+)
 - **TODO-DONE.md** - Completed Phase 2+ tasks
 - **TODO-DONE-ARCHIVE.md** - Phase 1 history
-- **docs/technical/gopherlua_engine_architecture_design.md** - Lua implementation blueprint
-- **docs/technical/gopherlua_engine_implementation_plan.md** - Detailed implementation roadmap
-- **docs/archives/research/** - Archived research documents
-
-## Implementation Guidance
-
-### Phase 2.2 Current Status  
-✅ **All Core Components Completed**: LState Pool, Type Converter, Security Sandbox with comprehensive test coverage  
-🔄 **Next**: Core Engine Integration (Task 2.2.4) - all dependencies satisfied, ready to start
-
-### Phase 2.2.4 Next Steps
-1. Begin with **Task 2.2.4.1**: Engine Implementation (`/pkg/engine/gopherlua/engine.go`)
-2. Follow TDD: Write tests first, then implement
-3. Use architecture design as reference for all implementations
-4. Integrate all completed components: LStatePool, TypeConverter, SecurityManager
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

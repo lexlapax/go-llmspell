@@ -9,9 +9,10 @@
 5. [Bridge Integration](#bridge-integration)
 6. [Performance & Optimization](#performance--optimization)
 7. [Security Model](#security-model)
-8. [Development Roadmap](#development-roadmap)
-9. [Testing Strategy](#testing-strategy)
-10. [API Reference](#api-reference)
+8. [Timeout Handling](#timeout-handling--state-abandonment)
+9. [Development Roadmap](#development-roadmap)
+10. [Testing Strategy](#testing-strategy)
+11. [API Reference](#api-reference)
 
 ## Executive Summary
 
@@ -114,6 +115,11 @@ type PooledState struct {
     useCount    int64
     errorCount  int64
     healthScore float64
+    
+    // Execution tracking for timeout safety
+    executing   bool           // true when state is in use
+    done        chan struct{}  // closed when execution completes
+    mu          sync.Mutex     // protects executing flag
 }
 ```
 
@@ -122,6 +128,8 @@ type PooledState struct {
 - Health-based state recycling
 - Generation-based lifecycle management
 - Comprehensive metrics tracking
+- Safe timeout handling with state abandonment
+- Execution tracking for race condition prevention
 
 ### 2. Type Conversion System
 
@@ -318,6 +326,113 @@ type ResourceLimits struct {
 }
 ```
 
+### 9. Timeout Handling & State Abandonment
+
+**Design**: Safe handling of script timeouts without race conditions
+
+```go
+// State abandonment for timeout scenarios
+func (p *LStatePool) AbandonState(state *lua.LState) {
+    p.mu.Lock()
+    defer p.mu.Unlock()
+    
+    pooledState, exists := p.inUse[state]
+    if !exists {
+        return // State not from this pool
+    }
+    
+    // Mark as not executing
+    pooledState.mu.Lock()
+    pooledState.executing = false
+    if pooledState.done != nil {
+        close(pooledState.done)
+    }
+    pooledState.mu.Unlock()
+    
+    // Remove from inUse tracking
+    delete(p.inUse, state)
+    
+    // Update metrics
+    atomic.AddInt64(&p.metrics.inUse, -1)
+    atomic.AddInt64(&p.metrics.recycled, 1)
+    
+    // Note: We do NOT close the state here
+    // It will be garbage collected when PCall completes
+}
+
+// Execution pipeline timeout handling
+func (ep *ExecutionPipeline) executeScript(execCtx *ExecutionContext) error {
+    resultChan := make(chan error, 1)
+    
+    go func() {
+        err := execCtx.State.PCall(0, lua.MultRet, nil)
+        select {
+        case resultChan <- err:
+        default: // Timed out, discard result
+        }
+    }()
+    
+    select {
+    case err := <-resultChan:
+        return err
+    case <-execCtx.Context.Done():
+        // Abandon state instead of closing
+        abandonedState := execCtx.State
+        execCtx.State = nil // Prevent normal cleanup
+        ep.pool.AbandonState(abandonedState)
+        return ErrTimeout
+    }
+}
+```
+
+**Key Design Decision**: 
+- Never close an LState while PCall() is executing (not thread-safe)
+- Abandoned states complete naturally and are garbage collected
+- Pool tracks executing states and waits during shutdown
+- Prevents data races while maintaining clean timeout behavior
+
+```go
+// Pool shutdown waits for executing states
+func (p *LStatePool) Shutdown(ctx context.Context) error {
+    // Wait for executing states with timeout
+    waitCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+    defer cancel()
+    
+    for {
+        p.mu.RLock()
+        hasExecuting := false
+        for _, pooledState := range p.inUse {
+            pooledState.mu.Lock()
+            if pooledState.executing {
+                hasExecuting = true
+            }
+            pooledState.mu.Unlock()
+            if hasExecuting {
+                break
+            }
+        }
+        p.mu.RUnlock()
+        
+        if !hasExecuting {
+            break
+        }
+        
+        select {
+        case <-waitCtx.Done():
+            return fmt.Errorf("timeout waiting for executing states")
+        case <-time.After(10 * time.Millisecond):
+            // Check again
+        }
+    }
+    
+    // Safe to close all states now
+    for _, state := range p.states {
+        state.Close()
+    }
+    return nil
+}
+```
+
 ## Implementation Design
 
 ### Engine Implementation Structure
@@ -388,15 +503,14 @@ func (e *LuaEngine) Execute(ctx context.Context, script string, params map[strin
         state.L.SetGlobal(k, e.converter.ToLua(state.L, v))
     }
     
-    // Execute script
-    if err := state.L.DoString(script); err != nil {
-        return nil, e.enhanceError(err, state.L)
+    // Execute script with timeout handling via pipeline
+    pipeline := NewExecutionPipeline(e)
+    result, err := pipeline.Execute(ctx, script, params)
+    if err != nil {
+        return nil, err
     }
     
-    // Get results
-    results := e.collectResults(state.L)
-    
-    return e.converter.FromLua(results), nil
+    return result, nil
 }
 ```
 

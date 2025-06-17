@@ -336,3 +336,254 @@ func TestLStatePool_Shutdown(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestLStatePool_AbandonState(t *testing.T) {
+	// Create factory with minimal security
+	factory := NewLStateFactory(FactoryConfig{
+		SecurityManager: NewSecurityManager(SecurityConfig{
+			Level: SecurityLevelMinimal,
+		}),
+	})
+
+	// Create pool
+	pool, err := NewLStatePool(factory, PoolConfig{
+		MinSize:         1,
+		MaxSize:         3,
+		IdleTimeout:     10 * time.Second,
+		HealthThreshold: 0.5,
+		CleanupInterval: 10 * time.Second,
+	})
+	require.NoError(t, err)
+	defer func() {
+		_ = pool.Shutdown(context.Background())
+	}()
+
+	t.Run("abandon_state_removes_from_pool", func(t *testing.T) {
+		// Get a state
+		ctx := context.Background()
+		state, err := pool.Get(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, state)
+
+		// Initial metrics
+		initialMetrics := pool.GetMetrics()
+		assert.Equal(t, int64(1), initialMetrics.InUse)
+		initialRecycled := initialMetrics.TotalRecycled
+
+		// Abandon the state
+		pool.AbandonState(state)
+
+		// Check metrics after abandon
+		finalMetrics := pool.GetMetrics()
+		assert.Equal(t, int64(0), finalMetrics.InUse)
+		// TotalRecycled should have increased by 1
+		assert.Equal(t, int64(1), finalMetrics.TotalRecycled-initialRecycled)
+
+		// State should not be returned to available pool
+		assert.Equal(t, int64(0), finalMetrics.Available)
+	})
+
+	t.Run("abandon_nil_state_is_safe", func(t *testing.T) {
+		// Should not panic
+		pool.AbandonState(nil)
+	})
+
+	t.Run("abandon_unknown_state_is_safe", func(t *testing.T) {
+		// Create a state outside the pool
+		unknownState, err := factory.Create()
+		require.NoError(t, err)
+		defer unknownState.Close()
+
+		// Should not panic or affect metrics
+		initialMetrics := pool.GetMetrics()
+		pool.AbandonState(unknownState)
+		finalMetrics := pool.GetMetrics()
+
+		assert.Equal(t, initialMetrics.InUse, finalMetrics.InUse)
+		assert.Equal(t, initialMetrics.TotalRecycled, finalMetrics.TotalRecycled)
+	})
+
+	t.Run("abandoned_state_marked_not_executing", func(t *testing.T) {
+		// Get a state
+		ctx := context.Background()
+		state, err := pool.Get(ctx)
+		require.NoError(t, err)
+
+		// Find the pooled state
+		pool.mu.RLock()
+		pooledState, exists := pool.inUse[state]
+		pool.mu.RUnlock()
+		require.True(t, exists)
+
+		// Should be marked as executing
+		pooledState.mu.Lock()
+		assert.True(t, pooledState.executing)
+		done := pooledState.done
+		pooledState.mu.Unlock()
+		require.NotNil(t, done)
+
+		// Abandon the state
+		pool.AbandonState(state)
+
+		// Should be marked as not executing and done closed
+		pooledState.mu.Lock()
+		assert.False(t, pooledState.executing)
+		pooledState.mu.Unlock()
+
+		// Done channel should be closed
+		select {
+		case <-done:
+			// Good, it's closed
+		default:
+			t.Fatal("done channel should be closed after abandon")
+		}
+	})
+
+	t.Run("concurrent_abandon_is_safe", func(t *testing.T) {
+		ctx := context.Background()
+		states := make([]*lua.LState, 3)
+
+		// Get multiple states
+		for i := 0; i < 3; i++ {
+			state, err := pool.Get(ctx)
+			require.NoError(t, err)
+			states[i] = state
+		}
+
+		// Abandon them concurrently
+		var wg sync.WaitGroup
+		for _, state := range states {
+			wg.Add(1)
+			go func(s *lua.LState) {
+				defer wg.Done()
+				pool.AbandonState(s)
+			}(state)
+		}
+		wg.Wait()
+
+		// All states should be abandoned
+		metrics := pool.GetMetrics()
+		assert.Equal(t, int64(0), metrics.InUse)
+		// Don't check exact TotalRecycled as it's cumulative from all tests
+	})
+
+	t.Run("shutdown_waits_for_executing_states", func(t *testing.T) {
+		// Create a new pool for this test
+		testPool, err := NewLStatePool(factory, PoolConfig{
+			MinSize:         1,
+			MaxSize:         2,
+			IdleTimeout:     10 * time.Second,
+			HealthThreshold: 0.5,
+			CleanupInterval: 10 * time.Second,
+		})
+		require.NoError(t, err)
+
+		// Get a state
+		ctx := context.Background()
+		state, err := testPool.Get(ctx)
+		require.NoError(t, err)
+
+		// Find the pooled state
+		testPool.mu.RLock()
+		pooledState, exists := testPool.inUse[state]
+		testPool.mu.RUnlock()
+		require.True(t, exists)
+
+		// Simulate long-running execution
+		executionDone := make(chan struct{})
+		go func() {
+			defer close(executionDone)
+
+			// Simulate work
+			time.Sleep(100 * time.Millisecond)
+
+			// Mark as done (but check if already closed by Put)
+			pooledState.mu.Lock()
+			pooledState.executing = false
+			if pooledState.done != nil {
+				select {
+				case <-pooledState.done:
+					// Already closed
+				default:
+					close(pooledState.done)
+				}
+			}
+			pooledState.mu.Unlock()
+		}()
+
+		// Start shutdown in parallel
+		shutdownDone := make(chan error, 1)
+		go func() {
+			shutdownDone <- testPool.Shutdown(context.Background())
+		}()
+
+		// Shutdown should wait for execution to complete
+		select {
+		case <-time.After(200 * time.Millisecond):
+			// Execution should have finished by now
+		case err := <-shutdownDone:
+			// Shutdown completed
+			assert.NoError(t, err)
+		}
+
+		// Make sure execution finished
+		select {
+		case <-executionDone:
+			// Good
+		default:
+			t.Fatal("execution should have completed")
+		}
+	})
+}
+
+func TestLStatePool_TimeoutScenario(t *testing.T) {
+	// This test simulates the actual timeout scenario
+	factory := NewLStateFactory(FactoryConfig{
+		SecurityManager: NewSecurityManager(SecurityConfig{
+			Level: SecurityLevelMinimal,
+		}),
+	})
+
+	pool, err := NewLStatePool(factory, PoolConfig{
+		MinSize:         1,
+		MaxSize:         2,
+		IdleTimeout:     10 * time.Second,
+		HealthThreshold: 0.5,
+		CleanupInterval: 10 * time.Second,
+	})
+	require.NoError(t, err)
+	defer func() {
+		_ = pool.Shutdown(context.Background())
+	}()
+
+	// Simulate getting a state and having it timeout
+	ctx := context.Background()
+	state, err := pool.Get(ctx)
+	require.NoError(t, err)
+
+	// Simulate script execution that times out
+	executionComplete := make(chan struct{})
+	go func() {
+		defer close(executionComplete)
+
+		// Simulate long-running script
+		time.Sleep(200 * time.Millisecond)
+
+		// In real scenario, PCall would return here
+		// The state is already abandoned, so don't touch it
+	}()
+
+	// Simulate timeout - abandon the state
+	pool.AbandonState(state)
+
+	// State should be removed from pool immediately
+	metrics := pool.GetMetrics()
+	assert.Equal(t, int64(0), metrics.InUse)
+
+	// Wait for execution to complete
+	<-executionComplete
+
+	// Shutdown should be clean - no race
+	err = pool.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
