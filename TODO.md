@@ -15,55 +15,18 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1.1: Script Engine Interface [COMPLETED]
 - ✅ Phase 1.2: Core Bridge Foundation [COMPLETED]
 - ✅ Phase 1.3: Core Bridge System [COMPLETED]
-- ✅ Phase 1.4.1: Foundation Updates [COMPLETED - 2025-06-15]
-- ✅ Phase 1.4.2: State Bridge Enhancements [COMPLETED - 2025-06-15]
-- ✅ Phase 1.4.3: Utility Bridge Upgrades [COMPLETED - 2025-06-16]
-- ✅ Phase 1.4.4: LLM Bridge Advanced Features [COMPLETED - 2025-06-16]
-- ✅ Phase 1.4.5: Schema Bridge Full Implementation [COMPLETED - 2025-06-16]
-- ⏸️ Phase 1.4.6: Model Info Bridge Intelligence [DEFERRED - Not in go-llms]
-- ✅ Phase 1.4.7: Agent Bridge Advanced Features [COMPLETED - 2025-06-16]
-- ✅ Phase 1.4.8: Event Bridge Replacement [COMPLETED - 2025-06-16]
-- ✅ Phase 1.4.11: Engine Integration [COMPLETED - 2025-06-16]
+- ✅ Phase 1.4: v0.3.5 Feature Integration [COMPLETED - 2025-06-16]
 - ✅ Phase 1.5: Additional Original Bridges [COMPLETED - 2025-06-16]
+- ✅ Phase 1.6: Logging Infrastructure [COMPLETED - 2025-06-16]
 - 🚧 Phase 2-5: Engine Implementations - NOT STARTED
 
 ---
+## DEFERRED TASKS from different Phase - For Revisit
+### Section 1.3.
+  - [ ] **Task 1.3.20: Support for async/promise-based tool execution** (**[DEFERRED]** to script engine implementation)
+  - [ ] **Task 1.3.21: Test cross-engine compatibility** (**[DEFERRED]** to script engine implementation)
 
-## Phase 1: Engine and Bridge Foundation
-
-### ✅ 1.1 Script Engine Interface [COMPLETED]
-
-### ✅ 1.2 Core Bridge Foundation [COMPLETED]
-
-### ✅ 1.3 Core Bridge System [COMPLETED]
-#### Items for revisit:
-  - [ ] Support for async/promise-based tool execution (deferred to script engine implementation)
-  - [ ] Test cross-engine compatibility (deferred to script engine implementation)
-
-### 1.4 v0.3.5 Feature Integration
-
-#### ✅ 1.4.1 Foundation Updates [COMPLETED - 2025-06-15]
-
-All foundation updates for go-llms v0.3.5 integration completed. See TODO-DONE.md for detailed completion summary.
-
-#### ✅ 1.4.2 State Bridge Enhancements [COMPLETED - 2025-06-15]
-
-All state bridge enhancements completed. See TODO-DONE.md for detailed completion summary.
-
-#### ✅ 1.4.3 Utility Bridge Upgrades [COMPLETED - 2025-06-16]
-
-All utility bridge upgrades completed. See TODO-DONE.md for detailed completion summary.
-
-#### ✅ 1.4.4 LLM Bridge Advanced Features [COMPLETED - 2025-06-16]
-
-All LLM Bridge advanced features completed. See TODO-DONE.md for detailed completion summary.
-
-#### ✅ 1.4.5 Schema Bridge Full Implementation [COMPLETED - 2025-06-16]
-
-All schema bridge full implementation completed. See TODO-DONE.md for detailed completion summary.
-
-#### ⏸️ 1.4.6 Model Info Bridge Intelligence [DEFERRED - Features not in go-llms]
-
+#### ⏸️ 1.4.6 Model Info Bridge Intelligence **[DEFERRED]** - Features not in go-llms
 **Status**: Tasks deferred - missing features documented in `go-llms-upstream-request.md`
 
 - [ ] **Task 1.4.6.1: Add Model Performance Analytics** ⏸️ **[DEFERRED]**
@@ -77,73 +40,27 @@ All schema bridge full implementation completed. See TODO-DONE.md for detailed c
 - [ ] **Task 1.4.6.3: Add Model Catalog Export** ⏸️ **[DEFERRED]**
   - Missing from go-llms: Catalog export, OpenAPI generation for models
   - Documented in upstream request #3
+- [ ] **Task 1.5.8: Memory Bridge** ⏸️ **[DEFERRED]** - Not in go-llms yet
+  - [ ] Will implement when available in go-llms
 
-**Next Action**: Contribute features to go-llms first, then implement bridges
+### Section 1.5
+- [ ] **Task 1.5.9: Conversation Bridge** ⏸️ **[DEFERRED]** - Not in go-llms yet
+  - [ ] Will implement when available in go-llms
 
-#### ✅ 1.4.7 Agent Bridge Advanced Features [COMPLETED - 2025-06-16]
 
-All agent bridge advanced features completed. See TODO-DONE.md for detailed completion summary.
+## Phase 1: Engine and Bridge Foundation
 
-#### ✅ 1.4.8 Event Bridge Replacement [COMPLETED - 2025-06-16]
+### ✅ 1.1 Script Engine Interface [COMPLETED]
 
-All event bridge replacement features completed. See TODO-DONE.md for detailed completion summary.
+### ✅ 1.2 Core Bridge Foundation [COMPLETED]
 
-#### ✅ 1.4.9 Tools Bridge Enhancement [COMPLETED - 2025-06-16]
+### ✅ 1.3 Core Bridge System [COMPLETED]
 
-All tools bridge enhancement features completed. See TODO-DONE.md for detailed completion summary.
-
-#### ✅ 1.4.10 Workflow Bridge Serialization [COMPLETED - 2025-06-16]
-
-All workflow bridge serialization features completed. See TODO-DONE.md for detailed completion summary.
-
-#### ✅ 1.4.11 Engine Integration [COMPLETED - 2025-06-16]
-
-Enhanced engine capabilities for advanced scripting needs. Bridge go-llms core functionality for profiling, events, and API generation. See TODO-DONE.md for detailed completion summary.
+### ✅ 1.4 v0.3.5 Feature Integration [COMPLETED - 2025-06-16]
 
 ### ✅ 1.5 Additional Original Bridges [COMPLETED - 2025-06-16]
 
-All additional original bridges completed. See TODO-DONE.md for detailed completion summary.
-
-#### Items for revisit:
-
-- [ ] **Task 1.5.8: Memory Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
-  - [ ] Will implement when available in go-llms
-
-- [ ] **Task 1.5.9: Conversation Bridge** ⏸️ **[DEFERRED - Not in go-llms yet]**
-  - [ ] Will implement when available in go-llms
-
-### 1.6 Logging Infrastructure
-
-- [ ] **Task 1.6.1: Debug Logging Bridge**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Create `/pkg/bridge/util/debug.go`
-  - [ ] Bridge go-llms debug logging system (`pkg/internal/debug`)
-  - [ ] Support component-based debug control via `GO_LLMS_DEBUG` environment variable
-  - [ ] Expose debug.Printf and debug.Println to scripts
-  - [ ] Enable conditional compilation support (debug vs production builds)
-  - [ ] Support custom logger integration with debug.SetLogger
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- [ ] **Task 1.6.2: Structured Logging Bridge**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Create `/pkg/bridge/util/slog.go`
-  - [ ] Bridge slog integration for structured logging (`pkg/agent/core/logging_hook.go`)
-  - [ ] Expose log levels: Basic, Detailed, Debug with emoji enhancement
-  - [ ] Support structured logging with key-value pairs from scripts
-  - [ ] Enable log message truncation and JSON marshaling
-  - [ ] Bridge LoggingHook for agent operations
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
-
-- [ ] **Task 1.6.3: Script Logger Interface Design**
-  - [ ] Ensure we leverage imports from go-llms pkg
-  - [ ] Create `/pkg/bridge/util/script_logger.go`
-  - [ ] Design unified script-friendly logging APIs
-  - [ ] Combine debug and structured logging capabilities
-  - [ ] Support context propagation through script calls
-  - [ ] Integrate with existing bridge error handling
-  - [ ] Support log formatting and output customization
-  - [ ] Enable logger configuration from script environments
-  - [ ] Check tests to use go-llms pkg/testutils and normalize for duplicate patterns
+### ✅ 1.6 Logging Infrastructure [COMPLETED - 2025-06-16]
 
 ---
 
