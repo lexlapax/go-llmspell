@@ -58,40 +58,48 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### Phase 2.2: Core Engine Components
 
-#### 2.2.1: LState Pool Implementation
-- [ ] **Task 2.2.1.1: Create State Factory** (`/pkg/engine/gopherlua/factory.go`)
-  - [ ] Define `LStateFactory` struct with configuration options
-  - [ ] Implement `Create()` method for new LState instances
-  - [ ] Add library loading based on security level
-  - [ ] Implement initialization script execution
-  - [ ] Add warmup strategy for JIT optimization
-  - [ ] Create factory configuration with sensible defaults
+**Implementation Order Based on Dependencies:**
+1. **FIRST**: Security Sandbox (2.2.3) & Type Converter (2.2.2) - No dependencies, can be done in parallel
+2. **SECOND**: LState Pool (2.2.1) - Depends on Security Sandbox for library loading configuration
+3. **THIRD**: Core Engine (2.2.4) - Depends on all above components
 
-- [ ] **Task 2.2.1.2: Implement State Pool** (`/pkg/engine/gopherlua/pool.go`)
-  - [ ] Define `LStatePool` struct with adaptive parameters
-  - [ ] Implement `Get()` with health checking
-  - [ ] Implement `Put()` with cleanup validation
-  - [ ] Add pool metrics tracking (usage, health, performance)
-  - [ ] Implement adaptive scaling logic
-  - [ ] Add graceful shutdown with timeout
-  - [ ] Create pool configuration options
+#### 2.2.3: Security Sandbox [IMPLEMENT FIRST - Prerequisite for State Factory]
+- [ ] **Task 2.2.3.1: Security Manager** (`/pkg/engine/gopherlua/security.go`)
+  - [ ] Define `SecurityManager` with policy configuration
+  - [ ] Implement security level presets (minimal, standard, strict)
+  - [ ] Add library whitelist/blacklist system
+  - [ ] Implement function filtering
+  - [ ] Create security policy validation
 
-- [ ] **Task 2.2.1.3: State Health Management** (`/pkg/engine/gopherlua/health.go`)
-  - [ ] Define health metrics (memory, errors, execution time)
-  - [ ] Implement health scoring algorithm
-  - [ ] Add state recycling based on health
-  - [ ] Create health monitoring goroutine
-  - [ ] Implement state quarantine for unhealthy instances
+- [ ] **Task 2.2.3.2: Library Restrictions** (`/pkg/engine/gopherlua/security_libraries.go`)
+  - [ ] Implement safe library loader
+  - [ ] Remove dangerous functions from os library
+  - [ ] Remove io library in strict mode
+  - [ ] Remove debug library completely
+  - [ ] Add custom safe replacements for common functions
 
-- [ ] **Task 2.2.1.4: Pool Testing** (`/pkg/engine/gopherlua/pool_test.go`)
-  - [ ] Test concurrent state acquisition/release
-  - [ ] Test pool scaling under load
-  - [ ] Test health-based recycling
-  - [ ] Test graceful shutdown
-  - [ ] Benchmark pool performance
-  - [ ] Test resource leak prevention
+- [ ] **Task 2.2.3.3: Resource Limits** (`/pkg/engine/gopherlua/security_limits.go`)
+  - [ ] Implement instruction count limiting via debug hooks
+  - [ ] Add memory limit monitoring
+  - [ ] Implement execution timeout with context
+  - [ ] Add stack depth limits
+  - [ ] Create resource limit profiles
 
-#### 2.2.2: Type Converter System
+- [ ] **Task 2.2.3.4: Sandbox Enforcement** (`/pkg/engine/gopherlua/security_sandbox.go`)
+  - [ ] Implement `ApplySandbox()` for LState configuration
+  - [ ] Add import/require restrictions
+  - [ ] Implement global environment filtering
+  - [ ] Add metatable protection
+  - [ ] Create sandbox escape prevention
+
+- [ ] **Task 2.2.3.5: Security Testing** (`/pkg/engine/gopherlua/security_test.go`)
+  - [ ] Test library restrictions by security level
+  - [ ] Test resource limit enforcement
+  - [ ] Test sandbox escape attempts
+  - [ ] Test malicious script execution
+  - [ ] Benchmark security overhead
+
+#### 2.2.2: Type Converter System [IMPLEMENT FIRST - No Dependencies]
 - [ ] **Task 2.2.2.1: Core Type Converter** (`/pkg/engine/gopherlua/converter.go`)
   - [ ] Define `LuaTypeConverter` interface matching engine.TypeConverter
   - [ ] Implement `ToLua()` for Go → Lua conversions
@@ -136,43 +144,41 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Test function wrapping and error handling
   - [ ] Benchmark conversion performance
 
-#### 2.2.3: Security Sandbox
-- [ ] **Task 2.2.3.1: Security Manager** (`/pkg/engine/gopherlua/security.go`)
-  - [ ] Define `SecurityManager` with policy configuration
-  - [ ] Implement security level presets (minimal, standard, strict)
-  - [ ] Add library whitelist/blacklist system
-  - [ ] Implement function filtering
-  - [ ] Create security policy validation
+#### 2.2.1: LState Pool Implementation [IMPLEMENT SECOND - Depends on Security Sandbox]
+- [ ] **Task 2.2.1.1: Create State Factory** (`/pkg/engine/gopherlua/factory.go`)
+  - [ ] Define `LStateFactory` struct with configuration options
+  - [ ] Accept SecurityManager/SecurityConfig in factory config
+  - [ ] Use SecurityManager to determine library loading
+  - [ ] Implement `Create()` method with security sandbox application
+  - [ ] Add initialization script execution
+  - [ ] Add warmup strategy for JIT optimization
+  - [ ] Create factory configuration with sensible defaults
 
-- [ ] **Task 2.2.3.2: Library Restrictions** (`/pkg/engine/gopherlua/security_libraries.go`)
-  - [ ] Implement safe library loader
-  - [ ] Remove dangerous functions from os library
-  - [ ] Remove io library in strict mode
-  - [ ] Remove debug library completely
-  - [ ] Add custom safe replacements for common functions
+- [ ] **Task 2.2.1.2: Implement State Pool** (`/pkg/engine/gopherlua/pool.go`)
+  - [ ] Define `LStatePool` struct with adaptive parameters
+  - [ ] Implement `Get()` with health checking
+  - [ ] Implement `Put()` with cleanup validation
+  - [ ] Add pool metrics tracking (usage, health, performance)
+  - [ ] Implement adaptive scaling logic
+  - [ ] Add graceful shutdown with timeout
+  - [ ] Create pool configuration options
 
-- [ ] **Task 2.2.3.3: Resource Limits** (`/pkg/engine/gopherlua/security_limits.go`)
-  - [ ] Implement instruction count limiting via debug hooks
-  - [ ] Add memory limit monitoring
-  - [ ] Implement execution timeout with context
-  - [ ] Add stack depth limits
-  - [ ] Create resource limit profiles
+- [ ] **Task 2.2.1.3: State Health Management** (`/pkg/engine/gopherlua/health.go`)
+  - [ ] Define health metrics (memory, errors, execution time)
+  - [ ] Implement health scoring algorithm
+  - [ ] Add state recycling based on health
+  - [ ] Create health monitoring goroutine
+  - [ ] Implement state quarantine for unhealthy instances
 
-- [ ] **Task 2.2.3.4: Sandbox Enforcement** (`/pkg/engine/gopherlua/security_sandbox.go`)
-  - [ ] Implement `ApplySandbox()` for LState configuration
-  - [ ] Add import/require restrictions
-  - [ ] Implement global environment filtering
-  - [ ] Add metatable protection
-  - [ ] Create sandbox escape prevention
+- [ ] **Task 2.2.1.4: Pool Testing** (`/pkg/engine/gopherlua/pool_test.go`)
+  - [ ] Test concurrent state acquisition/release
+  - [ ] Test pool scaling under load
+  - [ ] Test health-based recycling
+  - [ ] Test graceful shutdown
+  - [ ] Benchmark pool performance
+  - [ ] Test resource leak prevention
 
-- [ ] **Task 2.2.3.5: Security Testing** (`/pkg/engine/gopherlua/security_test.go`)
-  - [ ] Test library restrictions by security level
-  - [ ] Test resource limit enforcement
-  - [ ] Test sandbox escape attempts
-  - [ ] Test malicious script execution
-  - [ ] Benchmark security overhead
-
-#### 2.2.4: Core Engine Integration
+#### 2.2.4: Core Engine Integration [IMPLEMENT THIRD - Depends on all above]
 - [ ] **Task 2.2.4.1: Engine Implementation** (`/pkg/engine/gopherlua/engine.go`)
   - [ ] Define `LuaEngine` struct implementing engine.ScriptEngine
   - [ ] Implement `Initialize()` with component setup

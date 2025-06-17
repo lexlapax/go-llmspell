@@ -6,12 +6,12 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lexlapax/go-llms v0.3.5
 	github.com/stretchr/testify v1.10.0
+	github.com/yuin/gopher-lua v1.1.1
 )
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
-	github.com/cbednarski/gosloc v0.0.0-20190601080016-c6075349e027 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kr/text v0.2.0 // indirect
