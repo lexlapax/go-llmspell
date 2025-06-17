@@ -108,12 +108,13 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - Memory monitoring isn't precise for individual Lua scripts
       - No instruction-level counting (gopher-lua limitation)
       
-- [ ] **Task 2.2.3.4: Sandbox Enforcement** (`/pkg/engine/gopherlua/security_sandbox.go`)
-  - [ ] Implement `ApplySandbox()` for LState configuration
-  - [ ] Add import/require restrictions
-  - [ ] Implement global environment filtering
-  - [ ] Add metatable protection
-  - [ ] Create sandbox escape prevention
+- [x] **Task 2.2.3.4: Sandbox Enforcement** (`/pkg/engine/gopherlua/security_sandbox.go`) ✅ COMPLETED
+  - [x] Implement `ApplySandbox()` for LState configuration
+  - [x] Add import/require restrictions (with whitelist/blacklist per security level)
+  - [x] Implement global environment filtering (blocks dangerous globals)
+  - [x] Add metatable protection (basic implementation, marked for enhancement)
+  - [x] Create sandbox escape prevention (blocks getfenv, setfenv, debug access)
+  ⏭️ Metatable protection (noted for future enhancement)
 
 - [ ] **Task 2.2.3.5: Security Testing** (`/pkg/engine/gopherlua/security_test.go`)
   - [ ] Test library restrictions by security level

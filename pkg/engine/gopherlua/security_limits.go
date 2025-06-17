@@ -69,9 +69,11 @@ func (rle *ResourceLimitEnforcer) ExecuteWithLimits(ctx context.Context, L *lua.
 
 	// Execute with monitoring
 	errChan := make(chan error, 1)
+	done := make(chan struct{}) // Signal when goroutine completes
 
 	go func() {
 		defer func() {
+			close(done) // Signal completion
 			if r := recover(); r != nil {
 				if err, ok := r.(error); ok {
 					errChan <- err
@@ -92,6 +94,8 @@ func (rle *ResourceLimitEnforcer) ExecuteWithLimits(ctx context.Context, L *lua.
 	for {
 		select {
 		case err := <-errChan:
+			// Wait for goroutine to fully complete to avoid race
+			<-done
 			// Execution completed
 			if err != nil {
 				return fmt.Errorf("script execution failed: %w", err)
@@ -99,12 +103,16 @@ func (rle *ResourceLimitEnforcer) ExecuteWithLimits(ctx context.Context, L *lua.
 			return nil
 
 		case <-execCtx.Done():
-			// Timeout or cancellation
-			return fmt.Errorf("execution limit exceeded: %w", execCtx.Err())
+			// Timeout or cancellation - wait for goroutine to finish
+			// The context will cause the Lua execution to abort
+			<-done
+			return fmt.Errorf("execution time limit exceeded: %w", execCtx.Err())
 
 		case <-ticker.C:
 			// Periodic resource check
 			if err := rle.checkResourceUsage(monitor); err != nil {
+				// Wait for goroutine completion on limit exceeded
+				<-done
 				return err
 			}
 		}
