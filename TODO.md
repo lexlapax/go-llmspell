@@ -54,61 +54,107 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ## Phase 2: Lua Engine Implementation
 ### 2.1 Lua Engine Research and Planning
-- [ ] 2.1.1. Research gopher-lua integration with go and add additional TODO.md entries as needed 
-- [ ] 2.1.2. Analyze lua_State management and memory integration
-- [ ] 2.1.3. Design ScriptValue ↔ Lua type conversion system 
-- [ ] 2.1.4. Plan coroutine integration for async operations
-- [ ] 2.1.5. Design security sandboxing approach
-- [ ] 2.1.6. Create detailed implementation roadmap
-- [ ] 2.1.7. Research Lua bytecode validation and security implications - may not apply to gopher-lua
-- [ ] 2.1.8. Investigate gopher-lua, Lua 5.4 warning system integration 
-- [ ] 2.1.9. Study gopher-Lua generational GC vs incremental GC trade-offs
-- [ ] 2.1.10. Research Lua debug introspection capabilities for development tools
-- [ ] 2.1.11. Combine all research documents and re-synthesize into one lua_engine_architecture.md document
+- [x] 2.1.1. Research gopher-lua integration with go and add additional TODO.md entries as needed 
+- [x] 2.1.2. Analyze LState management and pooling strategies
+- [x] 2.1.3. Design ScriptValue ↔ LValue type conversion system 
+- [x] 2.1.4. Plan goroutine and channel integration
+- [x] 2.1.5. Design security sandboxing approach
+- [x] 2.1.6. Research compiled chunk caching for performance
+- [ ] 2.1.7. Investigate instruction count limits and timeout mechanisms
+- [ ] 2.1.8. Study memory limits via registry configuration
+- [ ] 2.1.9. Research module preloading and lazy initialization
+- [ ] 2.1.10. Design error handling and stack trace preservation
+- [ ] 2.1.11. Plan LState lifecycle management (creation, pooling, cleanup)
+- [ ] 2.1.12. Research UserData vs Table for bridge object representation
+- [ ] 2.1.13. Investigate coroutine support for async bridge operations
+- [ ] 2.1.14. Combine all research documents and re-synthesize into one lua_engine_architecture.md document
+- [ ] 2.1.15. Create detailed implementation roadmap
 
 ### 2.2 Lua Engine Core
 - [ ] **Task 2.2.1: Engine Implementation**
-  - [ ] Create test file `/pkg/engine/lua/engine_test.go`
+  - [ ] Create test file `/pkg/engine/gopherlua/engine_test.go`
   - [ ] Test ScriptEngine interface implementation
-  - [ ] Test GopherLua integration
-  - [ ] Test resource limits enforcement
-  - [ ] Create `/pkg/engine/lua/engine.go`
+  - [ ] Test GopherLua LState creation and management
+  - [ ] Test resource limits (instruction count, memory, stack depth)
+  - [ ] Test script execution timeout mechanisms
+  - [ ] Test state cleanup and isolation between executions
+  - [ ] Create `/pkg/engine/gopherlua/engine.go`
   - [ ] Implement ScriptEngine interface for Lua
-  - [ ] Integrate GopherLua
-  - [ ] Implement resource limits
+  - [ ] Integrate GopherLua with LState management
+  - [ ] Implement resource limits and timeouts
+  - [ ] Add compiled chunk caching
+  - [ ] Implement state pooling with sync.Pool
 
 - [ ] **Task 2.2.2: Type Converter**
-  - [ ] Create test file `/pkg/engine/lua/converter_test.go`
-  - [ ] Test Lua ↔ Go type conversions
-  - [ ] Test Lua tables → Go maps/arrays
-  - [ ] Create `/pkg/engine/lua/converter.go`
-  - [ ] Implement type conversions
-  - [ ] Optimize for performance
+  - [ ] Create test file `/pkg/engine/gopherlua/converter_test.go`
+  - [ ] Test ScriptValue ↔ LValue conversions
+  - [ ] Test Lua tables ↔ Go maps/structs
+  - [ ] Test LUserData for complex types
+  - [ ] Test nil/error handling
+  - [ ] Test circular reference detection
+  - [ ] Create `/pkg/engine/gopherlua/converter.go`
+  - [ ] Implement bidirectional type converter
+  - [ ] Handle all LValue types (nil, bool, number, string, function, table, userdata)
+  - [ ] Implement efficient table traversal
+  - [ ] Add type validation and error reporting
+  - [ ] Optimize for minimal allocations
 
 - [ ] **Task 2.2.3: Security Sandbox**
-  - [ ] Create test file `/pkg/engine/lua/sandbox_test.go`
-  - [ ] Test dangerous functions disabled
-  - [ ] Test file system restrictions
-  - [ ] Create `/pkg/engine/lua/sandbox.go`
-  - [ ] Disable dangerous Lua functions
-  - [ ] Implement restrictions
+  - [ ] Create test file `/pkg/engine/gopherlua/sandbox_test.go`
+  - [ ] Test dangerous libraries disabled (io, os, debug)
+  - [ ] Test instruction count limits
+  - [ ] Test memory limits via registry size
+  - [ ] Test function whitelist/blacklist
+  - [ ] Test module loading restrictions
+  - [ ] Create `/pkg/engine/gopherlua/sandbox.go`
+  - [ ] Remove dangerous standard libraries
+  - [ ] Implement instruction counting
+  - [ ] Configure memory limits
+  - [ ] Create safe function whitelist
+  - [ ] Control module access
 
-### 2.3 Lua Standard Library
-- [ ] **Task 2.3.1: Core Modules**
-  - [ ] Create `/pkg/engine/lua/stdlib/core.lua`
-  - [ ] Create `/pkg/engine/lua/stdlib/llm.lua` - LLM bridge wrapper
-  - [ ] Create `/pkg/engine/lua/stdlib/tools.lua` - Tools bridge wrapper
-  - [ ] Create `/pkg/engine/lua/stdlib/workflow.lua` - Workflow bridge wrapper
-  - [ ] Create `/pkg/engine/lua/stdlib/state.lua` - State bridge wrapper
-  - [ ] Create `/pkg/engine/lua/stdlib/events.lua` - Events bridge wrapper
-  - [ ] Create `/pkg/engine/lua/stdlib/hooks.lua` - Hooks bridge wrapper
+### 2.3 Lua Bridge Integration
+- [ ] **Task 2.3.1: Bridge Module System**
+  - [ ] Create `/pkg/engine/gopherlua/modules.go` - Module registration system
+  - [ ] Implement bridge-to-module adapter
+  - [ ] Add lazy loading support
+  - [ ] Create module documentation generator
+
+- [ ] **Task 2.3.2: Core Bridge Modules**
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/core.lua` - Core utilities and helpers
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/llm.lua` - LLM bridge wrapper
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/tools.lua` - Tools bridge wrapper
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/workflow.lua` - Workflow bridge wrapper
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/state.lua` - State bridge wrapper
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/events.lua` - Events bridge wrapper
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/hooks.lua` - Hooks bridge wrapper
+  - [ ] Create `/pkg/engine/gopherlua/stdlib/logging.lua` - Logging bridge wrapper
+
+- [ ] **Task 2.3.3: Lua Idioms and Patterns**
+  - [ ] Design Lua-idiomatic APIs for bridges
+  - [ ] Create promise/async patterns for Lua
+  - [ ] Implement error handling conventions
+  - [ ] Document Lua best practices
+
+### 2.4 Lua Engine Advanced Features
+- [ ] **Task 2.4.1: Performance Optimization**
+  - [ ] Implement LState pooling
+  - [ ] Add compiled script caching
+  - [ ] Optimize hot paths in type conversion
+  - [ ] Benchmark against performance targets
+
+- [ ] **Task 2.4.2: Development Tools**
+  - [ ] Add Lua script debugger support
+  - [ ] Implement script profiling
+  - [ ] Create REPL for testing
+  - [ ] Add script validation tools
 
 ---
 
 ## Phase 3: JavaScript Engine Implementation
 
 ### 3.1 JavaScript Engine Research and Planning
-- [ ] 3.1.1. Research goja (https://github.com/dop251/goja) integration with go and add additional TODO.md entries as needed 
+- [ ] 3.1.1. Research goja (https://github.com/dop251/goja) integration with go. Find the best javascript engine to work with in go-llmspell (There are others). add additional TODO.md entries as needed 
 - [ ] 3.1.2. Analyze state management and memory integration
 - [ ] 3.1.3. Design ScriptValue ↔ javascript type conversion system 
 - [ ] 3.1.4. Plan goroutine integration for async operations
