@@ -65,26 +65,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### Phase 2.3: Bridge Integration Layer
 
-#### 2.3.1: Module System Architecture
-- [ ] **Task 2.3.1.1: Module Registry** (`/pkg/engine/gopherlua/modules.go`)
-  - [ ] Define `ModuleSystem` with registration
-  - [ ] Implement module dependency resolution
-  - [ ] Add lazy loading support
-  - [ ] Create module priority system
-  - [ ] Implement circular dependency detection
-
-- [ ] **Task 2.3.1.2: Module Loader** (`/pkg/engine/gopherlua/modules_loader.go`)
-  - [ ] Implement `PreloadModule()` for lazy loading
-  - [ ] Add module initialization callbacks
-  - [ ] Create profile-based loading
-  - [ ] Implement module bundlingc
-  - [ ] Add module version management
-
-- [ ] **Task 2.3.1.3: Module Testing** (`/pkg/engine/gopherlua/modules_test.go`)
-  - [ ] Test module registration and loading
-  - [ ] Test dependency resolution
-  - [ ] Test lazy loading behavior
-  - [ ] Test circular dependency detection
+#### 2.3.1: Module System Architecture ✅ COMPLETED [2025-06-19]
 
 #### 2.3.2: Bridge Adapters
 - [ ] **Task 2.3.2.1: Bridge Adapter Base** (`/pkg/engine/gopherlua/bridge_adapter.go`)
@@ -136,33 +117,33 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Test type conversions
 
 #### 2.3.3: Lua Standard Library
-- [ ] **Task 2.3.3.1: Core Utilities** (`/pkg/engine/gopherlua/stdlib/spell.lua`)
-  - [ ] Create spell namespace with utilities
-  - [ ] Add logging functions
-  - [ ] Implement error handling helpers
-  - [ ] Add type checking utilities
-  - [ ] Create debugging helpers
-
-- [ ] **Task 2.3.3.2: Promise Implementation** (`/pkg/engine/gopherlua/stdlib/promise.lua`)
+- [ ] **Task 2.3.3.1: Promise Implementation** (`/pkg/engine/gopherlua/stdlib/promise.lua`)
   - [ ] Implement Promise class
   - [ ] Add then/catch/finally methods
   - [ ] Implement Promise.all()
   - [ ] Implement Promise.race()
   - [ ] Add async/await syntax sugar
 
-- [ ] **Task 2.3.3.3: Error Handling** (`/pkg/engine/gopherlua/stdlib/errors.lua`)
+- [ ] **Task 2.3.3.2: Error Handling** (`/pkg/engine/gopherlua/stdlib/errors.lua`)
   - [ ] Create error class hierarchy
   - [ ] Add stack trace capture
   - [ ] Implement error chaining
   - [ ] Add retry mechanisms
   - [ ] Create error recovery patterns
 
-- [ ] **Task 2.3.3.4: Testing Utilities** (`/pkg/engine/gopherlua/stdlib/test.lua`)
+- [ ] **Task 2.3.3.3: Testing Utilities** (`/pkg/engine/gopherlua/stdlib/test.lua`)
   - [ ] Create assertion library
   - [ ] Add test runner
   - [ ] Implement mocking utilities
   - [ ] Add performance helpers
   - [ ] Create test reporting
+
+- [ ] **Task 2.3.3.4: Core Utilities** (`/pkg/engine/gopherlua/stdlib/spell.lua`)
+  - [ ] Create spell namespace with utilities
+  - [ ] Add logging functions
+  - [ ] Implement error handling helpers
+  - [ ] Add type checking utilities
+  - [ ] Create debugging helpers
 
 - [ ] **Task 2.3.3.5: Documentation** (`/pkg/engine/gopherlua/stdlib/README.md`)
   - [ ] Document all stdlib modules
