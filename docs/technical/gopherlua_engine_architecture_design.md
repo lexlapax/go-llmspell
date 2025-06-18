@@ -133,10 +133,17 @@ type PooledState struct {
 
 ### 2. Type Conversion System
 
-**Design**: Bidirectional type conversion with optimization
+**Design**: Bidirectional type conversion with ScriptValue as the universal intermediary
+
+#### ScriptValue Integration (Phase 2.3.2.5)
+
+The ScriptValue system was introduced as a critical architectural improvement to provide type safety across all script engines. This was a significant refactoring that touched every part of the engine.
 
 ```go
 type LuaTypeConverter struct {
+    // ScriptValue converter (PRIMARY - Added in Phase 2.3.2.5)
+    scriptConverter *ScriptValueConverter
+    
     // Caches for performance
     structCache  map[reflect.Type]*structInfo
     methodCache  map[reflect.Type]map[string]lua.LGFunction
@@ -145,16 +152,85 @@ type LuaTypeConverter struct {
     strategies   map[reflect.Type]ConversionStrategy
 }
 
-// Conversion flow
-ScriptValue ↔ LValue ↔ Go Types ↔ go-llms Types
+// Conversion flow (UPDATED in Phase 2.3.2.5)
+Lua Script ↔ LValue ↔ ScriptValue ↔ Bridge Methods ↔ go-llms
+     ↑                                                      ↓
+     └────────────── ScriptValue ←─────────────────────┘
+```
+
+#### ScriptValueConverter
+
+```go
+type ScriptValueConverter struct {
+    mu        sync.RWMutex
+    maxDepth  int
+    converter *LuaTypeConverter // Back reference for custom types
+}
+
+// Primary conversion methods
+func (c *ScriptValueConverter) LValueToScriptValue(L *lua.LState, lv lua.LValue) (engine.ScriptValue, error)
+func (c *ScriptValueConverter) ScriptValueToLValue(L *lua.LState, sv engine.ScriptValue) (lua.LValue, error)
 ```
 
 **Type Mappings**:
-- **Primitives**: Direct mapping (bool, number, string, nil)
-- **Collections**: Tables ↔ maps/slices with circular reference handling
-- **Functions**: Wrapped with proper error propagation
-- **Bridge Objects**: UserData with metatable methods
-- **Channels**: LChannel for coroutine communication
+
+| Lua Type | LValue Type | ScriptValue Type | Go Type |
+|----------|-------------|------------------|----------|
+| boolean | lua.LBool | BoolValue | bool |
+| number | lua.LNumber | NumberValue | float64 |
+| string | lua.LString | StringValue | string |
+| nil | lua.LNil | NilValue | nil |
+| table | lua.LTable | ObjectValue/ArrayValue | map/slice |
+| function | lua.LFunction | FunctionValue | func |
+| userdata | lua.LUserData | CustomValue | Bridge object |
+| channel | lua.LChannel | ChannelValue | chan interface{} |
+| error | (via metatable) | ErrorValue | error |
+
+#### Impact on Bridge Methods
+
+**Before ScriptValue:**
+```go
+// Dangerous runtime type assertions
+func bridgeMethod(L *lua.LState) int {
+    arg1 := L.Get(1)
+    prompt := arg1.(lua.LString) // PANIC if wrong type!
+    // ...
+}
+```
+
+**After ScriptValue:**
+```go
+// Type-safe with explicit validation
+func (b *Bridge) ExecuteMethod(ctx context.Context, name string, args []ScriptValue) (ScriptValue, error) {
+    // Compile-time type safety
+    if len(args) < 1 || args[0].Type() != engine.TypeString {
+        return nil, fmt.Errorf("expected string prompt, got %v", args[0].Type())
+    }
+    prompt := args[0].(engine.StringValue).Value()
+    // ...
+    return engine.NewStringValue(result), nil
+}
+```
+
+#### Circular Reference Handling
+
+```go
+// Prevents infinite loops in recursive structures
+func (c *ScriptValueConverter) lValueToScriptValueWithDepth(
+    L *lua.LState, 
+    lv lua.LValue, 
+    depth int, 
+    visited map[uintptr]bool,
+) (engine.ScriptValue, error) {
+    // Check circular references
+    ptr := reflect.ValueOf(lv).Pointer()
+    if visited[ptr] {
+        return engine.NewNilValue(), nil // Break cycle
+    }
+    visited[ptr] = true
+    // ... conversion logic
+}
+```
 
 ### 3. Module System
 
@@ -977,6 +1053,85 @@ local agent = llm.agent({
 
 local response = await(agent:generateAsync("Hello!"))
 ```
+
+## Lessons Learned: ScriptValue Refactoring
+
+### The Cost of Late Architectural Changes
+
+The ScriptValue type system refactoring (Phase 2.3.2.5) was one of the most significant architectural changes made after initial implementation. This section documents the lessons learned to prevent similar costly refactorings in future projects.
+
+#### What Went Wrong
+
+1. **Initial Design Oversight**: The original design used `interface{}` throughout, assuming Go's type system would be sufficient
+2. **Underestimated Complexity**: Failed to anticipate the complexity of type conversions across multiple script engines
+3. **Late Discovery**: Type safety issues only became apparent after implementing multiple bridges
+4. **Cascading Changes**: The refactoring touched every bridge, test, and engine component
+
+#### Impact of the Refactoring
+
+- **Time Cost**: ~2 full days of refactoring work
+- **Files Changed**: 50+ files across engine and bridge packages
+- **Tests Broken**: 100+ tests required updates
+- **Documentation**: All examples and docs needed revision
+
+#### What We Should Have Done
+
+1. **Design Type System First**:
+   ```go
+   // Should have started with:
+   type ScriptValue interface {
+       Type() ScriptValueType
+       // ... full interface
+   }
+   ```
+
+2. **Define Bridge Interface with Types**:
+   ```go
+   // Not interface{} everywhere
+   type Bridge interface {
+       ExecuteMethod(ctx, name string, args []ScriptValue) (ScriptValue, error)
+   }
+   ```
+
+3. **Create Type Conversion Layer Early**:
+   - Design converters for each engine upfront
+   - Test edge cases before implementing bridges
+
+#### Key Takeaways
+
+1. **Type Safety is Fundamental**: In multi-language bridge systems, a universal type system should be the first design decision
+
+2. **Interface Design Before Implementation**: All bridge interfaces should be fully specified with proper types before any implementation
+
+3. **Test Type Conversions Early**: Create comprehensive type conversion tests before building features
+
+4. **Document Type Flows**: Visual diagrams of type conversion flows prevent confusion:
+   ```
+   Script → ScriptValue → Bridge → go-llms
+           ↑_____________________↓
+   ```
+
+5. **Consider All Engines**: Design decisions must work across all planned script engines, not just the first one
+
+#### Positive Outcomes
+
+Despite the cost, the ScriptValue refactoring delivered significant benefits:
+
+- **Compile-Time Safety**: Catches type errors at compile time instead of runtime panics
+- **Better Error Messages**: Can report exact type mismatches to script authors
+- **Cleaner Code**: Bridge implementations are more readable and maintainable
+- **Performance**: Eliminated many runtime type assertions and reflection calls
+- **Future Proof**: New engines can leverage the same type system
+
+#### Recommendations for Future Projects
+
+1. **Start with Types**: Define your type system before writing any bridge code
+2. **Prototype All Engines**: Test type conversions with all planned engines early
+3. **Use Code Generation**: Consider generating repetitive type conversion code
+4. **Benchmark Early**: Test performance impact of type conversions upfront
+5. **Document Extensively**: Type systems need thorough documentation with examples
+
+The ScriptValue refactoring, while costly, ultimately made go-llmspell more robust and maintainable. The lesson is clear: invest in proper type system design upfront to avoid expensive refactoring later.
 
 ## Conclusion
 

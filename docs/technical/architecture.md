@@ -315,8 +315,14 @@ type Bridge interface {
     
     // Registration with script engine
     RegisterWithEngine(engine ScriptEngine) error
+    
+    // ScriptValue-based execution (REQUIRED as of Phase 2.3.2.5)
+    ExecuteMethod(ctx context.Context, name string, args []ScriptValue) (ScriptValue, error)
+    ValidateMethod(name string, args []ScriptValue) error
 }
 ```
+
+**Important**: As of Phase 2.3.2.5, all bridges MUST implement the ScriptValue-based `ExecuteMethod` and `ValidateMethod`. The legacy `interface{}`-based methods are deprecated and will be removed.
 
 **Bridge Implementation Rules:**
 1. **Never implement features** - Only wrap go-llms APIs
@@ -358,45 +364,198 @@ type Bridge interface {
 
 ## Type System
 
+### ScriptValue: The Universal Type System
+
+**Introduced in Phase 2.3.2.5** (2025-06-19), ScriptValue is the foundational type system that enables type-safe communication between script engines and Go code. This was a critical architectural refactoring that should have been part of the initial design.
+
+#### Why ScriptValue?
+
+The original design used `interface{}` throughout, leading to:
+- Runtime type errors and panics
+- Inconsistent type handling across engines
+- Difficult debugging with unclear type mismatches
+- No compile-time safety for bridge implementations
+
+#### ScriptValue Architecture
+
+```go
+// ScriptValue is the universal interface for cross-engine values
+type ScriptValue interface {
+    Type() ScriptValueType     // Get the type of this value
+    IsNil() bool              // Check if value is nil/null/undefined
+    String() string           // String representation
+    ToGo() interface{}        // Convert to native Go type
+    Equals(ScriptValue) bool  // Value equality check
+}
+
+// Concrete implementations for each type
+type NilValue struct{}
+type BoolValue struct{ value bool }
+type NumberValue struct{ value float64 }
+type StringValue struct{ value string }
+type ArrayValue struct{ elements []ScriptValue }
+type ObjectValue struct{ fields map[string]ScriptValue }
+type FunctionValue struct{ name string; fn interface{} }
+type ErrorValue struct{ err error }
+type ChannelValue struct{ id string; ch interface{} }
+type CustomValue struct{ typeName string; value interface{} }
+```
+
+#### Type-Safe Bridge Methods
+
+**Before ScriptValue:**
+```go
+// Runtime type assertions everywhere
+func (b *Bridge) ExecuteMethod(name string, args []interface{}) (interface{}, error) {
+    // Dangerous - panics if wrong type
+    prompt := args[0].(string)
+    options := args[1].(map[string]interface{})
+    // ...
+}
+```
+
+**After ScriptValue:**
+```go
+// Compile-time type safety
+func (b *Bridge) ExecuteMethod(ctx context.Context, name string, args []ScriptValue) (ScriptValue, error) {
+    // Safe type checking
+    if args[0].Type() != TypeString {
+        return nil, fmt.Errorf("expected string, got %s", args[0].Type())
+    }
+    prompt := args[0].(StringValue).Value()
+    // ...
+    return NewStringValue(result), nil
+}
+```
+
 ### Type Conversion Flow
 
 ```
-Script Type → TypeConverter → Go Type → go-llms
-     ↑                                      ↓
-     └──────── TypeConverter ←─────────────┘
+Script Type → ScriptValue → TypeConverter → Go Type → go-llms
+     ↑                                                    ↓
+     └────────── ScriptValue ← TypeConverter ←──────────┘
 ```
 
 ### Supported Type Mappings
 
-| Script Type | Go Type | Notes |
-|-------------|---------|-------|
-| boolean | bool | Direct mapping |
-| number | float64 | All numbers are float64 |
-| string | string | UTF-8 encoded |
-| table/object | map[string]interface{} | Recursive conversion |
-| array | []interface{} | Preserves order |
-| function | func(...) ... | With adapter |
-| nil/null | nil | Direct mapping |
+| Script Type | ScriptValue | Go Type | Notes |
+|-------------|-------------|---------|-------|
+| boolean | BoolValue | bool | Direct mapping |
+| number | NumberValue | float64 | All numbers are float64 |
+| string | StringValue | string | UTF-8 encoded |
+| table/object | ObjectValue | map[string]interface{} | Recursive conversion |
+| array | ArrayValue | []interface{} | Preserves order |
+| function | FunctionValue | func(...) ... | With adapter |
+| nil/null | NilValue | nil | Direct mapping |
+| error | ErrorValue | error | Error propagation |
+| channel | ChannelValue | chan interface{} | Async operations |
+| custom | CustomValue | interface{} | Bridge-specific types |
 
 ### Type Converter Interface
 
 ```go
 type TypeConverter interface {
-    // Basic type conversions
-    ToBoolean(value interface{}) (bool, error)
-    ToNumber(value interface{}) (float64, error)
-    ToString(value interface{}) (string, error)
-    ToArray(value interface{}) ([]interface{}, error)
-    ToMap(value interface{}) (map[string]interface{}, error)
+    // ScriptValue conversions (PRIMARY - Added in 2.3.2.5)
+    ToBoolean(value ScriptValue) (bool, error)
+    ToNumber(value ScriptValue) (float64, error)
+    ToString(value ScriptValue) (string, error)
+    ToArray(value ScriptValue) ([]ScriptValue, error)
+    ToMap(value ScriptValue) (map[string]ScriptValue, error)
     
-    // Advanced conversions
-    ToStruct(source interface{}, target interface{}) error
-    ToFunction(fn interface{}) (interface{}, error)
-    FromFunction(fn interface{}) (interface{}, error)
+    // Engine-specific conversions
+    ToLuaScriptValue(L *lua.LState, lv lua.LValue) (ScriptValue, error)
+    FromLuaScriptValue(L *lua.LState, sv ScriptValue) (lua.LValue, error)
+    
+    // Legacy interface{} conversions (for backward compatibility)
+    ConvertToScriptValue(value interface{}) (ScriptValue, error)
+    ConvertFromScriptValue(sv ScriptValue) (interface{}, error)
     
     // Type information
-    GetType(value interface{}) TypeInfo
+    GetType(value ScriptValue) TypeInfo
     SupportsType(t reflect.Type) bool
+}
+```
+
+### ScriptValue Usage Patterns
+
+#### 1. Bridge Method Implementation
+```go
+func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []ScriptValue) (ScriptValue, error) {
+    switch name {
+    case "generate":
+        // Type-safe argument extraction
+        if len(args) < 1 || args[0].Type() != TypeString {
+            return nil, fmt.Errorf("generate requires string prompt")
+        }
+        prompt := args[0].(StringValue).Value()
+        
+        // Optional parameters with safe defaults
+        options := make(map[string]interface{})
+        if len(args) > 1 && args[1].Type() == TypeObject {
+            options = args[1].ToGo().(map[string]interface{})
+        }
+        
+        // Call go-llms
+        result, err := b.llm.Generate(ctx, prompt, options)
+        if err != nil {
+            return NewErrorValue(err), nil
+        }
+        
+        // Return typed result
+        return NewStringValue(result), nil
+    }
+}
+```
+
+#### 2. Complex Type Handling
+```go
+// Converting nested structures
+func convertComplexResult(data map[string]interface{}) ScriptValue {
+    fields := make(map[string]ScriptValue)
+    for k, v := range data {
+        fields[k] = convertToScriptValue(v)
+    }
+    return NewObjectValue(fields)
+}
+
+// Handling arrays of objects
+func convertModelList(models []ModelInfo) ScriptValue {
+    elements := make([]ScriptValue, len(models))
+    for i, model := range models {
+        elements[i] = NewObjectValue(map[string]ScriptValue{
+            "id":          NewStringValue(model.ID),
+            "name":        NewStringValue(model.Name),
+            "maxTokens":   NewNumberValue(float64(model.MaxTokens)),
+            "description": NewStringValue(model.Description),
+        })
+    }
+    return NewArrayValue(elements)
+}
+```
+
+#### 3. Error Handling
+```go
+// Proper error propagation
+func (b *Bridge) safeBridgeCall(name string, args []ScriptValue) (ScriptValue, error) {
+    // Validate method exists
+    if !b.hasMethod(name) {
+        return nil, fmt.Errorf("unknown method: %s", name)
+    }
+    
+    // Validate arguments
+    if err := b.ValidateMethod(name, args); err != nil {
+        return nil, fmt.Errorf("invalid arguments: %w", err)
+    }
+    
+    // Execute with panic recovery
+    defer func() {
+        if r := recover(); r != nil {
+            // Convert panic to error
+            err = fmt.Errorf("bridge panic: %v", r)
+        }
+    }()
+    
+    return b.ExecuteMethod(context.Background(), name, args)
 }
 ```
 
