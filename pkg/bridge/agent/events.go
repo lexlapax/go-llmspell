@@ -816,7 +816,7 @@ func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 
 		subID := args[0].(engine.StringValue).Value()
 		pattern, filterCount, found := b.eventBus.GetSubscriptionInfo(subID)
-		
+
 		if !found {
 			return engine.NewNilValue(), nil
 		}

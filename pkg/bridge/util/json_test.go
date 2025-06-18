@@ -338,7 +338,7 @@ func TestUtilJSONBridgeUnmarshalStrict(t *testing.T) {
 
 	// Test with disallow unknown fields
 	// This would fail with unknown fields in a strictly typed struct
-	result, err = bridge.ExecuteMethod(ctx, "unmarshalStrict", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "unmarshalStrict", []engine.ScriptValue{
 		engine.NewStringValue(`{"name":"test","unknown":"field"}`),
 		engine.NewBoolValue(true),
 	})

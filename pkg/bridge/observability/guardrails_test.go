@@ -187,7 +187,7 @@ func TestGuardrailsBridge(t *testing.T) {
 					engine.NewStringValue(guardrailID),
 					engine.NewObjectValue(invalidState),
 				}
-				result, err = bridge.ExecuteMethod(ctx, "validateGuardrail", invalidParams)
+				_, err = bridge.ExecuteMethod(ctx, "validateGuardrail", invalidParams)
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "validation failed")
 			},

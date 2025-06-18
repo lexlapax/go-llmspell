@@ -339,15 +339,6 @@ func convertModelsToScriptValue(models []domain.Model) engine.ScriptValue {
 	return engine.NewArrayValue(values)
 }
 
-// Helper function to convert models to script format (kept for compatibility)
-func convertModelsToScript(models []domain.Model) []map[string]interface{} {
-	result := make([]map[string]interface{}, len(models))
-	for i, m := range models {
-		result[i] = convertModelToScript(m)
-	}
-	return result
-}
-
 // Helper function to convert a single model to ScriptValue
 func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
 	pricingFields := map[string]engine.ScriptValue{
@@ -373,25 +364,6 @@ func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
 }
 
 // Helper function to convert a single model to script format
-func convertModelToScript(m domain.Model) map[string]interface{} {
-	return map[string]interface{}{
-		"provider":         m.Provider,
-		"name":             m.Name,
-		"displayName":      m.DisplayName,
-		"description":      m.Description,
-		"documentationURL": m.DocumentationURL,
-		"contextWindow":    m.ContextWindow,
-		"maxOutputTokens":  m.MaxOutputTokens,
-		"trainingCutoff":   m.TrainingCutoff,
-		"modelFamily":      m.ModelFamily,
-		"lastUpdated":      m.LastUpdated,
-		"pricing": map[string]interface{}{
-			"inputPer1kTokens":  m.Pricing.InputPer1kTokens,
-			"outputPer1kTokens": m.Pricing.OutputPer1kTokens,
-		},
-		"capabilities": convertCapabilitiesToScript(m.Capabilities),
-	}
-}
 
 // Helper function to convert capabilities to ScriptValue
 func convertCapabilitiesToScriptValue(c domain.Capabilities) engine.ScriptValue {
@@ -426,32 +398,4 @@ func convertCapabilitiesToScriptValue(c domain.Capabilities) engine.ScriptValue 
 		"streaming":       engine.NewBoolValue(c.Streaming),
 	}
 	return engine.NewObjectValue(fields)
-}
-
-// Helper function to convert capabilities to script format
-func convertCapabilitiesToScript(c domain.Capabilities) map[string]interface{} {
-	return map[string]interface{}{
-		"text": map[string]interface{}{
-			"read":  c.Text.Read,
-			"write": c.Text.Write,
-		},
-		"image": map[string]interface{}{
-			"read":  c.Image.Read,
-			"write": c.Image.Write,
-		},
-		"audio": map[string]interface{}{
-			"read":  c.Audio.Read,
-			"write": c.Audio.Write,
-		},
-		"video": map[string]interface{}{
-			"read":  c.Video.Read,
-			"write": c.Video.Write,
-		},
-		"file": map[string]interface{}{
-			"read":  c.File.Read,
-			"write": c.File.Write,
-		},
-		"functionCalling": c.FunctionCalling,
-		"streaming":       c.Streaming,
-	}
 }

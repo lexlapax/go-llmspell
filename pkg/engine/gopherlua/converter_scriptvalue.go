@@ -5,7 +5,6 @@ package gopherlua
 
 import (
 	"fmt"
-	"sync"
 	"unsafe"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -14,7 +13,6 @@ import (
 
 // ScriptValueConverter handles conversion between ScriptValue and lua.LValue
 type ScriptValueConverter struct {
-	mu        sync.RWMutex
 	maxDepth  int
 	converter *LuaTypeConverter // Reference to existing converter for custom types
 }

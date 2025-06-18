@@ -1037,18 +1037,3 @@ func (b *LLMBridge) updateMetrics(provider string, success bool, latency time.Du
 }
 
 // getProvider returns the active provider
-func (b *LLMBridge) getActiveProvider() (bridge.Provider, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	if b.activeProvider == "" {
-		return nil, fmt.Errorf("no active provider set")
-	}
-
-	provider, exists := b.providers[b.activeProvider]
-	if !exists {
-		return nil, fmt.Errorf("provider not found: %s", b.activeProvider)
-	}
-
-	return provider, nil
-}

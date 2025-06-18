@@ -110,11 +110,15 @@ func TestProvidersBridge_CreateProviderFromEnvironment(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize bridge
-	require.NoError(t, bridge.Initialize(ctx))
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
 	// Set environment variables
-	os.Setenv("OPENAI_API_KEY", "test-api-key")
-	defer os.Unsetenv("OPENAI_API_KEY")
+	err = os.Setenv("OPENAI_API_KEY", "test-api-key")
+	require.NoError(t, err)
+	defer func() {
+		_ = os.Unsetenv("OPENAI_API_KEY")
+	}()
 
 	// Test createProviderFromEnvironment
 	args := []engine.ScriptValue{

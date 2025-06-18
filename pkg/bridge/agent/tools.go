@@ -649,10 +649,10 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 
 		// Execute the tool
 		result, err := tool.Execute(toolCtx, params)
-		
+
 		// Update metrics
 		b.updateExecutionMetrics(name, err == nil, time.Since(startTime), err)
-		
+
 		if err != nil {
 			return nil, fmt.Errorf("tool execution failed: %w", err)
 		}
@@ -1165,35 +1165,6 @@ func convertScriptValueToInterface(v engine.ScriptValue) interface{} {
 	}
 }
 
-func toolInfoToMap(info bridge.ToolInfo) map[string]interface{} {
-	result := map[string]interface{}{
-		"name":        info.Name,
-		"description": info.Description,
-		"category":    info.Category,
-		"tags":        info.Tags,
-		"version":     info.Version,
-		"usageHint":   info.UsageHint,
-		"package":     info.Package,
-	}
-
-	// Parse schemas if available
-	if len(info.ParameterSchema) > 0 {
-		var params interface{}
-		if err := json.Unmarshal(info.ParameterSchema, &params); err == nil {
-			result["parameterSchema"] = params
-		}
-	}
-
-	if len(info.OutputSchema) > 0 {
-		var output interface{}
-		if err := json.Unmarshal(info.OutputSchema, &output); err == nil {
-			result["outputSchema"] = output
-		}
-	}
-
-	return result
-}
-
 func toolSchemaToScriptValue(schema *bridge.ToolSchema) map[string]engine.ScriptValue {
 	return map[string]engine.ScriptValue{
 		"name":          engine.NewStringValue(schema.Name),
@@ -1203,18 +1174,6 @@ func toolSchemaToScriptValue(schema *bridge.ToolSchema) map[string]engine.Script
 		"examples":      engine.ConvertToScriptValue(schema.Examples),
 		"constraints":   engine.ConvertToScriptValue(schema.Constraints),
 		"errorGuidance": engine.ConvertToScriptValue(schema.ErrorGuidance),
-	}
-}
-
-func toolSchemaToMap(schema *bridge.ToolSchema) map[string]interface{} {
-	return map[string]interface{}{
-		"name":          schema.Name,
-		"description":   schema.Description,
-		"parameters":    schema.Parameters,
-		"output":        schema.Output,
-		"examples":      schema.Examples,
-		"constraints":   schema.Constraints,
-		"errorGuidance": schema.ErrorGuidance,
 	}
 }
 
@@ -1249,24 +1208,6 @@ func customToolToScriptValue(name string, tool domain.Tool) map[string]engine.Sc
 		"usageInstructions":    engine.NewStringValue(tool.UsageInstructions()),
 		"constraints":          engine.ConvertToScriptValue(tool.Constraints()),
 		"errorGuidance":        engine.ConvertToScriptValue(tool.ErrorGuidance()),
-	}
-}
-
-func customToolToInfo(name string, tool domain.Tool) map[string]interface{} {
-	return map[string]interface{}{
-		"name":                 name,
-		"description":          tool.Description(),
-		"category":             tool.Category(),
-		"tags":                 tool.Tags(),
-		"version":              tool.Version(),
-		"custom":               true,
-		"isDeterministic":      tool.IsDeterministic(),
-		"isDestructive":        tool.IsDestructive(),
-		"requiresConfirmation": tool.RequiresConfirmation(),
-		"estimatedLatency":     tool.EstimatedLatency(),
-		"usageInstructions":    tool.UsageInstructions(),
-		"constraints":          tool.Constraints(),
-		"errorGuidance":        tool.ErrorGuidance(),
 	}
 }
 
@@ -1500,58 +1441,6 @@ func (b *ToolsBridge) toolToSchemaScriptValue(tool domain.Tool) map[string]engin
 		ErrorGuidance: tool.ErrorGuidance(),
 	}
 	return toolSchemaToScriptValue(schema)
-}
-
-func (b *ToolsBridge) toolToSchemaMap(tool domain.Tool) map[string]interface{} {
-	result := map[string]interface{}{
-		"name":          tool.Name(),
-		"description":   tool.Description(),
-		"constraints":   tool.Constraints(),
-		"errorGuidance": tool.ErrorGuidance(),
-	}
-
-	// Convert parameter schema
-	if paramSchema := tool.ParameterSchema(); paramSchema != nil {
-		result["parameters"] = b.schemaToMap(paramSchema)
-	}
-
-	// Convert output schema
-	if outputSchema := tool.OutputSchema(); outputSchema != nil {
-		result["output"] = b.schemaToMap(outputSchema)
-	}
-
-	// Convert examples
-	examples := tool.Examples()
-	if len(examples) > 0 {
-		exampleMaps := make([]map[string]interface{}, 0, len(examples))
-		for _, ex := range examples {
-			exampleMaps = append(exampleMaps, map[string]interface{}{
-				"name":        ex.Name,
-				"description": ex.Description,
-				"input":       ex.Input,
-				"output":      ex.Output,
-			})
-		}
-		result["examples"] = exampleMaps
-	}
-
-	return result
-}
-
-// schemaToMap converts a domain.Schema to a map
-func (b *ToolsBridge) schemaToMap(schema *schemaDomain.Schema) map[string]interface{} {
-	// Marshal schema to JSON then unmarshal to map
-	schemaJSON, err := json.Marshal(schema)
-	if err != nil {
-		return nil
-	}
-
-	var schemaMap map[string]interface{}
-	if err := json.Unmarshal(schemaJSON, &schemaMap); err != nil {
-		return nil
-	}
-
-	return schemaMap
 }
 
 // Helper methods for enhanced features

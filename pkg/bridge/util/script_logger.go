@@ -582,7 +582,7 @@ func (sl *ScriptLoggerBridge) configure(ctx context.Context, args []engine.Scrip
 	if formatVal, ok := configObj["format"]; ok && formatVal.Type() == engine.TypeString {
 		sl.config.Format = formatVal.(engine.StringValue).Value()
 		// Configure slog with new format
-		sl.slogBridge.ExecuteMethod(ctx, "configureLogger", []engine.ScriptValue{
+		_, _ = sl.slogBridge.ExecuteMethod(ctx, "configureLogger", []engine.ScriptValue{
 			engine.NewObjectValue(map[string]engine.ScriptValue{
 				"format": formatVal,
 			}),
@@ -605,7 +605,7 @@ func (sl *ScriptLoggerBridge) configure(ctx context.Context, args []engine.Scrip
 				compName := comp.(engine.StringValue).Value()
 				sl.config.Components[compName] = true
 				// Enable in debug bridge
-				sl.debugBridge.ExecuteMethod(ctx, "enableDebugComponent", []engine.ScriptValue{
+				_, _ = sl.debugBridge.ExecuteMethod(ctx, "enableDebugComponent", []engine.ScriptValue{
 					engine.NewStringValue(compName),
 				})
 			}
@@ -880,7 +880,7 @@ func (sl *ScriptLoggerBridge) logWithLevelAndContext(ctx context.Context, level,
 				engine.NewStringValue(component),
 				engine.NewStringValue(fmt.Sprintf("[%s] %s", strings.ToUpper(level), message)),
 			}
-			sl.debugBridge.ExecuteMethod(ctx, "debugPrintln", debugArgs)
+			_, _ = sl.debugBridge.ExecuteMethod(ctx, "debugPrintln", debugArgs)
 		}
 	}
 
@@ -920,7 +920,7 @@ func (sl *ScriptLoggerBridge) logWithLevelAndContext(ctx context.Context, level,
 		}
 
 		// Call appropriate slog method
-		sl.slogBridge.ExecuteMethod(ctx, level, slogArgs)
+		_, _ = sl.slogBridge.ExecuteMethod(ctx, level, slogArgs)
 	}
 
 	return engine.NewNilValue(), nil

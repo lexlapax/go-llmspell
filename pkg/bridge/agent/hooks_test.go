@@ -71,9 +71,9 @@ func TestHooksBridge_ValidateMethod(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "valid registerHook",
-			method:      "registerHook",
-			args:        []engine.ScriptValue{
+			name:   "valid registerHook",
+			method: "registerHook",
+			args: []engine.ScriptValue{
 				engine.NewStringValue("test-hook"),
 				engine.NewObjectValue(map[string]engine.ScriptValue{
 					"priority": engine.NewNumberValue(10),
@@ -94,9 +94,9 @@ func TestHooksBridge_ValidateMethod(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "valid executeHooks",
-			method:      "executeHooks",
-			args:        []engine.ScriptValue{
+			name:   "valid executeHooks",
+			method: "executeHooks",
+			args: []engine.ScriptValue{
 				engine.NewStringValue("beforeGenerate"),
 				engine.NewObjectValue(map[string]engine.ScriptValue{}),
 			},
@@ -131,7 +131,7 @@ func TestHooksBridge_ExecuteMethod_RegisterHook(t *testing.T) {
 	// Test registerHook
 	hookID := "test-hook"
 	hookDef := map[string]engine.ScriptValue{
-		"priority": engine.NewNumberValue(10),
+		"priority":       engine.NewNumberValue(10),
 		"beforeGenerate": engine.NewFunctionValue("beforeGenerate", func(ctx interface{}, messages interface{}) {}),
 	}
 
@@ -229,7 +229,7 @@ func TestHooksBridge_ExecuteMethod_ExecuteHooks(t *testing.T) {
 	registerArgs := []engine.ScriptValue{
 		engine.NewStringValue(hookID),
 		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"priority": engine.NewNumberValue(5),
+			"priority":       engine.NewNumberValue(5),
 			"beforeGenerate": engine.NewFunctionValue("beforeGenerate", func(ctx interface{}, messages interface{}) {}),
 		}),
 	}
@@ -290,7 +290,6 @@ func TestHooksBridge_ExecuteMethod_UnregisterHook(t *testing.T) {
 	hooks = result.(engine.ArrayValue).ToGo().([]interface{})
 	assert.Equal(t, 0, len(hooks), "Should have no hooks after unregister")
 }
-
 
 func TestHooksBridge_ExecuteMethod_ClearHooks(t *testing.T) {
 	bridge := NewHooksBridge()

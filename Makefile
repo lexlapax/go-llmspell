@@ -22,7 +22,7 @@ TEST_FLAGS=-v -race
 COVERAGE_FILE=coverage.out
 COVERAGE_HTML=coverage.html
 
-.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help build-examples mod
+.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help build-examples mod bench bench-run
 
 # Default target
 all: clean fmt vet test build
@@ -151,7 +151,16 @@ build-windows:
 # Run benchmarks
 bench:
 	@echo "Running benchmarks..."
+	@echo "Running package benchmarks..."
 	$(GOTEST) -bench=. -benchmem ./pkg/...
+	@echo "Running dedicated benchmark tests..."
+	$(GOTEST) -bench=. -benchmem -tags=bench ./tests/benchmarks/...
+	@echo "✅ All benchmarks complete"
+
+# Run specific benchmark
+bench-run:
+	@echo "Running specific benchmark: $(BENCH)"
+	$(GOTEST) -bench=$(BENCH) -benchmem -benchtime=10s -tags=bench ./tests/benchmarks/...
 
 # Quick build without linting
 quick: clean build

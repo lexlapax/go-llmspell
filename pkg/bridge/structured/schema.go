@@ -40,13 +40,6 @@ type asyncValidationRequest struct {
 	Created  time.Time            `json:"created"`
 }
 
-// validationCacheEntry represents a cached validation result
-type validationCacheEntry struct {
-	Result  *schemaDomain.ValidationResult `json:"result"`
-	Created time.Time                      `json:"created"`
-	TTL     time.Duration                  `json:"ttl"`
-}
-
 // SchemaBridge provides access to go-llms schema validation system
 type SchemaBridge struct {
 	mu                    sync.RWMutex

@@ -153,7 +153,9 @@ func TestSchemaBridge_Methods(t *testing.T) {
 // TestSchemaBridge_ValidateMethod tests parameter validation
 func TestSchemaBridge_ValidateMethod(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	tests := []struct {
 		name        string
@@ -213,7 +215,9 @@ func TestSchemaBridge_ValidateMethod(t *testing.T) {
 // TestSchemaBridge_SchemaOperations tests core schema functionality
 func TestSchemaBridge_SchemaOperations(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	t.Run("createSchema", func(t *testing.T) {
 		schemaData := createTestSchema()
@@ -245,7 +249,7 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 
 		resultObj := result.(engine.ObjectValue).ToGo().(map[string]interface{})
 		assert.Equal(t, "string", resultObj["type"])
-		
+
 		// Check constraints - numbers may be converted to float64
 		constraintsResult := resultObj["constraints"].(map[string]interface{})
 		assert.Equal(t, float64(1), constraintsResult["minLength"])
@@ -310,7 +314,9 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 // TestSchemaBridge_Repository tests schema storage operations
 func TestSchemaBridge_Repository(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	schemaData := createTestSchema()
 	schemaName := "test-schema"
@@ -357,7 +363,9 @@ func TestSchemaBridge_Repository(t *testing.T) {
 // TestSchemaBridge_GenerationMethods tests schema generation functionality
 func TestSchemaBridge_GenerationMethods(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	t.Run("generateSchemaFromType", func(t *testing.T) {
 		typeInfo := map[string]interface{}{
@@ -385,7 +393,9 @@ func TestSchemaBridge_GenerationMethods(t *testing.T) {
 // TestSchemaBridge_VersioningMethods tests versioning functionality
 func TestSchemaBridge_VersioningMethods(t *testing.T) {
 	bridge, ctx, _ := setupTestBridgeWithFileRepo(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	schemaData := createTestSchema()
 	schemaName := "versioned-schema"
@@ -436,7 +446,9 @@ func TestSchemaBridge_VersioningMethods(t *testing.T) {
 // TestSchemaBridge_MigrationMethods tests migration functionality
 func TestSchemaBridge_MigrationMethods(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	t.Run("registerMigrator", func(t *testing.T) {
 		migrator := map[string]interface{}{
@@ -471,7 +483,9 @@ func TestSchemaBridge_MigrationMethods(t *testing.T) {
 // TestSchemaBridge_ImportExportMethods tests import/export functionality
 func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	t.Run("exportRepository", func(t *testing.T) {
 		result, err := bridge.ExecuteMethod(ctx, "exportRepository", []engine.ScriptValue{})
@@ -597,7 +611,9 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 // TestSchemaBridge_TagMethods tests tag-based generation
 func TestSchemaBridge_TagMethods(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	t.Run("generateFromTags", func(t *testing.T) {
 		structData := map[string]interface{}{
@@ -670,7 +686,9 @@ func TestSchemaBridge_TagMethods(t *testing.T) {
 // TestSchemaBridge_CustomValidationMethods tests custom validation functionality
 func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	t.Run("registerCustomValidator", func(t *testing.T) {
 		validator := map[string]interface{}{
@@ -766,7 +784,9 @@ func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 // TestSchemaBridge_MetricsAndCache tests metrics and caching functionality
 func TestSchemaBridge_MetricsAndCache(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	t.Run("getValidationMetrics", func(t *testing.T) {
 		result, err := bridge.ExecuteMethod(ctx, "getValidationMetrics", []engine.ScriptValue{})
@@ -793,7 +813,9 @@ func TestSchemaBridge_MetricsAndCache(t *testing.T) {
 // TestSchemaBridge_ErrorHandling tests error scenarios
 func TestSchemaBridge_ErrorHandling(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	tests := []struct {
 		name          string
@@ -934,7 +956,9 @@ func TestSchemaBridge_HelperFunctions(t *testing.T) {
 // TestSchemaBridge_ConcurrentAccess tests thread safety
 func TestSchemaBridge_ConcurrentAccess(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
-	defer bridge.Cleanup(ctx)
+	defer func() {
+		_ = bridge.Cleanup(ctx)
+	}()
 
 	// Test concurrent schema operations
 	const numGoroutines = 10

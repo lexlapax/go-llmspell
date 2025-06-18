@@ -914,9 +914,6 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 			return nil, err
 		}
 		// Convert result array to ScriptValue
-		if result == nil {
-			return engine.NewArrayValue([]engine.ScriptValue{}), nil
-		}
 		if resultArray, ok := result.([]interface{}); ok {
 			scriptArray := make([]engine.ScriptValue, len(resultArray))
 			for i, v := range resultArray {

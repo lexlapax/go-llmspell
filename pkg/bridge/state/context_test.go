@@ -522,7 +522,7 @@ func TestStateContextBridgeGetAllContexts(t *testing.T) {
 		require.NoError(t, err)
 
 		contextObj := result.(engine.ObjectValue).Fields()
-		contextIDs = append(contextIDs, contextObj["_id"].(engine.StringValue).Value())
+		_ = append(contextIDs, contextObj["_id"].(engine.StringValue).Value())
 	}
 
 	// Get all contexts

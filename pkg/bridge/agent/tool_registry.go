@@ -750,14 +750,6 @@ func convertTagsToScriptValueRegistry(tags []string) engine.ScriptValue {
 	return engine.NewArrayValue(result)
 }
 
-func convertExamplesToScriptValue(examples []string) engine.ScriptValue {
-	result := make([]engine.ScriptValue, len(examples))
-	for i, example := range examples {
-		result[i] = engine.NewStringValue(example)
-	}
-	return engine.NewArrayValue(result)
-}
-
 func convertToolExamplesToScriptValue(examples interface{}) engine.ScriptValue {
 	if examples == nil {
 		return engine.NewArrayValue([]engine.ScriptValue{})

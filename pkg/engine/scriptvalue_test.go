@@ -75,7 +75,7 @@ func TestScriptValueTypes(t *testing.T) {
 		assert.Equal(t, TypeArray, v.Type())
 		assert.False(t, v.IsNil())
 		assert.Equal(t, "[1, two, true]", v.String())
-		
+
 		// Test ToGo conversion
 		goValue := v.ToGo()
 		arr, ok := goValue.([]interface{})
@@ -114,7 +114,7 @@ func TestScriptValueTypes(t *testing.T) {
 		v := NewObjectValue(fields)
 		assert.Equal(t, TypeObject, v.Type())
 		assert.False(t, v.IsNil())
-		
+
 		// Test ToGo conversion
 		goValue := v.ToGo()
 		obj, ok := goValue.(map[string]interface{})
@@ -326,7 +326,7 @@ func TestScriptValueConversion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ConvertToScriptValue(tt.input)
 			assert.Equal(t, tt.expected.Type(), result.Type())
-			
+
 			// For most types, we can check value equality
 			switch tt.expected.Type() {
 			case TypeNil, TypeBool, TypeNumber, TypeString, TypeError:
@@ -353,23 +353,23 @@ func TestScriptValueNestedConversions(t *testing.T) {
 			[]interface{}{2, 3},
 			map[string]interface{}{"key": "value"},
 		}
-		
+
 		v := ConvertToScriptValue(input)
 		assert.Equal(t, TypeArray, v.Type())
-		
+
 		// Convert back and verify structure
 		output := v.ToGo()
 		arr, ok := output.([]interface{})
 		require.True(t, ok)
 		assert.Len(t, arr, 3)
 		assert.Equal(t, float64(1), arr[0])
-		
+
 		innerArr, ok := arr[1].([]interface{})
 		require.True(t, ok)
 		assert.Len(t, innerArr, 2)
 		assert.Equal(t, float64(2), innerArr[0])
 		assert.Equal(t, float64(3), innerArr[1])
-		
+
 		innerMap, ok := arr[2].(map[string]interface{})
 		require.True(t, ok)
 		assert.Equal(t, "value", innerMap["key"])
@@ -385,22 +385,22 @@ func TestScriptValueNestedConversions(t *testing.T) {
 			},
 			"array": []interface{}{1, 2, 3},
 		}
-		
+
 		v := ConvertToScriptValue(input)
 		assert.Equal(t, TypeObject, v.Type())
-		
+
 		// Convert back and verify structure
 		output := v.ToGo()
 		obj, ok := output.(map[string]interface{})
 		require.True(t, ok)
 		assert.Equal(t, "test", obj["name"])
-		
+
 		nested, ok := obj["nested"].(map[string]interface{})
 		require.True(t, ok)
 		level2, ok := nested["level2"].(map[string]interface{})
 		require.True(t, ok)
 		assert.Equal(t, "deep", level2["level3"])
-		
+
 		arr, ok := obj["array"].([]interface{})
 		require.True(t, ok)
 		assert.Len(t, arr, 3)
@@ -557,8 +557,8 @@ func BenchmarkScriptValueCreation(b *testing.B) {
 func BenchmarkScriptValueConversion(b *testing.B) {
 	b.Run("ConvertMap", func(b *testing.B) {
 		m := map[string]interface{}{
-			"name": "test",
-			"age":  42,
+			"name":   "test",
+			"age":    42,
 			"active": true,
 		}
 		b.ResetTimer()

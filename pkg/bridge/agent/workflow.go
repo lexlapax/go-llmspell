@@ -853,14 +853,6 @@ func (b *WorkflowBridge) getWorkflow(id string) (bridge.BaseAgent, error) {
 }
 
 // registerWorkflow registers a workflow in the bridge
-func (b *WorkflowBridge) registerWorkflow(workflow bridge.BaseAgent) error {
-	if _, exists := b.workflows[workflow.ID()]; exists {
-		return fmt.Errorf("workflow %s already registered", workflow.ID())
-	}
-
-	b.workflows[workflow.ID()] = workflow
-	return nil
-}
 
 // initializeDefaultScriptHandlers sets up default script handlers
 func (b *WorkflowBridge) initializeDefaultScriptHandlers() {
@@ -932,19 +924,5 @@ func (b *WorkflowBridge) initializeDefaultScriptHandlers() {
 }
 
 // removeWorkflowInternal removes a workflow from the bridge
-func (b *WorkflowBridge) removeWorkflowInternal(id string) error {
-	workflow, exists := b.workflows[id]
-	if !exists {
-		return fmt.Errorf("workflow %s not found", id)
-	}
-
-	// Cleanup the workflow
-	if err := workflow.Cleanup(context.Background()); err != nil {
-		return fmt.Errorf("failed to cleanup workflow %s: %w", id, err)
-	}
-
-	delete(b.workflows, id)
-	return nil
-}
 
 // NOTE: Duplicate conversion function removed - using centralized engine.ConvertToScriptValue() instead

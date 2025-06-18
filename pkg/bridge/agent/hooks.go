@@ -628,5 +628,4 @@ func convertHookInfoToScriptValue(info map[string]interface{}) engine.ScriptValu
 	return engine.NewObjectValue(result)
 }
 
-
 // NOTE: Duplicate conversion function removed - using centralized engine.ConvertToScriptValue() instead

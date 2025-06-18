@@ -102,9 +102,9 @@ func TestToolsBridge_ValidateMethod(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "valid executeTool",
-			method:      "executeTool",
-			args:        []engine.ScriptValue{
+			name:   "valid executeTool",
+			method: "executeTool",
+			args: []engine.ScriptValue{
 				engine.NewStringValue("httpRequest"),
 				engine.NewObjectValue(map[string]engine.ScriptValue{}),
 			},
@@ -176,7 +176,7 @@ func TestToolsBridge_ExecuteMethod_GetToolInfo(t *testing.T) {
 	// Get list of tools first
 	result, err := bridge.ExecuteMethod(ctx, "listTools", []engine.ScriptValue{})
 	require.NoError(t, err)
-	
+
 	arrayValue := result.(engine.ArrayValue)
 	tools := arrayValue.ToGo().([]interface{})
 	require.Greater(t, len(tools), 0, "Need at least one tool")
@@ -242,7 +242,7 @@ func TestToolsBridge_ExecuteMethod_ExecuteTool(t *testing.T) {
 			return map[string]interface{}{"executed": true}, nil
 		}),
 	}
-	
+
 	_, err = bridge.ExecuteMethod(ctx, "registerCustomTool", []engine.ScriptValue{engine.NewObjectValue(toolDef)})
 	require.NoError(t, err)
 
@@ -256,7 +256,7 @@ func TestToolsBridge_ExecuteMethod_ExecuteTool(t *testing.T) {
 
 	objValue, ok := result.(engine.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from executeTool")
-	
+
 	resultMap := objValue.ToGo().(map[string]interface{})
 	assert.Equal(t, true, resultMap["executed"])
 }
@@ -270,14 +270,14 @@ func TestToolsBridge_ExecuteMethod_GetToolSchema(t *testing.T) {
 	// Get a tool that has schema
 	args := []engine.ScriptValue{engine.NewStringValue("httpRequest")}
 	result, err := bridge.ExecuteMethod(ctx, "getToolSchema", args)
-	
+
 	if err != nil {
 		// Tool might not exist, which is ok for this test
 		assert.Contains(t, err.Error(), "not found")
 	} else {
 		objValue, ok := result.(engine.ObjectValue)
 		assert.True(t, ok, "Expected ObjectValue from getToolSchema")
-		
+
 		schema := objValue.ToGo().(map[string]interface{})
 		assert.NotNil(t, schema["name"])
 		assert.NotNil(t, schema["description"])
@@ -298,13 +298,13 @@ func TestToolsBridge_ExecuteMethod_ValidateToolInput(t *testing.T) {
 			"method": engine.NewStringValue("GET"),
 		}),
 	}
-	
+
 	result, err := bridge.ExecuteMethod(ctx, "validateToolInput", args)
 	// May error if tool doesn't exist, which is ok
 	if err == nil {
 		objValue, ok := result.(engine.ObjectValue)
 		assert.True(t, ok, "Expected ObjectValue from validateToolInput")
-		
+
 		validation := objValue.ToGo().(map[string]interface{})
 		assert.NotNil(t, validation["valid"])
 	}
@@ -327,13 +327,13 @@ func TestToolsBridge_ExecuteMethod_GetToolMetrics(t *testing.T) {
 	}
 	_, err = bridge.ExecuteMethod(ctx, "registerCustomTool", []engine.ScriptValue{engine.NewObjectValue(toolDef)})
 	require.NoError(t, err)
-	
+
 	// Execute it to generate metrics
 	_, _ = bridge.ExecuteMethod(ctx, "executeTool", []engine.ScriptValue{
 		engine.NewStringValue("metricsTool"),
 		engine.NewObjectValue(map[string]engine.ScriptValue{}),
 	})
-	
+
 	// Now get metrics
 	args := []engine.ScriptValue{engine.NewStringValue("metricsTool")}
 	result, err := bridge.ExecuteMethod(ctx, "getToolMetrics", args)
@@ -341,7 +341,7 @@ func TestToolsBridge_ExecuteMethod_GetToolMetrics(t *testing.T) {
 
 	objValue, ok := result.(engine.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from getToolMetrics")
-	
+
 	metrics := objValue.ToGo().(map[string]interface{})
 	assert.NotNil(t, metrics["toolName"])
 }

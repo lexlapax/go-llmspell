@@ -339,7 +339,7 @@ func TestPoolBridge_ObjectPools(t *testing.T) {
 		args = []engine.ScriptValue{
 			engine.NewObjectValue(engine.ConvertMapToScriptValue(response)),
 		}
-		result, err = bridge.ExecuteMethod(ctx, "returnResponseToPool", args)
+		_, err = bridge.ExecuteMethod(ctx, "returnResponseToPool", args)
 		assert.NoError(t, err)
 	})
 
@@ -361,7 +361,7 @@ func TestPoolBridge_ObjectPools(t *testing.T) {
 		args = []engine.ScriptValue{
 			engine.NewObjectValue(engine.ConvertMapToScriptValue(token)),
 		}
-		result, err = bridge.ExecuteMethod(ctx, "returnTokenToPool", args)
+		_, err = bridge.ExecuteMethod(ctx, "returnTokenToPool", args)
 		assert.NoError(t, err)
 	})
 
@@ -382,7 +382,7 @@ func TestPoolBridge_ObjectPools(t *testing.T) {
 		args = []engine.ScriptValue{
 			engine.NewStringValue(channel["id"].(string)),
 		}
-		result, err = bridge.ExecuteMethod(ctx, "returnChannelToPool", args)
+		_, err = bridge.ExecuteMethod(ctx, "returnChannelToPool", args)
 		assert.NoError(t, err)
 	})
 }

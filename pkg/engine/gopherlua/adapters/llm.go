@@ -901,15 +901,14 @@ func (la *LLMAdapter) tableToMap(table *lua.LTable) map[string]engine.ScriptValu
 
 // RegisterAsModule registers the adapter as a module in the module system
 func (la *LLMAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
-	// Get bridge dependencies from metadata
-	metadata := la.GetMetadata()
-	deps := metadata.Dependencies
+	// Get bridge metadata
+	bridgeMetadata := la.GetBridge().GetMetadata()
 
 	// Create module definition using our overridden CreateLuaModule
 	module := gopherlua.ModuleDefinition{
 		Name:         name,
-		Description:  metadata.Description,
-		Dependencies: deps,
+		Description:  bridgeMetadata.Description,
+		Dependencies: []string{},           // LLM module has no dependencies by default
 		LoadFunc:     la.CreateLuaModule(), // Use our enhanced module creator
 	}
 

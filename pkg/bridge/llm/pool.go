@@ -1192,7 +1192,7 @@ func (b *PoolBridge) selectProvider(pool *ProviderPool) (string, error) {
 	case StrategyFastest:
 		// Select provider with lowest average latency
 		var fastest string
-		var lowestLatency time.Duration = time.Hour
+		lowestLatency := time.Hour
 
 		pool.Metrics.mu.RLock()
 		for provider, metrics := range pool.Metrics.ProviderMetrics {

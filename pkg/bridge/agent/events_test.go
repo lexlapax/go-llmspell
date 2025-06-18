@@ -42,7 +42,7 @@ func TestEventsBridge_Methods(t *testing.T) {
 	// Should have all expected methods
 	expectedMethods := []string{
 		"publishEvent", "subscribe", "subscribeWithFilter", "unsubscribe",
-		"storeEvent", "queryEvents", "getEventHistory", 
+		"storeEvent", "queryEvents", "getEventHistory",
 		"createFilter", "createCompositeFilter",
 		"serializeEvent", "deserializeEvent",
 		"replayEvents", "pauseReplay", "resumeReplay", "stopReplay",
@@ -257,7 +257,6 @@ func TestEventsBridge_ExecuteMethod_QueryEvents(t *testing.T) {
 	events := arrayValue.ToGo().([]interface{})
 	assert.GreaterOrEqual(t, len(events), 1, "Should have at least one event")
 }
-
 
 func TestEventsBridge_ExecuteMethod_Unsubscribe(t *testing.T) {
 	bridge := NewEventBridge()
