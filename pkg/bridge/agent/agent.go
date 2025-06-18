@@ -623,7 +623,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		}
 
 		// Convert result state to map
-		result := convertToScriptValue(resultState.Values())
+		result := engine.ConvertToScriptValue(resultState.Values())
 		return result, nil
 
 	case "listAgents":
@@ -674,7 +674,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		result := map[string]engine.ScriptValue{
 			"agentID":   engine.NewStringValue(agentID),
 			"format":    engine.NewStringValue(format),
-			"state":     convertToScriptValue(stateValues),
+			"state":     engine.ConvertToScriptValue(stateValues),
 			"timestamp": engine.NewStringValue(fmt.Sprintf("%d", ctx.Value("timestamp"))),
 			"version":   engine.NewStringValue("1.0"),
 		}
@@ -734,7 +734,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		result := map[string]engine.ScriptValue{
 			"snapshotName": engine.NewStringValue(snapshotName),
 			"agentID":      engine.NewStringValue(agentID),
-			"snapshot":     convertToScriptValue(snapshotData),
+			"snapshot":     engine.ConvertToScriptValue(snapshotData),
 			"created":      engine.NewStringValue(snapshotData["timestamp"].(string)),
 		}
 		return engine.NewObjectValue(result), nil
@@ -817,7 +817,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return engine.NewErrorValue(fmt.Errorf("failed to decrypt state: %w", err)), nil
 		}
 
-		return convertToScriptValue(stateValues), nil
+		return engine.ConvertToScriptValue(stateValues), nil
 
 	// Event Replay Methods
 	case "replayAgentEvents":
@@ -923,7 +923,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			if err != nil {
 				return engine.NewErrorValue(fmt.Errorf("failed to serialize event: %w", err)), nil
 			}
-			result[i] = convertToScriptValue(serialized)
+			result[i] = engine.ConvertToScriptValue(serialized)
 		}
 
 		return engine.NewArrayValue(result), nil
@@ -960,7 +960,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			"agentID":    engine.NewStringValue(agentID),
 			"format":     engine.NewStringValue(format),
 			"eventCount": engine.NewNumberValue(float64(len(eventsList))),
-			"history":    convertToScriptValue(batch),
+			"history":    engine.ConvertToScriptValue(batch),
 		}
 		return engine.NewObjectValue(result), nil
 
@@ -1051,7 +1051,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		}
 
 		profileResult := map[string]engine.ScriptValue{
-			"result":   convertToScriptValue(result),
+			"result":   engine.ConvertToScriptValue(result),
 			"profile":  engine.NewStringValue("operation_profile.pprof"),
 			"duration": engine.NewStringValue("125ms"), // Would be actual duration
 		}
@@ -1132,7 +1132,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		currentState := domain.NewState()
 		currentState.Set("agentID", agentID)
 
-		return convertToScriptValue(currentState.Values()), nil
+		return engine.ConvertToScriptValue(currentState.Values()), nil
 
 	case "setAgentHook":
 		if len(args) < 3 {
@@ -1218,7 +1218,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return engine.NewErrorValue(fmt.Errorf("failed to deserialize state: %w", err)), nil
 		}
 
-		return convertToScriptValue(stateValues), nil
+		return engine.ConvertToScriptValue(stateValues), nil
 
 	case "createStateSnapshot":
 		// This is an alias for saveAgentSnapshot
@@ -1360,39 +1360,3 @@ func (b *AgentBridge) removeAgentInternal(id string) error {
 	return nil
 }
 
-// convertToScriptValue converts a Go interface{} to engine.ScriptValue
-func convertToScriptValue(v interface{}) engine.ScriptValue {
-	if v == nil {
-		return engine.NewNilValue()
-	}
-
-	switch val := v.(type) {
-	case string:
-		return engine.NewStringValue(val)
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case float32:
-		return engine.NewNumberValue(float64(val))
-	case map[string]interface{}:
-		result := make(map[string]engine.ScriptValue)
-		for k, mv := range val {
-			result[k] = convertToScriptValue(mv)
-		}
-		return engine.NewObjectValue(result)
-	case []interface{}:
-		result := make([]engine.ScriptValue, len(val))
-		for i, av := range val {
-			result[i] = convertToScriptValue(av)
-		}
-		return engine.NewArrayValue(result)
-	default:
-		// For unknown types, convert to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", val))
-	}
-}

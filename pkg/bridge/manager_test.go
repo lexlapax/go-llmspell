@@ -606,21 +606,8 @@ func (m *mockScriptEngine) ToNative(scriptValue engine.ScriptValue) (interface{}
 }
 
 func (m *mockScriptEngine) FromNative(goValue interface{}) (engine.ScriptValue, error) {
-	// Simple conversion - in a real engine this would be more sophisticated
-	switch v := goValue.(type) {
-	case nil:
-		return engine.NewNilValue(), nil
-	case bool:
-		return engine.NewBoolValue(v), nil
-	case float64:
-		return engine.NewNumberValue(v), nil
-	case int:
-		return engine.NewNumberValue(float64(v)), nil
-	case string:
-		return engine.NewStringValue(v), nil
-	default:
-		return engine.NewStringValue(fmt.Sprintf("%v", v)), nil
-	}
+	// Use centralized conversion function
+	return engine.ConvertToScriptValue(goValue), nil
 }
 
 func (m *mockScriptEngine) Name() string {

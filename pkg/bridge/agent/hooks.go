@@ -623,7 +623,7 @@ func convertHooksListToScriptValue(hooks []map[string]interface{}) engine.Script
 func convertHookInfoToScriptValue(info map[string]interface{}) engine.ScriptValue {
 	result := make(map[string]engine.ScriptValue)
 	for k, v := range info {
-		result[k] = hookInterfaceToScriptValue(v)
+		result[k] = engine.ConvertToScriptValue(v)
 	}
 	return engine.NewObjectValue(result)
 }
@@ -631,39 +631,9 @@ func convertHookInfoToScriptValue(info map[string]interface{}) engine.ScriptValu
 func convertExecuteResultsToScriptValue(results []interface{}) engine.ScriptValue {
 	scriptResults := make([]engine.ScriptValue, len(results))
 	for i, r := range results {
-		scriptResults[i] = hookInterfaceToScriptValue(r)
+		scriptResults[i] = engine.ConvertToScriptValue(r)
 	}
 	return engine.NewArrayValue(scriptResults)
 }
 
-func hookInterfaceToScriptValue(v interface{}) engine.ScriptValue {
-	switch val := v.(type) {
-	case string:
-		return engine.NewStringValue(val)
-	case float64:
-		return engine.NewNumberValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case bool:
-		return engine.NewBoolValue(val)
-	case nil:
-		return engine.NewNilValue()
-	case []interface{}:
-		values := make([]engine.ScriptValue, len(val))
-		for i, item := range val {
-			values[i] = hookInterfaceToScriptValue(item)
-		}
-		return engine.NewArrayValue(values)
-	case map[string]interface{}:
-		values := make(map[string]engine.ScriptValue)
-		for k, v := range val {
-			values[k] = hookInterfaceToScriptValue(v)
-		}
-		return engine.NewObjectValue(values)
-	default:
-		// Fallback to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}
+// NOTE: Duplicate conversion function removed - using centralized engine.ConvertToScriptValue() instead

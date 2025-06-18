@@ -115,7 +115,7 @@ func TestLLMBridge_ProviderManagement(t *testing.T) {
 	// Test setProvider
 	args := []engine.ScriptValue{
 		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"model":       "mock-model",
 			"temperature": 0.7,
 		})),
@@ -156,7 +156,7 @@ func TestLLMBridge_TextGeneration(t *testing.T) {
 	// Set mock provider
 	args := []engine.ScriptValue{
 		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"model": "mock-model",
 		})),
 	}
@@ -166,7 +166,7 @@ func TestLLMBridge_TextGeneration(t *testing.T) {
 	// Test generate
 	args = []engine.ScriptValue{
 		engine.NewStringValue("Hello, world!"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"temperature": 0.7,
 			"max_tokens":  100,
 		})),
@@ -191,7 +191,7 @@ func TestLLMBridge_MessageGeneration(t *testing.T) {
 	// Set mock provider
 	args := []engine.ScriptValue{
 		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"model": "mock-model",
 		})),
 	}
@@ -211,8 +211,8 @@ func TestLLMBridge_MessageGeneration(t *testing.T) {
 	}
 
 	args = []engine.ScriptValue{
-		engine.NewArrayValue(testConvertSliceToScriptValue(messages)),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(messages)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"temperature": 0.7,
 		})),
 	}
@@ -237,7 +237,7 @@ func TestLLMBridge_Streaming(t *testing.T) {
 	// Set mock provider
 	args := []engine.ScriptValue{
 		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"model": "mock-model",
 		})),
 	}
@@ -247,7 +247,7 @@ func TestLLMBridge_Streaming(t *testing.T) {
 	// Test stream
 	args = []engine.ScriptValue{
 		engine.NewStringValue("Tell me a story"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"temperature": 0.7,
 		})),
 	}
@@ -285,7 +285,7 @@ func TestLLMBridge_SchemaValidation(t *testing.T) {
 
 	args := []engine.ScriptValue{
 		engine.NewStringValue("person"),
-		engine.NewObjectValue(testConvertMapToScriptValue(schema)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(schema)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "addResponseSchema", args)
@@ -316,7 +316,7 @@ func TestLLMBridge_StructuredGeneration(t *testing.T) {
 	// Set mock provider
 	args := []engine.ScriptValue{
 		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"model": "mock-model",
 		})),
 	}
@@ -338,7 +338,7 @@ func TestLLMBridge_StructuredGeneration(t *testing.T) {
 
 	args = []engine.ScriptValue{
 		engine.NewStringValue("list"),
-		engine.NewObjectValue(testConvertMapToScriptValue(schema)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(schema)),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "addResponseSchema", args)
 	require.NoError(t, err)
@@ -347,7 +347,7 @@ func TestLLMBridge_StructuredGeneration(t *testing.T) {
 	args = []engine.ScriptValue{
 		engine.NewStringValue("Generate a list of colors"),
 		engine.NewStringValue("list"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"temperature": 0.7,
 		})),
 	}
@@ -411,7 +411,7 @@ func TestLLMBridge_ProviderMetrics(t *testing.T) {
 	// Set provider
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"model": "test-model",
 		})),
 	}
@@ -454,7 +454,7 @@ func TestLLMBridge_FallbackChain(t *testing.T) {
 	}
 
 	args := []engine.ScriptValue{
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "setFallbackChain", args)
@@ -543,7 +543,7 @@ func TestLLMBridge_Concurrency(t *testing.T) {
 	// Set provider
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"model": "test-model",
 		})),
 	}

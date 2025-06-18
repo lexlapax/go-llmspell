@@ -90,7 +90,7 @@ func TestProvidersBridge_CreateProvider(t *testing.T) {
 	args := []engine.ScriptValue{
 		engine.NewStringValue("openai"),
 		engine.NewStringValue("test-openai"),
-		engine.NewObjectValue(testConvertMapToScriptValue(config)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "createProvider", args)
@@ -193,7 +193,7 @@ func TestProvidersBridge_ValidateProviderConfig(t *testing.T) {
 
 	args := []engine.ScriptValue{
 		engine.NewStringValue("openai"),
-		engine.NewObjectValue(testConvertMapToScriptValue(config)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "validateProviderConfig", args)
@@ -213,7 +213,7 @@ func TestProvidersBridge_ValidateProviderConfig(t *testing.T) {
 
 	args = []engine.ScriptValue{
 		engine.NewStringValue("openai"),
-		engine.NewObjectValue(testConvertMapToScriptValue(config)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "validateProviderConfig", args)
@@ -245,7 +245,7 @@ func TestProvidersBridge_MultiProvider(t *testing.T) {
 		args := []engine.ScriptValue{
 			engine.NewStringValue("mock"),
 			engine.NewStringValue(name),
-			engine.NewObjectValue(testConvertMapToScriptValue(config)),
+			engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 		}
 		_, err := bridge.ExecuteMethod(ctx, "createProvider", args)
 		require.NoError(t, err)
@@ -270,7 +270,7 @@ func TestProvidersBridge_MultiProvider(t *testing.T) {
 
 	args := []engine.ScriptValue{
 		engine.NewStringValue("multi1"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("consensus"),
 	}
 
@@ -303,7 +303,7 @@ func TestProvidersBridge_ConfigureMultiProvider(t *testing.T) {
 		args := []engine.ScriptValue{
 			engine.NewStringValue("mock"),
 			engine.NewStringValue(name),
-			engine.NewObjectValue(testConvertMapToScriptValue(config)),
+			engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 		}
 		_, err := bridge.ExecuteMethod(ctx, "createProvider", args)
 		require.NoError(t, err)
@@ -316,7 +316,7 @@ func TestProvidersBridge_ConfigureMultiProvider(t *testing.T) {
 
 	args := []engine.ScriptValue{
 		engine.NewStringValue("multi1"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("fastest"),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createMultiProvider", args)
@@ -331,7 +331,7 @@ func TestProvidersBridge_ConfigureMultiProvider(t *testing.T) {
 
 	args = []engine.ScriptValue{
 		engine.NewStringValue("multi1"),
-		engine.NewObjectValue(testConvertMapToScriptValue(config)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "configureMultiProvider", args)
@@ -372,7 +372,7 @@ func TestProvidersBridge_ProviderOperations(t *testing.T) {
 	args := []engine.ScriptValue{
 		engine.NewStringValue("mock"),
 		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(config)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createProvider", args)
 	require.NoError(t, err)
@@ -381,7 +381,7 @@ func TestProvidersBridge_ProviderOperations(t *testing.T) {
 	args = []engine.ScriptValue{
 		engine.NewStringValue("test-provider"),
 		engine.NewStringValue("Hello, world!"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
 			"temperature": 0.7,
 			"max_tokens":  100,
 		})),
@@ -412,7 +412,7 @@ func TestProvidersBridge_MockProvider(t *testing.T) {
 
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-mock"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(responses)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(responses)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "createMockProvider", args)
@@ -468,7 +468,7 @@ func TestProvidersBridge_ExportImportConfig(t *testing.T) {
 		args := []engine.ScriptValue{
 			engine.NewStringValue("mock"),
 			engine.NewStringValue("provider" + string(rune('1'+i))),
-			engine.NewObjectValue(testConvertMapToScriptValue(config)),
+			engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 		}
 		_, err := bridge.ExecuteMethod(ctx, "createProvider", args)
 		require.NoError(t, err)
@@ -487,7 +487,7 @@ func TestProvidersBridge_ExportImportConfig(t *testing.T) {
 
 	// Test importProviderConfig
 	args = []engine.ScriptValue{
-		engine.NewObjectValue(testConvertMapToScriptValue(exportedConfig)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(exportedConfig)),
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "importProviderConfig", args)
@@ -535,7 +535,7 @@ func TestProvidersBridge_ErrorHandling(t *testing.T) {
 	args = []engine.ScriptValue{
 		engine.NewStringValue("invalid-type"),
 		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(map[string]interface{}{})),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{})),
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "createProvider", args)
@@ -607,7 +607,7 @@ func TestProvidersBridge_ProviderMetadata(t *testing.T) {
 	args := []engine.ScriptValue{
 		engine.NewStringValue("mock"),
 		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(config)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createProvider", args)
 	require.NoError(t, err)
@@ -621,7 +621,7 @@ func TestProvidersBridge_ProviderMetadata(t *testing.T) {
 
 	args = []engine.ScriptValue{
 		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(testConvertMapToScriptValue(metadata)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(metadata)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "setProviderMetadata", args)
@@ -661,7 +661,7 @@ func TestProvidersBridge_ListProvidersByCapability(t *testing.T) {
 		args := []engine.ScriptValue{
 			engine.NewStringValue("mock"),
 			engine.NewStringValue("provider" + string(rune('1'+i))),
-			engine.NewObjectValue(testConvertMapToScriptValue(config)),
+			engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 		}
 		_, err := bridge.ExecuteMethod(ctx, "createProvider", args)
 		require.NoError(t, err)

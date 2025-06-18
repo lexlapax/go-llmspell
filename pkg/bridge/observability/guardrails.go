@@ -381,7 +381,7 @@ func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []engi
 			// Convert to map[string]engine.ScriptValue
 			scriptMap := make(map[string]engine.ScriptValue)
 			for k, v := range dataMap {
-				scriptMap[k] = gb.interfaceToScriptValue(v)
+				scriptMap[k] = engine.ConvertToScriptValue(v)
 			}
 			
 			dataValue := engine.NewObjectValue(scriptMap)
@@ -405,7 +405,7 @@ func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []engi
 			// Convert to map[string]engine.ScriptValue
 			scriptMap := make(map[string]engine.ScriptValue)
 			for k, v := range dataMap {
-				scriptMap[k] = gb.interfaceToScriptValue(v)
+				scriptMap[k] = engine.ConvertToScriptValue(v)
 			}
 			
 			dataValue := engine.NewObjectValue(scriptMap)
@@ -927,37 +927,3 @@ func (gb *GuardrailsBridge) mapToState(data map[string]interface{}) (*domain.Sta
 	return state, nil
 }
 
-// interfaceToScriptValue converts an interface{} to engine.ScriptValue
-func (gb *GuardrailsBridge) interfaceToScriptValue(v interface{}) engine.ScriptValue {
-	if v == nil {
-		return engine.NewNilValue()
-	}
-	
-	switch val := v.(type) {
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case string:
-		return engine.NewStringValue(val)
-	case []interface{}:
-		scriptValues := make([]engine.ScriptValue, len(val))
-		for i, item := range val {
-			scriptValues[i] = gb.interfaceToScriptValue(item)
-		}
-		return engine.NewArrayValue(scriptValues)
-	case map[string]interface{}:
-		scriptMap := make(map[string]engine.ScriptValue)
-		for k, v := range val {
-			scriptMap[k] = gb.interfaceToScriptValue(v)
-		}
-		return engine.NewObjectValue(scriptMap)
-	default:
-		// For unknown types, convert to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}

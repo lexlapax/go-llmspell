@@ -788,7 +788,7 @@ func (b *PoolBridge) generateWithPool(ctx context.Context, args []engine.ScriptV
 	// Generate using LLM bridge
 	result, genErr := b.llmBridge.generate(ctx, []engine.ScriptValue{
 		engine.NewStringValue(prompt),
-		engine.NewObjectValue(poolConvertMapToScriptValue(options)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
 	})
 
 	// Restore old provider
@@ -851,7 +851,7 @@ func (b *PoolBridge) generateMessageWithPool(ctx context.Context, args []engine.
 	// Generate using LLM bridge
 	result, genErr := b.llmBridge.generateMessage(ctx, []engine.ScriptValue{
 		messages,
-		engine.NewObjectValue(poolConvertMapToScriptValue(options)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
 	})
 
 	// Restore old provider
@@ -902,7 +902,7 @@ func (b *PoolBridge) streamWithPool(ctx context.Context, args []engine.ScriptVal
 	// Stream using LLM bridge
 	result, streamErr := b.llmBridge.stream(ctx, []engine.ScriptValue{
 		engine.NewStringValue(prompt),
-		engine.NewObjectValue(poolConvertMapToScriptValue(options)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
 	})
 
 	// Restore old provider
@@ -1302,50 +1302,4 @@ func (b *PoolBridge) poolToScriptValue(pool *ProviderPool) engine.ScriptValue {
 	return engine.NewObjectValue(poolData)
 }
 
-// poolConvertMapToScriptValue converts map[string]interface{} to map[string]engine.ScriptValue
-func poolConvertMapToScriptValue(m map[string]interface{}) map[string]engine.ScriptValue {
-	if m == nil {
-		return make(map[string]engine.ScriptValue)
-	}
-
-	result := make(map[string]engine.ScriptValue)
-	for k, v := range m {
-		result[k] = poolConvertToScriptValue(v)
-	}
-	return result
-}
-
-// poolConvertToScriptValue converts interface{} to ScriptValue
-func poolConvertToScriptValue(v interface{}) engine.ScriptValue {
-	if v == nil {
-		return engine.NewNilValue()
-	}
-
-	switch val := v.(type) {
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int32:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float32:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case string:
-		return engine.NewStringValue(val)
-	case []interface{}:
-		arr := make([]engine.ScriptValue, len(val))
-		for i, item := range val {
-			arr[i] = poolConvertToScriptValue(item)
-		}
-		return engine.NewArrayValue(arr)
-	case map[string]interface{}:
-		return engine.NewObjectValue(poolConvertMapToScriptValue(val))
-	default:
-		// Convert to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}
+// NOTE: Duplicate conversion functions removed - using centralized engine.ConvertToScriptValue() instead

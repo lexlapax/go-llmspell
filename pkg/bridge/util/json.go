@@ -502,7 +502,7 @@ func (b *UtilJSONBridge) unmarshal(ctx context.Context, args []engine.ScriptValu
 		return nil, err
 	}
 
-	return jsonConvertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -529,7 +529,7 @@ func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []engine.S
 		return nil, err
 	}
 
-	return jsonConvertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -557,7 +557,7 @@ func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.Scri
 		if err := decoder.Decode(&result); err != nil {
 			return nil, err
 		}
-		return jsonConvertToScriptValue(result), nil
+		return engine.ConvertToScriptValue(result), nil
 	}
 
 	// Otherwise use go-llms unmarshal
@@ -567,7 +567,7 @@ func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.Scri
 		return nil, err
 	}
 
-	return jsonConvertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *UtilJSONBridge) createEncoder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -651,7 +651,7 @@ func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []engine.ScriptV
 		return nil, err
 	}
 
-	return jsonConvertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -683,7 +683,7 @@ func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []engine.Scri
 		return nil, err
 	}
 
-	return jsonConvertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *UtilJSONBridge) parseWithRecovery(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -967,47 +967,4 @@ func (b *UtilJSONBridge) convertToConversionOptions(optionsMap map[string]interf
 }
 
 // Helper function to convert interface{} to ScriptValue
-func jsonConvertToScriptValue(v interface{}) engine.ScriptValue {
-	switch val := v.(type) {
-	case string:
-		return engine.NewStringValue(val)
-	case int, int32, int64, float32, float64:
-		return engine.NewNumberValue(jsonToFloat64(val))
-	case bool:
-		return engine.NewBoolValue(val)
-	case nil:
-		return engine.NewNilValue()
-	case map[string]interface{}:
-		objMap := make(map[string]engine.ScriptValue)
-		for k, v := range val {
-			objMap[k] = jsonConvertToScriptValue(v)
-		}
-		return engine.NewObjectValue(objMap)
-	case []interface{}:
-		arr := make([]engine.ScriptValue, len(val))
-		for i, item := range val {
-			arr[i] = jsonConvertToScriptValue(item)
-		}
-		return engine.NewArrayValue(arr)
-	default:
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}
-
-// Helper function to convert numeric types to float64
-func jsonToFloat64(v interface{}) float64 {
-	switch val := v.(type) {
-	case int:
-		return float64(val)
-	case int32:
-		return float64(val)
-	case int64:
-		return float64(val)
-	case float32:
-		return float64(val)
-	case float64:
-		return val
-	default:
-		return 0
-	}
-}
+// NOTE: Duplicate conversion functions removed - using centralized engine.ConvertToScriptValue() instead

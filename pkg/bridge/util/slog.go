@@ -467,7 +467,7 @@ func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []engine.Script
 	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
 		errMsg := args[1].(engine.StringValue).Value()
 		if errMsg != "" {
-			err = fmt.Errorf(errMsg)
+			err = fmt.Errorf("%s", errMsg)
 		}
 	}
 
@@ -530,7 +530,7 @@ func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []engine.Script
 	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
 		errMsg := args[2].(engine.StringValue).Value()
 		if errMsg != "" {
-			err = fmt.Errorf(errMsg)
+			err = fmt.Errorf("%s", errMsg)
 		}
 	}
 

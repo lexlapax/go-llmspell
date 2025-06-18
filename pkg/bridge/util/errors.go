@@ -966,14 +966,14 @@ func (b *UtilErrorsBridge) getErrorContext(ctx context.Context, args []engine.Sc
 				// Recursively convert map
 				objMap := make(map[string]engine.ScriptValue)
 				for mk, mv := range val {
-					objMap[mk] = convertToScriptValue(mv)
+					objMap[mk] = engine.ConvertToScriptValue(mv)
 				}
 				context[k] = engine.NewObjectValue(objMap)
 			case []interface{}:
 				// Convert array
 				arr := make([]engine.ScriptValue, len(val))
 				for i, item := range val {
-					arr[i] = convertToScriptValue(item)
+					arr[i] = engine.ConvertToScriptValue(item)
 				}
 				context[k] = engine.NewArrayValue(arr)
 			default:
@@ -1150,33 +1150,6 @@ type ErrorBuilder struct {
 	err *errors.BaseError
 }
 
-// Helper function to convert interface{} to ScriptValue
-func convertToScriptValue(v interface{}) engine.ScriptValue {
-	switch val := v.(type) {
-	case string:
-		return engine.NewStringValue(val)
-	case int, int32, int64, float32, float64:
-		return engine.NewNumberValue(toFloat64(val))
-	case bool:
-		return engine.NewBoolValue(val)
-	case nil:
-		return engine.NewNilValue()
-	case map[string]interface{}:
-		objMap := make(map[string]engine.ScriptValue)
-		for k, v := range val {
-			objMap[k] = convertToScriptValue(v)
-		}
-		return engine.NewObjectValue(objMap)
-	case []interface{}:
-		arr := make([]engine.ScriptValue, len(val))
-		for i, item := range val {
-			arr[i] = convertToScriptValue(item)
-		}
-		return engine.NewArrayValue(arr)
-	default:
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}
 
 // Helper function to convert numeric types to float64
 func toFloat64(v interface{}) float64 {

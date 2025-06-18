@@ -490,7 +490,7 @@ func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		result := make([]engine.ScriptValue, len(eventsList))
 		for i, event := range eventsList {
 			eventMap := b.eventToMap(event)
-			result[i] = convertEventToScriptValue(eventMap)
+			result[i] = engine.ConvertToScriptValue(eventMap)
 		}
 
 		return engine.NewArrayValue(result), nil
@@ -536,7 +536,7 @@ func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		result := make([]engine.ScriptValue, len(eventsList))
 		for i, event := range eventsList {
 			eventMap := b.eventToMap(event)
-			result[i] = convertEventToScriptValue(eventMap)
+			result[i] = engine.ConvertToScriptValue(eventMap)
 		}
 
 		return engine.NewArrayValue(result), nil
@@ -660,7 +660,7 @@ func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return engine.NewErrorValue(fmt.Errorf("failed to serialize event: %w", err)), nil
 		}
 
-		return convertEventToScriptValue(serialized), nil
+		return engine.ConvertToScriptValue(serialized), nil
 
 	case "deserializeEvent":
 		if len(args) < 1 {
@@ -676,7 +676,7 @@ func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		}
 
 		// Return deserialized event data
-		return convertEventToScriptValue(eventData), nil
+		return engine.ConvertToScriptValue(eventData), nil
 
 	// Event Aggregation Methods
 	case "createAggregator":
@@ -814,39 +814,4 @@ func (b *EventBridge) createFilterFromData(data map[string]interface{}) (events.
 	}
 }
 
-// convertEventToScriptValue converts a Go interface{} to engine.ScriptValue for events
-func convertEventToScriptValue(v interface{}) engine.ScriptValue {
-	if v == nil {
-		return engine.NewNilValue()
-	}
-
-	switch val := v.(type) {
-	case string:
-		return engine.NewStringValue(val)
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case float32:
-		return engine.NewNumberValue(float64(val))
-	case map[string]interface{}:
-		result := make(map[string]engine.ScriptValue)
-		for k, mv := range val {
-			result[k] = convertEventToScriptValue(mv)
-		}
-		return engine.NewObjectValue(result)
-	case []interface{}:
-		result := make([]engine.ScriptValue, len(val))
-		for i, av := range val {
-			result[i] = convertEventToScriptValue(av)
-		}
-		return engine.NewArrayValue(result)
-	default:
-		// For unknown types, convert to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", val))
-	}
-}
+// NOTE: Duplicate conversion function removed - using centralized engine.ConvertToScriptValue() instead

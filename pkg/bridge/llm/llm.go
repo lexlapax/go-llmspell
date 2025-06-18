@@ -584,7 +584,7 @@ func (b *LLMBridge) setProvider(ctx context.Context, args []engine.ScriptValue) 
 		"active": true,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) getProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -600,7 +600,7 @@ func (b *LLMBridge) getProvider(ctx context.Context, args []engine.ScriptValue) 
 		"active": true,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) listProviders(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -615,7 +615,7 @@ func (b *LLMBridge) listProviders(ctx context.Context, args []engine.ScriptValue
 		})
 	}
 
-	return engine.NewArrayValue(convertSliceToScriptValue(providers)), nil
+	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)), nil
 }
 
 func (b *LLMBridge) generate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -678,7 +678,7 @@ func (b *LLMBridge) generateMessage(ctx context.Context, args []engine.ScriptVal
 		},
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) stream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -707,7 +707,7 @@ func (b *LLMBridge) stream(ctx context.Context, args []engine.ScriptValue) (engi
 		"active":    true,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) generateWithSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -727,7 +727,7 @@ func (b *LLMBridge) generateWithSchema(ctx context.Context, args []engine.Script
 		"options": options,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) addResponseSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -757,7 +757,7 @@ func (b *LLMBridge) getResponseSchema(ctx context.Context, args []engine.ScriptV
 		},
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) listResponseSchemas(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -767,7 +767,7 @@ func (b *LLMBridge) listResponseSchemas(ctx context.Context, args []engine.Scrip
 		map[string]interface{}{"name": "color_list", "type": "array"},
 	}
 
-	return engine.NewArrayValue(convertSliceToScriptValue(schemas)), nil
+	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(schemas)), nil
 }
 
 func (b *LLMBridge) validateWithSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -782,7 +782,7 @@ func (b *LLMBridge) validateWithSchema(ctx context.Context, args []engine.Script
 		"schema": schemaName,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) getCapabilities(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -803,7 +803,7 @@ func (b *LLMBridge) getCapabilities(ctx context.Context, args []engine.ScriptVal
 		"max_context_length": 4096,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(capabilities)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(capabilities)), nil
 }
 
 func (b *LLMBridge) getModelInfo(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -817,7 +817,7 @@ func (b *LLMBridge) getModelInfo(ctx context.Context, args []engine.ScriptValue)
 		"capabilities": []interface{}{"text-generation", "chat"},
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(info)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(info)), nil
 }
 
 func (b *LLMBridge) listModels(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -833,7 +833,7 @@ func (b *LLMBridge) listModels(ctx context.Context, args []engine.ScriptValue) (
 		},
 	}
 
-	return engine.NewArrayValue(convertSliceToScriptValue(models)), nil
+	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(models)), nil
 }
 
 func (b *LLMBridge) checkCapability(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -873,7 +873,7 @@ func (b *LLMBridge) streamMessage(ctx context.Context, args []engine.ScriptValue
 		"active":    true,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) readStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -887,7 +887,7 @@ func (b *LLMBridge) readStream(ctx context.Context, args []engine.ScriptValue) (
 		"index":     1,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(chunk)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(chunk)), nil
 }
 
 func (b *LLMBridge) closeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -924,7 +924,7 @@ func (b *LLMBridge) getFallbackChain(ctx context.Context, args []engine.ScriptVa
 		chain[i] = name
 	}
 
-	return engine.NewArrayValue(convertSliceToScriptValue(chain)), nil
+	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(chain)), nil
 }
 
 func (b *LLMBridge) getProviderMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -946,7 +946,7 @@ func (b *LLMBridge) getProviderMetrics(ctx context.Context, args []engine.Script
 		"success_rate":     float64(metrics.SuccessfulCalls) / float64(metrics.TotalRequests) * 100,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 func (b *LLMBridge) resetProviderMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -977,7 +977,7 @@ func (b *LLMBridge) generateSchemaFromExample(ctx context.Context, args []engine
 		"generated_from": example,
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(schema)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(schema)), nil
 }
 
 func (b *LLMBridge) getProviderInfo(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -993,7 +993,7 @@ func (b *LLMBridge) getProviderInfo(ctx context.Context, args []engine.ScriptVal
 		"status":       "active",
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(info)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(info)), nil
 }
 
 func (b *LLMBridge) testProviderConnection(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -1008,7 +1008,7 @@ func (b *LLMBridge) testProviderConnection(ctx context.Context, args []engine.Sc
 		"tested_at":  time.Now().Format(time.RFC3339),
 	}
 
-	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
 }
 
 // Helper methods
@@ -1053,55 +1053,4 @@ func (b *LLMBridge) getActiveProvider() (bridge.Provider, error) {
 	return provider, nil
 }
 
-// Helper functions for type conversions
 
-// convertMapToScriptValue converts map[string]interface{} to map[string]ScriptValue
-func convertMapToScriptValue(m map[string]interface{}) map[string]engine.ScriptValue {
-	result := make(map[string]engine.ScriptValue)
-	for k, v := range m {
-		result[k] = convertToScriptValue(v)
-	}
-	return result
-}
-
-// convertSliceToScriptValue converts []interface{} to []ScriptValue
-func convertSliceToScriptValue(s []interface{}) []engine.ScriptValue {
-	result := make([]engine.ScriptValue, len(s))
-	for i, v := range s {
-		result[i] = convertToScriptValue(v)
-	}
-	return result
-}
-
-// convertToScriptValue converts interface{} to ScriptValue
-func convertToScriptValue(v interface{}) engine.ScriptValue {
-	if v == nil {
-		return engine.NewNilValue()
-	}
-
-	switch val := v.(type) {
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int32:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float32:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case string:
-		return engine.NewStringValue(val)
-	case []interface{}:
-		return engine.NewArrayValue(convertSliceToScriptValue(val))
-	case map[string]interface{}:
-		return engine.NewObjectValue(convertMapToScriptValue(val))
-	case error:
-		return engine.NewErrorValue(val)
-	default:
-		// For unknown types, convert to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}

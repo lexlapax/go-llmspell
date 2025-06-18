@@ -405,7 +405,7 @@ func (b *StateContextBridge) createSharedContext(ctx context.Context, args []eng
 
 	// Convert result to ScriptValue
 	result := b.sharedContextToScript(contextID, sharedContext)
-	return b.convertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *StateContextBridge) withInheritanceConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -458,7 +458,7 @@ func (b *StateContextBridge) withInheritanceConfig(ctx context.Context, args []e
 	}
 	b.mu.Unlock()
 
-	return b.convertToScriptValue(b.sharedContextToScript(contextID, updatedContext)), nil
+	return engine.ConvertToScriptValue(b.sharedContextToScript(contextID, updatedContext)), nil
 }
 
 func (b *StateContextBridge) get(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -486,7 +486,7 @@ func (b *StateContextBridge) get(ctx context.Context, args []engine.ScriptValue)
 	if !exists {
 		return engine.NewNilValue(), nil
 	}
-	return b.convertToScriptValue(value), nil
+	return engine.ConvertToScriptValue(value), nil
 }
 
 func (b *StateContextBridge) set(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -640,7 +640,7 @@ func (b *StateContextBridge) values(ctx context.Context, args []engine.ScriptVal
 	values := sharedContext.Values()
 	scriptValues := make([]engine.ScriptValue, 0, len(values))
 	for _, value := range values {
-		scriptValues = append(scriptValues, b.convertToScriptValue(value))
+		scriptValues = append(scriptValues, engine.ConvertToScriptValue(value))
 	}
 
 	return engine.NewArrayValue(scriptValues), nil
@@ -672,7 +672,7 @@ func (b *StateContextBridge) getArtifact(ctx context.Context, args []engine.Scri
 		return engine.NewNilValue(), nil
 	}
 
-	return b.convertToScriptValue(b.artifactToScript(artifact)), nil
+	return engine.ConvertToScriptValue(b.artifactToScript(artifact)), nil
 }
 
 func (b *StateContextBridge) artifacts(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -695,7 +695,7 @@ func (b *StateContextBridge) artifacts(ctx context.Context, args []engine.Script
 	artifacts := sharedContext.Artifacts()
 	scriptArtifacts := make([]engine.ScriptValue, 0, len(artifacts))
 	for _, artifact := range artifacts {
-		scriptArtifacts = append(scriptArtifacts, b.convertToScriptValue(b.artifactToScript(artifact)))
+		scriptArtifacts = append(scriptArtifacts, engine.ConvertToScriptValue(b.artifactToScript(artifact)))
 	}
 
 	return engine.NewArrayValue(scriptArtifacts), nil
@@ -721,7 +721,7 @@ func (b *StateContextBridge) messages(ctx context.Context, args []engine.ScriptV
 	messages := sharedContext.Messages()
 	scriptMessages := make([]engine.ScriptValue, len(messages))
 	for i, message := range messages {
-		scriptMessages[i] = b.convertToScriptValue(b.messageToScript(message))
+		scriptMessages[i] = engine.ConvertToScriptValue(b.messageToScript(message))
 	}
 
 	return engine.NewArrayValue(scriptMessages), nil
@@ -747,7 +747,7 @@ func (b *StateContextBridge) getMetadata(ctx context.Context, args []engine.Scri
 	// GetMetadata requires a key parameter. Get all metadata from local state
 	localState := sharedContext.LocalState()
 	metadata := localState.GetAllMetadata()
-	return b.convertToScriptValue(metadata), nil
+	return engine.ConvertToScriptValue(metadata), nil
 }
 
 func (b *StateContextBridge) localState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -768,7 +768,7 @@ func (b *StateContextBridge) localState(ctx context.Context, args []engine.Scrip
 	}
 
 	localState := sharedContext.LocalState()
-	return b.convertToScriptValue(b.stateToScript(localState)), nil
+	return engine.ConvertToScriptValue(b.stateToScript(localState)), nil
 }
 
 func (b *StateContextBridge) clone(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -808,7 +808,7 @@ func (b *StateContextBridge) clone(ctx context.Context, args []engine.ScriptValu
 	}
 	b.mu.Unlock()
 
-	return b.convertToScriptValue(b.sharedContextToScript(clonedID, clonedContext)), nil
+	return engine.ConvertToScriptValue(b.sharedContextToScript(clonedID, clonedContext)), nil
 }
 
 func (b *StateContextBridge) asState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -829,7 +829,7 @@ func (b *StateContextBridge) asState(ctx context.Context, args []engine.ScriptVa
 	}
 
 	state := sharedContext.AsState()
-	return b.convertToScriptValue(b.stateToScript(state)), nil
+	return engine.ConvertToScriptValue(b.stateToScript(state)), nil
 }
 
 func (b *StateContextBridge) createSnapshot(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -879,7 +879,7 @@ func (b *StateContextBridge) createSnapshot(ctx context.Context, args []engine.S
 	})
 	b.eventHistoryMu.Unlock()
 
-	return b.convertToScriptValue(snapshot), nil
+	return engine.ConvertToScriptValue(snapshot), nil
 }
 
 func (b *StateContextBridge) validateState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -901,7 +901,7 @@ func (b *StateContextBridge) validateState(ctx context.Context, args []engine.Sc
 		"errors": []interface{}{},
 	}
 
-	return b.convertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *StateContextBridge) setStateSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -979,7 +979,7 @@ func (b *StateContextBridge) persistState(ctx context.Context, args []engine.Scr
 		"success": true,
 		"version": 1,
 	}
-	return b.convertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *StateContextBridge) loadState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -993,7 +993,7 @@ func (b *StateContextBridge) listPersistedStates(ctx context.Context, args []eng
 		"states": []interface{}{},
 		"total":  0,
 	}
-	return b.convertToScriptValue(result), nil
+	return engine.ConvertToScriptValue(result), nil
 }
 
 func (b *StateContextBridge) deletePersistedState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -1259,41 +1259,6 @@ func (b *StateContextBridge) emitStateChangeEvent(contextID, key string, oldValu
 	b.eventHistoryMu.Unlock()
 }
 
-func (b *StateContextBridge) convertToScriptValue(v interface{}) engine.ScriptValue {
-	switch val := v.(type) {
-	case nil:
-		return engine.NewNilValue()
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int32:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float32:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case string:
-		return engine.NewStringValue(val)
-	case []interface{}:
-		arr := make([]engine.ScriptValue, len(val))
-		for i, item := range val {
-			arr[i] = b.convertToScriptValue(item)
-		}
-		return engine.NewArrayValue(arr)
-	case map[string]interface{}:
-		obj := make(map[string]engine.ScriptValue)
-		for k, v := range val {
-			obj[k] = b.convertToScriptValue(v)
-		}
-		return engine.NewObjectValue(obj)
-	default:
-		// For unknown types, convert to string
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}
 
 func (b *StateContextBridge) deleteStateFile(contextID string, version int) error {
 	if b.persistDir == "" {

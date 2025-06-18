@@ -373,7 +373,7 @@ func (b *WorkflowBridge) createSequentialWorkflow(args []engine.ScriptValue) (en
 		"id":     engine.NewStringValue(fmt.Sprintf("workflow-%s", name)),
 		"type":   engine.NewStringValue("sequential"),
 		"name":   engine.NewStringValue(name),
-		"config": convertWorkflowToScriptValue(config),
+		"config": engine.ConvertToScriptValue(config),
 	}
 	return engine.NewObjectValue(result), nil
 }
@@ -424,7 +424,7 @@ func (b *WorkflowBridge) executeWorkflow(ctx context.Context, args []engine.Scri
 	}
 
 	// Return result state values
-	return convertWorkflowToScriptValue(resultState.Values()), nil
+	return engine.ConvertToScriptValue(resultState.Values()), nil
 }
 
 func (b *WorkflowBridge) exportWorkflow(args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -620,7 +620,7 @@ func (b *WorkflowBridge) createScriptStep(args []engine.ScriptValue) (engine.Scr
 				stepConfig["description"] = engine.NewStringValue(desc)
 			}
 			if env, ok := config["environment"].(map[string]interface{}); ok {
-				stepConfig["environment"] = convertWorkflowToScriptValue(env)
+				stepConfig["environment"] = engine.ConvertToScriptValue(env)
 			}
 		}
 	}
@@ -947,39 +947,4 @@ func (b *WorkflowBridge) removeWorkflowInternal(id string) error {
 	return nil
 }
 
-// convertWorkflowToScriptValue converts a Go interface{} to engine.ScriptValue
-func convertWorkflowToScriptValue(v interface{}) engine.ScriptValue {
-	if v == nil {
-		return engine.NewNilValue()
-	}
-
-	switch val := v.(type) {
-	case string:
-		return engine.NewStringValue(val)
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case float32:
-		return engine.NewNumberValue(float64(val))
-	case map[string]interface{}:
-		result := make(map[string]engine.ScriptValue)
-		for k, mv := range val {
-			result[k] = convertWorkflowToScriptValue(mv)
-		}
-		return engine.NewObjectValue(result)
-	case []interface{}:
-		result := make([]engine.ScriptValue, len(val))
-		for i, av := range val {
-			result[i] = convertWorkflowToScriptValue(av)
-		}
-		return engine.NewArrayValue(result)
-	default:
-		// For unknown types, convert to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", val))
-	}
-}
+// NOTE: Duplicate conversion function removed - using centralized engine.ConvertToScriptValue() instead

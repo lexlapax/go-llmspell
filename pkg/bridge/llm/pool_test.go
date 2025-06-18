@@ -83,7 +83,7 @@ func TestPoolBridge_CreatePool(t *testing.T) {
 	providers := []interface{}{"provider1", "provider2", "provider3"}
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("round_robin"),
 	}
 
@@ -114,7 +114,7 @@ func TestPoolBridge_PoolStrategies(t *testing.T) {
 			providers := []interface{}{"provider1", "provider2"}
 			args := []engine.ScriptValue{
 				engine.NewStringValue("pool-" + strategy),
-				engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+				engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 				engine.NewStringValue(strategy),
 			}
 
@@ -141,7 +141,7 @@ func TestPoolBridge_GetPool(t *testing.T) {
 	providers := []interface{}{"provider1", "provider2"}
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("round_robin"),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createPool", args)
@@ -196,7 +196,7 @@ func TestPoolBridge_ListPools(t *testing.T) {
 		providers := []interface{}{"provider1", "provider2"}
 		args := []engine.ScriptValue{
 			engine.NewStringValue("pool-" + string(rune('a'+i))),
-			engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+			engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 			engine.NewStringValue("round_robin"),
 		}
 		_, err := bridge.ExecuteMethod(ctx, "createPool", args)
@@ -226,7 +226,7 @@ func TestPoolBridge_RemovePool(t *testing.T) {
 	providers := []interface{}{"provider1", "provider2"}
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("round_robin"),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createPool", args)
@@ -262,7 +262,7 @@ func TestPoolBridge_PoolMetrics(t *testing.T) {
 	providers := []interface{}{"provider1", "provider2"}
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("round_robin"),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createPool", args)
@@ -294,7 +294,7 @@ func TestPoolBridge_ProviderHealth(t *testing.T) {
 	providers := []interface{}{"provider1", "provider2", "provider3"}
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("failover"),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createPool", args)
@@ -337,7 +337,7 @@ func TestPoolBridge_ObjectPools(t *testing.T) {
 
 		// Return response to pool
 		args = []engine.ScriptValue{
-			engine.NewObjectValue(testConvertMapToScriptValue(response)),
+			engine.NewObjectValue(engine.ConvertMapToScriptValue(response)),
 		}
 		result, err = bridge.ExecuteMethod(ctx, "returnResponseToPool", args)
 		assert.NoError(t, err)
@@ -359,7 +359,7 @@ func TestPoolBridge_ObjectPools(t *testing.T) {
 
 		// Return token to pool
 		args = []engine.ScriptValue{
-			engine.NewObjectValue(testConvertMapToScriptValue(token)),
+			engine.NewObjectValue(engine.ConvertMapToScriptValue(token)),
 		}
 		result, err = bridge.ExecuteMethod(ctx, "returnTokenToPool", args)
 		assert.NoError(t, err)
@@ -399,7 +399,7 @@ func TestPoolBridge_PoolConfiguration(t *testing.T) {
 	providers := []interface{}{"provider1", "provider2"}
 	args := []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("round_robin"),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createPool", args)
@@ -417,7 +417,7 @@ func TestPoolBridge_PoolConfiguration(t *testing.T) {
 
 	args = []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewObjectValue(testConvertMapToScriptValue(config)),
+		engine.NewObjectValue(engine.ConvertMapToScriptValue(config)),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "setPoolConfiguration", args)
@@ -470,7 +470,7 @@ func TestPoolBridge_ErrorHandling(t *testing.T) {
 	providers := []interface{}{"provider1"}
 	args = []engine.ScriptValue{
 		engine.NewStringValue("test-pool"),
-		engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 		engine.NewStringValue("invalid_strategy"),
 	}
 
@@ -493,7 +493,7 @@ func TestPoolBridge_ValidateMethod(t *testing.T) {
 	// Test valid method with correct args
 	args := []engine.ScriptValue{
 		engine.NewStringValue("pool-name"),
-		engine.NewArrayValue(testConvertSliceToScriptValue([]interface{}{"provider1"})),
+		engine.NewArrayValue(engine.ConvertSliceToScriptValue([]interface{}{"provider1"})),
 		engine.NewStringValue("round_robin"),
 	}
 	err := bridge.ValidateMethod("createPool", args)
@@ -575,7 +575,7 @@ func TestPoolBridge_Concurrency(t *testing.T) {
 			providers := []interface{}{"provider1", "provider2"}
 			args := []engine.ScriptValue{
 				engine.NewStringValue("pool-" + string(rune('a'+n))),
-				engine.NewArrayValue(testConvertSliceToScriptValue(providers)),
+				engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
 				engine.NewStringValue("round_robin"),
 			}
 

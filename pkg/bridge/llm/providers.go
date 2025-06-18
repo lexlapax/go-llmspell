@@ -923,7 +923,7 @@ func (b *ProvidersBridge) generateWithProvider(ctx context.Context, args []engin
 		// Use the generate method from LLM bridge
 		result, err := b.llmBridge.generate(ctx, []engine.ScriptValue{
 			engine.NewStringValue(prompt),
-			engine.NewObjectValue(providersConvertMapToScriptValue(options)),
+			engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
 		})
 
 		// Restore old provider
@@ -958,7 +958,7 @@ func (b *ProvidersBridge) exportProviderConfig(ctx context.Context, args []engin
 	// Export providers
 	providers := make(map[string]engine.ScriptValue)
 	for name, metadata := range b.metadata {
-		providers[name] = engine.NewObjectValue(providersConvertMapToScriptValue(metadata))
+		providers[name] = engine.NewObjectValue(engine.ConvertMapToScriptValue(metadata))
 	}
 
 	// Export templates
@@ -1040,7 +1040,7 @@ func (b *ProvidersBridge) getProviderMetadata(ctx context.Context, args []engine
 
 	result := map[string]engine.ScriptValue{
 		"name":     engine.NewStringValue(providerName),
-		"metadata": engine.NewObjectValue(providersConvertMapToScriptValue(metadata)),
+		"metadata": engine.NewObjectValue(engine.ConvertMapToScriptValue(metadata)),
 	}
 	return engine.NewObjectValue(result), nil
 }
@@ -1089,62 +1089,9 @@ func (b *ProvidersBridge) templateToScriptValue(template *ProviderTemplate) engi
 		"description":     engine.NewStringValue(template.Description),
 		"requiredEnvVars": engine.NewArrayValue(requiredVars),
 		"optionalEnvVars": engine.NewArrayValue(optionalVars),
-		"defaultConfig":   engine.NewObjectValue(providersConvertMapToScriptValue(template.DefaultConfig)),
+		"defaultConfig":   engine.NewObjectValue(engine.ConvertMapToScriptValue(template.DefaultConfig)),
 	}
 	return engine.NewObjectValue(result)
 }
 
-// providersConvertMapToScriptValue converts map[string]interface{} to map[string]engine.ScriptValue
-func providersConvertMapToScriptValue(m map[string]interface{}) map[string]engine.ScriptValue {
-	if m == nil {
-		return make(map[string]engine.ScriptValue)
-	}
-
-	result := make(map[string]engine.ScriptValue)
-	for k, v := range m {
-		result[k] = providersConvertToScriptValue(v)
-	}
-	return result
-}
-
-// providersConvertToScriptValue converts interface{} to ScriptValue
-func providersConvertToScriptValue(v interface{}) engine.ScriptValue {
-	if v == nil {
-		return engine.NewNilValue()
-	}
-
-	switch val := v.(type) {
-	case bool:
-		return engine.NewBoolValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case int32:
-		return engine.NewNumberValue(float64(val))
-	case int64:
-		return engine.NewNumberValue(float64(val))
-	case float32:
-		return engine.NewNumberValue(float64(val))
-	case float64:
-		return engine.NewNumberValue(val)
-	case string:
-		return engine.NewStringValue(val)
-	case []string:
-		// Convert string slice
-		arr := make([]engine.ScriptValue, len(val))
-		for i, s := range val {
-			arr[i] = engine.NewStringValue(s)
-		}
-		return engine.NewArrayValue(arr)
-	case []interface{}:
-		arr := make([]engine.ScriptValue, len(val))
-		for i, item := range val {
-			arr[i] = providersConvertToScriptValue(item)
-		}
-		return engine.NewArrayValue(arr)
-	case map[string]interface{}:
-		return engine.NewObjectValue(providersConvertMapToScriptValue(val))
-	default:
-		// Convert to string representation
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
-}
+// NOTE: Duplicate conversion functions removed - using centralized engine.ConvertToScriptValue() instead
