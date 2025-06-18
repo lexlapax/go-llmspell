@@ -23,6 +23,7 @@ import (
 type EventBridge struct {
 	mu          sync.RWMutex
 	initialized bool
+	isRecording bool // Track recording state
 
 	// Core event infrastructure
 	eventBus *events.EventBus
@@ -109,10 +110,7 @@ func (b *EventBridge) Initialize(ctx context.Context) error {
 	}))
 
 	// EventBus doesn't have Start method - it's always running
-	// Start recording events (no filters)
-	if err := b.recorder.Start(); err != nil {
-		return fmt.Errorf("failed to start event recorder: %w", err)
-	}
+	// Don't start recording automatically - let the user control it
 
 	b.initialized = true
 	return nil
@@ -298,6 +296,40 @@ func (b *EventBridge) Methods() []engine.MethodInfo {
 			},
 			ReturnType: "object",
 		},
+		// Recording Methods
+		{
+			Name:        "startRecording",
+			Description: "Start recording events to storage",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "void",
+		},
+		{
+			Name:        "stopRecording",
+			Description: "Stop recording events",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "void",
+		},
+		{
+			Name:        "isRecording",
+			Description: "Check if events are being recorded",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "boolean",
+		},
+		// Subscription Info Methods
+		{
+			Name:        "getSubscriptionCount",
+			Description: "Get the number of active subscriptions",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "number",
+		},
+		{
+			Name:        "getSubscriptionInfo",
+			Description: "Get information about a subscription",
+			Parameters: []engine.ParameterInfo{
+				{Name: "subscriptionID", Type: "string", Description: "Subscription ID", Required: true},
+			},
+			ReturnType: "object",
+		},
 	}
 }
 
@@ -346,6 +378,24 @@ func (b *EventBridge) ValidateMethod(name string, args []engine.ScriptValue) err
 		if args[0].Type() != engine.TypeString {
 			return fmt.Errorf("subscriptionID must be string")
 		}
+	case "queryEvents":
+		if len(args) < 1 {
+			return fmt.Errorf("queryEvents requires query parameter")
+		}
+		if args[0].Type() != engine.TypeObject {
+			return fmt.Errorf("query must be object")
+		}
+	case "startRecording", "stopRecording", "isRecording", "getSubscriptionCount":
+		// No parameters required
+	case "getSubscriptionInfo":
+		if len(args) < 1 {
+			return fmt.Errorf("getSubscriptionInfo requires subscriptionID parameter")
+		}
+		if args[0].Type() != engine.TypeString {
+			return fmt.Errorf("subscriptionID must be string")
+		}
+	default:
+		return fmt.Errorf("unknown method: %s", name)
 	}
 	return nil
 }
@@ -725,6 +775,57 @@ func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			"lastUpdate": engine.NewStringValue(aggregator.LastUpdate.Format(time.RFC3339)),
 		}
 
+		return engine.NewObjectValue(result), nil
+
+	// Recording Methods
+	case "startRecording":
+		if b.recorder == nil {
+			return engine.NewErrorValue(fmt.Errorf("recorder not initialized")), nil
+		}
+		if b.isRecording {
+			return engine.NewErrorValue(fmt.Errorf("already recording")), nil
+		}
+		if err := b.recorder.Start(); err != nil {
+			return engine.NewErrorValue(err), nil
+		}
+		b.isRecording = true
+		return engine.NewNilValue(), nil
+
+	case "stopRecording":
+		if b.recorder == nil {
+			return engine.NewErrorValue(fmt.Errorf("recorder not initialized")), nil
+		}
+		if !b.isRecording {
+			return engine.NewErrorValue(fmt.Errorf("not recording")), nil
+		}
+		b.recorder.Stop()
+		b.isRecording = false
+		return engine.NewNilValue(), nil
+
+	case "isRecording":
+		return engine.NewBoolValue(b.isRecording), nil
+
+	case "getSubscriptionCount":
+		count := b.eventBus.GetSubscriptionCount()
+		return engine.NewNumberValue(float64(count)), nil
+
+	case "getSubscriptionInfo":
+		if len(args) < 1 {
+			return engine.NewErrorValue(fmt.Errorf("getSubscriptionInfo requires subscriptionID parameter")), nil
+		}
+
+		subID := args[0].(engine.StringValue).Value()
+		pattern, filterCount, found := b.eventBus.GetSubscriptionInfo(subID)
+		
+		if !found {
+			return engine.NewNilValue(), nil
+		}
+
+		result := map[string]engine.ScriptValue{
+			"subscriptionID": engine.NewStringValue(subID),
+			"pattern":        engine.NewStringValue(pattern),
+			"filterCount":    engine.NewNumberValue(float64(filterCount)),
+		}
 		return engine.NewObjectValue(result), nil
 
 	default:

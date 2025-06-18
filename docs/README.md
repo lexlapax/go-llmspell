@@ -43,6 +43,8 @@ Welcome to the comprehensive go-llmspell documentation. This directory contains 
 
 ### Essential Reading
 - [**Architecture Overview**](technical/architecture.md) - Complete system design and philosophy
+- [**GopherLua Engine Architecture**](technical/gopherlua_engine_architecture_design.md) - Lua engine implementation design
+- [**ScriptValue Migration Guide**](technical/scriptvalue_migration_guide.md) - Type system migration guide
 - [**User Guide Index**](user-guide/README.md) - Everything for spell writers
 - [**Technical Guide Index**](technical/README.md) - Everything for developers
 

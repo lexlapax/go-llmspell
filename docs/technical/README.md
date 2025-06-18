@@ -6,6 +6,8 @@ This directory contains technical documentation for go-llmspell developers and c
 
 ### Core Architecture
 - [**Architecture Overview**](architecture.md) - Complete system architecture, bridge-first design, and technical specifications
+- [**GopherLua Engine Architecture**](gopherlua_engine_architecture_design.md) - Comprehensive Lua engine design and implementation blueprint
+- [**ScriptValue Migration Guide**](scriptvalue_migration_guide.md) - Guide for migrating bridges from interface{} to ScriptValue type system
 
 ### Implementation Guides
 - [**API Reference**](api-reference.md) *(Coming Soon)* - Complete API documentation for all interfaces

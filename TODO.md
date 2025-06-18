@@ -19,9 +19,11 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - Phase 2.1: Research and Planning ✅ COMPLETED [2025-06-17]
   - Phase 2.2: Core Engine Components ✅ COMPLETED [2025-06-18]
   - Phase 2.3: Bridge Integration Layer 🚧 IN PROGRESS
-    - ✅ 2.3.1: Module System Architecture [COMPLETED]
-    - ✅ 2.3.2: Async/Coroutine Support [COMPLETED]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 1 of 14 completed]
+    - ✅ 2.3.1: Module System Architecture [COMPLETED - 2025-06-19]
+    - ✅ 2.3.2: Async/Coroutine Support [COMPLETED - 2025-06-19]
+    - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
+    - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 2 of 14 completed]
     - 🔲 2.3.4: Lua Standard Library [NOT STARTED]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -75,33 +77,9 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 #### 2.3.2: Async/Coroutine Support
 ✅ **COMPLETED [2025-06-19]** - All async/coroutine tasks completed. See TODO-DONE.md for details.
 
-- ✅ **Task 2.3.2.0.1: ScriptValue Conversion Centralization** [COMPLETED - 2025-06-18] **[322 lines eliminated]** **[MOVED TO TODO-DONE.md]**
-
-- ✅ **Task 2.3.2.0: ScriptValue Type System Refactoring - Phase 5: Update GopherLua Engine** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
-  
-  
-  - [ ] **Phase 7: Update Tests**
-    - [ ] Update all test files to use ScriptValue
-    - [ ] Fix mock implementations in tests
-    - [ ] Update example scripts to demonstrate new type system
-    - [ ] Add comprehensive ScriptValue conversion tests
-  
-  - [ ] **Phase 8: Cleanup and Documentation**
-    - [ ] Document ScriptValue type system
-    - [ ] Create migration guide for bridge authors
-    - [ ] Update architecture documentation
-    - [ ] Add performance benchmarks comparing old vs new
-    - [ ] Remove old interface{} based code where possible
-
-- ✅ **Task 2.3.2.1: Async Runtime** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
-- ✅ **Task 2.3.2.2: Channel Integration** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
-- ✅ **Task 2.3.2.3: Async Bridge Methods** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
-- ✅ **Task 2.3.2.4: Async Testing** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
 
 #### 2.3.3: Bridge Adapters
-- ✅ **Task 2.3.3.1: Bridge Adapter Base** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
-
-- ✅ **Task 2.3.3.2: LLM and Provider Bridge Adapter** (`/pkg/engine/gopherlua/adapters/llm.go`) [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
+🚧 **IN PROGRESS** - 2 of 14 adapters completed
 
 - [ ] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`)
   - [ ] Create state and context management module

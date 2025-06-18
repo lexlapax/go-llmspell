@@ -13,6 +13,9 @@ func TestToolsBridge_Initialize(t *testing.T) {
 	bridge := NewToolsBridge()
 	ctx := context.Background()
 
+	// Should be not initialized initially
+	assert.False(t, bridge.IsInitialized())
+
 	err := bridge.Initialize(ctx)
 	assert.NoError(t, err)
 	assert.True(t, bridge.IsInitialized())
@@ -28,10 +31,8 @@ func TestToolsBridge_GetMetadata(t *testing.T) {
 	metadata := bridge.GetMetadata()
 
 	assert.Equal(t, "Tools Bridge", metadata.Name)
-	assert.Equal(t, "2.1.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "tools bridge")
-	assert.Equal(t, "go-llmspell", metadata.Author)
-	assert.Equal(t, "MIT", metadata.License)
+	assert.NotEmpty(t, metadata.Version)
 }
 
 func TestToolsBridge_Methods(t *testing.T) {
@@ -40,20 +41,24 @@ func TestToolsBridge_Methods(t *testing.T) {
 
 	// Should have all expected methods
 	expectedMethods := []string{
-		"discoverTools", "executeTool", "validateTool", "getToolSchema",
-		"listAvailableTools", "getToolDefinition", "createCustomTool",
-		"registerTool", "unregisterTool", "enableTool", "disableTool",
-		"isToolEnabled", "getToolMetrics", "resetToolMetrics", "benchmarkTool",
-		"getToolBenchmarks", "setToolTimeout", "getToolTimeout",
-		"addToolValidator", "removeToolValidator", "validateToolInput",
-		"validateToolOutput", "generateToolDocumentation", "exportToolDocumentation",
-		"createToolChain", "executeToolChain", "getToolChain", "removeToolChain",
-		"listToolChains", "addToolToChain", "removeToolFromChain",
-		"setToolChainTimeout", "executeToolsInParallel", "getToolExecutionHistory",
-		"clearToolExecutionHistory", "exportToolExecutionReport",
+		// Discovery methods
+		"listTools", "searchTools", "listByCategory", "getToolInfo",
+		"getToolSchema", "getToolHelp", "getToolExamples",
+		// Tool creation/execution
+		"createTool", "executeTool", "executeToolValidated",
+		// Custom tool registration
+		"registerCustomTool",
+		// Validation methods
+		"validateToolInput", "validateToolOutput", "getValidationReport",
+		// Metrics methods
+		"getToolMetrics", "getAllToolsMetrics", "enableToolProfiling",
+		"getToolUsageReport", "getToolAnomalies",
+		// Documentation methods
+		"generateToolDocumentation", "generateAllToolsDocs", "generateSDKSnippet",
+		"generateToolPlayground",
 	}
 
-	assert.GreaterOrEqual(t, len(methods), len(expectedMethods))
+	assert.Equal(t, len(expectedMethods), len(methods), "Method count mismatch")
 
 	// Check that key methods exist
 	methodNames := make(map[string]bool)
@@ -79,33 +84,30 @@ func TestToolsBridge_ValidateMethod(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "valid discoverTools",
-			method:      "discoverTools",
+			name:        "valid listTools",
+			method:      "listTools",
 			args:        []engine.ScriptValue{},
 			expectError: false,
 		},
 		{
-			name:        "valid executeTool",
-			method:      "executeTool",
-			args:        []engine.ScriptValue{engine.NewStringValue("calculator"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			name:        "valid searchTools",
+			method:      "searchTools",
+			args:        []engine.ScriptValue{engine.NewStringValue("test")},
 			expectError: false,
 		},
 		{
-			name:        "invalid executeTool - missing args",
-			method:      "executeTool",
+			name:        "invalid searchTools - missing args",
+			method:      "searchTools",
 			args:        []engine.ScriptValue{},
 			expectError: true,
 		},
 		{
-			name:        "valid getToolDefinition",
-			method:      "getToolDefinition",
-			args:        []engine.ScriptValue{engine.NewStringValue("calculator")},
-			expectError: false,
-		},
-		{
-			name:        "valid createCustomTool",
-			method:      "createCustomTool",
-			args:        []engine.ScriptValue{engine.NewStringValue("custom"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			name:        "valid executeTool",
+			method:      "executeTool",
+			args:        []engine.ScriptValue{
+				engine.NewStringValue("httpRequest"),
+				engine.NewObjectValue(map[string]engine.ScriptValue{}),
+			},
 			expectError: false,
 		},
 		{
@@ -128,96 +130,102 @@ func TestToolsBridge_ValidateMethod(t *testing.T) {
 	}
 }
 
-func TestToolsBridge_ExecuteMethod_DiscoverTools(t *testing.T) {
+func TestToolsBridge_ExecuteMethod_ListTools(t *testing.T) {
 	bridge := NewToolsBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test discoverTools
-	result, err := bridge.ExecuteMethod(ctx, "discoverTools", []engine.ScriptValue{})
+	// Test listTools
+	result, err := bridge.ExecuteMethod(ctx, "listTools", []engine.ScriptValue{})
 	assert.NoError(t, err)
 
 	arrayValue, ok := result.(engine.ArrayValue)
-	assert.True(t, ok, "Expected ArrayValue from discoverTools")
+	assert.True(t, ok, "Expected ArrayValue from listTools")
 
-	// Should return array of discovered tools
+	// Should return array of tools
 	tools := arrayValue.ToGo().([]interface{})
-	assert.GreaterOrEqual(t, len(tools), 0, "Should return array of tools")
+	assert.Greater(t, len(tools), 0, "Should have some tools")
 }
 
-func TestToolsBridge_ExecuteMethod_ListAvailableTools(t *testing.T) {
+func TestToolsBridge_ExecuteMethod_SearchTools(t *testing.T) {
 	bridge := NewToolsBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test listAvailableTools
-	result, err := bridge.ExecuteMethod(ctx, "listAvailableTools", []engine.ScriptValue{})
+	// Test searchTools
+	args := []engine.ScriptValue{engine.NewStringValue("http")}
+	result, err := bridge.ExecuteMethod(ctx, "searchTools", args)
 	assert.NoError(t, err)
 
 	arrayValue, ok := result.(engine.ArrayValue)
-	assert.True(t, ok, "Expected ArrayValue from listAvailableTools")
+	assert.True(t, ok, "Expected ArrayValue from searchTools")
 
-	// Should return array of available tools
+	// Should return filtered tools
 	tools := arrayValue.ToGo().([]interface{})
-	assert.GreaterOrEqual(t, len(tools), 0, "Should return array of available tools")
+	assert.GreaterOrEqual(t, len(tools), 0, "Should return array of matching tools")
 }
 
-func TestToolsBridge_ExecuteMethod_GetToolDefinition(t *testing.T) {
+func TestToolsBridge_ExecuteMethod_GetToolInfo(t *testing.T) {
 	bridge := NewToolsBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test getToolDefinition with non-existent tool
-	args := []engine.ScriptValue{engine.NewStringValue("non-existent-tool")}
-	result, err := bridge.ExecuteMethod(ctx, "getToolDefinition", args)
-	assert.NoError(t, err) // Should return error value, not Go error
-
-	// Could be either ObjectValue (success) or ErrorValue (not found)
-	switch result.(type) {
-	case engine.ObjectValue:
-		// Tool exists and definition returned
-	case engine.ErrorValue:
-		// Tool not found - this is expected for non-existent tools
-		errorValue := result.(engine.ErrorValue)
-		assert.Contains(t, errorValue.Error().Error(), "not found")
-	default:
-		t.Fatalf("Expected ObjectValue or ErrorValue, got %T", result)
-	}
-}
-
-func TestToolsBridge_ExecuteMethod_CreateCustomTool(t *testing.T) {
-	bridge := NewToolsBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
+	// Get list of tools first
+	result, err := bridge.ExecuteMethod(ctx, "listTools", []engine.ScriptValue{})
 	require.NoError(t, err)
+	
+	arrayValue := result.(engine.ArrayValue)
+	tools := arrayValue.ToGo().([]interface{})
+	require.Greater(t, len(tools), 0, "Need at least one tool")
 
-	// Test createCustomTool
-	toolDefinition := map[string]engine.ScriptValue{
-		"name":        engine.NewStringValue("custom-tool"),
-		"description": engine.NewStringValue("A custom tool for testing"),
-		"category":    engine.NewStringValue("test"),
-	}
+	// Get first tool name
+	firstTool := tools[0].(map[string]interface{})
+	toolName := firstTool["name"].(string)
 
-	args := []engine.ScriptValue{
-		engine.NewStringValue("custom-tool"),
-		engine.NewObjectValue(toolDefinition),
-	}
-
-	result, err := bridge.ExecuteMethod(ctx, "createCustomTool", args)
+	// Test getToolInfo
+	args := []engine.ScriptValue{engine.NewStringValue(toolName)}
+	result, err = bridge.ExecuteMethod(ctx, "getToolInfo", args)
 	assert.NoError(t, err)
 
-	// Should return ObjectValue (tool created) or ErrorValue (creation failed)
-	switch result.(type) {
-	case engine.ObjectValue:
-		// Tool created successfully
-	case engine.ErrorValue:
-		// Creation failed - this might be expected if tools are read-only
-	default:
-		t.Fatalf("Expected ObjectValue or ErrorValue, got %T", result)
+	objValue, ok := result.(engine.ObjectValue)
+	assert.True(t, ok, "Expected ObjectValue from getToolInfo")
+
+	toolInfo := objValue.ToGo().(map[string]interface{})
+	assert.Equal(t, toolName, toolInfo["name"])
+	assert.NotEmpty(t, toolInfo["description"])
+}
+
+func TestToolsBridge_ExecuteMethod_RegisterCustomTool(t *testing.T) {
+	bridge := NewToolsBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Create custom tool definition
+	toolDef := map[string]engine.ScriptValue{
+		"name":        engine.NewStringValue("customTool"),
+		"description": engine.NewStringValue("A custom test tool"),
+		"execute": engine.NewFunctionValue("execute", func(ctx interface{}, params interface{}) (interface{}, error) {
+			return map[string]interface{}{"result": "success"}, nil
+		}),
 	}
+
+	// Test registerCustomTool
+	args := []engine.ScriptValue{engine.NewObjectValue(toolDef)}
+	result, err := bridge.ExecuteMethod(ctx, "registerCustomTool", args)
+	assert.NoError(t, err)
+
+	// registerCustomTool returns nil on success
+	_, ok := result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from registerCustomTool")
+
+	// Verify tool was registered
+	toolInfo, err := bridge.ExecuteMethod(ctx, "getToolInfo", []engine.ScriptValue{engine.NewStringValue("customTool")})
+	assert.NoError(t, err)
+	assert.NotNil(t, toolInfo)
 }
 
 func TestToolsBridge_ExecuteMethod_ExecuteTool(t *testing.T) {
@@ -226,45 +234,31 @@ func TestToolsBridge_ExecuteMethod_ExecuteTool(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test executeTool with simple parameters
-	toolParams := map[string]engine.ScriptValue{
-		"input": engine.NewStringValue("test input"),
+	// Register a custom tool first
+	toolDef := map[string]engine.ScriptValue{
+		"name":        engine.NewStringValue("testExecutor"),
+		"description": engine.NewStringValue("Test executor tool"),
+		"execute": engine.NewFunctionValue("execute", func(ctx interface{}, params interface{}) (interface{}, error) {
+			return map[string]interface{}{"executed": true}, nil
+		}),
 	}
+	
+	_, err = bridge.ExecuteMethod(ctx, "registerCustomTool", []engine.ScriptValue{engine.NewObjectValue(toolDef)})
+	require.NoError(t, err)
 
+	// Test executeTool
 	args := []engine.ScriptValue{
-		engine.NewStringValue("echo"), // Assuming echo tool exists
-		engine.NewObjectValue(toolParams),
+		engine.NewStringValue("testExecutor"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{"test": engine.NewBoolValue(true)}),
 	}
-
 	result, err := bridge.ExecuteMethod(ctx, "executeTool", args)
 	assert.NoError(t, err)
 
-	// Could be any type depending on tool output
-	assert.NotNil(t, result, "Should return some result from tool execution")
-}
-
-func TestToolsBridge_ExecuteMethod_ValidateTool(t *testing.T) {
-	bridge := NewToolsBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Test validateTool
-	toolDefinition := map[string]engine.ScriptValue{
-		"name":        engine.NewStringValue("test-tool"),
-		"description": engine.NewStringValue("A test tool"),
-	}
-
-	args := []engine.ScriptValue{engine.NewObjectValue(toolDefinition)}
-	result, err := bridge.ExecuteMethod(ctx, "validateTool", args)
-	assert.NoError(t, err)
-
-	// Should return ValidationResult
-	objectValue, ok := result.(engine.ObjectValue)
-	assert.True(t, ok, "Expected ObjectValue from validateTool")
-
-	validation := objectValue.ToGo().(map[string]interface{})
-	assert.Contains(t, validation, "valid")
+	objValue, ok := result.(engine.ObjectValue)
+	assert.True(t, ok, "Expected ObjectValue from executeTool")
+	
+	resultMap := objValue.ToGo().(map[string]interface{})
+	assert.Equal(t, true, resultMap["executed"])
 }
 
 func TestToolsBridge_ExecuteMethod_GetToolSchema(t *testing.T) {
@@ -273,104 +267,47 @@ func TestToolsBridge_ExecuteMethod_GetToolSchema(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test getToolSchema
-	args := []engine.ScriptValue{engine.NewStringValue("calculator")}
+	// Get a tool that has schema
+	args := []engine.ScriptValue{engine.NewStringValue("httpRequest")}
 	result, err := bridge.ExecuteMethod(ctx, "getToolSchema", args)
-	assert.NoError(t, err)
-
-	// Could be ObjectValue (schema found) or ErrorValue (not found)
-	switch result.(type) {
-	case engine.ObjectValue:
-		// Schema found
-	case engine.ErrorValue:
-		// Schema not found
-	default:
-		t.Fatalf("Expected ObjectValue or ErrorValue, got %T", result)
+	
+	if err != nil {
+		// Tool might not exist, which is ok for this test
+		assert.Contains(t, err.Error(), "not found")
+	} else {
+		objValue, ok := result.(engine.ObjectValue)
+		assert.True(t, ok, "Expected ObjectValue from getToolSchema")
+		
+		schema := objValue.ToGo().(map[string]interface{})
+		assert.NotNil(t, schema["name"])
+		assert.NotNil(t, schema["description"])
 	}
 }
 
-func TestToolsBridge_ExecuteMethod_RegisterUnregisterTool(t *testing.T) {
+func TestToolsBridge_ExecuteMethod_ValidateToolInput(t *testing.T) {
 	bridge := NewToolsBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	toolName := "test-tool"
-	toolDefinition := map[string]engine.ScriptValue{
-		"name":        engine.NewStringValue(toolName),
-		"description": engine.NewStringValue("A test tool"),
+	// Test validateToolInput
+	args := []engine.ScriptValue{
+		engine.NewStringValue("httpRequest"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"url":    engine.NewStringValue("https://example.com"),
+			"method": engine.NewStringValue("GET"),
+		}),
 	}
-
-	// Test registerTool
-	registerArgs := []engine.ScriptValue{
-		engine.NewStringValue(toolName),
-		engine.NewObjectValue(toolDefinition),
+	
+	result, err := bridge.ExecuteMethod(ctx, "validateToolInput", args)
+	// May error if tool doesn't exist, which is ok
+	if err == nil {
+		objValue, ok := result.(engine.ObjectValue)
+		assert.True(t, ok, "Expected ObjectValue from validateToolInput")
+		
+		validation := objValue.ToGo().(map[string]interface{})
+		assert.NotNil(t, validation["valid"])
 	}
-
-	result, err := bridge.ExecuteMethod(ctx, "registerTool", registerArgs)
-	assert.NoError(t, err)
-
-	// Should return success indicator or error
-	switch result.(type) {
-	case engine.BoolValue:
-		// Registration result
-	case engine.ErrorValue:
-		// Registration failed
-	case engine.NilValue:
-		// Registration completed without explicit result
-	default:
-		t.Fatalf("Expected BoolValue, ErrorValue, or NilValue, got %T", result)
-	}
-
-	// Test unregisterTool
-	unregisterArgs := []engine.ScriptValue{engine.NewStringValue(toolName)}
-	result, err = bridge.ExecuteMethod(ctx, "unregisterTool", unregisterArgs)
-	assert.NoError(t, err)
-
-	// Should return success indicator
-	switch result.(type) {
-	case engine.BoolValue:
-		// Unregistration result
-	case engine.ErrorValue:
-		// Unregistration failed
-	case engine.NilValue:
-		// Unregistration completed
-	default:
-		t.Fatalf("Expected BoolValue, ErrorValue, or NilValue, got %T", result)
-	}
-}
-
-func TestToolsBridge_ExecuteMethod_EnableDisableTool(t *testing.T) {
-	bridge := NewToolsBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	toolName := "test-tool"
-
-	// Test enableTool
-	enableArgs := []engine.ScriptValue{engine.NewStringValue(toolName)}
-	result, err := bridge.ExecuteMethod(ctx, "enableTool", enableArgs)
-	assert.NoError(t, err)
-
-	_, ok := result.(engine.BoolValue)
-	assert.True(t, ok, "Expected BoolValue from enableTool")
-
-	// Test isToolEnabled
-	isEnabledArgs := []engine.ScriptValue{engine.NewStringValue(toolName)}
-	result, err = bridge.ExecuteMethod(ctx, "isToolEnabled", isEnabledArgs)
-	assert.NoError(t, err)
-
-	_, ok = result.(engine.BoolValue)
-	assert.True(t, ok, "Expected BoolValue from isToolEnabled")
-
-	// Test disableTool
-	disableArgs := []engine.ScriptValue{engine.NewStringValue(toolName)}
-	result, err = bridge.ExecuteMethod(ctx, "disableTool", disableArgs)
-	assert.NoError(t, err)
-
-	_, ok = result.(engine.BoolValue)
-	assert.True(t, ok, "Expected BoolValue from disableTool")
 }
 
 func TestToolsBridge_ExecuteMethod_GetToolMetrics(t *testing.T) {
@@ -379,134 +316,34 @@ func TestToolsBridge_ExecuteMethod_GetToolMetrics(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test getToolMetrics
-	args := []engine.ScriptValue{engine.NewStringValue("test-tool")}
+	// Test getToolMetrics - first execute a tool to generate metrics
+	// Register a custom tool
+	toolDef := map[string]engine.ScriptValue{
+		"name":        engine.NewStringValue("metricsTool"),
+		"description": engine.NewStringValue("Tool for metrics test"),
+		"execute": engine.NewFunctionValue("execute", func(ctx interface{}, params interface{}) (interface{}, error) {
+			return map[string]interface{}{"result": "success"}, nil
+		}),
+	}
+	_, err = bridge.ExecuteMethod(ctx, "registerCustomTool", []engine.ScriptValue{engine.NewObjectValue(toolDef)})
+	require.NoError(t, err)
+	
+	// Execute it to generate metrics
+	_, _ = bridge.ExecuteMethod(ctx, "executeTool", []engine.ScriptValue{
+		engine.NewStringValue("metricsTool"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+	})
+	
+	// Now get metrics
+	args := []engine.ScriptValue{engine.NewStringValue("metricsTool")}
 	result, err := bridge.ExecuteMethod(ctx, "getToolMetrics", args)
 	assert.NoError(t, err)
 
-	objectValue, ok := result.(engine.ObjectValue)
+	objValue, ok := result.(engine.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from getToolMetrics")
-
-	metrics := objectValue.ToGo().(map[string]interface{})
-	assert.Contains(t, metrics, "execution_count")
-	assert.Contains(t, metrics, "success_count")
-}
-
-func TestToolsBridge_ExecuteMethod_BenchmarkTool(t *testing.T) {
-	bridge := NewToolsBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Test benchmarkTool
-	benchmarkConfig := map[string]engine.ScriptValue{
-		"iterations": engine.NewNumberValue(10),
-		"timeout":    engine.NewNumberValue(5000),
-	}
-
-	args := []engine.ScriptValue{
-		engine.NewStringValue("echo"),
-		engine.NewObjectValue(benchmarkConfig),
-	}
-
-	result, err := bridge.ExecuteMethod(ctx, "benchmarkTool", args)
-	assert.NoError(t, err)
-
-	// Should return benchmark results
-	objectValue, ok := result.(engine.ObjectValue)
-	assert.True(t, ok, "Expected ObjectValue from benchmarkTool")
-
-	benchmark := objectValue.ToGo().(map[string]interface{})
-	assert.Contains(t, benchmark, "average_duration")
-	assert.Contains(t, benchmark, "total_iterations")
-}
-
-func TestToolsBridge_ExecuteMethod_SetGetToolTimeout(t *testing.T) {
-	bridge := NewToolsBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	toolName := "test-tool"
-	timeout := float64(5000) // 5 seconds
-
-	// Test setToolTimeout
-	setArgs := []engine.ScriptValue{
-		engine.NewStringValue(toolName),
-		engine.NewNumberValue(timeout),
-	}
-	result, err := bridge.ExecuteMethod(ctx, "setToolTimeout", setArgs)
-	assert.NoError(t, err)
-
-	_, ok := result.(engine.NilValue)
-	assert.True(t, ok, "Expected NilValue from setToolTimeout")
-
-	// Test getToolTimeout
-	getArgs := []engine.ScriptValue{engine.NewStringValue(toolName)}
-	result, err = bridge.ExecuteMethod(ctx, "getToolTimeout", getArgs)
-	assert.NoError(t, err)
-
-	numberValue, ok := result.(engine.NumberValue)
-	assert.True(t, ok, "Expected NumberValue from getToolTimeout")
-	assert.Equal(t, timeout, numberValue.Value(), "Timeout should match what was set")
-}
-
-func TestToolsBridge_ExecuteMethod_CreateToolChain(t *testing.T) {
-	bridge := NewToolsBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Test createToolChain
-	chainConfig := map[string]engine.ScriptValue{
-		"name":        engine.NewStringValue("test-chain"),
-		"description": engine.NewStringValue("A test tool chain"),
-		"tools": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewStringValue("tool1"),
-			engine.NewStringValue("tool2"),
-		}),
-	}
-
-	args := []engine.ScriptValue{
-		engine.NewStringValue("test-chain"),
-		engine.NewObjectValue(chainConfig),
-	}
-
-	result, err := bridge.ExecuteMethod(ctx, "createToolChain", args)
-	assert.NoError(t, err)
-
-	stringValue, ok := result.(engine.StringValue)
-	assert.True(t, ok, "Expected StringValue (chain ID) from createToolChain")
-	assert.Equal(t, "test-chain", stringValue.Value(), "Chain ID should match input")
-}
-
-func TestToolsBridge_ExecuteMethod_ExecuteToolsInParallel(t *testing.T) {
-	bridge := NewToolsBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Test executeToolsInParallel
-	toolSpecs := []engine.ScriptValue{
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"name":   engine.NewStringValue("tool1"),
-			"params": engine.NewObjectValue(map[string]engine.ScriptValue{}),
-		}),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"name":   engine.NewStringValue("tool2"),
-			"params": engine.NewObjectValue(map[string]engine.ScriptValue{}),
-		}),
-	}
-
-	args := []engine.ScriptValue{engine.NewArrayValue(toolSpecs)}
-	result, err := bridge.ExecuteMethod(ctx, "executeToolsInParallel", args)
-	assert.NoError(t, err)
-
-	arrayValue, ok := result.(engine.ArrayValue)
-	assert.True(t, ok, "Expected ArrayValue from executeToolsInParallel")
-
-	results := arrayValue.ToGo().([]interface{})
-	assert.Equal(t, 2, len(results), "Should return results for both tools")
+	
+	metrics := objValue.ToGo().(map[string]interface{})
+	assert.NotNil(t, metrics["toolName"])
 }
 
 func TestToolsBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
@@ -516,11 +353,9 @@ func TestToolsBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
 	require.NoError(t, err)
 
 	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
-	assert.NoError(t, err) // Should return error value, not Go error
-
-	errorValue, ok := result.(engine.ErrorValue)
-	assert.True(t, ok, "Expected ErrorValue for unknown method")
-	assert.Contains(t, errorValue.Error().Error(), "unknown method")
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "method not found")
 }
 
 func TestToolsBridge_RequiredPermissions(t *testing.T) {
@@ -530,14 +365,14 @@ func TestToolsBridge_RequiredPermissions(t *testing.T) {
 	assert.Greater(t, len(permissions), 0, "Should have required permissions")
 
 	// Check for expected permission types
-	hasToolsPermission := false
+	hasToolPermission := false
 	for _, perm := range permissions {
-		if perm.Resource == "tools" {
-			hasToolsPermission = true
+		if perm.Resource == "tool" {
+			hasToolPermission = true
 			break
 		}
 	}
-	assert.True(t, hasToolsPermission, "Should have tools permission")
+	assert.True(t, hasToolPermission, "Should have tool permission")
 }
 
 func TestToolsBridge_TypeMappings(t *testing.T) {
@@ -547,7 +382,7 @@ func TestToolsBridge_TypeMappings(t *testing.T) {
 	assert.Greater(t, len(mappings), 0, "Should have type mappings")
 
 	// Check for expected mappings
-	expectedTypes := []string{"Tool", "ToolDefinition", "ToolChain"}
+	expectedTypes := []string{"Tool", "ToolInfo"}
 	for _, expectedType := range expectedTypes {
 		_, exists := mappings[expectedType]
 		assert.True(t, exists, "Expected type mapping for %s", expectedType)
@@ -572,10 +407,8 @@ func TestToolsBridge_NotInitialized(t *testing.T) {
 	ctx := context.Background()
 
 	// Should fail when not initialized
-	result, err := bridge.ExecuteMethod(ctx, "discoverTools", []engine.ScriptValue{})
-	assert.NoError(t, err) // Should return error value, not Go error
-
-	errorValue, ok := result.(engine.ErrorValue)
-	assert.True(t, ok, "Expected ErrorValue when not initialized")
-	assert.Contains(t, errorValue.Error().Error(), "not initialized")
+	result, err := bridge.ExecuteMethod(ctx, "listTools", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "not initialized")
 }

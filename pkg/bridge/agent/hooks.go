@@ -194,7 +194,7 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 // ExecuteMethod runs a bridge method
 func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if !b.IsInitialized() {
-		return nil, fmt.Errorf("bridge not initialized")
+		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
 	}
 
 	switch method {
@@ -235,11 +235,11 @@ func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []e
 		}
 		return convertHookInfoToScriptValue(info.(map[string]interface{})), nil
 	case "executeHooks":
-		results, err := b.executeHooks(ctx, args)
+		success, err := b.executeHooks(ctx, args)
 		if err != nil {
 			return nil, err
 		}
-		return convertExecuteResultsToScriptValue(results.([]interface{})), nil
+		return engine.NewBoolValue(success.(bool)), nil
 	case "clearHooks":
 		count, err := b.clearHooks(ctx)
 		if err != nil {
@@ -628,12 +628,5 @@ func convertHookInfoToScriptValue(info map[string]interface{}) engine.ScriptValu
 	return engine.NewObjectValue(result)
 }
 
-func convertExecuteResultsToScriptValue(results []interface{}) engine.ScriptValue {
-	scriptResults := make([]engine.ScriptValue, len(results))
-	for i, r := range results {
-		scriptResults[i] = engine.ConvertToScriptValue(r)
-	}
-	return engine.NewArrayValue(scriptResults)
-}
 
 // NOTE: Duplicate conversion function removed - using centralized engine.ConvertToScriptValue() instead

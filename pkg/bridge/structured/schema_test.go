@@ -245,7 +245,11 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 
 		resultObj := result.(engine.ObjectValue).ToGo().(map[string]interface{})
 		assert.Equal(t, "string", resultObj["type"])
-		assert.Equal(t, constraints, resultObj["constraints"])
+		
+		// Check constraints - numbers may be converted to float64
+		constraintsResult := resultObj["constraints"].(map[string]interface{})
+		assert.Equal(t, float64(1), constraintsResult["minLength"])
+		assert.Equal(t, float64(100), constraintsResult["maxLength"])
 	})
 
 	t.Run("validateJSON", func(t *testing.T) {

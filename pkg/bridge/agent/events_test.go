@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
@@ -27,9 +28,9 @@ func TestEventsBridge_GetMetadata(t *testing.T) {
 	bridge := NewEventBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "Events Bridge", metadata.Name)
-	assert.Equal(t, "2.1.0", metadata.Version)
-	assert.Contains(t, metadata.Description, "event system")
+	assert.Equal(t, "events", metadata.Name)
+	assert.Equal(t, "2.0.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "Event system bridge")
 	assert.Equal(t, "go-llmspell", metadata.Author)
 	assert.Equal(t, "MIT", metadata.License)
 }
@@ -40,15 +41,12 @@ func TestEventsBridge_Methods(t *testing.T) {
 
 	// Should have all expected methods
 	expectedMethods := []string{
-		"emit", "subscribe", "unsubscribe", "once", "listListeners",
-		"removeAllListeners", "hasListeners", "getMaxListeners", "setMaxListeners",
-		"getListenerCount", "startRecording", "stopRecording", "getRecordedEvents",
-		"clearRecordedEvents", "replayEvents", "pauseRecording", "resumeRecording",
-		"isRecording", "createEventFilter", "setEventFilter", "removeEventFilter",
-		"listEventFilters", "enableEventPersistence", "disableEventPersistence",
-		"saveEvents", "loadEvents", "getEventStats", "clearEventStats",
-		"exportEvents", "importEvents", "createEventBatch", "emitEventBatch",
-		"scheduleEvent", "cancelScheduledEvent", "listScheduledEvents",
+		"publishEvent", "subscribe", "subscribeWithFilter", "unsubscribe",
+		"storeEvent", "queryEvents", "getEventHistory", 
+		"createFilter", "createCompositeFilter",
+		"serializeEvent", "deserializeEvent",
+		"replayEvents", "pauseReplay", "resumeReplay", "stopReplay",
+		"createAggregator", "getAggregatedData",
 	}
 
 	assert.GreaterOrEqual(t, len(methods), len(expectedMethods))
@@ -77,27 +75,27 @@ func TestEventsBridge_ValidateMethod(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "valid emit",
-			method:      "emit",
-			args:        []engine.ScriptValue{engine.NewStringValue("test-event"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			name:        "valid publishEvent",
+			method:      "publishEvent",
+			args:        []engine.ScriptValue{engine.NewObjectValue(map[string]engine.ScriptValue{"type": engine.NewStringValue("test")})},
 			expectError: false,
 		},
 		{
-			name:        "invalid emit - missing args",
-			method:      "emit",
+			name:        "invalid publishEvent - missing args",
+			method:      "publishEvent",
 			args:        []engine.ScriptValue{},
 			expectError: true,
 		},
 		{
 			name:        "valid subscribe",
 			method:      "subscribe",
-			args:        []engine.ScriptValue{engine.NewStringValue("test-event"), engine.NewStringValue("handler")},
+			args:        []engine.ScriptValue{engine.NewStringValue("test-event"), engine.NewFunctionValue("handler", func(args []engine.ScriptValue) (engine.ScriptValue, error) { return engine.NewNilValue(), nil })},
 			expectError: false,
 		},
 		{
-			name:        "valid listListeners",
-			method:      "listListeners",
-			args:        []engine.ScriptValue{},
+			name:        "valid queryEvents",
+			method:      "queryEvents",
+			args:        []engine.ScriptValue{engine.NewObjectValue(map[string]engine.ScriptValue{})},
 			expectError: false,
 		},
 		{
@@ -120,29 +118,28 @@ func TestEventsBridge_ValidateMethod(t *testing.T) {
 	}
 }
 
-func TestEventsBridge_ExecuteMethod_Emit(t *testing.T) {
+func TestEventsBridge_ExecuteMethod_PublishEvent(t *testing.T) {
 	bridge := NewEventBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test emit event
-	eventType := "test-event"
+	// Test publish event
 	eventData := map[string]engine.ScriptValue{
+		"type":    engine.NewStringValue("test-event"),
 		"message": engine.NewStringValue("Hello World"),
 		"count":   engine.NewNumberValue(42),
 	}
 
 	args := []engine.ScriptValue{
-		engine.NewStringValue(eventType),
 		engine.NewObjectValue(eventData),
 	}
 
-	result, err := bridge.ExecuteMethod(ctx, "emit", args)
+	result, err := bridge.ExecuteMethod(ctx, "publishEvent", args)
 	assert.NoError(t, err)
 
 	_, ok := result.(engine.NilValue)
-	assert.True(t, ok, "Expected NilValue from emit")
+	assert.True(t, ok, "Expected NilValue from publishEvent")
 }
 
 func TestEventsBridge_ExecuteMethod_Subscribe(t *testing.T) {
@@ -152,12 +149,14 @@ func TestEventsBridge_ExecuteMethod_Subscribe(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test subscribe to event
-	eventType := "test-event"
-	handler := "test-handler-function"
+	eventPattern := "test-event"
+	handler := engine.NewFunctionValue("handler", func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+		return engine.NewNilValue(), nil
+	})
 
 	args := []engine.ScriptValue{
-		engine.NewStringValue(eventType),
-		engine.NewStringValue(handler),
+		engine.NewStringValue(eventPattern),
+		handler,
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "subscribe", args)
@@ -168,19 +167,19 @@ func TestEventsBridge_ExecuteMethod_Subscribe(t *testing.T) {
 	assert.NotEmpty(t, stringValue.Value(), "Subscription ID should not be empty")
 }
 
-func TestEventsBridge_ExecuteMethod_ListListeners(t *testing.T) {
+func TestEventsBridge_ExecuteMethod_GetSubscriptionCount(t *testing.T) {
 	bridge := NewEventBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test listListeners - should work even with no listeners
-	result, err := bridge.ExecuteMethod(ctx, "listListeners", []engine.ScriptValue{})
+	// Test getSubscriptionCount - should return 0 initially
+	result, err := bridge.ExecuteMethod(ctx, "getSubscriptionCount", []engine.ScriptValue{})
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
-	assert.True(t, ok, "Expected ArrayValue from listListeners")
-	assert.Equal(t, 0, len(arrayValue.ToGo().([]interface{})), "Expected empty array initially")
+	numberValue, ok := result.(engine.NumberValue)
+	assert.True(t, ok, "Expected NumberValue from getSubscriptionCount")
+	assert.Equal(t, float64(0), numberValue.Value(), "Expected 0 subscriptions initially")
 }
 
 func TestEventsBridge_ExecuteMethod_StartStopRecording(t *testing.T) {
@@ -220,7 +219,7 @@ func TestEventsBridge_ExecuteMethod_StartStopRecording(t *testing.T) {
 	assert.False(t, boolValue.Value(), "Should not be recording after stopRecording")
 }
 
-func TestEventsBridge_ExecuteMethod_GetRecordedEvents(t *testing.T) {
+func TestEventsBridge_ExecuteMethod_QueryEvents(t *testing.T) {
 	bridge := NewEventBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
@@ -230,94 +229,35 @@ func TestEventsBridge_ExecuteMethod_GetRecordedEvents(t *testing.T) {
 	_, err = bridge.ExecuteMethod(ctx, "startRecording", []engine.ScriptValue{})
 	require.NoError(t, err)
 
-	// Emit an event
+	// Publish an event
 	eventArgs := []engine.ScriptValue{
-		engine.NewStringValue("test-event"),
 		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"type": engine.NewStringValue("test-event"),
 			"data": engine.NewStringValue("test"),
 		}),
 	}
-	_, err = bridge.ExecuteMethod(ctx, "emit", eventArgs)
+	_, err = bridge.ExecuteMethod(ctx, "publishEvent", eventArgs)
 	require.NoError(t, err)
 
-	// Get recorded events
-	result, err := bridge.ExecuteMethod(ctx, "getRecordedEvents", []engine.ScriptValue{})
+	// Give a moment for the event to be processed and stored
+	time.Sleep(10 * time.Millisecond)
+
+	// Query events
+	queryArgs := []engine.ScriptValue{
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"limit": engine.NewNumberValue(10),
+		}),
+	}
+	result, err := bridge.ExecuteMethod(ctx, "queryEvents", queryArgs)
 	assert.NoError(t, err)
 
 	arrayValue, ok := result.(engine.ArrayValue)
-	assert.True(t, ok, "Expected ArrayValue from getRecordedEvents")
+	assert.True(t, ok, "Expected ArrayValue from queryEvents")
 
 	events := arrayValue.ToGo().([]interface{})
-	assert.Greater(t, len(events), 0, "Should have recorded events")
+	assert.GreaterOrEqual(t, len(events), 1, "Should have at least one event")
 }
 
-func TestEventsBridge_ExecuteMethod_GetEventStats(t *testing.T) {
-	bridge := NewEventBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Get stats
-	result, err := bridge.ExecuteMethod(ctx, "getEventStats", []engine.ScriptValue{})
-	assert.NoError(t, err)
-
-	objectValue, ok := result.(engine.ObjectValue)
-	assert.True(t, ok, "Expected ObjectValue from getEventStats")
-
-	stats := objectValue.ToGo().(map[string]interface{})
-	assert.Contains(t, stats, "total_events")
-	assert.Contains(t, stats, "total_listeners")
-}
-
-func TestEventsBridge_ExecuteMethod_SetMaxListeners(t *testing.T) {
-	bridge := NewEventBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Set max listeners
-	args := []engine.ScriptValue{engine.NewNumberValue(50)}
-	result, err := bridge.ExecuteMethod(ctx, "setMaxListeners", args)
-	assert.NoError(t, err)
-
-	_, ok := result.(engine.NilValue)
-	assert.True(t, ok, "Expected NilValue from setMaxListeners")
-
-	// Get max listeners
-	result, err = bridge.ExecuteMethod(ctx, "getMaxListeners", []engine.ScriptValue{})
-	assert.NoError(t, err)
-
-	numberValue, ok := result.(engine.NumberValue)
-	assert.True(t, ok, "Expected NumberValue from getMaxListeners")
-	assert.Equal(t, float64(50), numberValue.Value(), "Max listeners should be 50")
-}
-
-func TestEventsBridge_ExecuteMethod_CreateEventFilter(t *testing.T) {
-	bridge := NewEventBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Create event filter
-	filterConfig := map[string]engine.ScriptValue{
-		"eventTypes": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewStringValue("test-event"),
-		}),
-		"priority": engine.NewNumberValue(1),
-	}
-
-	args := []engine.ScriptValue{
-		engine.NewStringValue("test-filter"),
-		engine.NewObjectValue(filterConfig),
-	}
-
-	result, err := bridge.ExecuteMethod(ctx, "createEventFilter", args)
-	assert.NoError(t, err)
-
-	stringValue, ok := result.(engine.StringValue)
-	assert.True(t, ok, "Expected StringValue (filter ID) from createEventFilter")
-	assert.Equal(t, "test-filter", stringValue.Value(), "Filter ID should match input")
-}
 
 func TestEventsBridge_ExecuteMethod_Unsubscribe(t *testing.T) {
 	bridge := NewEventBridge()
@@ -328,7 +268,9 @@ func TestEventsBridge_ExecuteMethod_Unsubscribe(t *testing.T) {
 	// Subscribe first
 	subscribeArgs := []engine.ScriptValue{
 		engine.NewStringValue("test-event"),
-		engine.NewStringValue("handler"),
+		engine.NewFunctionValue("handler", func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+			return engine.NewNilValue(), nil
+		}),
 	}
 
 	subscribeResult, err := bridge.ExecuteMethod(ctx, "subscribe", subscribeArgs)
@@ -341,9 +283,8 @@ func TestEventsBridge_ExecuteMethod_Unsubscribe(t *testing.T) {
 	result, err := bridge.ExecuteMethod(ctx, "unsubscribe", unsubscribeArgs)
 	assert.NoError(t, err)
 
-	boolValue, ok := result.(engine.BoolValue)
-	assert.True(t, ok, "Expected BoolValue from unsubscribe")
-	assert.True(t, boolValue.Value(), "Unsubscribe should succeed")
+	_, ok := result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from unsubscribe")
 }
 
 func TestEventsBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
@@ -384,7 +325,7 @@ func TestEventsBridge_TypeMappings(t *testing.T) {
 	assert.Greater(t, len(mappings), 0, "Should have type mappings")
 
 	// Check for expected mappings
-	expectedTypes := []string{"Event", "EventFilter", "EventListener"}
+	expectedTypes := []string{"Event", "EventFilter", "EventQuery"}
 	for _, expectedType := range expectedTypes {
 		_, exists := mappings[expectedType]
 		assert.True(t, exists, "Expected type mapping for %s", expectedType)
@@ -409,7 +350,9 @@ func TestEventsBridge_NotInitialized(t *testing.T) {
 	ctx := context.Background()
 
 	// Should fail when not initialized
-	result, err := bridge.ExecuteMethod(ctx, "listListeners", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "publishEvent", []engine.ScriptValue{
+		engine.NewObjectValue(map[string]engine.ScriptValue{"type": engine.NewStringValue("test")}),
+	})
 	assert.NoError(t, err) // Should return error value, not Go error
 
 	errorValue, ok := result.(engine.ErrorValue)

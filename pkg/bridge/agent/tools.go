@@ -394,8 +394,48 @@ func (b *ToolsBridge) TypeMappings() map[string]engine.TypeMapping {
 
 // ValidateMethod validates method calls
 func (b *ToolsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
-	// Method validation handled by engine based on Methods() metadata
-	return nil
+	switch name {
+	case "listTools", "getAllToolsMetrics", "generateAllToolsDocs":
+		// No arguments required
+		return nil
+	case "searchTools", "listByCategory", "getToolInfo", "getToolSchema", "getToolHelp", "getToolExamples", "createTool", "getToolMetrics", "enableToolProfiling":
+		if len(args) < 1 {
+			return fmt.Errorf("%s requires at least one argument", name)
+		}
+		if args[0] == nil || args[0].Type() != engine.TypeString {
+			return fmt.Errorf("%s requires first argument to be string", name)
+		}
+		return nil
+	case "executeTool", "executeToolValidated", "validateToolInput", "validateToolOutput":
+		if len(args) < 2 {
+			return fmt.Errorf("%s requires at least two arguments", name)
+		}
+		if args[0] == nil || args[0].Type() != engine.TypeString {
+			return fmt.Errorf("%s requires first argument to be string", name)
+		}
+		if args[1] == nil || args[1].Type() != engine.TypeObject {
+			return fmt.Errorf("%s requires second argument to be object", name)
+		}
+		return nil
+	case "registerCustomTool":
+		if len(args) < 1 {
+			return fmt.Errorf("registerCustomTool requires tool definition")
+		}
+		if args[0] == nil || args[0].Type() != engine.TypeObject {
+			return fmt.Errorf("registerCustomTool requires argument to be object")
+		}
+		return nil
+	case "getValidationReport", "getToolUsageReport", "getToolAnomalies":
+		// Optional arguments
+		return nil
+	case "generateToolDocumentation", "generateSDKSnippet", "generateToolPlayground":
+		if len(args) < 1 {
+			return fmt.Errorf("%s requires at least one argument", name)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 // RequiredPermissions returns required permissions
@@ -585,6 +625,9 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		name := args[0].(engine.StringValue).Value()
 		params := args[1]
 
+		// Track execution start time
+		startTime := time.Now()
+
 		var tool domain.Tool
 
 		// Check custom tools first
@@ -606,6 +649,10 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 
 		// Execute the tool
 		result, err := tool.Execute(toolCtx, params)
+		
+		// Update metrics
+		b.updateExecutionMetrics(name, err == nil, time.Since(startTime), err)
+		
 		if err != nil {
 			return nil, fmt.Errorf("tool execution failed: %w", err)
 		}
