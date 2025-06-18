@@ -20,13 +20,13 @@ import (
 type WorkflowBridge struct {
 	mu          sync.RWMutex
 	initialized bool
-	
+
 	// Store actual workflow agents
-	workflows   map[string]domain.BaseAgent
-	
+	workflows map[string]domain.BaseAgent
+
 	// Store workflow definitions for serialization
 	definitions map[string]*workflow.WorkflowDefinition
-	
+
 	// Task 1.4.10.1: Workflow Import/Export
 	serializers     map[string]workflow.WorkflowSerializer
 	serializerCache map[string][]byte // Cache serialized workflows
@@ -38,7 +38,7 @@ type WorkflowBridge struct {
 	// Task 1.4.10.3: Workflow Templates
 	templateCache    map[string]*workflow.WorkflowTemplate
 	templateRegistry map[string]*workflow.WorkflowTemplate // Local template registry
-	
+
 	// Registry for tracking workflow execution
 	registry *core.AgentRegistry
 }
@@ -103,7 +103,7 @@ func (b *WorkflowBridge) Initialize(ctx context.Context) error {
 	if err := workflow.RegisterDefaultTemplates(); err != nil {
 		return fmt.Errorf("failed to register default templates: %w", err)
 	}
-	
+
 	// Initialize agent registry
 	b.registry = core.NewAgentRegistry()
 
@@ -503,8 +503,8 @@ func (b *WorkflowBridge) ValidateMethod(name string, args []engine.ScriptValue) 
 		if args[1].Type() != engine.TypeObject {
 			return fmt.Errorf("config must be object")
 		}
-	case "executeWorkflow", "pauseWorkflow", "resumeWorkflow", "stopWorkflow", 
-	     "getWorkflowStatus", "getWorkflow", "removeWorkflow":
+	case "executeWorkflow", "pauseWorkflow", "resumeWorkflow", "stopWorkflow",
+		"getWorkflowStatus", "getWorkflow", "removeWorkflow":
 		if len(args) < 1 {
 			return fmt.Errorf("%s requires workflowID parameter", name)
 		}
@@ -515,7 +515,7 @@ func (b *WorkflowBridge) ValidateMethod(name string, args []engine.ScriptValue) 
 		// No parameters required
 		return nil
 	}
-	
+
 	// Check if method exists
 	methods := b.Methods()
 	for _, method := range methods {
@@ -523,7 +523,7 @@ func (b *WorkflowBridge) ValidateMethod(name string, args []engine.ScriptValue) 
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("unknown method: %s", name)
 }
 
@@ -725,7 +725,7 @@ func (b *WorkflowBridge) executeWorkflow(ctx context.Context, args []engine.Scri
 	b.mu.RLock()
 	workflow, exists := b.workflows[workflowID]
 	b.mu.RUnlock()
-	
+
 	if !exists {
 		return engine.NewErrorValue(fmt.Errorf("workflow not found: %s", workflowID)), nil
 	}
@@ -754,7 +754,7 @@ func (b *WorkflowBridge) executeWorkflow(ctx context.Context, args []engine.Scri
 func (b *WorkflowBridge) listWorkflows() (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	
+
 	workflows := make([]engine.ScriptValue, 0, len(b.workflows))
 	for id, wf := range b.workflows {
 		workflowData := map[string]engine.ScriptValue{
@@ -779,7 +779,7 @@ func (b *WorkflowBridge) getWorkflowDetails(args []engine.ScriptValue) (engine.S
 
 	b.mu.RLock()
 	wf, exists := b.workflows[workflowID]
-	def, _ := b.definitions[workflowID]
+	def := b.definitions[workflowID]
 	b.mu.RUnlock()
 
 	if !exists {
@@ -835,7 +835,7 @@ func (b *WorkflowBridge) removeWorkflow(ctx context.Context, args []engine.Scrip
 
 	delete(b.workflows, workflowID)
 	delete(b.definitions, workflowID)
-	
+
 	return engine.NewBoolValue(true), nil
 }
 
@@ -915,11 +915,11 @@ func (b *WorkflowBridge) addStep(args []engine.ScriptValue) (engine.ScriptValue,
 		if name, ok := stepConfig["name"].(string); ok {
 			stepName = name
 		}
-		
+
 		// Create a placeholder agent for the step
 		agent := core.NewBaseAgent(stepName, "Step agent", domain.AgentTypeCustom)
 		seqWf.AddAgent(agent)
-		
+
 		return engine.NewStringValue(stepName), nil
 	}
 
@@ -1051,7 +1051,7 @@ func (b *WorkflowBridge) createWorkflowTemplate(args []engine.ScriptValue) (engi
 
 func (b *WorkflowBridge) listWorkflowTemplates() (engine.ScriptValue, error) {
 	templates := workflow.ListTemplates()
-	
+
 	result := make([]engine.ScriptValue, 0, len(templates))
 	for _, tmpl := range templates {
 		templateData := map[string]engine.ScriptValue{
@@ -1062,7 +1062,7 @@ func (b *WorkflowBridge) listWorkflowTemplates() (engine.ScriptValue, error) {
 		}
 		result = append(result, engine.NewObjectValue(templateData))
 	}
-	
+
 	return engine.NewArrayValue(result), nil
 }
 
@@ -1091,7 +1091,7 @@ func (b *WorkflowBridge) createWorkflowFromTemplate(args []engine.ScriptValue) (
 	if args[1].Type() == engine.TypeString {
 		return engine.NewStringValue(args[1].(engine.StringValue).Value()), nil
 	}
-	
+
 	return engine.NewStringValue("workflow-from-template"), nil
 }
 

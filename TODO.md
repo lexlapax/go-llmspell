@@ -77,6 +77,108 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 #### 2.3.2: Async/Coroutine Support
 ✅ **COMPLETED [2025-06-19]** - All async/coroutine tasks completed. See TODO-DONE.md for details.
 
+#### 2.3.2.5: Test Utilities Extraction
+🔲 **NOT STARTED** - Extract common test patterns to centralized testutils package
+
+##### Phase 1: Foundation (Week 1)
+- [ ] **Task 2.3.2.5.1: Create Core Mock Implementations**
+  - [ ] Create `/pkg/testutils` directory structure
+  - [ ] Implement `mock_engine.go` - Consolidate mock engine implementations from 4+ files
+    - [ ] Extract mockRegistryScriptEngine from registry_test.go
+    - [ ] Extract mockEngineForIntegration from integration_test.go
+    - [ ] Extract mockEngine from interface_test.go
+    - [ ] Extract mockScriptEngine from manager_test.go
+    - [ ] Create unified MockScriptEngine with builder pattern
+  - [ ] Implement `mock_bridges.go` - Common mock bridge patterns
+    - [ ] Extract mockBridge patterns from bridge_adapter_test.go
+    - [ ] Extract mockAsyncBridge from async_bridges_test.go
+    - [ ] Extract mockBridge from state/manager_test.go
+    - [ ] Create MockBridge with method handler support
+  - [ ] Move existing `scriptvalue_helpers.go` content and enhance
+  - [ ] Add comprehensive tests for all mock implementations
+
+##### Phase 2: Core Helpers (Week 2)
+- [ ] **Task 2.3.2.5.2: Implement Bridge Test Helpers**
+  - [ ] Create `bridge_helpers.go` with common setup/teardown patterns
+    - [ ] Implement SetupTestBridge for initialization + cleanup
+    - [ ] Implement SetupTestBridgeWithEngine for mock engine integration
+    - [ ] Add AssertBridgeInitialized verification helper
+    - [ ] Add AssertBridgeMethod for method verification
+  - [ ] Create `builders.go` with ScriptValue fluent builders
+    - [ ] Implement ScriptValueBuilder with method chaining
+    - [ ] Add quick creators: StringValue, NumberValue, etc.
+    - [ ] Add ObjectFromMap and ArrayFromSlice converters
+    - [ ] Create test data factory methods
+  - [ ] Create `assertions.go` with type assertion helpers
+    - [ ] Implement AssertScriptValueType for type checking
+    - [ ] Add AssertErrorValue for error validation
+    - [ ] Add AssertObjectHasFields for object validation
+    - [ ] Add AssertArrayLength for array validation
+    - [ ] Implement RequireNoGoError for ErrorValue checks
+  - [ ] Create migration guide documentation
+
+##### Phase 3: Progressive Migration - Engine Package (Week 3)
+- [ ] **Task 2.3.2.5.3: Migrate `/pkg/engine` Tests**
+  - [ ] Migrate `interface_test.go` to use MockScriptEngine
+  - [ ] Migrate `integration_test.go` to use centralized helpers
+  - [ ] Migrate `registry_test.go` to use mock implementations
+  - [ ] Migrate `types_test.go` to use ScriptValue builders
+  - [ ] Update `engine_test.go` files to use assertions
+  - [ ] Remove all duplicated mock code from engine package
+  - [ ] Verify all engine tests pass after migration
+
+##### Phase 4: Progressive Migration - Bridge Package (Week 4)
+- [ ] **Task 2.3.2.5.4: Migrate `/pkg/bridge` Tests**
+  - [ ] Migrate `manager_test.go` to use MockScriptEngine
+  - [ ] Migrate all bridge test files to use bridge_helpers
+    - [ ] Update agent package tests (6 files)
+    - [ ] Update llm package tests (7 files)
+    - [ ] Update state package tests (2 files)
+    - [ ] Update util package tests (8 files)
+    - [ ] Update observability package tests (3 files)
+    - [ ] Update structured package tests (1 file)
+  - [ ] Replace custom ScriptValue creation with builders
+  - [ ] Remove duplicated assertion code
+  - [ ] Verify all bridge tests pass after migration
+
+##### Phase 5: Advanced Helpers & GopherLua Migration (Week 5)
+- [ ] **Task 2.3.2.5.5: Implement Advanced Helpers & Migrate GopherLua**
+  - [ ] Implement `table_test_helpers.go` for table-driven tests
+    - [ ] Create MethodTestCase struct for method testing
+    - [ ] Implement RunMethodTests executor
+    - [ ] Create ValidationTestCase for ValidateMethod tests
+    - [ ] Implement RunValidationTests executor
+  - [ ] Implement `context.go` with context creation helpers
+    - [ ] Add TestContext for basic test contexts
+    - [ ] Add TestContextWithTimeout for timeout testing
+    - [ ] Add TestContextWithCancel for cancellation testing
+  - [ ] Implement `numeric.go` with numeric converters
+    - [ ] Extract common toFloat64 helper
+    - [ ] Add MustFloat64 panic helper
+  - [ ] Migrate `/pkg/engine/gopherlua` tests (30+ files)
+    - [ ] Update all test files to use centralized utilities
+    - [ ] Remove duplicated mock implementations
+    - [ ] Apply table test helpers where appropriate
+
+##### Phase 6: Cleanup and Documentation (Week 6)
+- [ ] **Task 2.3.2.5.6: Final Cleanup and Documentation**
+  - [ ] Remove all remaining duplicated test code
+  - [ ] Create comprehensive testutils package documentation
+    - [ ] Write usage guide with examples
+    - [ ] Document all helper functions
+    - [ ] Create migration checklist for future tests
+  - [ ] Run full test suite with race detection
+  - [ ] Measure code reduction metrics (target: 30-40%)
+  - [ ] Create best practices guide for writing tests
+  - [ ] Update contribution guidelines with testutils usage
+
+##### Success Metrics
+- [ ] All tests pass after migration
+- [ ] Test line count reduced by >30%
+- [ ] No duplicated mock implementations remain
+- [ ] All packages use centralized test utilities
+- [ ] Zero race conditions in test suite
+- [ ] Improved test execution time
 
 #### 2.3.3: Bridge Adapters
 🚧 **IN PROGRESS** - 2 of 14 adapters completed

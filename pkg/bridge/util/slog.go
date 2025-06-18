@@ -282,13 +282,15 @@ func (sb *SlogBridge) RequiredPermissions() []engine.Permission {
 
 // ExecuteMethod executes a bridge method
 func (sb *SlogBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Check initialization first
 	sb.mu.RLock()
-	defer sb.mu.RUnlock()
-
 	if !sb.initialized {
+		sb.mu.RUnlock()
 		return nil, fmt.Errorf("slog bridge not initialized")
 	}
+	sb.mu.RUnlock()
 
+	// Methods that need write locks handle their own locking
 	switch name {
 	case "info":
 		return sb.info(ctx, args)

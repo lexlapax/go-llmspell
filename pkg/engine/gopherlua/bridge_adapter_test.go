@@ -562,7 +562,7 @@ func (m *mockBridge) ValidateMethod(method string, args []engine.ScriptValue) er
 	if !found {
 		return errors.New("unknown method")
 	}
-	
+
 	// If validateFunc is set, use it for validation
 	if m.validateFunc != nil {
 		// Convert ScriptValue args to interface{} for validateFunc
@@ -572,7 +572,7 @@ func (m *mockBridge) ValidateMethod(method string, args []engine.ScriptValue) er
 		}
 		return m.validateFunc(method, interfaceArgs...)
 	}
-	
+
 	return nil
 }
 
@@ -583,7 +583,7 @@ func (m *mockBridge) ExecuteMethod(ctx context.Context, method string, args []en
 		for i, arg := range args {
 			interfaceArgs[i] = arg.ToGo()
 		}
-		
+
 		result, err := m.callFunc(method, interfaceArgs...)
 		if err != nil {
 			return engine.NewErrorValue(err), err

@@ -627,16 +627,30 @@ func (b *UtilJSONBridge) encodeStream(ctx context.Context, args []engine.ScriptV
 		return nil, fmt.Errorf("encoder must be JSONEncoder")
 	}
 	customVal := args[0].(engine.CustomValue)
-	encoder, ok := customVal.Value().(*json.Encoder)
-	if !ok {
+	// json-iterator returns a concrete type, check the type name instead
+	if customVal.TypeName() != "JSONEncoder" {
 		return nil, fmt.Errorf("encoder must be JSONEncoder")
 	}
+	encoder := customVal.Value()
 
 	// Get value to encode
 	value := args[1].ToGo()
 
-	if err := encoder.Encode(value); err != nil {
-		return nil, err
+	// Use type assertion to call Encode - json-iterator returns a concrete encoder type
+	switch enc := encoder.(type) {
+	case interface{ Encode(interface{}) error }:
+		if err := enc.Encode(value); err != nil {
+			return nil, err
+		}
+	default:
+		// Fall back to standard library json.Encoder
+		if jsonEnc, ok := encoder.(*json.Encoder); ok {
+			if err := jsonEnc.Encode(value); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("encoder does not implement Encode method")
+		}
 	}
 
 	return engine.NewNilValue(), nil
@@ -652,14 +666,28 @@ func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []engine.ScriptV
 		return nil, fmt.Errorf("decoder must be JSONDecoder")
 	}
 	customVal := args[0].(engine.CustomValue)
-	decoder, ok := customVal.Value().(*json.Decoder)
-	if !ok {
+	// json-iterator returns a concrete type, check the type name instead
+	if customVal.TypeName() != "JSONDecoder" {
 		return nil, fmt.Errorf("decoder must be JSONDecoder")
 	}
+	decoder := customVal.Value()
 
+	// Use type assertion to call Decode - json-iterator returns a concrete decoder type
 	var result interface{}
-	if err := decoder.Decode(&result); err != nil {
-		return nil, err
+	switch dec := decoder.(type) {
+	case interface{ Decode(interface{}) error }:
+		if err := dec.Decode(&result); err != nil {
+			return nil, err
+		}
+	default:
+		// Fall back to standard library json.Decoder
+		if jsonDec, ok := decoder.(*json.Decoder); ok {
+			if err := jsonDec.Decode(&result); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("decoder does not implement Decode method")
+		}
 	}
 
 	return engine.ConvertToScriptValue(result), nil

@@ -1327,3 +1327,39 @@ All bridges successfully converted from []interface{} to []engine.ScriptValue fo
   - ✅ Updated test expectations to match actual return types
   - ✅ Fixed error message expectations: "unknown method" → "method not found"
   - ✅ Updated type mappings test to check for actual types only
+
+### Additional Test Fixes [2025-12-19]
+
+- ✅ **Task: Fix make lint errors** [COMPLETED - 2025-12-19]
+  - ✅ Fixed 39 lint errors across multiple files
+  - ✅ Fixed errcheck: Added defer error handling for Close() methods
+  - ✅ Fixed ineffassign: Used blank identifier for unused assignments
+  - ✅ Fixed staticcheck: Removed unused functions, methods, structs, and fields
+  - ✅ Fixed unused: Removed unused test helper functions
+  - ✅ Fixed typecheck: Added missing return statements
+
+- ✅ **Task: Fix workflow bridge implementation** [COMPLETED - 2025-12-19]
+  - ✅ Replaced mock workflow implementation with real go-llms workflows
+  - ✅ Imported workflow package from go-llms
+  - ✅ Implemented SequentialAgent, ParallelAgent, and ConditionalAgent support
+  - ✅ Fixed import issues and method signatures
+  - ✅ Updated ValidateMethod to properly check for unknown methods
+  - ✅ Fixed test to use actual workflow functionality instead of mocks
+
+- ✅ **Task: Fix test hangs and deadlocks** [COMPLETED - 2025-12-19]
+  - ✅ Fixed RWMutex deadlock in script_logger.go
+    - Released read lock before calling methods that need write locks
+    - Pattern: Can't upgrade RLock to Lock, must release first
+  - ✅ Fixed similar deadlock in slog.go
+    - Applied same pattern of releasing lock before method calls
+  - ✅ Fixed JSON bridge encoder/decoder type assertions
+    - json-iterator returns concrete types, not interfaces
+    - Updated to use TypeName() checks and interface-based method calls
+    - Added fallback to standard library json types
+
+- ✅ **Task: Test utilities extraction planning** [COMPLETED - 2025-12-19]
+  - ✅ Created centralized test utilities in /pkg/testutils/
+  - ✅ Documented test fixes in TEST_FIXES.md
+  - ✅ Created comprehensive test extraction plan in TESTUTILS_EXTRACTION_PLAN.md
+  - ✅ Planned 6-week phased approach for test utility extraction
+  - ✅ Expected 30-40% code reduction through shared utilities

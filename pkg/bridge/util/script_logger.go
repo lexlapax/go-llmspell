@@ -347,13 +347,15 @@ func (sl *ScriptLoggerBridge) RequiredPermissions() []engine.Permission {
 
 // ExecuteMethod executes a bridge method
 func (sl *ScriptLoggerBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Check initialization first
 	sl.mu.RLock()
-	defer sl.mu.RUnlock()
-
 	if !sl.initialized {
+		sl.mu.RUnlock()
 		return nil, fmt.Errorf("script logger bridge not initialized")
 	}
+	sl.mu.RUnlock()
 
+	// Methods that need write locks handle their own locking
 	switch name {
 	case "log":
 		return sl.log(ctx, args)

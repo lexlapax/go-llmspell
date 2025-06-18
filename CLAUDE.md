@@ -4,12 +4,12 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-✅ **Phases 1-2.3.2 COMPLETE** [2025-06-19]: All 21 bridges converted to ScriptValue system  
-🚧 **Phase 2.3.3 ACTIVE**: Bridge adapters (2/14 done) - State adapter next
+✅ **Phase 2.3.2 COMPLETE** [2025-12-19]: ScriptValue system + test fixes  
+🚧 **Phase 2.3.2.5 ACTIVE**: Test utilities extraction - Consolidating 56 test files
 
-- ScriptValue refactoring complete with full type safety
-- Performance benchmarks show minimal overhead  
-- Migration guide available for bridge authors
+- All 21 bridges converted to ScriptValue with type safety
+- Fixed workflow bridge, deadlocks, JSON type assertions
+- Starting 6-week test utilities extraction (30-40% code reduction target)
 
 ## Architecture
 
@@ -18,38 +18,40 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 ```
 /pkg/engine/     # Script engine interfaces (our code)
 /pkg/bridge/     # Thin wrappers around go-llms (no business logic)
+/pkg/testutils/  # Centralized test utilities (NEW)
 ```
 
 ## Implementation Workflow
 
-1. **Read TODO.md** - TDD mandatory - Write tests first
-2. **Bridge-first** - Wrap go-llms, never reimplement business logic  
-3. **Research and Plan codebase** - Always look at `go-llms/` git sub-module and the implementation there to inform what files and what to implement locally in go-llmspell
-4. **Run `make all`** - Complete dev cycle (fmt, vet, lint, test, build)
-5. **Update TODO.md** - Mark completed tasks with timestamps
+1. **TDD mandatory** - Write tests first, use testutils for new tests
+2. **Bridge-first** - Wrap go-llms, never reimplement  
+3. **Research go-llms** - Check implementation in git submodule first
+4. **Reuse code** - Use pkg/testutils, reduce duplication
+5. **Run `make all`** - Complete dev cycle
+6. **Update TODO.md** - Mark tasks with timestamps
 
-### ScriptValue System
-- ExecuteMethod(ctx, name, args []engine.ScriptValue) (engine.ScriptValue, error)
-- ValidateMethod(name, args []engine.ScriptValue) error
-- Use engine.NewXXXValue() constructors, type check with args[i].Type()
+## Current Task: Test Utilities Extraction
 
-## Current Phase: Lua Bridge Adapters
+**Week 1 Goals**:
+- Create `/pkg/testutils` structure
+- Consolidate 4+ mock engine implementations → `mock_engine.go`
+- Extract 3+ mock bridge patterns → `mock_bridges.go`
+- Move existing `scriptvalue_helpers.go`
+- Add comprehensive tests for mocks
 
-**Completed**: 2.3.3.2 - LLM and Provider Bridge Adapter ✅
-
-**Next Task**: 2.3.3.3 - State Bridge Adapter (`/pkg/engine/gopherlua/adapters/state.go`)
-- Create state and context management module
-- Implement get/set operations
-- Add transform functions
-- Implement persistence methods
-- Add state merging capabilities
+**Key Patterns to Extract**:
+- Mock engines (12+ files)
+- Bridge setup/teardown (20+ files)
+- ScriptValue creation (30+ files)
+- Type assertions (25+ files)
+- Table test structures (40+ files)
 
 ## Commands
 
 ```bash
-make all   # Complete dev cycle
+make all   # fmt, vet, lint, test, build
 make test  # Test with race detection  
-make lint  # Code quality checks
+make lint  # Check code quality
 ```
 
 # important-instruction-reminders
