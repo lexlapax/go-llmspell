@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
 func TestExecutionPipeline_StateAcquisition(t *testing.T) {
@@ -168,7 +169,9 @@ func TestExecutionPipeline_ParameterInjection(t *testing.T) {
 				"name": "World",
 			},
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, "Hello, World", result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, "Hello, World", sv.ToGo())
 			},
 		},
 		{
@@ -180,7 +183,9 @@ func TestExecutionPipeline_ParameterInjection(t *testing.T) {
 				"c": 2,
 			},
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, 20.0, result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, 20.0, sv.ToGo())
 			},
 		},
 		{
@@ -190,7 +195,9 @@ func TestExecutionPipeline_ParameterInjection(t *testing.T) {
 				"flag": true,
 			},
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, "yes", result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, "yes", sv.ToGo())
 			},
 		},
 		{
@@ -203,7 +210,9 @@ func TestExecutionPipeline_ParameterInjection(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, 40.0, result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, 40.0, sv.ToGo())
 			},
 		},
 		{
@@ -213,7 +222,9 @@ func TestExecutionPipeline_ParameterInjection(t *testing.T) {
 				"items": []interface{}{10, 20, 30},
 			},
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, 60.0, result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, 60.0, sv.ToGo())
 			},
 		},
 		{
@@ -223,7 +234,9 @@ func TestExecutionPipeline_ParameterInjection(t *testing.T) {
 				"value": nil,
 			},
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, "nil", result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, "nil", sv.ToGo())
 			},
 		},
 	}
@@ -336,36 +349,35 @@ func TestExecutionPipeline_ResultExtraction(t *testing.T) {
 			name:   "nil_result",
 			script: `return nil`,
 			validate: func(t *testing.T, result interface{}) {
-				assert.Nil(t, result)
+				testutils.AssertScriptValueNil(t, result)
 			},
 		},
 		{
 			name:   "boolean_result",
 			script: `return true`,
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, true, result)
+				testutils.AssertScriptValueEquals(t, true, result)
 			},
 		},
 		{
 			name:   "number_result",
 			script: `return 3.14159`,
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, 3.14159, result)
+				testutils.AssertScriptValueEquals(t, 3.14159, result)
 			},
 		},
 		{
 			name:   "string_result",
 			script: `return "Hello, Lua!"`,
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, "Hello, Lua!", result)
+				testutils.AssertScriptValueEquals(t, "Hello, Lua!", result)
 			},
 		},
 		{
 			name:   "table_result",
 			script: `return {name = "test", value = 42}`,
 			validate: func(t *testing.T, result interface{}) {
-				resultMap, ok := result.(map[string]interface{})
-				require.True(t, ok)
+				resultMap := testutils.ExtractScriptValueMap(t, result)
 				assert.Equal(t, "test", resultMap["name"])
 				assert.Equal(t, 42.0, resultMap["value"])
 			},
@@ -374,8 +386,7 @@ func TestExecutionPipeline_ResultExtraction(t *testing.T) {
 			name:   "array_result",
 			script: `return {1, 2, 3, 4, 5}`,
 			validate: func(t *testing.T, result interface{}) {
-				resultSlice, ok := result.([]interface{})
-				require.True(t, ok)
+				resultSlice := testutils.ExtractScriptValueSlice(t, result)
 				assert.Len(t, resultSlice, 5)
 				assert.Equal(t, 1.0, resultSlice[0])
 				assert.Equal(t, 5.0, resultSlice[4])
@@ -385,7 +396,7 @@ func TestExecutionPipeline_ResultExtraction(t *testing.T) {
 			name:   "no_return_value",
 			script: `local x = 42`,
 			validate: func(t *testing.T, result interface{}) {
-				assert.Nil(t, result)
+				testutils.AssertScriptValueNil(t, result)
 			},
 		},
 	}
@@ -547,7 +558,7 @@ func TestExecutionPipeline_ChunkCacheIntegration(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		result, err := eng.Execute(ctx, script, nil)
 		require.NoError(t, err)
-		assert.Equal(t, 55.0, result) // fibonacci(10) = 55
+		testutils.AssertScriptValueEquals(t, 55.0, result) // fibonacci(10) = 55
 	}
 
 	// Check that metrics show cache hits
@@ -582,7 +593,7 @@ func TestExecutionPipeline_MemoryManagement(t *testing.T) {
 	ctx := context.Background()
 	result, err := eng.Execute(ctx, script, nil)
 	require.NoError(t, err)
-	assert.Equal(t, 1000.0, result)
+	testutils.AssertScriptValueEquals(t, 1000.0, result)
 
 	// Check that memory metrics are updated
 	metrics := eng.GetMetrics()

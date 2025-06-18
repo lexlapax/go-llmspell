@@ -5,6 +5,7 @@ package engine
 
 import (
 	"fmt"
+	"reflect"
 )
 
 // ConvertToScriptValue converts interface{} to appropriate ScriptValue type
@@ -48,7 +49,30 @@ func ConvertToScriptValue(v interface{}) ScriptValue {
 	case ScriptValue:
 		// Already a ScriptValue, return as-is
 		return val
+	case chan interface{}:
+		// Handle channels
+		return NewChannelValue("", val)
+	case func():
+		// Handle functions with no parameters
+		return NewFunctionValue("", val)
+	case func() interface{}:
+		// Handle functions that return interface{}
+		return NewFunctionValue("", val)
+	case func(interface{}) interface{}:
+		// Handle functions with one parameter
+		return NewFunctionValue("", val)
+	case error:
+		// Handle errors as ErrorValue
+		return NewErrorValue(val)
 	default:
+		// Check if it's a function using reflection
+		if isFunction(v) {
+			return NewFunctionValue("", v)
+		}
+		// Check if it's a channel using reflection
+		if isChannel(v) {
+			return NewChannelValue("", v)
+		}
 		// Fallback to string representation
 		return NewStringValue(fmt.Sprintf("%v", v))
 	}
@@ -211,4 +235,20 @@ func ValidateOptionalBoolArg(args []ScriptValue, index int, defaultValue bool) b
 		return defaultValue
 	}
 	return args[index].(BoolValue).Value()
+}
+
+// isFunction checks if the value is a function using reflection
+func isFunction(v interface{}) bool {
+	if v == nil {
+		return false
+	}
+	return reflect.TypeOf(v).Kind() == reflect.Func
+}
+
+// isChannel checks if the value is a channel using reflection
+func isChannel(v interface{}) bool {
+	if v == nil {
+		return false
+	}
+	return reflect.TypeOf(v).Kind() == reflect.Chan
 }

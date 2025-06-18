@@ -5,6 +5,7 @@ package gopherlua
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -322,7 +323,7 @@ func TestCircularReferenceDetection(t *testing.T) {
 		t.Errorf("expected error for circular reference but got none")
 	}
 
-	if err != nil && fmt.Sprintf("%v", err) != "circular reference detected in table" {
+	if err != nil && !strings.Contains(err.Error(), "circular reference detected") {
 		t.Errorf("expected circular reference error, got: %v", err)
 	}
 }

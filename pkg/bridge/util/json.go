@@ -461,7 +461,18 @@ func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.Script
 		indent = args[2].(engine.StringValue).Value()
 	}
 
-	data, err := llmjson.MarshalIndent(value, prefix, indent)
+	// json-iterator doesn't support custom prefixes, so use standard library when prefix is non-empty
+	if prefix != "" {
+		// Use standard library json for prefix support
+		data, err := json.MarshalIndent(value, prefix, indent)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewStringValue(string(data)), nil
+	}
+
+	// Use go-llms json for better performance when no prefix
+	data, err := llmjson.MarshalIndent(value, "", indent)
 	if err != nil {
 		return nil, err
 	}

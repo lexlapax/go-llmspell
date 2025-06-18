@@ -431,7 +431,7 @@ func TestBridgeAdapter_MethodValidation(t *testing.T) {
 		err := L.DoString(`
 			local result, err = validateMethod({name = "test"})
 			assert(result == nil)
-			assert(string.find(err, "validation error"))
+			assert(string.find(err, "missing required field"))
 		`)
 		assert.NoError(t, err)
 
@@ -552,12 +552,28 @@ func (m *mockBridge) Call(method string, args ...interface{}) (interface{}, erro
 
 func (m *mockBridge) ValidateMethod(method string, args []engine.ScriptValue) error {
 	// Find method info
+	found := false
 	for _, mi := range m.methods {
 		if mi.Name == method {
-			return nil
+			found = true
+			break
 		}
 	}
-	return errors.New("unknown method")
+	if !found {
+		return errors.New("unknown method")
+	}
+	
+	// If validateFunc is set, use it for validation
+	if m.validateFunc != nil {
+		// Convert ScriptValue args to interface{} for validateFunc
+		interfaceArgs := make([]interface{}, len(args))
+		for i, arg := range args {
+			interfaceArgs[i] = arg.ToGo()
+		}
+		return m.validateFunc(method, interfaceArgs...)
+	}
+	
+	return nil
 }
 
 func (m *mockBridge) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -567,6 +583,7 @@ func (m *mockBridge) ExecuteMethod(ctx context.Context, method string, args []en
 		for i, arg := range args {
 			interfaceArgs[i] = arg.ToGo()
 		}
+		
 		result, err := m.callFunc(method, interfaceArgs...)
 		if err != nil {
 			return engine.NewErrorValue(err), err
@@ -581,6 +598,27 @@ func (m *mockBridge) ExecuteMethod(ctx context.Context, method string, args []en
 			return engine.NewNumberValue(v), nil
 		case bool:
 			return engine.NewBoolValue(v), nil
+		case []interface{}:
+			// Handle slice for multiple returns
+			elements := make([]engine.ScriptValue, len(v))
+			for i, elem := range v {
+				switch e := elem.(type) {
+				case string:
+					elements[i] = engine.NewStringValue(e)
+				case int:
+					elements[i] = engine.NewNumberValue(float64(e))
+				case float64:
+					elements[i] = engine.NewNumberValue(e)
+				case bool:
+					elements[i] = engine.NewBoolValue(e)
+				default:
+					elements[i] = engine.NewStringValue(fmt.Sprintf("%v", e))
+				}
+			}
+			return engine.NewArrayValue(elements), nil
+		case map[string]interface{}:
+			// Handle map structures
+			return convertMapToScriptValue(v), nil
 		default:
 			return engine.NewStringValue(fmt.Sprintf("%v", v)), nil
 		}
@@ -598,4 +636,32 @@ func (m *mockBridge) TypeMappings() map[string]engine.TypeMapping {
 
 func (m *mockBridge) RequiredPermissions() []engine.Permission {
 	return nil
+}
+
+// Helper function to convert map[string]interface{} to ScriptValue
+func convertMapToScriptValue(m map[string]interface{}) engine.ScriptValue {
+	fields := make(map[string]engine.ScriptValue)
+	for k, v := range m {
+		switch val := v.(type) {
+		case string:
+			fields[k] = engine.NewStringValue(val)
+		case int:
+			fields[k] = engine.NewNumberValue(float64(val))
+		case float64:
+			fields[k] = engine.NewNumberValue(val)
+		case bool:
+			fields[k] = engine.NewBoolValue(val)
+		case []string:
+			elements := make([]engine.ScriptValue, len(val))
+			for i, s := range val {
+				elements[i] = engine.NewStringValue(s)
+			}
+			fields[k] = engine.NewArrayValue(elements)
+		case map[string]interface{}:
+			fields[k] = convertMapToScriptValue(val)
+		default:
+			fields[k] = engine.NewStringValue(fmt.Sprintf("%v", val))
+		}
+	}
+	return engine.NewObjectValue(fields)
 }

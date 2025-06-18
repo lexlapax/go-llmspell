@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
 func TestLuaEngine_FullIntegration(t *testing.T) {
@@ -290,8 +291,7 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 			res := <-results
 			require.NoError(t, res.error, "Worker %d failed", res.workerID)
 
-			resultMap, ok := res.result.(map[string]interface{})
-			require.True(t, ok)
+			resultMap := testutils.ExtractScriptValueMap(t, res.result)
 			assert.Equal(t, 10100.0, resultMap["sum"]) // sum of 2*i for i=1 to 100
 			assert.Equal(t, float64(res.workerID), resultMap["worker_id"])
 		}
@@ -339,7 +339,7 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 		// Verify engine can still execute scripts after errors
 		result, err := eng.Execute(ctx, `return "recovery successful"`, nil)
 		require.NoError(t, err)
-		assert.Equal(t, "recovery successful", result)
+		testutils.AssertScriptValueEquals(t, "recovery successful", result)
 	})
 
 	t.Run("resource_management", func(t *testing.T) {
@@ -369,7 +369,7 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 			return #data
 		`, nil)
 		require.NoError(t, err)
-		assert.Equal(t, 1000.0, result)
+		testutils.AssertScriptValueEquals(t, 1000.0, result)
 	})
 
 	// Final metrics check

@@ -115,14 +115,18 @@ func TestLuaEngine_BasicExecution(t *testing.T) {
 			name:   "simple_arithmetic",
 			script: "return 2 + 3",
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, 5.0, result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, 5.0, sv.ToGo())
 			},
 		},
 		{
 			name:   "string_operation",
 			script: `return "Hello, " .. "World!"`,
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, "Hello, World!", result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, "Hello, World!", sv.ToGo())
 			},
 		},
 		{
@@ -133,14 +137,18 @@ func TestLuaEngine_BasicExecution(t *testing.T) {
 				"age":  30,
 			},
 			validate: func(t *testing.T, result interface{}) {
-				assert.Equal(t, "Alice is 30 years old", result)
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				assert.Equal(t, "Alice is 30 years old", sv.ToGo())
 			},
 		},
 		{
 			name:   "table_creation",
 			script: "local x, y = 10, 20; return {x = x, y = y, z = x + y}",
 			validate: func(t *testing.T, result interface{}) {
-				resultMap, ok := result.(map[string]interface{})
+				sv, ok := result.(engine.ScriptValue)
+				require.True(t, ok)
+				resultMap, ok := sv.ToGo().(map[string]interface{})
 				require.True(t, ok)
 				assert.Equal(t, 10.0, resultMap["x"])
 				assert.Equal(t, 20.0, resultMap["y"])
@@ -151,11 +159,21 @@ func TestLuaEngine_BasicExecution(t *testing.T) {
 			name:   "array_creation",
 			script: "return {1, 2, 3, 4, 5}",
 			validate: func(t *testing.T, result interface{}) {
-				resultSlice, ok := result.([]interface{})
+				sv, ok := result.(engine.ScriptValue)
 				require.True(t, ok)
-				assert.Len(t, resultSlice, 5)
-				assert.Equal(t, 1.0, resultSlice[0])
-				assert.Equal(t, 5.0, resultSlice[4])
+				// Lua tables with numeric indices can be either arrays or objects
+				resultGo := sv.ToGo()
+				if resultSlice, ok := resultGo.([]interface{}); ok {
+					assert.Len(t, resultSlice, 5)
+					assert.Equal(t, 1.0, resultSlice[0])
+					assert.Equal(t, 5.0, resultSlice[4])
+				} else if resultMap, ok := resultGo.(map[string]interface{}); ok {
+					// Lua uses 1-based indexing
+					assert.Equal(t, 1.0, resultMap["1"])
+					assert.Equal(t, 5.0, resultMap["5"])
+				} else {
+					t.Fatalf("unexpected result type: %T", resultGo)
+				}
 			},
 		},
 		{

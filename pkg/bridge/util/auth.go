@@ -447,10 +447,12 @@ func (b *UtilAuthBridge) RequiredPermissions() []engine.Permission {
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
 func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Check initialization without holding the lock during method execution
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	initialized := b.initialized
+	b.mu.RUnlock()
 
-	if !b.initialized {
+	if !initialized {
 		return nil, ErrBridgeNotInitialized
 	}
 

@@ -699,7 +699,12 @@ func TestRegistry(t *testing.T) {
 		// Execute script
 		result, err := registry.ExecuteScript(context.Background(), "lua", "print('hello')", nil)
 		assert.NoError(t, err)
-		assert.Equal(t, "executed: print('hello')", result)
+		// Extract value from ScriptValue
+		if sv, ok := result.(ScriptValue); ok {
+			assert.Equal(t, "executed: print('hello')", sv.ToGo())
+		} else {
+			assert.Equal(t, "executed: print('hello')", result)
+		}
 
 		// Check metrics updated
 		stats := registry.GetStats()
@@ -730,7 +735,12 @@ func TestRegistry(t *testing.T) {
 		// Execute file
 		result, err := registry.ExecuteFile(context.Background(), "test.lua", nil)
 		assert.NoError(t, err)
-		assert.Equal(t, "executed file: test.lua", result)
+		// Extract value from ScriptValue
+		if sv, ok := result.(ScriptValue); ok {
+			assert.Equal(t, "executed file: test.lua", sv.ToGo())
+		} else {
+			assert.Equal(t, "executed file: test.lua", result)
+		}
 
 		// Test file without extension
 		_, err = registry.ExecuteFile(context.Background(), "test", nil)

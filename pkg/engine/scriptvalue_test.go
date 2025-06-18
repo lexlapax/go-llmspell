@@ -298,7 +298,7 @@ func TestScriptValueConversion(t *testing.T) {
 		{
 			name:     "error",
 			input:    errors.New("test error"),
-			expected: NewStringValue("test error"), // errors are converted to strings
+			expected: NewErrorValue(errors.New("test error")), // errors are converted to ErrorValue
 		},
 		{
 			name:     "slice",
