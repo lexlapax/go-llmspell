@@ -118,8 +118,8 @@ func TestConvertToScriptValue(t *testing.T) {
 		{
 			name: "simple map",
 			input: map[string]interface{}{
-				"name": "test",
-				"age":  25,
+				"name":   "test",
+				"age":    25,
 				"active": true,
 			},
 			expected: NewObjectValue(map[string]ScriptValue{
@@ -148,10 +148,10 @@ func TestConvertToScriptValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ConvertToScriptValue(tt.input)
-			
+
 			// Compare types
 			assert.Equal(t, tt.expected.Type(), result.Type())
-			
+
 			// Compare values by converting both to Go and comparing
 			assert.Equal(t, tt.expected.ToGo(), result.ToGo())
 		})
@@ -165,7 +165,7 @@ func TestConvertNestedStructures(t *testing.T) {
 				"name": "Alice",
 				"age":  30,
 				"preferences": map[string]interface{}{
-					"theme": "dark",
+					"theme":         "dark",
 					"notifications": true,
 				},
 			},
@@ -173,7 +173,7 @@ func TestConvertNestedStructures(t *testing.T) {
 				"name": "Bob",
 				"age":  25,
 				"preferences": map[string]interface{}{
-					"theme": "light",
+					"theme":         "light",
 					"notifications": false,
 				},
 			},
@@ -185,20 +185,20 @@ func TestConvertNestedStructures(t *testing.T) {
 	require.Equal(t, TypeObject, result.Type())
 
 	obj := result.(ObjectValue)
-	
+
 	// Check users array
 	users, exists := obj.Get("users")
 	require.True(t, exists)
 	require.Equal(t, TypeArray, users.Type())
-	
+
 	usersArray := users.(ArrayValue)
 	assert.Equal(t, 2, usersArray.Len())
-	
+
 	// Check first user
 	firstUser, exists := usersArray.Get(0)
 	require.True(t, exists)
 	require.Equal(t, TypeObject, firstUser.Type())
-	
+
 	firstUserObj := firstUser.(ObjectValue)
 	name, exists := firstUserObj.Get("name")
 	require.True(t, exists)
@@ -223,7 +223,7 @@ func TestConvertMapToScriptValue(t *testing.T) {
 			"age":  25,
 		}
 		result := ConvertMapToScriptValue(input)
-		
+
 		assert.Len(t, result, 2)
 		assert.Equal(t, TypeString, result["name"].Type())
 		assert.Equal(t, "test", result["name"].(StringValue).Value())
@@ -247,7 +247,7 @@ func TestConvertSliceToScriptValue(t *testing.T) {
 	t.Run("simple slice", func(t *testing.T) {
 		input := []interface{}{"hello", 42, true}
 		result := ConvertSliceToScriptValue(input)
-		
+
 		require.Len(t, result, 3)
 		assert.Equal(t, TypeString, result[0].Type())
 		assert.Equal(t, "hello", result[0].(StringValue).Value())
@@ -388,7 +388,7 @@ func TestValidateObjectArg(t *testing.T) {
 		"name": NewStringValue("test"),
 		"age":  NewNumberValue(25),
 	})
-	
+
 	args := []ScriptValue{
 		objectValue,
 		NewStringValue("hello"),
@@ -422,7 +422,7 @@ func TestValidateArrayArg(t *testing.T) {
 		NewStringValue("hello"),
 		NewNumberValue(42),
 	})
-	
+
 	args := []ScriptValue{
 		arrayValue,
 		NewStringValue("hello"),
@@ -503,7 +503,7 @@ func TestConvertScriptValueMap(t *testing.T) {
 			"age":  NewNumberValue(25),
 		}
 		result := ConvertScriptValueMap(input)
-		
+
 		expected := map[string]interface{}{
 			"name": "test",
 			"age":  float64(25),
@@ -525,7 +525,7 @@ func TestConvertScriptValueSlice(t *testing.T) {
 			NewBoolValue(true),
 		}
 		result := ConvertScriptValueSlice(input)
-		
+
 		expected := []interface{}{"hello", float64(42), true}
 		assert.Equal(t, expected, result)
 	})
@@ -534,10 +534,10 @@ func TestConvertScriptValueSlice(t *testing.T) {
 // Benchmark tests to ensure performance is acceptable
 func BenchmarkConvertToScriptValue(b *testing.B) {
 	testData := map[string]interface{}{
-		"name": "test",
-		"age":  25,
+		"name":   "test",
+		"age":    25,
 		"active": true,
-		"tags": []interface{}{"tag1", "tag2", "tag3"},
+		"tags":   []interface{}{"tag1", "tag2", "tag3"},
 		"metadata": map[string]interface{}{
 			"version": "1.0",
 			"count":   100,

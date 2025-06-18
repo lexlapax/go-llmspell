@@ -4,6 +4,7 @@
 package gopherlua
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -20,8 +21,6 @@ type BridgeAdapter struct {
 	methodInfo  map[string]engine.MethodInfo
 	validation  bool
 	mu          sync.RWMutex
-	// Extension point for bridges that support direct calling
-	callHandler func(string, ...interface{}) (interface{}, error)
 }
 
 // NewBridgeAdapter creates a new bridge adapter
@@ -37,13 +36,6 @@ func NewBridgeAdapter(b engine.Bridge) *BridgeAdapter {
 	// Cache method info
 	for _, method := range b.Methods() {
 		adapter.methodInfo[method.Name] = method
-	}
-
-	// Check if bridge supports direct calling (via interface assertion)
-	if caller, ok := b.(interface {
-		Call(string, ...interface{}) (interface{}, error)
-	}); ok {
-		adapter.callHandler = caller.Call
 	}
 
 	return adapter
@@ -93,6 +85,13 @@ func (ba *BridgeAdapter) SetTypeConverter(converter *LuaTypeConverter) {
 	ba.mu.Lock()
 	defer ba.mu.Unlock()
 	ba.converter = converter
+}
+
+// GetTypeConverter returns the type converter
+func (ba *BridgeAdapter) GetTypeConverter() *LuaTypeConverter {
+	ba.mu.RLock()
+	defer ba.mu.RUnlock()
+	return ba.converter
 }
 
 // EnableValidation enables or disables method argument validation
@@ -145,17 +144,18 @@ func (ba *BridgeAdapter) WrapMethod(methodName string) lua.LGFunction {
 			}
 		}()
 
-		// Get arguments
+		// Get arguments and convert to ScriptValue
 		nArgs := L.GetTop()
-		args := make([]interface{}, nArgs)
+		args := make([]engine.ScriptValue, nArgs)
 		for i := 0; i < nArgs; i++ {
-			val, err := ba.converter.FromLua(L.Get(i + 1))
+			luaVal := L.Get(i + 1)
+			scriptVal, err := ba.converter.ToLuaScriptValue(L, luaVal)
 			if err != nil {
 				L.Push(lua.LNil)
 				L.Push(lua.LString(fmt.Sprintf("argument conversion error: %v", err)))
 				return 2
 			}
-			args[i] = val
+			args[i] = scriptVal
 		}
 
 		// Validate if enabled
@@ -167,43 +167,48 @@ func (ba *BridgeAdapter) WrapMethod(methodName string) lua.LGFunction {
 			}
 		}
 
-		// Call bridge method if handler is available
-		if ba.callHandler == nil {
-			L.Push(lua.LNil)
-			L.Push(lua.LString("bridge does not support direct method calls"))
-			return 2
-		}
-
-		result, err := ba.callHandler(methodName, args...)
+		// Execute bridge method
+		ctx := context.Background() // TODO: Pass context from caller
+		result, err := ba.bridge.ExecuteMethod(ctx, methodName, args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
 			return 2
 		}
 
-		// Handle multiple returns
-		if slice, ok := result.([]interface{}); ok {
-			for _, val := range slice {
-				lval, err := ba.converter.ToLua(L, val)
-				if err != nil {
-					L.Push(lua.LNil)
-					L.Push(lua.LString(fmt.Sprintf("result conversion error: %v", err)))
-					return 2
+		// Convert ScriptValue result back to Lua
+		if result != nil {
+			// Check if result is an array (for multiple returns)
+			if result.Type() == engine.TypeArray {
+				if arrayResult, ok := result.(engine.ArrayValue); ok {
+					elements := arrayResult.Elements()
+					for _, elem := range elements {
+						lval, err := ba.converter.FromLuaScriptValue(L, elem)
+						if err != nil {
+							L.Push(lua.LNil)
+							L.Push(lua.LString(fmt.Sprintf("result conversion error: %v", err)))
+							return 2
+						}
+						L.Push(lval)
+					}
+					return len(elements)
 				}
-				L.Push(lval)
 			}
-			return len(slice)
-		}
 
-		// Single return
-		lval, err := ba.converter.ToLua(L, result)
-		if err != nil {
+			// Single return
+			lval, err := ba.converter.FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(fmt.Sprintf("result conversion error: %v", err)))
+				return 2
+			}
+			L.Push(lval)
+			return 1
+		} else {
+			// Nil result
 			L.Push(lua.LNil)
-			L.Push(lua.LString(fmt.Sprintf("result conversion error: %v", err)))
-			return 2
+			return 1
 		}
-		L.Push(lval)
-		return 1
 	}
 
 	// Cache the function

@@ -185,24 +185,30 @@ func (e *LuaEngine) Initialize(config engine.EngineConfig) error {
 }
 
 // Execute executes a Lua script with the given parameters
-func (e *LuaEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
+func (e *LuaEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (engine.ScriptValue, error) {
 	// Use the execution pipeline for cleaner, more maintainable code
-	return e.ExecuteWithPipeline(ctx, script, params)
+	result, err := e.ExecuteWithPipeline(ctx, script, params)
+	if err != nil {
+		return engine.NewErrorValue(err), err
+	}
+
+	// Convert result to ScriptValue
+	return e.converter.ToScriptValue(result)
 }
 
 // ExecuteFile executes a Lua script from a file
-func (e *LuaEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
+func (e *LuaEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (engine.ScriptValue, error) {
 	if !e.initialized {
-		return nil, fmt.Errorf("engine not initialized")
+		return engine.NewErrorValue(fmt.Errorf("engine not initialized")), fmt.Errorf("engine not initialized")
 	}
 
 	// Check if file exists and is readable
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("cannot access file %s: %w", path, err)
+		return engine.NewErrorValue(err), fmt.Errorf("cannot access file %s: %w", path, err)
 	}
 	if info.IsDir() {
-		return nil, fmt.Errorf("path %s is a directory", path)
+		return engine.NewErrorValue(fmt.Errorf("path %s is a directory", path)), fmt.Errorf("path %s is a directory", path)
 	}
 
 	// Check file extension
@@ -216,13 +222,13 @@ func (e *LuaEngine) ExecuteFile(ctx context.Context, path string, params map[str
 		}
 	}
 	if !isValidExt {
-		return nil, fmt.Errorf("unsupported file extension %s", ext)
+		return engine.NewErrorValue(fmt.Errorf("unsupported file extension %s", ext)), fmt.Errorf("unsupported file extension %s", ext)
 	}
 
 	// Read file content
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s: %w", path, err)
+		return engine.NewErrorValue(err), fmt.Errorf("failed to read file %s: %w", path, err)
 	}
 
 	// Execute script content
@@ -293,25 +299,17 @@ func (e *LuaEngine) ListBridges() []string {
 	return e.bridgeManager.ListBridges()
 }
 
-// ToNative converts a Lua value to a Go value
-func (e *LuaEngine) ToNative(scriptValue interface{}) (interface{}, error) {
-	if luaValue, ok := scriptValue.(lua.LValue); ok {
-		return e.converter.FromLua(luaValue)
+// ToNative converts a ScriptValue to a Go value
+func (e *LuaEngine) ToNative(scriptValue engine.ScriptValue) (interface{}, error) {
+	if scriptValue == nil || scriptValue.IsNil() {
+		return nil, nil
 	}
-	return scriptValue, nil
+	return e.converter.FromScriptValue(scriptValue), nil
 }
 
-// FromNative converts a Go value to a Lua value
-func (e *LuaEngine) FromNative(goValue interface{}) (interface{}, error) {
-	// For standalone conversion, we need a temporary LState
-	// This is not ideal for performance but required by the interface
-	tempState, err := e.factory.Create()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary state: %w", err)
-	}
-	defer tempState.Close()
-
-	return e.converter.ToLua(tempState, goValue)
+// FromNative converts a Go value to a ScriptValue
+func (e *LuaEngine) FromNative(goValue interface{}) (engine.ScriptValue, error) {
+	return e.converter.ToScriptValue(goValue)
 }
 
 // Name returns the engine name
@@ -434,7 +432,40 @@ func (e *LuaEngine) DestroyContext(ctx engine.ScriptContext) error {
 }
 
 func (e *LuaEngine) ExecuteScript(ctx context.Context, script string, options engine.ExecutionOptions) (*engine.ExecutionResult, error) {
-	return nil, fmt.Errorf("ExecuteScript not implemented yet")
+	startTime := time.Now()
+
+	// Convert variables from ExecutionOptions to map[string]interface{}
+	params := make(map[string]interface{})
+	for k, v := range options.Variables {
+		params[k] = v
+	}
+
+	// Execute the script
+	result, err := e.Execute(ctx, script, params)
+	duration := time.Since(startTime)
+
+	// Create ExecutionResult
+	execResult := &engine.ExecutionResult{
+		Value:    result,
+		Duration: duration,
+		Metadata: make(map[string]interface{}),
+	}
+
+	// Add execution metadata
+	execResult.Metadata["engine"] = e.Name()
+	execResult.Metadata["script_length"] = len(script)
+
+	if err != nil {
+		execResult.Error = err
+		// If we have an error value, use it; otherwise create one
+		if result != nil && result.Type() == engine.TypeError {
+			execResult.Value = result
+		} else {
+			execResult.Value = engine.NewErrorValue(err)
+		}
+	}
+
+	return execResult, err
 }
 
 func (e *LuaEngine) GetEventBus() engine.EventBus {

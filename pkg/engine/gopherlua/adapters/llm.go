@@ -1,9 +1,11 @@
 // ABOUTME: LLM bridge adapter that exposes go-llms LLM functionality to Lua scripts
-// ABOUTME: Provides agent creation, completion methods, streaming, model selection, and token counting
+// ABOUTME: Provides agent creation, completion methods, streaming, model selection, provider management, and pool functionality
 
 package adapters
 
 import (
+	"context"
+
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -13,16 +15,22 @@ import (
 // LLMAdapter specializes BridgeAdapter for LLM functionality
 type LLMAdapter struct {
 	*gopherlua.BridgeAdapter
+
+	// References to related bridges for enhanced functionality
+	providersBridge engine.Bridge
+	poolBridge      engine.Bridge
 }
 
-// NewLLMAdapter creates a new LLM adapter
-func NewLLMAdapter(bridge engine.Bridge) *LLMAdapter {
+// NewLLMAdapter creates a new LLM adapter with optional related bridges
+func NewLLMAdapter(bridge engine.Bridge, providersBridge engine.Bridge, poolBridge engine.Bridge) *LLMAdapter {
 	// Create base adapter
 	baseAdapter := gopherlua.NewBridgeAdapter(bridge)
 
 	// Create LLM adapter
 	adapter := &LLMAdapter{
-		BridgeAdapter: baseAdapter,
+		BridgeAdapter:   baseAdapter,
+		providersBridge: providersBridge,
+		poolBridge:      poolBridge,
 	}
 
 	// Add LLM-specific methods if not already present
@@ -58,6 +66,15 @@ func (la *LLMAdapter) CreateLuaModule() lua.LGFunction {
 		// Add LLM-specific enhancements
 		la.addLLMEnhancements(L, module)
 
+		// Add provider management methods
+		la.addProviderMethods(L, module)
+
+		// Add pool management methods
+		la.addPoolMethods(L, module)
+
+		// Add model management methods
+		la.addModelMethods(L, module)
+
 		// Module is already on stack
 		return 1
 	}
@@ -75,6 +92,415 @@ func (la *LLMAdapter) addLLMEnhancements(L *lua.LState, module *lua.LTable) {
 
 	// Add constants
 	la.addConstants(L, module)
+}
+
+// addProviderMethods adds provider management methods
+func (la *LLMAdapter) addProviderMethods(L *lua.LState, module *lua.LTable) {
+	// Create provider namespace
+	providers := L.NewTable()
+
+	// createProvider method
+	L.SetField(providers, "create", L.NewFunction(func(L *lua.LState) int {
+		providerType := L.CheckString(1)
+		name := L.CheckString(2)
+		config := L.OptTable(3, L.NewTable())
+
+		// Convert config to map
+		configMap := la.tableToMap(config)
+
+		// Call provider creation through main bridge
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewStringValue(providerType),
+			engine.NewStringValue(name),
+			engine.NewObjectValue(configMap),
+		}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "createProvider", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// getProvider method
+	L.SetField(providers, "get", L.NewFunction(func(L *lua.LState) int {
+		name := L.CheckString(1)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(name)}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "getProvider", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// listProviders method
+	L.SetField(providers, "list", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "listProviders", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// Add provider templates support
+	L.SetField(providers, "getTemplate", L.NewFunction(func(L *lua.LState) int {
+		templateName := L.CheckString(1)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(templateName)}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "getProviderTemplate", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// Multi-provider support
+	L.SetField(providers, "createMulti", L.NewFunction(func(L *lua.LState) int {
+		name := L.CheckString(1)
+		providerList := L.CheckTable(2)
+		strategy := L.CheckString(3)
+		config := L.OptTable(4, L.NewTable())
+
+		// Convert provider list to array
+		var providerNames []engine.ScriptValue
+		providerList.ForEach(func(k, v lua.LValue) {
+			if str, ok := v.(lua.LString); ok {
+				providerNames = append(providerNames, engine.NewStringValue(string(str)))
+			}
+		})
+
+		// Convert config to map
+		configMap := la.tableToMap(config)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewStringValue(name),
+			engine.NewArrayValue(providerNames),
+			engine.NewStringValue(strategy),
+			engine.NewObjectValue(configMap),
+		}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "createMultiProvider", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// Add providers namespace to module
+	L.SetField(module, "providers", providers)
+}
+
+// addPoolMethods adds pool management methods
+func (la *LLMAdapter) addPoolMethods(L *lua.LState, module *lua.LTable) {
+	// Create pool namespace
+	pool := L.NewTable()
+
+	// createPool method
+	L.SetField(pool, "create", L.NewFunction(func(L *lua.LState) int {
+		name := L.CheckString(1)
+		providers := L.CheckTable(2)
+		strategy := L.CheckString(3)
+		config := L.OptTable(4, L.NewTable())
+
+		// Convert providers to array
+		var providerList []engine.ScriptValue
+		providers.ForEach(func(k, v lua.LValue) {
+			if str, ok := v.(lua.LString); ok {
+				providerList = append(providerList, engine.NewStringValue(string(str)))
+			}
+		})
+
+		// Convert config to map
+		configMap := la.tableToMap(config)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewStringValue(name),
+			engine.NewArrayValue(providerList),
+			engine.NewStringValue(strategy),
+			engine.NewObjectValue(configMap),
+		}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "createPool", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// getPoolHealth method
+	L.SetField(pool, "getHealth", L.NewFunction(func(L *lua.LState) int {
+		poolName := L.CheckString(1)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(poolName)}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "getPoolHealth", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// generateWithPool method
+	L.SetField(pool, "generate", L.NewFunction(func(L *lua.LState) int {
+		poolName := L.CheckString(1)
+		prompt := L.CheckString(2)
+		options := L.OptTable(3, L.NewTable())
+
+		// Convert options to map
+		optionsMap := la.tableToMap(options)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewStringValue(poolName),
+			engine.NewStringValue(prompt),
+			engine.NewObjectValue(optionsMap),
+		}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "generateWithPool", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// Pool metrics
+	L.SetField(pool, "getMetrics", L.NewFunction(func(L *lua.LState) int {
+		poolName := L.CheckString(1)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(poolName)}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "getPoolMetrics", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// Add pool namespace to module
+	L.SetField(module, "pool", pool)
+}
+
+// addModelMethods adds model management methods
+func (la *LLMAdapter) addModelMethods(L *lua.LState, module *lua.LTable) {
+	// Create models namespace
+	models := L.NewTable()
+
+	// listModels method
+	L.SetField(models, "list", L.NewFunction(func(L *lua.LState) int {
+		provider := L.OptString(1, "")
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(provider)}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "listModels", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// getModelInfo method
+	L.SetField(models, "getInfo", L.NewFunction(func(L *lua.LState) int {
+		modelName := L.CheckString(1)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(modelName)}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "getModelInfo", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// checkCapabilities method
+	L.SetField(models, "checkCapabilities", L.NewFunction(func(L *lua.LState) int {
+		modelName := L.CheckString(1)
+		capability := L.CheckString(2)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewStringValue(modelName),
+			engine.NewStringValue(capability),
+		}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "checkModelCapability", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// Add models namespace to module
+	L.SetField(module, "models", models)
 }
 
 // addConvenienceMethods adds convenience methods to the module
@@ -155,6 +581,37 @@ func (la *LLMAdapter) addConvenienceMethods(L *lua.LState, module *lua.LTable) {
 		}
 		return 2
 	}))
+
+	// Add token counting utility
+	L.SetField(module, "countTokens", L.NewFunction(func(L *lua.LState) int {
+		text := L.CheckString(1)
+		model := L.OptString(2, "")
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewStringValue(text),
+			engine.NewStringValue(model),
+		}
+
+		result, err := la.GetBridge().ExecuteMethod(ctx, "countTokens", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Convert result to Lua
+		luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
 // addConstants adds LLM-related constants to the module
@@ -180,6 +637,15 @@ func (la *LLMAdapter) addConstants(L *lua.LState, module *lua.LTable) {
 	L.SetField(errors, "INVALID_MODEL", lua.LString("invalid_model"))
 	L.SetField(errors, "CONTEXT_LENGTH", lua.LString("context_length_exceeded"))
 	L.SetField(module, "ERRORS", errors)
+
+	// Add pool strategies
+	strategies := L.NewTable()
+	L.SetField(strategies, "ROUND_ROBIN", lua.LString("round_robin"))
+	L.SetField(strategies, "FAILOVER", lua.LString("failover"))
+	L.SetField(strategies, "FASTEST", lua.LString("fastest"))
+	L.SetField(strategies, "WEIGHTED", lua.LString("weighted"))
+	L.SetField(strategies, "LEAST_USED", lua.LString("least_used"))
+	L.SetField(module, "STRATEGIES", strategies)
 }
 
 // WrapMethod wraps a bridge method with LLM-specific handling
@@ -195,6 +661,10 @@ func (la *LLMAdapter) WrapMethod(methodName string) lua.LGFunction {
 		return la.wrapComplete(baseWrapped)
 	case "stream":
 		return la.wrapStream(baseWrapped)
+	case "generate":
+		return la.wrapGenerate(baseWrapped)
+	case "generateMessage":
+		return la.wrapGenerateMessage(baseWrapped)
 	default:
 		return baseWrapped
 	}
@@ -228,6 +698,51 @@ func (la *LLMAdapter) wrapComplete(baseFn lua.LGFunction) lua.LGFunction {
 		if L.GetTop() == 0 {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("prompt is required"))
+			return 2
+		}
+
+		// If no options provided, add empty table
+		if L.GetTop() == 1 {
+			L.Push(L.NewTable())
+		}
+
+		return baseFn(L)
+	}
+}
+
+// wrapGenerate adds generate-specific handling
+func (la *LLMAdapter) wrapGenerate(baseFn lua.LGFunction) lua.LGFunction {
+	return func(L *lua.LState) int {
+		// Ensure at least prompt is provided
+		if L.GetTop() == 0 {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("prompt is required"))
+			return 2
+		}
+
+		// If no options provided, add empty table
+		if L.GetTop() == 1 {
+			L.Push(L.NewTable())
+		}
+
+		return baseFn(L)
+	}
+}
+
+// wrapGenerateMessage adds message generation handling
+func (la *LLMAdapter) wrapGenerateMessage(baseFn lua.LGFunction) lua.LGFunction {
+	return func(L *lua.LState) int {
+		// Ensure at least messages array is provided
+		if L.GetTop() == 0 {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("messages array is required"))
+			return 2
+		}
+
+		// Validate messages is a table
+		if L.Get(1).Type() != lua.LTTable {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("messages must be an array"))
 			return 2
 		}
 
@@ -321,4 +836,115 @@ func (la *LLMAdapter) enhanceAgentObject(L *lua.LState, agent *lua.LTable) {
 		L.Push(info)
 		return 1
 	}))
+
+	// Add streaming method to agent
+	L.SetField(agent, "stream", L.NewFunction(func(L *lua.LState) int {
+		prompt := L.CheckString(1)
+		options := L.OptTable(2, L.NewTable())
+
+		// Get agent ID
+		agentId := agent.RawGetString("id")
+		if agentId == lua.LNil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("agent has no id"))
+			return 2
+		}
+
+		// Call agentStream through the module
+		module := L.GetGlobal("llm")
+		if module.Type() != lua.LTTable {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("llm module not found"))
+			return 2
+		}
+
+		agentStreamFn := module.(*lua.LTable).RawGetString("agentStream")
+		if agentStreamFn == lua.LNil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("agentStream not found"))
+			return 2
+		}
+
+		// Call agentStream
+		err := L.CallByParam(lua.P{
+			Fn:      agentStreamFn,
+			NRet:    2,
+			Protect: true,
+		}, agentId, lua.LString(prompt), options)
+
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		return 2
+	}))
+}
+
+// tableToMap converts a Lua table to a map[string]engine.ScriptValue
+func (la *LLMAdapter) tableToMap(table *lua.LTable) map[string]engine.ScriptValue {
+	result := make(map[string]engine.ScriptValue)
+
+	table.ForEach(func(k, v lua.LValue) {
+		if key, ok := k.(lua.LString); ok {
+			// Convert value to ScriptValue
+			sv, err := la.BridgeAdapter.GetTypeConverter().ToLuaScriptValue(nil, v)
+			if err == nil {
+				result[string(key)] = sv
+			}
+		}
+	})
+
+	return result
+}
+
+// RegisterAsModule registers the adapter as a module in the module system
+func (la *LLMAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+	// Get bridge dependencies from metadata
+	metadata := la.GetMetadata()
+	deps := metadata.Dependencies
+
+	// Create module definition using our overridden CreateLuaModule
+	module := gopherlua.ModuleDefinition{
+		Name:         name,
+		Description:  metadata.Description,
+		Dependencies: deps,
+		LoadFunc:     la.CreateLuaModule(), // Use our enhanced module creator
+	}
+
+	// Register the module
+	return ms.Register(module)
+}
+
+// GetBridge returns the underlying bridge
+func (la *LLMAdapter) GetBridge() engine.Bridge {
+	return la.BridgeAdapter.GetBridge()
+}
+
+// GetMethods returns the available methods
+func (la *LLMAdapter) GetMethods() []string {
+	// Get base methods
+	methods := la.BridgeAdapter.GetMethods()
+
+	// Add LLM-specific methods if not already present
+	llmMethods := []string{
+		"generate", "generateMessage", "stream",
+		"createProvider", "getProvider", "listProviders",
+		"createPool", "getPoolHealth", "generateWithPool",
+		"listModels", "getModelInfo", "countTokens",
+	}
+
+	methodMap := make(map[string]bool)
+	for _, m := range methods {
+		methodMap[m] = true
+	}
+
+	for _, m := range llmMethods {
+		if !methodMap[m] {
+			methods = append(methods, m)
+		}
+	}
+
+	return methods
 }

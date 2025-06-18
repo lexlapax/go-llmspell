@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -19,45 +18,52 @@ import (
 type mockAsyncBridge struct {
 	id          string
 	initialized bool
-	methods     map[string]bridge.MethodInfo
+	methods     map[string]engine.MethodInfo
 }
 
 func newMockAsyncBridge() *mockAsyncBridge {
 	return &mockAsyncBridge{
 		id: "mockAsync",
-		methods: map[string]bridge.MethodInfo{
+		methods: map[string]engine.MethodInfo{
 			"fastMethod": {
 				Description: "A fast method that returns immediately",
-				Parameters:  []bridge.ParameterInfo{{Name: "input", Type: "string"}},
-				Returns:     []bridge.ReturnInfo{{Type: "string"}},
+				Parameters:  []engine.ParameterInfo{{Name: "input", Type: "string"}},
+				ReturnType:  "string",
 			},
 			"slowMethod": {
 				Description: "A slow method that takes time",
-				Parameters:  []bridge.ParameterInfo{{Name: "delay", Type: "number"}},
-				Returns:     []bridge.ReturnInfo{{Type: "string"}},
+				Parameters:  []engine.ParameterInfo{{Name: "delay", Type: "number"}},
+				ReturnType:  "string",
 			},
 			"streamMethod": {
 				Description: "A method that streams data",
-				Parameters:  []bridge.ParameterInfo{{Name: "count", Type: "number"}},
-				Returns:     []bridge.ReturnInfo{{Type: "channel"}},
+				Parameters:  []engine.ParameterInfo{{Name: "count", Type: "number"}},
+				ReturnType:  "channel",
 			},
 			"errorMethod": {
 				Description: "A method that returns an error",
-				Parameters:  []bridge.ParameterInfo{},
-				Returns:     []bridge.ReturnInfo{{Type: "error"}},
+				Parameters:  []engine.ParameterInfo{},
+				ReturnType:  "error",
 			},
 		},
 	}
 }
 
-func (m *mockAsyncBridge) GetID() string                                                 { return m.id }
-func (m *mockAsyncBridge) GetMetadata() bridge.BridgeMetadata                            { return bridge.BridgeMetadata{} }
-func (m *mockAsyncBridge) Initialize(ctx context.Context) error                          { m.initialized = true; return nil }
-func (m *mockAsyncBridge) Cleanup(ctx context.Context) error                             { m.initialized = false; return nil }
-func (m *mockAsyncBridge) GetMethods() map[string]bridge.MethodInfo                      { return m.methods }
-func (m *mockAsyncBridge) GetTypeMappings() map[string]bridge.TypeMapping                { return nil }
+func (m *mockAsyncBridge) GetID() string                        { return m.id }
+func (m *mockAsyncBridge) GetMetadata() engine.BridgeMetadata   { return engine.BridgeMetadata{} }
+func (m *mockAsyncBridge) Initialize(ctx context.Context) error { m.initialized = true; return nil }
+func (m *mockAsyncBridge) Cleanup(ctx context.Context) error    { m.initialized = false; return nil }
+func (m *mockAsyncBridge) Methods() []engine.MethodInfo {
+	methods := make([]engine.MethodInfo, 0, len(m.methods))
+	for _, method := range m.methods {
+		methods = append(methods, method)
+	}
+	return methods
+}
+func (m *mockAsyncBridge) TypeMappings() map[string]engine.TypeMapping                   { return nil }
 func (m *mockAsyncBridge) IsInitialized() bool                                           { return m.initialized }
-func (m *mockAsyncBridge) GetRequiredPermissions() []string                              { return nil }
+func (m *mockAsyncBridge) RequiredPermissions() []engine.Permission                      { return nil }
+func (m *mockAsyncBridge) RegisterWithEngine(engine engine.ScriptEngine) error           { return nil }
 func (m *mockAsyncBridge) ValidateMethod(method string, args []engine.ScriptValue) error { return nil }
 
 func (m *mockAsyncBridge) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -141,7 +147,7 @@ func TestAsyncBridgeWrapper_Creation(t *testing.T) {
 	}
 
 	// Check that methods are wrapped
-	methods := wrapper.GetMethods()
+	methods := wrapper.Methods()
 	if len(methods) != len(mockBridge.methods) {
 		t.Errorf("Expected %d methods, got %d", len(mockBridge.methods), len(methods))
 	}

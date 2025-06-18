@@ -544,7 +544,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	case "createAgent":
 		b.mu.Lock()
 		defer b.mu.Unlock()
-		
+
 		if len(args) < 2 {
 			return engine.NewErrorValue(fmt.Errorf("createAgent requires id and config parameters")), nil
 		}
@@ -560,7 +560,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		if description == "" {
 			description = "Script-created agent"
 		}
-		
+
 		// Extract type from config, default to "basic"
 		agentTypeStr, _ := config["type"].(string)
 		if agentTypeStr == "" {
@@ -597,7 +597,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		if len(args) < 2 {
 			return engine.NewErrorValue(fmt.Errorf("executeAgent requires agentID and input parameters")), nil
 		}
-		
+
 		b.mu.RLock()
 		agentID := args[0].(engine.StringValue).Value()
 		input := args[1].ToGo()
@@ -629,7 +629,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	case "listAgents":
 		b.mu.RLock()
 		defer b.mu.RUnlock()
-		
+
 		agents := make([]engine.ScriptValue, 0, len(b.agents))
 		for _, agent := range b.agents {
 			agentInfo := map[string]engine.ScriptValue{
@@ -645,7 +645,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	case "exportAgentState":
 		b.mu.RLock()
 		defer b.mu.RUnlock()
-		
+
 		if len(args) < 1 {
 			return engine.NewErrorValue(fmt.Errorf("exportAgentState requires agentID parameter")), nil
 		}
@@ -1251,7 +1251,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	case "getAgent":
 		b.mu.RLock()
 		defer b.mu.RUnlock()
-		
+
 		if len(args) < 1 {
 			return engine.NewErrorValue(fmt.Errorf("getAgent requires agentID parameter")), nil
 		}
@@ -1274,7 +1274,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	case "removeAgent":
 		b.mu.Lock()
 		defer b.mu.Unlock()
-		
+
 		if len(args) < 1 {
 			return engine.NewErrorValue(fmt.Errorf("removeAgent requires agentID parameter")), nil
 		}
@@ -1290,7 +1290,7 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	case "getAgentMetrics":
 		b.mu.RLock()
 		defer b.mu.RUnlock()
-		
+
 		if len(args) < 1 {
 			return engine.NewErrorValue(fmt.Errorf("getAgentMetrics requires agentID parameter")), nil
 		}
@@ -1359,4 +1359,3 @@ func (b *AgentBridge) removeAgentInternal(id string) error {
 	delete(b.agents, id)
 	return nil
 }
-

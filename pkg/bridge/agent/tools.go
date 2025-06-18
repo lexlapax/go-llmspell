@@ -1088,7 +1088,6 @@ func convertStringSliceToScriptValue(slice []string) engine.ScriptValue {
 	return engine.NewArrayValue(values)
 }
 
-
 // convertScriptValueToInterface converts ScriptValue to interface{} for go-llms compatibility
 func convertScriptValueToInterface(v engine.ScriptValue) interface{} {
 	switch v.Type() {

@@ -74,11 +74,19 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 		result, err := eng.Execute(ctx, script, params)
 		require.NoError(t, err)
 
-		resultMap, ok := result.(map[string]interface{})
+		// Convert ScriptValue back to Go map for testing
+		require.Equal(t, engine.TypeObject, result.Type())
+		objectValue, ok := result.(engine.ObjectValue)
 		require.True(t, ok)
-		assert.Equal(t, 40.0, resultMap["sum"])
-		assert.Equal(t, 375.0, resultMap["product"])
-		assert.Equal(t, "Hello Integration Test", resultMap["message"])
+
+		fields := objectValue.Fields()
+		sumValue, _ := engine.ConvertToNumber(fields["sum"])
+		productValue, _ := engine.ConvertToNumber(fields["product"])
+		messageValue, _ := engine.ConvertToString(fields["message"])
+
+		assert.Equal(t, 40.0, sumValue)
+		assert.Equal(t, 375.0, productValue)
+		assert.Equal(t, "Hello Integration Test", messageValue)
 	})
 
 	t.Run("type_conversion_comprehensive", func(t *testing.T) {
@@ -128,19 +136,38 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 		result, err := eng.Execute(ctx, script, params)
 		require.NoError(t, err)
 
-		resultMap, ok := result.(map[string]interface{})
-		require.True(t, ok)
-		assert.Equal(t, true, resultMap["bool_flag"])
-		assert.Equal(t, 3.0, resultMap["count"])
-		assert.Equal(t, 100.0, resultMap["total"])
-
-		nested, ok := resultMap["nested"].(map[string]interface{})
+		// Convert ScriptValue back to Go types for testing
+		require.Equal(t, engine.TypeObject, result.Type())
+		objectValue, ok := result.(engine.ObjectValue)
 		require.True(t, ok)
 
-		computed, ok := nested["computed"].(map[string]interface{})
+		fields := objectValue.Fields()
+		boolFlag, _ := engine.ConvertToBool(fields["bool_flag"])
+		count, _ := engine.ConvertToNumber(fields["count"])
+		total, _ := engine.ConvertToNumber(fields["total"])
+
+		assert.Equal(t, true, boolFlag)
+		assert.Equal(t, 3.0, count)
+		assert.Equal(t, 100.0, total)
+
+		// Check nested object
+		nestedValue := fields["nested"]
+		require.Equal(t, engine.TypeObject, nestedValue.Type())
+		nestedObj, ok := nestedValue.(engine.ObjectValue)
 		require.True(t, ok)
-		assert.InDelta(t, 33.333, computed["average"].(float64), 0.01)
-		assert.Equal(t, "low", computed["status"])
+
+		nestedFields := nestedObj.Fields()
+		computedValue := nestedFields["computed"]
+		require.Equal(t, engine.TypeObject, computedValue.Type())
+		computedObj, ok := computedValue.(engine.ObjectValue)
+		require.True(t, ok)
+
+		computedObjFields := computedObj.Fields()
+		average, _ := engine.ConvertToNumber(computedObjFields["average"])
+		status, _ := engine.ConvertToString(computedObjFields["status"])
+
+		assert.InDelta(t, 33.333, average, 0.01)
+		assert.Equal(t, "low", status)
 	})
 
 	t.Run("security_sandbox_enforcement", func(t *testing.T) {
@@ -168,10 +195,18 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 
 		result, err := eng.Execute(ctx, allowedScript, nil)
 		require.NoError(t, err)
-		resultMap, ok := result.(map[string]interface{})
+
+		// Convert ScriptValue back to Go types for testing
+		require.Equal(t, engine.TypeObject, result.Type())
+		objectValue, ok := result.(engine.ObjectValue)
 		require.True(t, ok)
-		assert.Equal(t, 4.0, resultMap["string_len"])
-		assert.InDelta(t, 3.14159, resultMap["math_pi"].(float64), 0.001)
+
+		fields := objectValue.Fields()
+		stringLen, _ := engine.ConvertToNumber(fields["string_len"])
+		mathPi, _ := engine.ConvertToNumber(fields["math_pi"])
+
+		assert.Equal(t, 4.0, stringLen)
+		assert.InDelta(t, 3.14159, mathPi, 0.001)
 	})
 
 	t.Run("performance_and_caching", func(t *testing.T) {
@@ -197,10 +232,17 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 			result, err := eng.Execute(ctx, script, map[string]interface{}{"n": 10})
 			require.NoError(t, err)
 
-			resultMap, ok := result.(map[string]interface{})
+			// Convert ScriptValue back to Go types for testing
+			require.Equal(t, engine.TypeObject, result.Type())
+			objectValue, ok := result.(engine.ObjectValue)
 			require.True(t, ok)
-			assert.Equal(t, 10.0, resultMap["input"])
-			assert.Equal(t, 55.0, resultMap["result"]) // fib(10) = 55
+
+			fields := objectValue.Fields()
+			input, _ := engine.ConvertToNumber(fields["input"])
+			fibResult, _ := engine.ConvertToNumber(fields["result"])
+
+			assert.Equal(t, 10.0, input)
+			assert.Equal(t, 55.0, fibResult) // fib(10) = 55
 		}
 
 		// Check metrics to verify caching is working
@@ -397,11 +439,19 @@ func TestLuaEngine_BridgeIntegration(t *testing.T) {
 	result, err := eng.Execute(ctx, script, nil)
 	require.NoError(t, err)
 
-	resultMap, ok := result.(map[string]interface{})
+	// Convert ScriptValue back to Go types for testing
+	require.Equal(t, engine.TypeObject, result.Type())
+	objectValue, ok := result.(engine.ObjectValue)
 	require.True(t, ok)
-	assert.Equal(t, "Integration Test Bridge", resultMap["bridge_name"])
-	assert.Equal(t, "1.0.0", resultMap["bridge_version"])
-	assert.Equal(t, true, resultMap["has_calculate"])
+
+	fields := objectValue.Fields()
+	bridgeName, _ := engine.ConvertToString(fields["bridge_name"])
+	bridgeVersion, _ := engine.ConvertToString(fields["bridge_version"])
+	hasCalculate, _ := engine.ConvertToBool(fields["has_calculate"])
+
+	assert.Equal(t, "Integration Test Bridge", bridgeName)
+	assert.Equal(t, "1.0.0", bridgeVersion)
+	assert.Equal(t, true, hasCalculate)
 
 	// Verify bridge list
 	bridges := eng.ListBridges()

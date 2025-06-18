@@ -1150,7 +1150,6 @@ type ErrorBuilder struct {
 	err *errors.BaseError
 }
 
-
 // Helper function to convert numeric types to float64
 func toFloat64(v interface{}) float64 {
 	switch val := v.(type) {

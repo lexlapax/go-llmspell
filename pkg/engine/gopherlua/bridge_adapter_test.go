@@ -6,6 +6,7 @@ package gopherlua
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -549,10 +550,7 @@ func (m *mockBridge) Call(method string, args ...interface{}) (interface{}, erro
 	return nil, errors.New("method not implemented")
 }
 
-func (m *mockBridge) ValidateMethod(method string, args []interface{}) error {
-	if m.validateFunc != nil {
-		return m.validateFunc(method, args...)
-	}
+func (m *mockBridge) ValidateMethod(method string, args []engine.ScriptValue) error {
 	// Find method info
 	for _, mi := range m.methods {
 		if mi.Name == method {
@@ -560,6 +558,34 @@ func (m *mockBridge) ValidateMethod(method string, args []interface{}) error {
 		}
 	}
 	return errors.New("unknown method")
+}
+
+func (m *mockBridge) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if m.callFunc != nil {
+		// Convert ScriptValue args to interface{} for the old callFunc
+		interfaceArgs := make([]interface{}, len(args))
+		for i, arg := range args {
+			interfaceArgs[i] = arg.ToGo()
+		}
+		result, err := m.callFunc(method, interfaceArgs...)
+		if err != nil {
+			return engine.NewErrorValue(err), err
+		}
+		// Convert result back to ScriptValue
+		switch v := result.(type) {
+		case string:
+			return engine.NewStringValue(v), nil
+		case int:
+			return engine.NewNumberValue(float64(v)), nil
+		case float64:
+			return engine.NewNumberValue(v), nil
+		case bool:
+			return engine.NewBoolValue(v), nil
+		default:
+			return engine.NewStringValue(fmt.Sprintf("%v", v)), nil
+		}
+	}
+	return engine.NewStringValue("mock result"), nil
 }
 
 func (m *mockBridge) RegisterWithEngine(engine engine.ScriptEngine) error {

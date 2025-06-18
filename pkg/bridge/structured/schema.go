@@ -353,7 +353,7 @@ func (b *SchemaBridge) createSchema(ctx context.Context, args []engine.ScriptVal
 	}
 
 	schemaData := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
-	
+
 	// Create schema using script conversion
 	schema, err := scriptToSchema(schemaData)
 	if err != nil {
@@ -375,7 +375,7 @@ func (b *SchemaBridge) createProperty(ctx context.Context, args []engine.ScriptV
 	}
 
 	propertyType := args[0].(engine.StringValue).Value()
-	
+
 	var constraints map[string]interface{}
 	if len(args) > 1 && args[1].Type() == engine.TypeObject {
 		constraints = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
@@ -420,10 +420,10 @@ func (b *SchemaBridge) validateJSON(ctx context.Context, args []engine.ScriptVal
 	}
 
 	validationResult := map[string]interface{}{
-		"valid":   result.Valid,
-		"errors":  validationErrorsToScript(result.Errors),
-		"schema":  schemaToScript(schema),
-		"data":    data,
+		"valid":  result.Valid,
+		"errors": validationErrorsToScript(result.Errors),
+		"schema": schemaToScript(schema),
+		"data":   data,
 	}
 
 	return engine.NewObjectValue(engine.ConvertMapToScriptValue(validationResult)), nil
@@ -440,7 +440,7 @@ func (b *SchemaBridge) generateSchemaFromType(ctx context.Context, args []engine
 	}
 
 	typeInfo := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
-	
+
 	// Generate schema from type information using the reflection generator
 	schema, err := b.generator.GenerateSchema(typeInfo)
 	if err != nil {
@@ -462,7 +462,7 @@ func (b *SchemaBridge) convertJSONSchema(ctx context.Context, args []engine.Scri
 	}
 
 	jsonSchema := args[0].(engine.StringValue).Value()
-	
+
 	var schemaData map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonSchema), &schemaData); err != nil {
 		return engine.NewErrorValue(fmt.Errorf("invalid JSON schema: %w", err)), nil
@@ -751,20 +751,20 @@ func (b *SchemaBridge) processAsyncValidations(ctx context.Context) {
 			if !ok {
 				return
 			}
-			
+
 			// Process async validation request
 			// Convert data to JSON string for validation
 			dataJSON, err := json.Marshal(req.Data)
 			if err != nil {
 				continue
 			}
-			
+
 			result, err := b.validator.Validate(req.Schema, string(dataJSON))
 			if err != nil {
 				// Handle error
 				continue
 			}
-			
+
 			// Update metrics
 			b.validationMetrics.mutex.Lock()
 			b.validationMetrics.AsyncValidations++

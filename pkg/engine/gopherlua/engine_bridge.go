@@ -170,16 +170,16 @@ func (bm *BridgeManager) wrapBridgeMethod(L *lua.LState, bridge engine.Bridge, m
 		// Get number of arguments
 		argc := L.GetTop()
 
-		// Extract arguments
-		args := make([]interface{}, argc)
+		// Extract arguments and convert to ScriptValue
+		args := make([]engine.ScriptValue, argc)
 		for i := 1; i <= argc; i++ {
 			luaValue := L.Get(i)
-			goValue, err := bm.converter.FromLua(luaValue)
+			scriptValue, err := bm.converter.ToLuaScriptValue(L, luaValue)
 			if err != nil {
-				L.ArgError(i, fmt.Sprintf("failed to convert argument: %v", err))
+				L.ArgError(i, fmt.Sprintf("failed to convert argument to ScriptValue: %v", err))
 				return 0
 			}
-			args[i-1] = goValue
+			args[i-1] = scriptValue
 		}
 
 		// Validate method call
@@ -188,22 +188,27 @@ func (bm *BridgeManager) wrapBridgeMethod(L *lua.LState, bridge engine.Bridge, m
 			return 0
 		}
 
-		// For now, return a placeholder since we don't have actual bridge method execution
-		// This will be implemented when we have the actual bridge implementations
-		switch methodInfo.ReturnType {
-		case "string":
-			L.Push(lua.LString(fmt.Sprintf("result_of_%s", methodInfo.Name)))
-		case "number":
-			L.Push(lua.LNumber(42.0))
-		case "boolean":
-			L.Push(lua.LBool(true))
-		case "table":
-			L.Push(L.NewTable())
-		default:
-			L.Push(lua.LNil)
+		// Execute the method on the bridge
+		ctx := context.Background() // TODO: Pass context from caller
+		result, err := bridge.ExecuteMethod(ctx, methodInfo.Name, args)
+		if err != nil {
+			L.RaiseError("execution failed: %v", err)
+			return 0
 		}
 
-		return 1 // Number of return values
+		// Convert result ScriptValue back to Lua value
+		if result != nil {
+			luaResult, err := bm.converter.FromLuaScriptValue(L, result)
+			if err != nil {
+				L.RaiseError("failed to convert result: %v", err)
+				return 0
+			}
+			L.Push(luaResult)
+			return 1
+		} else {
+			L.Push(lua.LNil)
+			return 1
+		}
 	})
 }
 
@@ -248,7 +253,7 @@ func (bm *BridgeManager) GetBridgeMetadata() map[string]engine.BridgeMetadata {
 }
 
 // ValidateBridgeMethod validates a method call against a bridge
-func (bm *BridgeManager) ValidateBridgeMethod(bridgeID, methodName string, args []interface{}) error {
+func (bm *BridgeManager) ValidateBridgeMethod(bridgeID, methodName string, args []engine.ScriptValue) error {
 	bm.mu.RLock()
 	bridge, exists := bm.bridges[bridgeID]
 	bm.mu.RUnlock()

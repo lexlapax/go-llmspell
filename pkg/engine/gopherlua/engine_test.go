@@ -6,6 +6,7 @@ package gopherlua
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -226,12 +227,12 @@ func TestLuaEngine_TypeConversion(t *testing.T) {
 	tests := []struct {
 		name     string
 		goValue  interface{}
-		validate func(t *testing.T, scriptValue interface{})
+		validate func(t *testing.T, scriptValue engine.ScriptValue)
 	}{
 		{
 			name:    "boolean_true",
 			goValue: true,
-			validate: func(t *testing.T, scriptValue interface{}) {
+			validate: func(t *testing.T, scriptValue engine.ScriptValue) {
 				converted, err := eng.ToNative(scriptValue)
 				require.NoError(t, err)
 				assert.Equal(t, true, converted)
@@ -240,7 +241,7 @@ func TestLuaEngine_TypeConversion(t *testing.T) {
 		{
 			name:    "number_int",
 			goValue: 42,
-			validate: func(t *testing.T, scriptValue interface{}) {
+			validate: func(t *testing.T, scriptValue engine.ScriptValue) {
 				converted, err := eng.ToNative(scriptValue)
 				require.NoError(t, err)
 				assert.Equal(t, 42.0, converted) // Lua numbers are float64
@@ -249,7 +250,7 @@ func TestLuaEngine_TypeConversion(t *testing.T) {
 		{
 			name:    "string_value",
 			goValue: "test string",
-			validate: func(t *testing.T, scriptValue interface{}) {
+			validate: func(t *testing.T, scriptValue engine.ScriptValue) {
 				converted, err := eng.ToNative(scriptValue)
 				require.NoError(t, err)
 				assert.Equal(t, "test string", converted)
@@ -261,7 +262,7 @@ func TestLuaEngine_TypeConversion(t *testing.T) {
 				"key1": "value1",
 				"key2": 123,
 			},
-			validate: func(t *testing.T, scriptValue interface{}) {
+			validate: func(t *testing.T, scriptValue engine.ScriptValue) {
 				converted, err := eng.ToNative(scriptValue)
 				require.NoError(t, err)
 				convertedMap, ok := converted.(map[string]interface{})
@@ -273,7 +274,7 @@ func TestLuaEngine_TypeConversion(t *testing.T) {
 		{
 			name:    "slice_value",
 			goValue: []interface{}{1, 2, 3},
-			validate: func(t *testing.T, scriptValue interface{}) {
+			validate: func(t *testing.T, scriptValue engine.ScriptValue) {
 				converted, err := eng.ToNative(scriptValue)
 				require.NoError(t, err)
 				convertedSlice, ok := converted.([]interface{})
@@ -561,11 +562,23 @@ func (b *testBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-func (b *testBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *testBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if name == "testMethod" && len(args) == 1 {
 		return nil
 	}
 	return errors.New("invalid method call")
+}
+
+func (b *testBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	switch name {
+	case "testMethod":
+		if len(args) > 0 {
+			return engine.NewStringValue("result: " + args[0].String()), nil
+		}
+		return engine.NewStringValue("result: no input"), nil
+	default:
+		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 func (b *testBridge) TypeMappings() map[string]engine.TypeMapping {

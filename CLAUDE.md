@@ -4,8 +4,11 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-✅ **Phases 1-2.3.2 COMPLETE** [2025-06-19]: All 21 bridges converted to ScriptValue system  
-🚧 **Phase 2.3.2.5 ACTIVE**: Update GopherLua Engine to use ScriptValue internally
+✅ **Phase 1 COMPLETE** [2025-06-17]: 38+ bridges across 13 categories  
+✅ **Phase 2.1-2.2 COMPLETE** [2025-06-18]: Lua core engine implemented  
+✅ **Phase 2.3.2 COMPLETE** [2025-06-19]: Async support & ScriptValue integration  
+✅ **Phase 2.3.2.5 COMPLETE** [2025-06-19]: GopherLua Engine uses ScriptValue internally
+🚧 **Phase 2.3.3 ACTIVE**: Bridge adapters (2/14 done) - State adapter next
 
 ## Architecture
 
@@ -28,9 +31,16 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 - ValidateMethod(name, args []engine.ScriptValue) error
 - Use engine.NewXXXValue() constructors, type check with args[i].Type()
 
-## Current Phase: GopherLua Engine ScriptValue Integration
+## Current Phase: Lua Bridge Adapters
 
-**Tasks**: LValue↔ScriptValue converters, update engine pipeline, bridge adapter integration, comprehensive testing
+**Completed**: 2.3.3.2 - LLM and Provider Bridge Adapter ✅
+
+**Next Task**: 2.3.3.3 - State Bridge Adapter (`/pkg/engine/gopherlua/adapters/state.go`)
+- Create state and context management module
+- Implement get/set operations
+- Add transform functions
+- Implement persistence methods
+- Add state merging capabilities
 
 ## Commands
 

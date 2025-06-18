@@ -5,6 +5,7 @@ package gopherlua
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -68,8 +69,20 @@ func (mb *MockBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-func (mb *MockBridge) ValidateMethod(name string, args []interface{}) error {
+func (mb *MockBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	return nil
+}
+
+func (mb *MockBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Mock implementation for testing
+	switch name {
+	case "testMethod":
+		return engine.NewStringValue("test result"), nil
+	case "mathOperation":
+		return engine.NewNumberValue(42), nil
+	default:
+		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 func (mb *MockBridge) TypeMappings() map[string]engine.TypeMapping {

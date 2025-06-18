@@ -1259,7 +1259,6 @@ func (b *StateContextBridge) emitStateChangeEvent(contextID, key string, oldValu
 	b.eventHistoryMu.Unlock()
 }
 
-
 func (b *StateContextBridge) deleteStateFile(contextID string, version int) error {
 	if b.persistDir == "" {
 		return nil

@@ -18,7 +18,11 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - 🚧 Phase 2: Lua Engine Implementation - IN PROGRESS
   - Phase 2.1: Research and Planning ✅ COMPLETED [2025-06-17]
   - Phase 2.2: Core Engine Components ✅ COMPLETED [2025-06-18]
-  - Phase 2.3: Bridge Integration Layer 🔄 NEXT
+  - Phase 2.3: Bridge Integration Layer 🚧 IN PROGRESS
+    - ✅ 2.3.1: Module System Architecture [COMPLETED]
+    - ✅ 2.3.2: Async/Coroutine Support [COMPLETED]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 1 of 14 completed]
+    - 🔲 2.3.4: Lua Standard Library [NOT STARTED]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
 - 🚧 Phase 4: Tengo Engine Implementation - NOT STARTED
@@ -65,54 +69,16 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### Phase 2.3: Bridge Integration Layer
 
-#### 2.3.1: Module System Architecture ✅ COMPLETED [2025-06-19]
+#### 2.3.1: Module System Architecture 
+✅ **COMPLETED [2025-06-19]** - See TODO-DONE.md for details.
 
 #### 2.3.2: Async/Coroutine Support
-**Note**: This section moved before Bridge Adapters to provide async foundation for bridge operations.
+✅ **COMPLETED [2025-06-19]** - All async/coroutine tasks completed. See TODO-DONE.md for details.
 
-- ✅ **Task 2.3.2.1: Async Runtime** (`/pkg/engine/gopherlua/async.go`) [COMPLETED - 2025-06-19]
-- ✅ **Task 2.3.2.2: Channel Integration** (`/pkg/engine/gopherlua/channels.go`) [COMPLETED - 2025-06-19]
-- ✅ **Task 2.3.2.0: ScriptValue Type System Refactoring** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
+- ✅ **Task 2.3.2.0.1: ScriptValue Conversion Centralization** [COMPLETED - 2025-06-18] **[322 lines eliminated]** **[MOVED TO TODO-DONE.md]**
 
-- ✅ **Task 2.3.2.0.1: ScriptValue Conversion Centralization** [COMPLETED - 2025-06-18] **[322 lines eliminated]**
-  **Goal**: Eliminate 11 duplicate conversion functions across 7 files by centralizing to pkg/engine/conversion.go **[COMPLETED]**
+- ✅ **Task 2.3.2.0: ScriptValue Type System Refactoring - Phase 5: Update GopherLua Engine** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
   
-  **Summary**: Successfully eliminated 322 lines of duplicate code across 7 files:
-  - ✅ llm/test_helpers.go (75 lines) - 3 functions removed
-  - ✅ llm/providers.go (55 lines) - 2 functions removed  
-  - ✅ llm/pool.go (47 lines) - 2 functions removed
-  - ✅ util/json.go (44 lines) - 1 function + helper removed
-  - ✅ agent/events.go (35 lines) - 1 function removed
-  - ✅ agent/workflow.go (35 lines) - 1 function removed
-  - ✅ agent/hooks.go (31 lines) - 1 function removed
-  
-  **All Success Metrics Achieved**:
-  - ✅ 322 lines of duplicate code removed
-  - ✅ 11 duplicate functions eliminated
-  - ✅ All bridge tests continue to pass
-  - ✅ Consistent usage of engine.ConvertToScriptValue() across all bridges
-  - ✅ No functional regressions introduced
-
-- [ ] **Task 2.3.2.0: ScriptValue Type System Refactoring - Phase 5: Update GopherLua Engine** [NEXT]
-    - [ ] Create LValueToScriptValue(lua.LValue) ScriptValue converter
-    - [ ] Create ScriptValueToLValue(ScriptValue) lua.LValue converter
-    - [ ] Update existing converter.go to use ScriptValue internally
-    - [ ] Maintain circular reference detection
-    - [ ] Update caching to work with ScriptValue
-    - [ ] Refactor engine.go ToNative/FromNative to use ScriptValue
-    - [ ] Update Execute to convert map[string]interface{} to map[string]ScriptValue
-    - [ ] Update ExecuteFile to use ScriptValue
-    - [ ] Update ExecuteScript to return ScriptValue in ExecutionResult
-    - [ ] Fix engine_bridge.go to use ScriptValue for method calls
-    - [ ] Update bridge_adapter.go to use ScriptValue throughout
-    - [ ] Fix convertArgs to work with ScriptValue
-    - [ ] Update all method wrappers to handle ScriptValue
-    - [ ] Ensure error propagation with ErrorValue
-  
-  - [ ] **Phase 6: Update Other Engines**
-    - [ ] Update JavaScript engine when implemented
-    - [ ] Update Tengo engine when implemented
-    - [ ] Ensure consistency across all engines
   
   - [ ] **Phase 7: Update Tests**
     - [ ] Update all test files to use ScriptValue
@@ -127,49 +93,15 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Add performance benchmarks comparing old vs new
     - [ ] Remove old interface{} based code where possible
 
-- ✅ **Task 2.3.2.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`) [COMPLETED - 2025-06-19]
-  - ✅ Wrap bridge methods for async execution
-  - ✅ Add automatic promisification
-  - ✅ Implement streaming support
-  - ✅ Add progress callbacks
-  - ✅ Create cancellation tokens
-
-- ✅ **Task 2.3.2.4: Async Testing** (`/pkg/engine/gopherlua/async_test.go`) [COMPLETED - 2025-06-19]
-  - ✅ Test coroutine lifecycle
-  - ✅ Test promise integration
-  - ✅ Test channel operations
-  - ✅ Test cancellation and timeouts
-  - ✅ Test concurrent async operations
+- ✅ **Task 2.3.2.1: Async Runtime** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
+- ✅ **Task 2.3.2.2: Channel Integration** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
+- ✅ **Task 2.3.2.3: Async Bridge Methods** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
+- ✅ **Task 2.3.2.4: Async Testing** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
 
 #### 2.3.3: Bridge Adapters
-- ✅ **Task 2.3.3.1: Bridge Adapter Base** (`/pkg/engine/gopherlua/bridge_adapter.go`) [COMPLETED - 2025-06-19]
-  - ✅ Defined `BridgeAdapter` struct with engine.Bridge wrapping
-  - ✅ Implemented base adapter with common functionality
-  - ✅ Added method discovery and wrapping
-  - ✅ Created error handling standards
-  - ✅ Implemented type conversion integration
+- ✅ **Task 2.3.3.1: Bridge Adapter Base** [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
 
-- [ ] **Task 2.3.3.2: LLM and Provider Bridge Adapter** (`/pkg/engine/gopherlua/adapters/llm.go`)
-  - [ ] Create LLM module with basic generation methods
-    - [ ] Implement `generate(prompt, options)` method
-    - [ ] Implement `generateMessage(messages, options)` method  
-    - [ ] Add streaming support with `stream(prompt, options)`
-    - [ ] Add token counting utilities
-  - [ ] Integrate Provider Registry functionality (from providers.go)
-    - [ ] Add `createProvider(type, name, config)` method
-    - [ ] Add `getProvider(name)` method
-    - [ ] Add `listProviders()` method
-    - [ ] Add provider template support
-    - [ ] Add multi-provider support with strategies
-  - [ ] Integrate Provider Pool functionality (from pool.go)
-    - [ ] Add `createPool(name, providers, strategy)` method
-    - [ ] Add pool health monitoring methods
-    - [ ] Add `generateWithPool(poolName, prompt, options)` method
-    - [ ] Add object pool utilities for optimization
-  - [ ] Implement model selection and info
-    - [ ] Add `listModels()` method
-    - [ ] Add `getModelInfo(modelName)` method
-    - [ ] Add model capability checking
+- ✅ **Task 2.3.3.2: LLM and Provider Bridge Adapter** (`/pkg/engine/gopherlua/adapters/llm.go`) [COMPLETED - 2025-06-19] **[MOVED TO TODO-DONE.md]**
 
 - [ ] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`)
   - [ ] Create state and context management module
@@ -756,6 +688,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
   - [ ] Implement ScriptEngine interface for JS
   - [ ] Integrate Goja
   - [ ] Add ES6+ support
+  - [ ] Update engine to use ScriptValue type system
 
 - [ ] **Task 3.2.2: Type Converter**
   - [ ] Create test file `/pkg/engine/javascript/converter_test.go`
@@ -764,6 +697,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
   - [ ] Create `/pkg/engine/javascript/converter.go`
   - [ ] Implement type conversions
   - [ ] Handle async patterns
+  - [ ] Implement ScriptValue ↔ JS value converters
 
 - [ ] **Task 3.2.3: Security Sandbox**
   - [ ] Create test file `/pkg/engine/javascript/sandbox_test.go`
@@ -793,11 +727,13 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
   - [ ] Implement ScriptEngine interface for Tengo
   - [ ] Integrate Tengo VM
   - [ ] Optimize for performance
+  - [ ] Update engine to use ScriptValue type system
 
 - [ ] **Task 4.1.2: Type Converter**
   - [ ] Create `/pkg/engine/tengo/converter.go`
   - [ ] Implement Tengo ↔ Go conversions
   - [ ] Handle Tengo objects
+  - [ ] Implement ScriptValue ↔ Tengo converters
 
 - [ ] **Task 4.1.3: Security Sandbox**
   - [ ] Create `/pkg/engine/tengo/sandbox.go`

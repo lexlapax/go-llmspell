@@ -52,7 +52,7 @@ func (b *testBridgeForRegistration) Methods() []engine.MethodInfo {
 	return b.methods
 }
 
-func (b *testBridgeForRegistration) ValidateMethod(name string, args []interface{}) error {
+func (b *testBridgeForRegistration) ValidateMethod(name string, args []engine.ScriptValue) error {
 	for _, method := range b.methods {
 		if method.Name == name {
 			if len(args) == len(method.Parameters) {
@@ -61,6 +61,39 @@ func (b *testBridgeForRegistration) ValidateMethod(name string, args []interface
 		}
 	}
 	return fmt.Errorf("invalid method call: %s", name)
+}
+
+func (b *testBridgeForRegistration) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	switch name {
+	case "testMethod":
+		if len(args) > 0 {
+			return engine.NewStringValue("result: " + args[0].String()), nil
+		}
+		return engine.NewStringValue("result: no input"), nil
+	case "mathOperation":
+		if len(args) >= 2 {
+			a, _ := engine.ConvertToNumber(args[0])
+			b, _ := engine.ConvertToNumber(args[1])
+			return engine.NewNumberValue(a + b), nil
+		}
+		return engine.NewNumberValue(0), nil
+	case "add":
+		if len(args) >= 2 {
+			a, _ := engine.ConvertToNumber(args[0])
+			b, _ := engine.ConvertToNumber(args[1])
+			return engine.NewNumberValue(a + b), nil
+		}
+		return engine.NewNumberValue(0), nil
+	case "multiply":
+		if len(args) >= 2 {
+			a, _ := engine.ConvertToNumber(args[0])
+			b, _ := engine.ConvertToNumber(args[1])
+			return engine.NewNumberValue(a * b), nil
+		}
+		return engine.NewNumberValue(1), nil
+	default:
+		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 func (b *testBridgeForRegistration) TypeMappings() map[string]engine.TypeMapping {
@@ -367,7 +400,7 @@ func TestLuaEngine_BridgeValidation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test method validation
-	validArgs := []interface{}{"test_string", 42.0}
+	validArgs := []engine.ScriptValue{engine.NewStringValue("test_string"), engine.NewNumberValue(42.0)}
 	err = bridge.ValidateMethod("validateMe", validArgs)
 	assert.NoError(t, err)
 
@@ -376,7 +409,7 @@ func TestLuaEngine_BridgeValidation(t *testing.T) {
 	assert.Error(t, err)
 
 	// Test wrong argument count
-	invalidArgs := []interface{}{"test_string"}
+	invalidArgs := []engine.ScriptValue{engine.NewStringValue("test_string")}
 	err = bridge.ValidateMethod("validateMe", invalidArgs)
 	assert.Error(t, err)
 }

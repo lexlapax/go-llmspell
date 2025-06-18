@@ -160,10 +160,18 @@ func (ep *ExecutionPipeline) loadBridgeModules(execCtx *ExecutionContext) error 
 // injectParameters injects script parameters into the Lua state
 func (ep *ExecutionPipeline) injectParameters(execCtx *ExecutionContext) error {
 	for key, value := range execCtx.Params {
-		luaValue, err := ep.converter.ToLua(execCtx.State, value)
+		// Convert Go value to ScriptValue first for consistency
+		scriptValue, err := ep.converter.ToScriptValue(value)
 		if err != nil {
-			return fmt.Errorf("failed to convert parameter %s: %w", key, err)
+			return fmt.Errorf("failed to convert parameter %s to ScriptValue: %w", key, err)
 		}
+
+		// Then convert ScriptValue to Lua value
+		luaValue, err := ep.converter.FromLuaScriptValue(execCtx.State, scriptValue)
+		if err != nil {
+			return fmt.Errorf("failed to convert parameter %s to Lua: %w", key, err)
+		}
+
 		execCtx.State.SetGlobal(key, luaValue)
 	}
 	return nil
@@ -268,11 +276,15 @@ func (ep *ExecutionPipeline) extractResult(execCtx *ExecutionContext) error {
 	// Get return value (top of stack)
 	if execCtx.State.GetTop() > 0 {
 		luaValue := execCtx.State.Get(-1)
-		goValue, err := ep.converter.FromLua(luaValue)
+
+		// Convert Lua value to ScriptValue first for consistency
+		scriptValue, err := ep.converter.ToLuaScriptValue(execCtx.State, luaValue)
 		if err != nil {
-			return fmt.Errorf("failed to convert result: %w", err)
+			return fmt.Errorf("failed to convert result to ScriptValue: %w", err)
 		}
-		execCtx.Result = goValue
+
+		// Then convert ScriptValue to Go value for compatibility
+		execCtx.Result = ep.converter.FromScriptValue(scriptValue)
 	} else {
 		execCtx.Result = nil
 	}

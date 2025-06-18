@@ -10,14 +10,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	lua "github.com/yuin/gopher-lua"
 )
 
 // AsyncBridgeWrapper wraps a bridge to provide async method execution
 type AsyncBridgeWrapper struct {
-	bridge     bridge.Bridge
+	bridge     engine.Bridge
 	runtime    *AsyncRuntime
 	channelMgr *ChannelManager
 }
@@ -43,7 +42,7 @@ type CancellationToken struct {
 type ProgressCallback func(progress float64)
 
 // NewAsyncBridgeWrapper creates a new async wrapper for a bridge
-func NewAsyncBridgeWrapper(b bridge.Bridge, runtime *AsyncRuntime, channelMgr *ChannelManager) (*AsyncBridgeWrapper, error) {
+func NewAsyncBridgeWrapper(b engine.Bridge, runtime *AsyncRuntime, channelMgr *ChannelManager) (*AsyncBridgeWrapper, error) {
 	if b == nil {
 		return nil, fmt.Errorf("bridge cannot be nil")
 	}
@@ -66,7 +65,7 @@ func (w *AsyncBridgeWrapper) GetID() string {
 	return w.bridge.GetID()
 }
 
-func (w *AsyncBridgeWrapper) GetMetadata() bridge.BridgeMetadata {
+func (w *AsyncBridgeWrapper) GetMetadata() engine.BridgeMetadata {
 	return w.bridge.GetMetadata()
 }
 
@@ -78,20 +77,24 @@ func (w *AsyncBridgeWrapper) Cleanup(ctx context.Context) error {
 	return w.bridge.Cleanup(ctx)
 }
 
-func (w *AsyncBridgeWrapper) GetMethods() map[string]bridge.MethodInfo {
-	return w.bridge.GetMethods()
+func (w *AsyncBridgeWrapper) Methods() []engine.MethodInfo {
+	return w.bridge.Methods()
 }
 
-func (w *AsyncBridgeWrapper) GetTypeMappings() map[string]bridge.TypeMapping {
-	return w.bridge.GetTypeMappings()
+func (w *AsyncBridgeWrapper) TypeMappings() map[string]engine.TypeMapping {
+	return w.bridge.TypeMappings()
 }
 
 func (w *AsyncBridgeWrapper) IsInitialized() bool {
 	return w.bridge.IsInitialized()
 }
 
-func (w *AsyncBridgeWrapper) GetRequiredPermissions() []string {
-	return w.bridge.GetRequiredPermissions()
+func (w *AsyncBridgeWrapper) RegisterWithEngine(eng engine.ScriptEngine) error {
+	return w.bridge.RegisterWithEngine(eng)
+}
+
+func (w *AsyncBridgeWrapper) RequiredPermissions() []engine.Permission {
+	return w.bridge.RequiredPermissions()
 }
 
 func (w *AsyncBridgeWrapper) ValidateMethod(method string, args []engine.ScriptValue) error {

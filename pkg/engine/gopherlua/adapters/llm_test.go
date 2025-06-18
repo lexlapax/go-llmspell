@@ -29,8 +29,8 @@ func TestLLMAdapter_Creation(t *testing.T) {
 			},
 		}
 
-		// Create adapter
-		adapter := NewLLMAdapter(llmBridge)
+		// Create adapter with nil providers and pool bridges for basic test
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		require.NotNil(t, adapter)
 
 		// Should have specific LLM methods
@@ -50,7 +50,7 @@ func TestLLMAdapter_Creation(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -69,6 +69,14 @@ func TestLLMAdapter_Creation(t *testing.T) {
 		// Check standard methods exist
 		assert.NotEqual(t, lua.LNil, module.RawGetString("createAgent"))
 		assert.NotEqual(t, lua.LNil, module.RawGetString("Agent")) // Constructor alias
+
+		// Check namespaces exist
+		models := module.RawGetString("models")
+		assert.NotEqual(t, lua.LNil, models, "models namespace should exist")
+		if models.Type() == lua.LTTable {
+			modelsTable := models.(*lua.LTable)
+			assert.NotEqual(t, lua.LNil, modelsTable.RawGetString("list"), "models.list should exist")
+		}
 	})
 }
 
@@ -89,7 +97,7 @@ func TestLLMAdapter_AgentCreation(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -132,7 +140,7 @@ func TestLLMAdapter_AgentCreation(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -174,7 +182,7 @@ func TestLLMAdapter_Completion(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -212,7 +220,7 @@ func TestLLMAdapter_Completion(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -254,7 +262,7 @@ func TestLLMAdapter_Streaming(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -308,7 +316,7 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -323,8 +331,14 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 		// Test listing models
 		err = L.DoString(`
 			local llm = require("llm")
-			local models = llm.listModels()
-			assert(#models == 2)
+			-- First check if models namespace exists
+			assert(llm.models ~= nil, "models namespace should exist")
+			assert(type(llm.models.list) == "function", "models.list should be a function")
+			local models, err = llm.models.list()
+			assert(err == nil, "error calling models.list: " .. tostring(err))
+			assert(models ~= nil, "models should not be nil")
+			assert(type(models) == "table", "models should be a table, got: " .. type(models))
+			assert(#models == 2, "expected 2 models, got: " .. #models)
 			assert(models[1].id == "gpt-4")
 			assert(models[2].id == "gpt-3.5-turbo")
 		`)
@@ -346,7 +360,7 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -386,7 +400,7 @@ func TestLLMAdapter_TokenCounting(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -421,7 +435,7 @@ func TestLLMAdapter_ErrorHandling(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -469,7 +483,7 @@ func TestLLMAdapter_ChainedOperations(t *testing.T) {
 			},
 		}
 
-		adapter := NewLLMAdapter(llmBridge)
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -545,7 +559,7 @@ func (m *mockLLMBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-func (m *mockLLMBridge) ValidateMethod(name string, args []interface{}) error {
+func (m *mockLLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Basic validation
 	for _, method := range m.Methods() {
 		if method.Name == name {
@@ -553,6 +567,42 @@ func (m *mockLLMBridge) ValidateMethod(name string, args []interface{}) error {
 		}
 	}
 	return errors.New("unknown method")
+}
+
+func (m *mockLLMBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// If callFunc is set, convert args and call it
+	if m.callFunc != nil {
+		// Convert ScriptValue args to interface{} for callFunc
+		convertedArgs := make([]interface{}, len(args))
+		for i, arg := range args {
+			convertedArgs[i] = arg.ToGo()
+		}
+
+		result, err := m.callFunc(name, convertedArgs...)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert result to ScriptValue
+		return convertResultToScriptValue(result), nil
+	}
+
+	// Default mock implementation
+	switch name {
+	case "createAgent":
+		return engine.NewStringValue("mock-agent-id"), nil
+	case "complete":
+		return engine.NewStringValue("Mock completion response"), nil
+	case "listModels":
+		return engine.NewArrayValue([]engine.ScriptValue{
+			engine.NewStringValue("gpt-4"),
+			engine.NewStringValue("gpt-3.5-turbo"),
+		}), nil
+	case "countTokens":
+		return engine.NewNumberValue(42), nil
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 func (m *mockLLMBridge) TypeMappings() map[string]engine.TypeMapping {
@@ -583,4 +633,45 @@ func (m *mockLLMBridge) Call(method string, args ...interface{}) (interface{}, e
 		return m.callFunc(method, args...)
 	}
 	return nil, errors.New("method not implemented")
+}
+
+// Helper function to convert result to ScriptValue
+func convertResultToScriptValue(result interface{}) engine.ScriptValue {
+	if result == nil {
+		return engine.NewNilValue()
+	}
+
+	switch v := result.(type) {
+	case string:
+		return engine.NewStringValue(v)
+	case int:
+		return engine.NewNumberValue(float64(v))
+	case float64:
+		return engine.NewNumberValue(v)
+	case bool:
+		return engine.NewBoolValue(v)
+	case []interface{}:
+		elements := make([]engine.ScriptValue, len(v))
+		for i, elem := range v {
+			elements[i] = convertResultToScriptValue(elem)
+		}
+		return engine.NewArrayValue(elements)
+	case []map[string]interface{}:
+		elements := make([]engine.ScriptValue, len(v))
+		for i, elem := range v {
+			elements[i] = convertResultToScriptValue(elem)
+		}
+		return engine.NewArrayValue(elements)
+	case map[string]interface{}:
+		fields := make(map[string]engine.ScriptValue)
+		for k, val := range v {
+			fields[k] = convertResultToScriptValue(val)
+		}
+		return engine.NewObjectValue(fields)
+	case error:
+		return engine.NewErrorValue(v)
+	default:
+		// For other types, convert to string
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
 }

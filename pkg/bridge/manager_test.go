@@ -101,7 +101,7 @@ func (m *mockBridge) ExecuteMethod(ctx context.Context, name string, args []engi
 	if !m.IsInitialized() {
 		return nil, fmt.Errorf("bridge not initialized")
 	}
-	
+
 	switch name {
 	case "test":
 		return engine.NewStringValue("test result"), nil

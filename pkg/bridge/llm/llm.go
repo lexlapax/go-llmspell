@@ -1052,5 +1052,3 @@ func (b *LLMBridge) getActiveProvider() (bridge.Provider, error) {
 
 	return provider, nil
 }
-
-

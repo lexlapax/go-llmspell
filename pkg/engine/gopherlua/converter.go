@@ -6,7 +6,6 @@ package gopherlua
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -26,6 +25,7 @@ type LuaTypeConverter struct {
 	conversionCache *conversionCache
 	maxDepth        int
 	cacheSize       int
+	scriptConverter *ScriptValueConverter
 }
 
 // LuaTypeConverterConfig provides configuration options for the converter
@@ -76,12 +76,17 @@ func NewLuaTypeConverterWithConfig(config LuaTypeConverterConfig) *LuaTypeConver
 		config.CacheSize = defaultCacheSize
 	}
 
-	return &LuaTypeConverter{
+	converter := &LuaTypeConverter{
 		customTypes:     make(map[string]*customTypeConverter),
 		conversionCache: newConversionCache(config.CacheSize),
 		maxDepth:        config.MaxDepth,
 		cacheSize:       config.CacheSize,
 	}
+
+	// Initialize the ScriptValue converter with a reference to this converter
+	converter.scriptConverter = NewScriptValueConverter(converter)
+
+	return converter
 }
 
 // newConversionCache creates a new LRU cache
@@ -460,142 +465,24 @@ func (cc *conversionCache) recordMiss() {
 
 // Implementation of engine.TypeConverter interface
 
-// ToBoolean converts any value to boolean
-func (ltc *LuaTypeConverter) ToBoolean(v interface{}) (bool, error) {
-	if v == nil {
-		return false, nil
+// ToFunction converts a ScriptValue to engine.Function
+func (ltc *LuaTypeConverter) ToFunction(v engine.ScriptValue) (engine.Function, error) {
+	if v == nil || v.Type() != engine.TypeFunction {
+		return nil, fmt.Errorf("cannot convert %s to Function", v.Type())
 	}
 
-	rv := reflect.ValueOf(v)
-	switch rv.Kind() {
-	case reflect.Bool:
-		return rv.Bool(), nil
-	case reflect.String:
-		str := rv.String()
-		return str != "" && str != "false" && str != "0", nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return rv.Int() != 0, nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return rv.Uint() != 0, nil
-	case reflect.Float32, reflect.Float64:
-		return rv.Float() != 0, nil
-	case reflect.Slice, reflect.Array, reflect.Map:
-		return rv.Len() > 0, nil
-	default:
-		return true, nil // Non-nil values are truthy
-	}
-}
-
-// ToNumber converts any value to float64
-func (ltc *LuaTypeConverter) ToNumber(v interface{}) (float64, error) {
-	if v == nil {
-		return 0, nil
-	}
-
-	rv := reflect.ValueOf(v)
-	switch rv.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return float64(rv.Int()), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return float64(rv.Uint()), nil
-	case reflect.Float32, reflect.Float64:
-		return rv.Float(), nil
-	case reflect.String:
-		// Try to parse string as number
-		str := rv.String()
-		if num, err := strconv.ParseFloat(str, 64); err == nil {
-			return num, nil
+	if fv, ok := v.(engine.FunctionValue); ok {
+		if fn, ok := fv.Function().(engine.Function); ok {
+			return fn, nil
 		}
-		return 0, fmt.Errorf("cannot convert string '%s' to number", str)
-	case reflect.Bool:
-		if rv.Bool() {
-			return 1, nil
-		}
-		return 0, nil
-	default:
-		return 0, fmt.Errorf("cannot convert %T to number", v)
-	}
-}
-
-// ToString converts any value to string
-func (ltc *LuaTypeConverter) ToString(v interface{}) (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return fmt.Sprintf("%v", v), nil
-}
-
-// ToArray converts any value to []interface{}
-func (ltc *LuaTypeConverter) ToArray(v interface{}) ([]interface{}, error) {
-	if v == nil {
-		return nil, nil
 	}
 
-	rv := reflect.ValueOf(v)
-	switch rv.Kind() {
-	case reflect.Slice, reflect.Array:
-		result := make([]interface{}, rv.Len())
-		for i := 0; i < rv.Len(); i++ {
-			result[i] = rv.Index(i).Interface()
-		}
-		return result, nil
-	default:
-		return []interface{}{v}, nil // Wrap single values in array
-	}
+	return nil, fmt.Errorf("ScriptValue does not contain a valid Function")
 }
 
-// ToMap converts any value to map[string]interface{}
-func (ltc *LuaTypeConverter) ToMap(v interface{}) (map[string]interface{}, error) {
-	if v == nil {
-		return nil, nil
-	}
-
-	rv := reflect.ValueOf(v)
-	switch rv.Kind() {
-	case reflect.Map:
-		result := make(map[string]interface{})
-		for _, key := range rv.MapKeys() {
-			keyStr := fmt.Sprintf("%v", key.Interface())
-			result[keyStr] = rv.MapIndex(key).Interface()
-		}
-		return result, nil
-
-	case reflect.Struct:
-		result := make(map[string]interface{})
-		rt := rv.Type()
-		for i := 0; i < rv.NumField(); i++ {
-			field := rt.Field(i)
-			if field.IsExported() {
-				result[field.Name] = rv.Field(i).Interface()
-			}
-		}
-		return result, nil
-
-	default:
-		return map[string]interface{}{"value": v}, nil
-	}
-}
-
-// ToStruct converts a value to the given struct target
-func (ltc *LuaTypeConverter) ToStruct(v interface{}, target interface{}) error {
-	// This is a placeholder implementation
-	// A full implementation would use reflection to populate the target struct
-	return fmt.Errorf("ToStruct not fully implemented yet")
-}
-
-// FromStruct converts a struct to map[string]interface{}
-func (ltc *LuaTypeConverter) FromStruct(v interface{}) (map[string]interface{}, error) {
-	return ltc.ToMap(v)
-}
-
-// ToFunction converts a value to engine.Function
-func (ltc *LuaTypeConverter) ToFunction(v interface{}) (engine.Function, error) {
-	return nil, fmt.Errorf("ToFunction not implemented for Lua converter")
-}
-
-// FromFunction converts engine.Function to appropriate value
-func (ltc *LuaTypeConverter) FromFunction(fn engine.Function) (interface{}, error) {
-	return nil, fmt.Errorf("FromFunction not implemented for Lua converter")
+// FromFunction converts engine.Function to ScriptValue
+func (ltc *LuaTypeConverter) FromFunction(fn engine.Function) (engine.ScriptValue, error) {
+	return engine.NewFunctionValue("function", fn), nil
 }
 
 // SupportsType checks if the converter supports a given type
@@ -643,4 +530,164 @@ func (ltc *LuaTypeConverter) GetTypeInfo(typeName string) engine.TypeInfo {
 		Properties:  []string{},
 		Metadata:    make(map[string]interface{}),
 	}
+}
+
+// ScriptValue integration methods
+
+// ToScriptValue converts a Go value to a ScriptValue
+func (ltc *LuaTypeConverter) ToScriptValue(value interface{}) (engine.ScriptValue, error) {
+	return ltc.scriptConverter.GoToScriptValue(value)
+}
+
+// FromScriptValue converts a ScriptValue to a Go value
+func (ltc *LuaTypeConverter) FromScriptValue(sv engine.ScriptValue) interface{} {
+	return ltc.scriptConverter.ScriptValueToGo(sv)
+}
+
+// ToLuaScriptValue converts a lua.LValue to a ScriptValue
+func (ltc *LuaTypeConverter) ToLuaScriptValue(L *lua.LState, lv lua.LValue) (engine.ScriptValue, error) {
+	return ltc.scriptConverter.LValueToScriptValue(L, lv)
+}
+
+// FromLuaScriptValue converts a ScriptValue to a lua.LValue
+func (ltc *LuaTypeConverter) FromLuaScriptValue(L *lua.LState, sv engine.ScriptValue) (lua.LValue, error) {
+	return ltc.scriptConverter.ScriptValueToLValue(L, sv)
+}
+
+// ToLuaWithScriptValue converts a Go value to Lua via ScriptValue (for consistency)
+func (ltc *LuaTypeConverter) ToLuaWithScriptValue(L *lua.LState, value interface{}) (lua.LValue, error) {
+	// First convert to ScriptValue
+	sv, err := ltc.ToScriptValue(value)
+	if err != nil {
+		return nil, fmt.Errorf("error converting to ScriptValue: %w", err)
+	}
+
+	// Then convert ScriptValue to Lua
+	return ltc.FromLuaScriptValue(L, sv)
+}
+
+// FromLuaWithScriptValue converts a Lua value to Go via ScriptValue (for consistency)
+func (ltc *LuaTypeConverter) FromLuaWithScriptValue(L *lua.LState, lv lua.LValue) (interface{}, error) {
+	// First convert to ScriptValue
+	sv, err := ltc.ToLuaScriptValue(L, lv)
+	if err != nil {
+		return nil, fmt.Errorf("error converting to ScriptValue: %w", err)
+	}
+
+	// Then convert ScriptValue to Go
+	return ltc.FromScriptValue(sv), nil
+}
+
+// Interface implementation methods for TypeConverter
+
+// FromInterface converts a Go interface{} to ScriptValue
+func (ltc *LuaTypeConverter) FromInterface(v interface{}) (engine.ScriptValue, error) {
+	return ltc.ToScriptValue(v)
+}
+
+// ToInterface converts a ScriptValue to Go interface{}
+func (ltc *LuaTypeConverter) ToInterface(v engine.ScriptValue) (interface{}, error) {
+	if v == nil || v.IsNil() {
+		return nil, nil
+	}
+	return ltc.FromScriptValue(v), nil
+}
+
+// ToBoolean converts a ScriptValue to boolean
+func (ltc *LuaTypeConverter) ToBoolean(v engine.ScriptValue) (bool, error) {
+	if v == nil || v.IsNil() {
+		return false, nil
+	}
+	return engine.IsTrue(v), nil
+}
+
+// ToNumber converts a ScriptValue to float64
+func (ltc *LuaTypeConverter) ToNumber(v engine.ScriptValue) (float64, error) {
+	return engine.ConvertToNumber(v)
+}
+
+// ToString converts a ScriptValue to string
+func (ltc *LuaTypeConverter) ToString(v engine.ScriptValue) (string, error) {
+	return engine.ConvertToString(v)
+}
+
+// ToArray converts a ScriptValue to []ScriptValue
+func (ltc *LuaTypeConverter) ToArray(v engine.ScriptValue) ([]engine.ScriptValue, error) {
+	if v == nil || v.IsNil() {
+		return nil, nil
+	}
+
+	if v.Type() == engine.TypeArray {
+		if av, ok := v.(engine.ArrayValue); ok {
+			return av.Elements(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("cannot convert %s to array", v.Type())
+}
+
+// ToMap converts a ScriptValue to map[string]ScriptValue
+func (ltc *LuaTypeConverter) ToMap(v engine.ScriptValue) (map[string]engine.ScriptValue, error) {
+	if v == nil || v.IsNil() {
+		return nil, nil
+	}
+
+	if v.Type() == engine.TypeObject {
+		if ov, ok := v.(engine.ObjectValue); ok {
+			return ov.Fields(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("cannot convert %s to map", v.Type())
+}
+
+// ToStruct converts a ScriptValue to the target struct
+func (ltc *LuaTypeConverter) ToStruct(v engine.ScriptValue, target interface{}) error {
+	if v == nil || v.IsNil() {
+		return nil
+	}
+
+	// Use reflection to convert object fields to struct
+	if v.Type() != engine.TypeObject {
+		return fmt.Errorf("cannot convert %s to struct, expected object", v.Type())
+	}
+
+	ov, ok := v.(engine.ObjectValue)
+	if !ok {
+		return fmt.Errorf("value is not an ObjectValue")
+	}
+
+	// Get target type
+	targetValue := reflect.ValueOf(target)
+	if targetValue.Kind() != reflect.Ptr || targetValue.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("target must be a pointer to struct")
+	}
+
+	targetStruct := targetValue.Elem()
+	targetType := targetStruct.Type()
+
+	// Map object fields to struct fields
+	fields := ov.Fields()
+	for i := 0; i < targetType.NumField(); i++ {
+		field := targetType.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+
+		if fieldValue, exists := fields[field.Name]; exists {
+			goValue := ltc.FromScriptValue(fieldValue)
+			fieldValueReflect := reflect.ValueOf(goValue)
+
+			if fieldValueReflect.Type().ConvertibleTo(field.Type) {
+				targetStruct.Field(i).Set(fieldValueReflect.Convert(field.Type))
+			}
+		}
+	}
+
+	return nil
+}
+
+// FromStruct converts a Go struct to ScriptValue
+func (ltc *LuaTypeConverter) FromStruct(v interface{}) (engine.ScriptValue, error) {
+	return ltc.ToScriptValue(v)
 }

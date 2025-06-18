@@ -47,7 +47,7 @@ func TestAgentBridge_Methods(t *testing.T) {
 		"getAgentTools", "configureAgent", "exportAgentState", "importAgentState",
 		"saveAgentSnapshot", "loadAgentSnapshot", "listAgentSnapshots", "deleteAgentSnapshot",
 		"replayAgentEvents", "startEventRecording", "stopEventRecording", "getEventHistory",
-		"clearEventHistory", "startAgentProfiling", "stopAgentProfiling", 
+		"clearEventHistory", "startAgentProfiling", "stopAgentProfiling",
 		"getAgentPerformanceReport", "clearAgentProfilingData", "exportAgentProfilingData",
 		"setAgentProfilingConfig",
 	}
@@ -276,7 +276,6 @@ func TestAgentBridge_ExecuteMethod_GetAgentMetrics(t *testing.T) {
 	assert.Contains(t, metrics, "execution_count")
 	assert.Contains(t, metrics, "success_count")
 }
-
 
 func TestAgentBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
 	bridge := NewAgentBridge()

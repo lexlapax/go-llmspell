@@ -994,7 +994,192 @@ All bridges successfully converted from []interface{} to []engine.ScriptValue fo
 - Phase 1 completion details are archived in TODO-DONE-ARCHIVE.md
 - Each completed task should include completion date and key implementation details
 
+## Phase 2.3.2: Async/Coroutine Support - COMPLETED [2025-06-19]
+
+### ✅ **Task 2.3.2.1: Async Runtime** (`/pkg/engine/gopherlua/async.go`) [COMPLETED - 2025-06-19]
+- ✅ Implemented `AsyncRuntime` struct for coroutine management
+- ✅ Added promise-coroutine integration with `Promise` type
+- ✅ Created async execution context with `AsyncExecutionContext`
+- ✅ Implemented cancellation support via Go contexts
+- ✅ Added timeout handling for coroutine operations
+- ✅ Created thread-safe coroutine tracking with mutex protection
+- ✅ Implemented coroutine lifecycle management (spawn, wait, cleanup)
+- ✅ Added coroutine result storage and retrieval
+- ✅ Fixed race condition in coroutine execution
+- ✅ Comprehensive test coverage with 8 test suites covering:
+  - Runtime creation and validation
+  - Coroutine spawning and management
+  - Cancellation and timeout handling
+  - Promise integration
+  - Execution context creation
+  - Resource cleanup
+- ✅ All tests passing with race condition detection enabled
+
+### ✅ **Task 2.3.2.2: Channel Integration** (`/pkg/engine/gopherlua/channels.go`) [COMPLETED - 2025-06-19]
+- ✅ Implemented `ChannelManager` for Go channel ↔ LChannel bridge
+- ✅ Added select operation support using Go's reflect.Select
+- ✅ Created buffered channel support with configurable buffer sizes
+- ✅ Implemented channel closing with proper lifecycle management
+- ✅ Added deadlock detection via context timeouts
+- ✅ Created thread-safe channel management with mutex protection
+- ✅ Implemented channel limits and active channel counting
+- ✅ Added comprehensive channel information and listing methods
+- ✅ Fixed channel lifecycle to handle closed channels properly
+- ✅ Comprehensive test coverage with 9 test suites covering:
+  - Channel manager creation and validation
+  - Channel creation (unbuffered, buffered, large buffer)
+  - Send/receive operations with multiple value types
+  - Select operations with multiple channels
+  - Timeout handling and context cancellation
+  - Channel closing and lifecycle management
+  - Deadlock detection scenarios
+  - Channel limits and capacity management
+  - Resource cleanup and concurrent operations
+
+### ✅ **Task 2.3.2.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`) [COMPLETED - 2025-06-19]
+- ✅ Implemented `AsyncBridgeWrapper` for wrapping bridges with async execution
+- ✅ Added automatic promisification using CreateEmptyPromise and goroutines
+- ✅ Implemented streaming support with ExecuteMethodStream returning Stream objects
+- ✅ Added progress callbacks with ticker-based progress estimation
+- ✅ Created cancellation tokens with context propagation and Cancel() support
+- ✅ Implemented AwaitAll for waiting on multiple promises concurrently
+- ✅ Implemented AwaitRace for getting the first resolved promise result
+- ✅ Created temporary ScriptValue types to enable bridge method wrapping
+- ✅ Added temporary bridge interfaces extending for ScriptValue support
+- ✅ Implemented comprehensive error handling and context cancellation
+- ✅ Fixed race conditions in progress callback tests with mutex protection
+- ✅ Comprehensive test coverage with 8 test suites covering:
+  - Async bridge wrapper creation and initialization
+  - Promisification of fast and slow methods
+  - Timeout handling with context cancellation
+  - Streaming method execution with channel forwarding
+  - Progress callbacks with concurrent updates
+  - Cancellation token creation and usage
+  - Error propagation from bridge methods
+  - Multiple promise management with AwaitAll
+  - Promise racing with AwaitRace
+- ✅ All tests passing with race condition detection enabled
+
+### ✅ **Task 2.3.2.4: Async Testing** (`/pkg/engine/gopherlua/async_test.go`) [COMPLETED - 2025-06-19]
+- ✅ Implemented comprehensive coroutine lifecycle tests
+  - State tracking from spawn to completion
+  - Error propagation (runtime, syntax, nil operation errors)
+  - Multiple return value handling
+  - Result caching for completed coroutines
+- ✅ Deep promise integration testing
+  - Promise await functionality with state checking
+  - Promise cancellation with timeout handling
+  - Empty promise manual resolution
+  - Error resolution and propagation
+- ✅ Channel operations with async integration
+  - Async send/receive operations with goroutines
+  - Select operations with timeout contexts
+  - Channel creation and lifecycle management
+- ✅ Complex cancellation and timeout scenarios
+  - Cascading cancellation with nested contexts
+  - Selective cancellation of specific coroutines
+  - Context timeout propagation
+- ✅ Comprehensive concurrent async operations
+  - Concurrent coroutine spawning (50 goroutines × 10 operations)
+  - Concurrent promise operations with result verification
+  - Stress testing with max coroutine limits
+  - Race condition testing with concurrent state modifications
+- ✅ Bridge integration with async operations
+  - Async bridge method execution with promises
+  - Streaming support with channel forwarding
+  - Multiple promise handling with AwaitAll
+- ✅ Extended existing tests with 800+ lines of comprehensive coverage
+- ✅ All tests pass with race detection enabled (-race flag)
+
+## Phase 2.3.3: Bridge Adapters - COMPLETED [2025-06-19]
+
+### ✅ **Task 2.3.3.1: Bridge Adapter Base** (`/pkg/engine/gopherlua/bridge_adapter.go`) [COMPLETED - 2025-06-19]
+- ✅ Defined `BridgeAdapter` struct with engine.Bridge wrapping
+- ✅ Implemented base adapter with common functionality:
+  - Bridge wrapping and metadata exposure
+  - Method discovery and caching
+  - Type converter integration
+  - Lua module creation
+  - Method wrapping with automatic type conversion
+  - Error handling and panic recovery
+  - Module system registration
+  - Validation support
+- ✅ Added method discovery and wrapping:
+  - Automatic discovery of bridge methods
+  - Method info retrieval
+  - Lazy method wrapper creation with caching
+  - Support for multiple return values
+- ✅ Created error handling standards:
+  - Panic recovery in wrapped methods
+  - Consistent error return pattern (nil, error)
+  - Argument and result conversion error handling
+- ✅ Implemented type conversion integration:
+  - Automatic Go→Lua conversion for arguments
+  - Automatic Lua→Go conversion for results
+  - Support for complex types via LuaTypeConverter
+- ✅ Created comprehensive test coverage:
+  - Adapter creation and metadata exposure
+  - Method discovery and info retrieval
+  - Lua module creation
+  - Method wrapping with various types
+  - Error handling and panic recovery
+  - Module system registration
+  - Method validation
+  - Performance optimizations (caching)
+- ✅ Handled special case for bridges with Call method:
+  - Interface assertion to check for Call support
+  - Fallback error for bridges without Call method
+
+## Phase 2.3.2.0: ScriptValue Type System Refactoring - COMPLETED [2025-06-19]
+
+### ✅ **Task 2.3.2.0.1: ScriptValue Conversion Centralization** [COMPLETED - 2025-06-18] **[322 lines eliminated]**
+**Goal**: Eliminate 11 duplicate conversion functions across 7 files by centralizing to pkg/engine/conversion.go **[COMPLETED]**
+
+**Summary**: Successfully eliminated 322 lines of duplicate code across 7 files:
+- ✅ llm/test_helpers.go (75 lines) - 3 functions removed
+- ✅ llm/providers.go (55 lines) - 2 functions removed  
+- ✅ llm/pool.go (47 lines) - 2 functions removed
+- ✅ util/json.go (44 lines) - 1 function + helper removed
+- ✅ agent/events.go (35 lines) - 1 function removed
+- ✅ agent/workflow.go (35 lines) - 1 function removed
+- ✅ agent/hooks.go (31 lines) - 1 function removed
+
+**All Success Metrics Achieved**:
+- ✅ 322 lines of duplicate code removed
+- ✅ 11 duplicate functions eliminated
+- ✅ All bridge tests continue to pass
+- ✅ Consistent usage of engine.ConvertToScriptValue() across all bridges
+- ✅ No functional regressions introduced
+
+### ✅ **Task 2.3.2.0: ScriptValue Type System Refactoring - Phase 5: Update GopherLua Engine** [COMPLETED - 2025-06-19]
+- ✅ Create LValueToScriptValue(lua.LValue) ScriptValue converter
+- ✅ Create ScriptValueToLValue(ScriptValue) lua.LValue converter
+- ✅ Update existing converter.go to use ScriptValue internally
+- ✅ Maintain circular reference detection
+- ✅ Update caching to work with ScriptValue
+- ✅ Refactor engine.go ToNative/FromNative to use ScriptValue
+- ✅ Update Execute to convert map[string]interface{} to map[string]ScriptValue
+- ✅ Update ExecuteFile to use ScriptValue
+- ✅ Update ExecuteScript to return ScriptValue in ExecutionResult
+- ✅ Fix engine_bridge.go to use ScriptValue for method calls
+- ✅ Update bridge_adapter.go to use ScriptValue throughout
+- ✅ Fix convertArgs to work with ScriptValue
+- ✅ Update all method wrappers to handle ScriptValue
+- ✅ Ensure error propagation with ErrorValue
+- ✅ Update comprehensive tests for ScriptValue integration
+- ✅ Run make all to ensure no regressions
+
 ## Progress Log
+
+### 2025-06-19 - Completed Task Extraction
+- Moved completed sections from TODO.md to TODO-DONE.md:
+  - Task 2.3.2.0.1: ScriptValue Conversion Centralization (322 lines eliminated)
+  - Task 2.3.2.0 Phase 5: Update GopherLua Engine (ScriptValue integration complete)
+  - Task 2.3.2.1: Async Runtime (coroutine management implementation)
+  - Task 2.3.2.2: Channel Integration (Go channel ↔ LChannel bridge)
+  - Task 2.3.2.3: Async Bridge Methods (promisification and streaming)
+  - Task 2.3.2.4: Async Testing (comprehensive async test coverage)
+  - Task 2.3.3.1: Bridge Adapter Base (foundation for all bridge adapters)
 
 ### 2025-06-19
 - **Task 2.3.2.1**: Async Runtime - Fixed race condition in async_test.go
@@ -1027,4 +1212,61 @@ All bridges successfully converted from []interface{} to []engine.ScriptValue fo
   - Remaining bridges to update:
     - Agent package (5 remaining), LLM package (3), State package (2), Util package (8)
 - **Task 2.3.2.3**: Async Bridge Methods - Implemented AsyncBridgeWrapper with promisification
+- **Task 2.3.2.0 - Phase 5**: ScriptValue Type System Refactoring - Update GopherLua Engine [COMPLETED]
+  - ✅ Created bi-directional LValue ↔ ScriptValue converters with circular reference detection
+  - ✅ Updated all engine methods (Execute, ExecuteFile, ExecuteScript) to use ScriptValue
+  - ✅ Converted entire bridge adapter system to use ScriptValue for method calls
+  - ✅ Updated ToNative/FromNative to work with ScriptValue
+  - ✅ Fixed all test files to handle ScriptValue return types
+  - ✅ Removed duplicate interface{} methods from converter.go
+  - ✅ Resolved all compilation errors and interface mismatches
+  - Key files updated: converter_scriptvalue.go (new), converter.go, engine.go, engine_execute.go, engine_bridge.go, bridge_adapter.go
+  - Fixed multiple test files including engine_integration_test.go, engine_test.go, engine_bridge_test.go
 - **Task 2.3.2.4**: Async Testing - Added comprehensive async test coverage (800+ lines)
+- **Task 2.3.3.1**: Bridge Adapter Base (`/pkg/engine/gopherlua/bridge_adapter.go`) [COMPLETED]
+  - ✅ Defined `BridgeAdapter` struct with engine.Bridge wrapping
+  - ✅ Implemented base adapter with common functionality
+  - ✅ Added method discovery and wrapping
+  - ✅ Created error handling standards
+  - ✅ Implemented type conversion integration
+
+### 2025-06-19 - TODO.md Cleanup
+- Extracted and moved all completed Phase 2.3 tasks to TODO-DONE.md
+- Updated migration status to reflect current progress
+- Cleaned up redundant Phase 6 entries (to be added as subtasks to engine implementations)
+
+### 2.3.3 Bridge Adapters (continued)
+
+- ✅ **Task 2.3.3.2: LLM and Provider Bridge Adapter** (`/pkg/engine/gopherlua/adapters/llm.go`) [COMPLETED - 2025-06-19]
+  - ✅ Enhanced existing LLM adapter with comprehensive provider and pool management
+  - ✅ Created LLM module with basic generation methods
+    - ✅ Wrapped existing `generate(prompt, options)` method with validation
+    - ✅ Wrapped existing `generateMessage(messages, options)` method with message validation  
+    - ✅ Enhanced streaming support with `stream(prompt, options)` and default callback handling
+    - ✅ Added token counting utility method `countTokens(text, model)`
+  - ✅ Integrated Provider Registry functionality through providers namespace
+    - ✅ Added `providers.create(type, name, config)` method
+    - ✅ Added `providers.get(name)` method
+    - ✅ Added `providers.list()` method
+    - ✅ Added `providers.getTemplate(name)` for provider template support
+    - ✅ Added `providers.createMulti(name, providers, strategy, config)` for multi-provider support
+  - ✅ Integrated Provider Pool functionality through pool namespace
+    - ✅ Added `pool.create(name, providers, strategy, config)` method
+    - ✅ Added `pool.getHealth(poolName)` for health monitoring
+    - ✅ Added `pool.generate(poolName, prompt, options)` method
+    - ✅ Added `pool.getMetrics(poolName)` for pool performance metrics
+  - ✅ Implemented model selection and info through models namespace
+    - ✅ Added `models.list(provider)` method
+    - ✅ Added `models.getInfo(modelName)` method
+    - ✅ Added `models.checkCapabilities(modelName, capability)` for capability checking
+  - ✅ Enhanced agent objects with direct methods
+    - ✅ Added `agent.complete(prompt, options)` method
+    - ✅ Added `agent.stream(prompt, options)` method
+    - ✅ Added `agent.info()` method
+  - ✅ Added comprehensive constants
+    - ✅ Model constants (GPT4, GPT35_TURBO, CLAUDE3, CLAUDE2)
+    - ✅ Default options (temperature, maxTokens, topP)
+    - ✅ Error codes (RATE_LIMIT, INVALID_MODEL, CONTEXT_LENGTH)
+    - ✅ Pool strategies (ROUND_ROBIN, FAILOVER, FASTEST, WEIGHTED, LEAST_USED)
+  - ✅ Fixed RegisterAsModule to use overridden CreateLuaModule for proper namespace creation
+  - ✅ All tests passing with comprehensive coverage

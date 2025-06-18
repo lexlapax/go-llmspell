@@ -599,7 +599,7 @@ func TestSchemaBridge_TagMethods(t *testing.T) {
 		structData := map[string]interface{}{
 			"type": "struct",
 			"tags": map[string]interface{}{
-				"json": "name,omitempty",
+				"json":     "name,omitempty",
 				"validate": "required,min=1",
 			},
 		}
@@ -792,10 +792,10 @@ func TestSchemaBridge_ErrorHandling(t *testing.T) {
 	defer bridge.Cleanup(ctx)
 
 	tests := []struct {
-		name       string
-		method     string
-		args       []engine.ScriptValue
-		expectError bool
+		name          string
+		method        string
+		args          []engine.ScriptValue
+		expectError   bool
 		errorContains string
 	}{
 		{
@@ -838,7 +838,7 @@ func TestSchemaBridge_ErrorHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := bridge.ExecuteMethod(ctx, tt.method, tt.args)
-			
+
 			if tt.expectError {
 				if err != nil {
 					assert.Contains(t, err.Error(), tt.errorContains)
