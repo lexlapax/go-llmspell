@@ -1,17 +1,11 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with this repository.
-
-## Project Overview
-
 go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bridges go-llms v0.3.5 to scripts without reimplementing features.
 
 ## Current Status
 
-✅ **Phase 1 COMPLETE** [2025-06-17]: 38+ bridges, zero business logic duplication  
-✅ **Phase 2.1-2.2 COMPLETE** [2025-06-18]: Core Engine Components - LuaEngine fully implemented  
-✅ **Phase 2.3.1 COMPLETE** [2025-06-19]: Module System Architecture  
-🚧 **Phase 2.3.2 NEXT**: Async/Coroutine Support - Foundation for bridge operations
+✅ **Phases 1-2.3.2 COMPLETE** [2025-06-19]: All 21 bridges converted to ScriptValue system  
+🚧 **Phase 2.3.2.5 ACTIVE**: Update GopherLua Engine to use ScriptValue internally
 
 ## Architecture
 
@@ -24,22 +18,19 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Implementation Workflow
 
-1. **Read TODO.md** - Current Phase 2.3.2 tasks (Async/Coroutine Support)
-2. **TDD mandatory** - Write tests first, then implement
-3. **Bridge-first** - Wrap go-llms, never reimplement business logic
-4. **Run `make all`** - Complete dev cycle (fmt, vet, lint, test, build)
-5. **Update TODO-DONE.md** - Mark completed tasks with timestamps
+1. **Read TODO.md** - TDD mandatory - Write tests first
+2. **Bridge-first** - Wrap go-llms, never reimplement business logic  
+3. **Run `make all`** - Complete dev cycle (fmt, vet, lint, test, build)
+4. **Update TODO-DONE.md** - Mark completed tasks with timestamps
 
-## Phase 2.3.2: Async/Coroutine Support
+### ScriptValue System
+- ExecuteMethod(ctx, name, args []engine.ScriptValue) (engine.ScriptValue, error)
+- ValidateMethod(name, args []engine.ScriptValue) error
+- Use engine.NewXXXValue() constructors, type check with args[i].Type()
 
-**Current Focus**: Building async foundation for bridge operations
+## Current Phase: GopherLua Engine ScriptValue Integration
 
-- Task 2.3.2.1: Async Runtime (`/pkg/engine/gopherlua/async.go`)
-- Task 2.3.2.2: Channel Integration (`/pkg/engine/gopherlua/channels.go`)  
-- Task 2.3.2.3: Async Bridge Methods (`/pkg/engine/gopherlua/async_bridges.go`)
-- Task 2.3.2.4: Async Testing (`/pkg/engine/gopherlua/async_test.go`)
-
-**Why First**: Bridge adapters need async foundation for streaming, timeouts, and concurrency.
+**Tasks**: LValue↔ScriptValue converters, update engine pipeline, bridge adapter integration, comprehensive testing
 
 ## Commands
 

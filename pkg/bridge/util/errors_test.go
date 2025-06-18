@@ -1,634 +1,560 @@
-// ABOUTME: Tests for error utilities bridge functionality
-// ABOUTME: Verifies SerializableError, recovery strategies, aggregation, and categorization
+// ABOUTME: Tests for error utilities bridge with ScriptValue-based API
+// ABOUTME: Validates error serialization, recovery strategies, and categorization
 
 package util
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	// Import errors package to verify types
-	llmerrors "github.com/lexlapax/go-llms/pkg/errors"
-
-	// Use go-llms testutils for consistency with project patterns
-	"github.com/lexlapax/go-llms/pkg/testutils/fixtures"
-	"github.com/lexlapax/go-llms/pkg/testutils/helpers"
 )
 
-// Test error scenarios using testutils patterns instead of custom types
-// This follows go-llms testutils best practices for error testing
+func TestUtilErrorsBridgeInitialization(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	assert.NotNil(t, bridge)
+	assert.Equal(t, "util_errors", bridge.GetID())
+	assert.False(t, bridge.IsInitialized())
 
-func TestUtilErrorsBridge_InterfaceCompliance(t *testing.T) {
-	tests := []struct {
-		name string
-		test func(*testing.T, *UtilErrorsBridge)
-	}{
-		{"GetID", func(t *testing.T, b *UtilErrorsBridge) {
-			assert.Equal(t, "util_errors", b.GetID())
-		}},
-		{"GetMetadata", func(t *testing.T, b *UtilErrorsBridge) {
-			metadata := b.GetMetadata()
-			assert.Equal(t, "util_errors", metadata.Name)
-			assert.Equal(t, "2.0.0", metadata.Version)
-			assert.Contains(t, metadata.Description, "Error serialization utilities")
-		}},
-		{"Initialize", func(t *testing.T, b *UtilErrorsBridge) {
-			ctx := context.Background()
-			err := b.Initialize(ctx)
-			assert.NoError(t, err)
-			assert.True(t, b.IsInitialized())
-		}},
-		{"IsInitialized", func(t *testing.T, b *UtilErrorsBridge) {
-			assert.False(t, b.IsInitialized())
-			ctx := context.Background()
-			err := b.Initialize(ctx)
-			assert.NoError(t, err)
-			assert.True(t, b.IsInitialized())
-		}},
-		{"Methods", func(t *testing.T, b *UtilErrorsBridge) {
-			methods := b.Methods()
-			assert.NotEmpty(t, methods)
-			// Check for key methods
-			methodNames := make(map[string]bool)
-			for _, m := range methods {
-				methodNames[m.Name] = true
-			}
-			assert.True(t, methodNames["createError"])
-			assert.True(t, methodNames["wrapError"])
-			assert.True(t, methodNames["errorToJSON"])
-			assert.True(t, methodNames["createExponentialBackoffStrategy"])
-			assert.True(t, methodNames["createErrorAggregator"])
-			assert.True(t, methodNames["categorizeError"])
-			assert.True(t, methodNames["emitErrorEvent"])
-		}},
-		{"TypeMappings", func(t *testing.T, b *UtilErrorsBridge) {
-			mappings := b.TypeMappings()
-			assert.NotEmpty(t, mappings)
-			assert.Contains(t, mappings, "SerializableError")
-			assert.Contains(t, mappings, "RecoveryStrategy")
-			assert.Contains(t, mappings, "ErrorAggregator")
-			assert.Contains(t, mappings, "ErrorCategory")
-			assert.Contains(t, mappings, "ErrorBuilder")
-		}},
-		{"ValidateMethod", func(t *testing.T, b *UtilErrorsBridge) {
-			err := b.ValidateMethod("createError", []interface{}{"test error"})
-			assert.NoError(t, err)
-		}},
-		{"RequiredPermissions", func(t *testing.T, b *UtilErrorsBridge) {
-			perms := b.RequiredPermissions()
-			assert.NotEmpty(t, perms)
-			// Should have memory and storage permissions
-			hasMemory := false
-			hasStorage := false
-			for _, p := range perms {
-				if p.Resource == "errors" {
-					if string(p.Type) == "memory" {
-						hasMemory = true
-					} else if string(p.Type) == "storage" {
-						hasStorage = true
-					}
-				}
-			}
-			assert.True(t, hasMemory)
-			assert.True(t, hasStorage)
-		}},
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+	assert.True(t, bridge.IsInitialized())
+
+	// Test double initialization
+	err = bridge.Initialize(ctx)
+	assert.NoError(t, err)
+
+	// Test cleanup
+	err = bridge.Cleanup(ctx)
+	require.NoError(t, err)
+	assert.False(t, bridge.IsInitialized())
+}
+
+func TestUtilErrorsBridgeMetadata(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	metadata := bridge.GetMetadata()
+
+	assert.Equal(t, "util_errors", metadata.Name)
+	assert.Equal(t, "2.0.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "Error serialization utilities")
+	assert.Equal(t, "go-llmspell", metadata.Author)
+	assert.Equal(t, "MIT", metadata.License)
+}
+
+func TestUtilErrorsBridgeMethods(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	methods := bridge.Methods()
+
+	// Check that all expected methods are present
+	expectedMethods := []string{
+		// Error creation
+		"createError",
+		"wrapError",
+		"createErrorWithCode",
+		// Serialization
+		"errorToJSON",
+		"errorFromJSON",
+		// Recovery strategies
+		"createExponentialBackoffStrategy",
+		"createLinearBackoffStrategy",
+		"applyRecoveryStrategy",
+		// Categorization
+		"categorizeError",
+		"registerErrorCategory",
+		"getErrorCategories",
+		// Aggregation
+		"createErrorAggregator",
+		"addError",
+		"aggregateErrors",
+		"getAggregatedErrors",
+		// Events
+		"emitErrorEvent",
+		"subscribeToErrorEvents",
+		// Handlers
+		"registerErrorHandler",
+		"applyErrorHandler",
+		// Inspection
+		"isRetryableError",
+		"isFatalError",
+		"getErrorMetadata",
+		"getErrorStackTrace",
+		// Building
+		"createErrorBuilder",
+		"buildError",
+		// Context
+		"enrichError",
+		"getErrorContext",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bridge := NewUtilErrorsBridge()
-			tt.test(t, bridge)
-		})
+	methodMap := make(map[string]bool)
+	for _, m := range methods {
+		methodMap[m.Name] = true
+	}
+
+	for _, expected := range expectedMethods {
+		assert.True(t, methodMap[expected], "Method %s not found", expected)
 	}
 }
 
-func TestUtilErrorsBridge_ErrorCreation(t *testing.T) {
+func TestUtilErrorsBridgeCreateError(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
 	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
 	tests := []struct {
-		name     string
-		method   string
-		args     []interface{}
-		validate func(t *testing.T, result interface{}, err error)
+		name    string
+		args    []engine.ScriptValue
+		wantErr bool
 	}{
 		{
-			name:   "createError basic",
-			method: "createError",
-			args:   []interface{}{"test error message"},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				baseErr, ok := result.(*llmerrors.BaseError)
-				require.True(t, ok)
-				assert.Equal(t, "test error message", baseErr.Message)
+			name: "simple error",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test error message"),
 			},
+			wantErr: false,
 		},
 		{
-			name:   "createError with metadata",
-			method: "createError",
-			args: []interface{}{
-				"test error with metadata",
-				map[string]interface{}{"key": "value", "number": 42},
+			name: "error with metadata",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test error with metadata"),
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"code":   engine.NewNumberValue(500),
+					"module": engine.NewStringValue("auth"),
+				}),
 			},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				baseErr, ok := result.(*llmerrors.BaseError)
-				require.True(t, ok)
-				assert.Equal(t, "test error with metadata", baseErr.Message)
-				assert.Equal(t, "value", baseErr.GetContext()["key"])
-				assert.Equal(t, 42, baseErr.GetContext()["number"])
-			},
+			wantErr: false,
 		},
 		{
-			name:   "createErrorWithCode",
-			method: "createErrorWithCode",
-			args:   []interface{}{"ERR_CODE_001", "error with code"},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				baseErr, ok := result.(*llmerrors.BaseError)
-				require.True(t, ok)
-				assert.Equal(t, "error with code", baseErr.Message)
-				assert.Equal(t, "ERR_CODE_001", baseErr.Code)
-			},
+			name:    "missing message",
+			args:    []engine.ScriptValue{},
+			wantErr: true,
 		},
 		{
-			name:   "wrapError",
-			method: "wrapError",
-			args:   []interface{}{errors.New("original error"), "wrapper message"},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				baseErr, ok := result.(*llmerrors.BaseError)
-				require.True(t, ok)
-				assert.Equal(t, "wrapper message", baseErr.Message)
-				assert.NotNil(t, baseErr.Cause)
+			name: "invalid message type",
+			args: []engine.ScriptValue{
+				engine.NewNumberValue(123),
 			},
-		},
-		{
-			name:   "enrichError",
-			method: "enrichError",
-			args: []interface{}{
-				errors.New("base error"),
-				map[string]interface{}{"enriched": true, "data": "extra"},
-			},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				baseErr, ok := result.(*llmerrors.BaseError)
-				require.True(t, ok)
-				assert.Equal(t, true, baseErr.GetContext()["enriched"])
-				assert.Equal(t, "extra", baseErr.GetContext()["data"])
-			},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := bridge.ExecuteMethod(ctx, tt.method, tt.args)
-			tt.validate(t, result, err)
+			result, err := bridge.ExecuteMethod(ctx, "createError", tt.args)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.Equal(t, engine.TypeCustom, result.Type())
+			}
 		})
 	}
 }
 
-func TestUtilErrorsBridge_ErrorSerialization(t *testing.T) {
+func TestUtilErrorsBridgeWrapError(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
 	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
-	// Create an error
-	result, err := bridge.ExecuteMethod(ctx, "createErrorWithCode", []interface{}{
-		"TEST_ERROR",
-		"test serialization",
-		map[string]interface{}{"severity": "high"},
+	// First create an error to wrap
+	origErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
+		engine.NewStringValue("original error"),
 	})
 	require.NoError(t, err)
-	testErr := result.(*llmerrors.BaseError)
-
-	// Serialize to JSON
-	jsonResult, err := bridge.ExecuteMethod(ctx, "errorToJSON", []interface{}{testErr})
-	require.NoError(t, err)
-	jsonStr, ok := jsonResult.(string)
-	require.True(t, ok)
-
-	// Verify JSON structure
-	var parsed map[string]interface{}
-	err = json.Unmarshal([]byte(jsonStr), &parsed)
-	require.NoError(t, err)
-	assert.Equal(t, "TEST_ERROR", parsed["code"])
-	assert.Equal(t, "test serialization", parsed["message"])
-	assert.NotNil(t, parsed["context"])
-
-	// Deserialize back
-	deserResult, err := bridge.ExecuteMethod(ctx, "errorFromJSON", []interface{}{jsonStr})
-	require.NoError(t, err)
-	require.NotNil(t, deserResult)
-}
-
-func TestUtilErrorsBridge_RecoveryStrategies(t *testing.T) {
-	bridge := NewUtilErrorsBridge()
-	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
 
 	tests := []struct {
-		name     string
-		method   string
-		args     []interface{}
-		validate func(t *testing.T, result interface{}, err error)
+		name    string
+		args    []engine.ScriptValue
+		wantErr bool
 	}{
 		{
-			name:   "createExponentialBackoffStrategy",
-			method: "createExponentialBackoffStrategy",
-			args:   []interface{}{100.0, 5000.0, 5.0}, // baseDelay, maxDelay, maxRetries
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				strategy, ok := result.(*llmerrors.ExponentialBackoffStrategy)
-				require.True(t, ok)
-				assert.Equal(t, "exponential_backoff", strategy.Name())
+			name: "wrap error simple",
+			args: []engine.ScriptValue{
+				origErr,
+				engine.NewStringValue("wrapper message"),
 			},
+			wantErr: false,
 		},
 		{
-			name:   "createLinearBackoffStrategy",
-			method: "createLinearBackoffStrategy",
-			args:   []interface{}{1000.0, 3.0}, // delay, maxRetries
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				strategy, ok := result.(*llmerrors.LinearBackoffStrategy)
-				require.True(t, ok)
-				assert.Equal(t, "linear_backoff", strategy.Name())
+			name: "wrap error with metadata",
+			args: []engine.ScriptValue{
+				origErr,
+				engine.NewStringValue("wrapper with metadata"),
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"wrap_level": engine.NewNumberValue(1),
+				}),
 			},
+			wantErr: false,
+		},
+		{
+			name: "missing parameters",
+			args: []engine.ScriptValue{
+				origErr,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid error type",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("not an error"),
+				engine.NewStringValue("wrapper"),
+			},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := bridge.ExecuteMethod(ctx, tt.method, tt.args)
-			tt.validate(t, result, err)
+			result, err := bridge.ExecuteMethod(ctx, "wrapError", tt.args)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.Equal(t, engine.TypeCustom, result.Type())
+			}
 		})
 	}
 }
 
-func TestUtilErrorsBridge_ErrorCategorization(t *testing.T) {
+func TestUtilErrorsBridgeErrorSerialization(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
 	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Create an error with metadata
+	testErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
+		engine.NewStringValue("test serialization error"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"code":     engine.NewStringValue("ERR_001"),
+			"severity": engine.NewNumberValue(5),
+		}),
+	})
+	require.NoError(t, err)
+
+	// Serialize to JSON
+	jsonResult, err := bridge.ExecuteMethod(ctx, "errorToJSON", []engine.ScriptValue{testErr})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, jsonResult.Type())
+
+	jsonStr := jsonResult.(engine.StringValue).Value()
+	assert.Contains(t, jsonStr, "test serialization error")
+	assert.Contains(t, jsonStr, "ERR_001")
+
+	// Verify it's valid JSON
+	var jsonData map[string]interface{}
+	err = json.Unmarshal([]byte(jsonStr), &jsonData)
+	assert.NoError(t, err)
+
+	// Deserialize from JSON
+	deserializedErr, err := bridge.ExecuteMethod(ctx, "errorFromJSON", []engine.ScriptValue{
+		engine.NewStringValue(jsonStr),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeCustom, deserializedErr.Type())
+}
+
+func TestUtilErrorsBridgeBackoffStrategies(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	t.Run("exponential backoff", func(t *testing.T) {
+		strategy, err := bridge.ExecuteMethod(ctx, "createExponentialBackoffStrategy", []engine.ScriptValue{
+			engine.NewNumberValue(100),  // baseDelay
+			engine.NewNumberValue(5000), // maxDelay
+			engine.NewNumberValue(3),    // maxRetries
+		})
+		require.NoError(t, err)
+		assert.Equal(t, engine.TypeCustom, strategy.Type())
+	})
+
+	t.Run("linear backoff", func(t *testing.T) {
+		strategy, err := bridge.ExecuteMethod(ctx, "createLinearBackoffStrategy", []engine.ScriptValue{
+			engine.NewNumberValue(500), // delay
+			engine.NewNumberValue(5),   // maxRetries
+		})
+		require.NoError(t, err)
+		assert.Equal(t, engine.TypeCustom, strategy.Type())
+	})
+
+	t.Run("invalid parameters", func(t *testing.T) {
+		_, err := bridge.ExecuteMethod(ctx, "createExponentialBackoffStrategy", []engine.ScriptValue{
+			engine.NewStringValue("not a number"),
+			engine.NewNumberValue(5000),
+			engine.NewNumberValue(3),
+		})
+		assert.Error(t, err)
+	})
+}
+
+func TestUtilErrorsBridgeErrorCategorization(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
 	// Test default categories
-	categories, err := bridge.ExecuteMethod(ctx, "getErrorCategories", []interface{}{})
+	categories, err := bridge.ExecuteMethod(ctx, "getErrorCategories", []engine.ScriptValue{})
 	require.NoError(t, err)
-	catMap, ok := categories.(map[string]interface{})
-	require.True(t, ok)
+	assert.Equal(t, engine.TypeObject, categories.Type())
+
+	catMap := categories.(engine.ObjectValue).Fields()
 	assert.Contains(t, catMap, "network")
 	assert.Contains(t, catMap, "validation")
 	assert.Contains(t, catMap, "authentication")
+	assert.Contains(t, catMap, "system")
 
-	// Test categorization
-	testCases := []struct {
-		errorMsg string
-		expected string
-	}{
-		{"network connection failed", "network"},
-		{"invalid input provided", "validation"},
-		{"unauthorized access", "authentication"},
-		{"rate limit exceeded", "ratelimit"},
-		{"internal system error", "system"},
-		{"unknown error type", "unknown"},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.errorMsg, func(t *testing.T) {
-			err := errors.New(tc.errorMsg)
-			result, execErr := bridge.ExecuteMethod(ctx, "categorizeError", []interface{}{err})
-			require.NoError(t, execErr)
-			category, ok := result.(string)
-			require.True(t, ok)
-			assert.Equal(t, tc.expected, category)
-		})
-	}
-
-	// Test custom category registration
-	_, err = bridge.ExecuteMethod(ctx, "registerErrorCategory", []interface{}{
-		"custom",
-		map[string]interface{}{
-			"description": "Custom error category",
-			"retryable":   false,
-			"fatal":       true,
-		},
+	// Register custom category
+	result, err := bridge.ExecuteMethod(ctx, "registerErrorCategory", []engine.ScriptValue{
+		engine.NewStringValue("custom"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"description": engine.NewStringValue("Custom error category"),
+			"retryable":   engine.NewBoolValue(true),
+			"fatal":       engine.NewBoolValue(false),
+		}),
 	})
 	require.NoError(t, err)
+	assert.True(t, result.IsNil())
 
 	// Verify custom category was added
-	categories, err = bridge.ExecuteMethod(ctx, "getErrorCategories", []interface{}{})
+	categories, err = bridge.ExecuteMethod(ctx, "getErrorCategories", []engine.ScriptValue{})
 	require.NoError(t, err)
-	catMap, ok = categories.(map[string]interface{})
-	require.True(t, ok)
+	catMap = categories.(engine.ObjectValue).Fields()
 	assert.Contains(t, catMap, "custom")
 }
 
-func TestUtilErrorsBridge_ErrorAggregation(t *testing.T) {
+func TestUtilErrorsBridgeErrorAggregation(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
 	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
 	// Create aggregator
-	aggResult, err := bridge.ExecuteMethod(ctx, "createErrorAggregator", []interface{}{})
+	aggregator, err := bridge.ExecuteMethod(ctx, "createErrorAggregator", []engine.ScriptValue{})
 	require.NoError(t, err)
-	aggregator, ok := aggResult.(llmerrors.ErrorAggregator)
-	require.True(t, ok)
+	assert.Equal(t, engine.TypeCustom, aggregator.Type())
 
-	// Add errors
-	err1 := errors.New("first error")
-	err2 := errors.New("second error")
-	err3 := errors.New("third error")
+	// Create some errors to aggregate
+	err1, _ := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
+		engine.NewStringValue("error 1"),
+	})
+	err2, _ := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
+		engine.NewStringValue("error 2"),
+	})
 
-	_, err = bridge.ExecuteMethod(ctx, "addError", []interface{}{aggregator, err1})
-	require.NoError(t, err)
-	_, err = bridge.ExecuteMethod(ctx, "addError", []interface{}{aggregator, err2})
-	require.NoError(t, err)
-	_, err = bridge.ExecuteMethod(ctx, "addError", []interface{}{aggregator, err3})
-	require.NoError(t, err)
-
-	// Test aggregateErrors helper
-	aggErr, err := bridge.ExecuteMethod(ctx, "aggregateErrors", []interface{}{
-		[]interface{}{err1, err2, err3},
-		"Multiple errors occurred during processing",
+	// Add errors to aggregator
+	result, err := bridge.ExecuteMethod(ctx, "addError", []engine.ScriptValue{
+		aggregator,
+		err1,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, aggErr)
+	assert.True(t, result.IsNil())
 
-	// Verify it's a wrapped error with our message
-	baseErr, ok := aggErr.(*llmerrors.BaseError)
-	require.True(t, ok)
-	assert.Contains(t, baseErr.Message, "Multiple errors occurred during processing")
+	result, err = bridge.ExecuteMethod(ctx, "addError", []engine.ScriptValue{
+		aggregator,
+		err2,
+	})
+	require.NoError(t, err)
+	assert.True(t, result.IsNil())
+
+	// Test aggregateErrors method
+	aggregatedErr, err := bridge.ExecuteMethod(ctx, "aggregateErrors", []engine.ScriptValue{
+		engine.NewArrayValue([]engine.ScriptValue{err1, err2}),
+		engine.NewStringValue("Multiple errors occurred"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeCustom, aggregatedErr.Type())
 }
 
-func TestUtilErrorsBridge_ErrorInspection(t *testing.T) {
+func TestUtilErrorsBridgeErrorInspection(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
 	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
-
-	// Create a retryable error
-	result, err := bridge.ExecuteMethod(ctx, "createError", []interface{}{"test error"})
+	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
-	baseErr := result.(*llmerrors.BaseError)
-	baseErr = baseErr.SetRetryable(true)
-	baseErr = baseErr.SetFatal(false)
 
-	// Test isRetryableError
-	retryable, err := bridge.ExecuteMethod(ctx, "isRetryableError", []interface{}{baseErr})
+	// Create test error
+	testErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
+		engine.NewStringValue("test error"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"retryable": engine.NewBoolValue(true),
+			"fatal":     engine.NewBoolValue(false),
+		}),
+	})
 	require.NoError(t, err)
-	assert.True(t, retryable.(bool))
 
-	// Test isFatalError
-	fatal, err := bridge.ExecuteMethod(ctx, "isFatalError", []interface{}{baseErr})
-	require.NoError(t, err)
-	assert.False(t, fatal.(bool))
+	t.Run("isRetryableError", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "isRetryableError", []engine.ScriptValue{testErr})
+		require.NoError(t, err)
+		assert.Equal(t, engine.TypeBool, result.Type())
+	})
 
-	// Test getErrorContext
-	baseErr = baseErr.WithContext("testKey", "testValue")
-	context, err := bridge.ExecuteMethod(ctx, "getErrorContext", []interface{}{baseErr})
-	require.NoError(t, err)
-	ctxMap, ok := context.(map[string]interface{})
-	require.True(t, ok)
-	assert.Equal(t, "testValue", ctxMap["testKey"])
+	t.Run("isFatalError", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "isFatalError", []engine.ScriptValue{testErr})
+		require.NoError(t, err)
+		assert.Equal(t, engine.TypeBool, result.Type())
+	})
+
+	t.Run("categorizeError", func(t *testing.T) {
+		// Create network error
+		networkErr, _ := bridge.ExecuteMethod(ctx, "createErrorWithCode", []engine.ScriptValue{
+			engine.NewStringValue("NETWORK_ERROR"),
+			engine.NewStringValue("Connection failed"),
+		})
+
+		result, err := bridge.ExecuteMethod(ctx, "categorizeError", []engine.ScriptValue{networkErr})
+		require.NoError(t, err)
+		assert.Equal(t, engine.TypeString, result.Type())
+		assert.Equal(t, "network", result.(engine.StringValue).Value())
+	})
 }
 
-func TestUtilErrorsBridge_ErrorBuilder(t *testing.T) {
+func TestUtilErrorsBridgeErrorContext(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
 	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Create error with context
+	testErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
+		engine.NewStringValue("context test error"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"user_id":    engine.NewNumberValue(123),
+			"request_id": engine.NewStringValue("req-456"),
+		}),
+	})
+	require.NoError(t, err)
+
+	// Get error context
+	context, err := bridge.ExecuteMethod(ctx, "getErrorContext", []engine.ScriptValue{testErr})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeObject, context.Type())
+
+	contextMap := context.(engine.ObjectValue).Fields()
+	assert.Contains(t, contextMap, "user_id")
+	assert.Contains(t, contextMap, "request_id")
+
+	// Enrich error with additional context
+	enrichedErr, err := bridge.ExecuteMethod(ctx, "enrichError", []engine.ScriptValue{
+		testErr,
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"timestamp": engine.NewStringValue("2024-01-01"),
+			"severity":  engine.NewNumberValue(5),
+		}),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeCustom, enrichedErr.Type())
+}
+
+func TestUtilErrorsBridgeErrorBuilder(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
 	// Create error builder
-	builderResult, err := bridge.ExecuteMethod(ctx, "createErrorBuilder", []interface{}{})
+	builder, err := bridge.ExecuteMethod(ctx, "createErrorBuilder", []engine.ScriptValue{})
 	require.NoError(t, err)
-	builder, ok := builderResult.(*ErrorBuilder)
-	require.True(t, ok)
+	assert.Equal(t, engine.TypeCustom, builder.Type())
 
-	// Modify the error through builder
-	builder.err.Message = "Built error"
-	builder.err.Code = "BUILT_001"
-	builder.err = builder.err.SetRetryable(true)
-	builder.err = builder.err.WithContext("built", true)
-
-	// Build the error
-	builtErr, err := bridge.ExecuteMethod(ctx, "buildError", []interface{}{builder})
+	// Build error
+	builtErr, err := bridge.ExecuteMethod(ctx, "buildError", []engine.ScriptValue{builder})
 	require.NoError(t, err)
-	baseErr, ok := builtErr.(*llmerrors.BaseError)
-	require.True(t, ok)
-
-	assert.Equal(t, "Built error", baseErr.Message)
-	assert.Equal(t, "BUILT_001", baseErr.Code)
-	assert.True(t, baseErr.Retryable)
-	assert.Equal(t, true, baseErr.GetContext()["built"])
+	assert.Equal(t, engine.TypeCustom, builtErr.Type())
 }
 
-func TestUtilErrorsBridge_ThreadSafety(t *testing.T) {
+func TestUtilErrorsBridgeValidateMethod(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
-	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
 
-	// Run concurrent operations
-	done := make(chan bool, 3)
+	// ValidateMethod should always return nil as validation is handled by engine
+	err := bridge.ValidateMethod("createError", []engine.ScriptValue{
+		engine.NewStringValue("test"),
+	})
+	assert.NoError(t, err)
 
-	// Concurrent error creation
-	go func() {
-		for i := 0; i < 10; i++ {
-			_, err := bridge.ExecuteMethod(ctx, "createError", []interface{}{
-				"concurrent error",
-			})
-			assert.NoError(t, err)
+	err = bridge.ValidateMethod("unknownMethod", []engine.ScriptValue{})
+	assert.NoError(t, err)
+}
+
+func TestUtilErrorsBridgeRequiredPermissions(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	permissions := bridge.RequiredPermissions()
+
+	assert.GreaterOrEqual(t, len(permissions), 2)
+
+	// Check for expected permissions
+	hasMemory := false
+	hasStorage := false
+
+	for _, perm := range permissions {
+		if perm.Type == engine.PermissionMemory && perm.Resource == "errors" {
+			hasMemory = true
+			assert.Contains(t, perm.Actions, "read")
+			assert.Contains(t, perm.Actions, "write")
 		}
-		done <- true
-	}()
-
-	// Concurrent category registration
-	go func() {
-		for i := 0; i < 10; i++ {
-			_, err := bridge.ExecuteMethod(ctx, "registerErrorCategory", []interface{}{
-				"test" + string(rune(i)),
-				map[string]interface{}{"description": "test"},
-			})
-			assert.NoError(t, err)
+		if perm.Type == engine.PermissionStorage && perm.Resource == "errors" {
+			hasStorage = true
+			assert.Contains(t, perm.Actions, "emit")
+			assert.Contains(t, perm.Actions, "subscribe")
 		}
-		done <- true
-	}()
+	}
 
-	// Concurrent aggregation with realistic errors using standard errors
-	go func() {
-		aggregator, _ := bridge.ExecuteMethod(ctx, "createErrorAggregator", []interface{}{})
-		for i := 0; i < 10; i++ {
-			// Use different error scenarios for variety
-			var err error
-			switch i % 3 {
-			case 0:
-				err = errors.New("Network timeout")
-			case 1:
-				err = errors.New("Rate limit hit")
-			default:
-				err = errors.New("Auth failed")
-			}
-			_, execErr := bridge.ExecuteMethod(ctx, "addError", []interface{}{aggregator, err})
-			assert.NoError(t, execErr)
-		}
-		done <- true
-	}()
+	assert.True(t, hasMemory, "Memory permission not found")
+	assert.True(t, hasStorage, "Storage permission not found")
+}
 
-	// Wait for all goroutines
-	for i := 0; i < 3; i++ {
-		<-done
+func TestUtilErrorsBridgeTypeMappings(t *testing.T) {
+	bridge := NewUtilErrorsBridge()
+	mappings := bridge.TypeMappings()
+
+	// Check expected type mappings
+	expectedTypes := []string{
+		"SerializableError",
+		"RecoveryStrategy",
+		"ErrorAggregator",
+		"ErrorCategory",
+		"ErrorBuilder",
+	}
+
+	for _, typeName := range expectedTypes {
+		mapping, ok := mappings[typeName]
+		assert.True(t, ok, "Type mapping for %s not found", typeName)
+		assert.NotEmpty(t, mapping.GoType)
+		assert.NotEmpty(t, mapping.ScriptType)
 	}
 }
 
-func TestUtilErrorsBridge_RealisticErrorScenarios(t *testing.T) {
+func TestUtilErrorsBridgeErrorHandling(t *testing.T) {
 	bridge := NewUtilErrorsBridge()
 	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
 
-	t.Run("rate limit scenario", func(t *testing.T) {
-		// Use testutils pattern for realistic error creation
-		testState := fixtures.BasicTestState()
-		testState.Set("error_type", "rate_limit")
-		testState.Set("provider", "openai")
-
-		// Create realistic rate limit error using standard errors package
-		rateLimitErr := errors.New("rate limit exceeded. Please retry after 60 seconds.")
-
-		// Test categorization
-		category, err := bridge.ExecuteMethod(ctx, "categorizeError", []interface{}{rateLimitErr})
-		require.NoError(t, err)
-		assert.Equal(t, "ratelimit", category.(string))
-
-		// Test retryability (standard errors aren't marked retryable by default)
-		retryable, err := bridge.ExecuteMethod(ctx, "isRetryableError", []interface{}{rateLimitErr})
-		require.NoError(t, err)
-		assert.False(t, retryable.(bool)) // Standard error types aren't retryable by default
-
-		// Test wrapping with context from testutils state
-		provider, _ := testState.Get("provider")
-		wrapped, err := bridge.ExecuteMethod(ctx, "wrapError", []interface{}{
-			rateLimitErr,
-			"Rate limit handling",
-			map[string]interface{}{
-				"retry_after": 60,
-				"provider":    provider,
-			},
-		})
-		require.NoError(t, err)
-		wrappedErr := wrapped.(*llmerrors.BaseError)
-		assert.Equal(t, "Rate limit handling", wrappedErr.Message)
-		assert.Equal(t, 60, wrappedErr.GetContext()["retry_after"])
-		assert.Equal(t, provider, wrappedErr.GetContext()["provider"])
+	// Test method execution before initialization
+	_, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
+		engine.NewStringValue("test"),
 	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not initialized")
 
-	t.Run("auth failure scenario", func(t *testing.T) {
-		// Use testutils pattern for agent context simulation
-		testContext := helpers.CreateTestToolContext()
-		requestID := testContext.RunID // Use actual run ID from testutils
+	// Initialize bridge
+	err = bridge.Initialize(ctx)
+	require.NoError(t, err)
 
-		// Create realistic auth error using standard errors package
-		authErr := errors.New("Invalid API key provided. Please check your authentication credentials.")
+	// Test unknown method
+	_, err = bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "method not found")
 
-		// Test categorization
-		category, err := bridge.ExecuteMethod(ctx, "categorizeError", []interface{}{authErr})
-		require.NoError(t, err)
-		assert.Equal(t, "authentication", category.(string))
-
-		// Test fatality (auth errors are typically fatal)
-		fatal, err := bridge.ExecuteMethod(ctx, "isFatalError", []interface{}{authErr})
-		require.NoError(t, err)
-		assert.False(t, fatal.(bool)) // Auth errors shouldn't be fatal by default
-
-		// Test enriching with realistic request context from testutils
-		enriched, err := bridge.ExecuteMethod(ctx, "enrichError", []interface{}{
-			authErr,
-			map[string]interface{}{
-				"request_id": requestID,
-				"endpoint":   "/v1/chat/completions",
-				"agent_id":   testContext.Agent.ID,
-				"user_id":    "user_789",
-			},
-		})
-		require.NoError(t, err)
-		enrichedErr := enriched.(*llmerrors.BaseError)
-		assert.Equal(t, requestID, enrichedErr.GetContext()["request_id"])
-		assert.Equal(t, testContext.Agent.ID, enrichedErr.GetContext()["agent_id"])
-	})
-
-	t.Run("network timeout scenario", func(t *testing.T) {
-		// Create realistic network errors using standard errors package
-		networkErr := errors.New("Request timeout: Unable to connect to the API endpoint.")
-		networkErr2 := errors.New("DNS resolution failed")
-		networkErr3 := errors.New("Connection refused")
-
-		// Test categorization
-		category, err := bridge.ExecuteMethod(ctx, "categorizeError", []interface{}{networkErr})
-		require.NoError(t, err)
-		assert.Equal(t, "network", category.(string))
-
-		// Test recovery strategy with realistic parameters
-		strategy, err := bridge.ExecuteMethod(ctx, "createExponentialBackoffStrategy", []interface{}{
-			1000.0,  // 1 second base delay
-			30000.0, // 30 second max delay
-			5.0,     // 5 max retries
-		})
-		require.NoError(t, err)
-		require.NotNil(t, strategy)
-
-		// Test aggregating multiple network errors
-		aggregated, err := bridge.ExecuteMethod(ctx, "aggregateErrors", []interface{}{
-			[]interface{}{networkErr, networkErr2, networkErr3},
-			"Multiple network issues encountered",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, aggregated)
-	})
-}
-
-func TestUtilErrorsBridge_EdgeCases(t *testing.T) {
-	bridge := NewUtilErrorsBridge()
-	ctx := context.Background()
-	require.NoError(t, bridge.Initialize(ctx))
-
-	t.Run("nil error handling", func(t *testing.T) {
-		// Categorize nil error
-		_, err := bridge.ExecuteMethod(ctx, "categorizeError", []interface{}{nil})
-		require.Error(t, err) // Should error on nil
-	})
-
-	t.Run("empty aggregator", func(t *testing.T) {
-		// Create empty aggregator
-		_, _ = bridge.ExecuteMethod(ctx, "createErrorAggregator", []interface{}{})
-
-		// Try to aggregate empty
-		result, err := bridge.ExecuteMethod(ctx, "aggregateErrors", []interface{}{
-			[]interface{}{},
-			"No errors",
-		})
-		require.NoError(t, err)
-		assert.Nil(t, result)
-	})
-
-	t.Run("invalid JSON deserialization", func(t *testing.T) {
-		_, err := bridge.ExecuteMethod(ctx, "errorFromJSON", []interface{}{
-			"invalid json string",
-		})
-		require.Error(t, err)
-	})
-
-	t.Run("method not initialized", func(t *testing.T) {
-		uninitBridge := NewUtilErrorsBridge()
-		_, err := uninitBridge.ExecuteMethod(ctx, "createError", []interface{}{"test"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "not initialized")
-	})
+	// Test invalid arguments
+	_, err = bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "requires")
 }

@@ -294,6 +294,9 @@ func (tb *TracingBridge) ExecuteMethod(ctx context.Context, name string, args []
 		if err != nil {
 			return nil, err
 		}
+		if result == nil {
+			return engine.NewNilValue(), nil
+		}
 		return engine.NewObjectValue(result.(map[string]engine.ScriptValue)), nil
 	default:
 		return nil, fmt.Errorf("unknown method: %s", name)

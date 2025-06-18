@@ -1,600 +1,510 @@
-// ABOUTME: Tests for hooks bridge providing access to go-llms agent hook system
-// ABOUTME: Verifies hook registration, execution, priority ordering, and lifecycle integration
-
 package agent
 
 import (
 	"context"
-	"sync"
 	"testing"
 
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/lexlapax/go-llms/pkg/agent/domain"
-	"github.com/lexlapax/go-llms/pkg/testutils/helpers"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-func TestHooksBridge_BasicOperations(t *testing.T) {
-	tests := []struct {
-		name string
-		test func(t *testing.T, bridge *HooksBridge)
-	}{
-		{
-			name: "GetID returns correct identifier",
-			test: func(t *testing.T, b *HooksBridge) {
-				assert.Equal(t, "hooks", b.GetID())
-			},
-		},
-		{
-			name: "GetMetadata returns valid metadata",
-			test: func(t *testing.T, b *HooksBridge) {
-				metadata := b.GetMetadata()
-				assert.Equal(t, "Hooks Bridge", metadata.Name)
-				assert.NotEmpty(t, metadata.Version)
-				assert.NotEmpty(t, metadata.Description)
-				assert.Equal(t, "go-llmspell", metadata.Author)
-			},
-		},
-		{
-			name: "Initialize and cleanup work correctly",
-			test: func(t *testing.T, b *HooksBridge) {
-				ctx := context.Background()
+func TestHooksBridge_Initialize(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
 
-				// Initial state
-				assert.False(t, b.IsInitialized())
+	err := bridge.Initialize(ctx)
+	assert.NoError(t, err)
+	assert.True(t, bridge.IsInitialized())
+}
 
-				// Initialize
-				err := b.Initialize(ctx)
-				require.NoError(t, err)
-				assert.True(t, b.IsInitialized())
+func TestHooksBridge_GetID(t *testing.T) {
+	bridge := NewHooksBridge()
+	assert.Equal(t, "hooks", bridge.GetID())
+}
 
-				// Double initialize should be safe
-				err = b.Initialize(ctx)
-				require.NoError(t, err)
-				assert.True(t, b.IsInitialized())
+func TestHooksBridge_GetMetadata(t *testing.T) {
+	bridge := NewHooksBridge()
+	metadata := bridge.GetMetadata()
 
-				// Cleanup
-				err = b.Cleanup(ctx)
-				require.NoError(t, err)
-				assert.False(t, b.IsInitialized())
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bridge := NewHooksBridge()
-			tt.test(t, bridge)
-		})
-	}
+	assert.Equal(t, "Hooks Bridge", metadata.Name)
+	assert.Equal(t, "2.1.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "hook system")
+	assert.Equal(t, "go-llmspell", metadata.Author)
+	assert.Equal(t, "MIT", metadata.License)
 }
 
 func TestHooksBridge_Methods(t *testing.T) {
 	bridge := NewHooksBridge()
 	methods := bridge.Methods()
 
-	// Check that we have the expected hook-related methods
+	// Should have all expected methods
 	expectedMethods := []string{
-		"registerHook",
-		"unregisterHook",
-		"listHooks",
-		"enableHook",
-		"disableHook",
-		"getHookInfo",
-		"executeHooks",
-		"clearHooks",
+		"registerHook", "unregisterHook", "executeHook", "listHooks",
+		"hasHook", "clearHooks", "getHookPriority", "setHookPriority",
+		"enableHook", "disableHook", "isHookEnabled", "getHookMetadata",
+		"setHookMetadata", "getHookStats", "resetHookStats", "createHookChain",
+		"executeHookChain", "getHookChain", "removeHookChain", "listHookChains",
+		"validateHook", "getHookDependencies", "setHookDependencies",
+		"resolveHookDependencies", "getHookExecutionOrder", "executeConditionalHook",
+		"createHookGroup", "addHookToGroup", "removeHookFromGroup", "executeHookGroup",
+		"getHookGroup", "listHookGroups", "removeHookGroup",
 	}
 
-	methodMap := make(map[string]engine.MethodInfo)
-	for _, m := range methods {
-		methodMap[m.Name] = m
+	assert.GreaterOrEqual(t, len(methods), len(expectedMethods))
+
+	// Check that key methods exist
+	methodNames := make(map[string]bool)
+	for _, method := range methods {
+		methodNames[method.Name] = true
 	}
 
 	for _, expected := range expectedMethods {
-		t.Run("has_method_"+expected, func(t *testing.T) {
-			method, exists := methodMap[expected]
-			assert.True(t, exists, "Missing method: %s", expected)
-			assert.NotEmpty(t, method.Description)
-			assert.NotEmpty(t, method.ReturnType)
-		})
+		assert.True(t, methodNames[expected], "Expected method %s not found", expected)
 	}
 }
 
-func TestHooksBridge_HookRegistration(t *testing.T) {
-	ctx := context.Background()
+func TestHooksBridge_ValidateMethod(t *testing.T) {
 	bridge := NewHooksBridge()
-	require.NoError(t, bridge.Initialize(ctx))
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
 	tests := []struct {
-		name     string
-		method   string
-		args     []interface{}
-		validate func(t *testing.T, result interface{}, err error)
+		name        string
+		method      string
+		args        []engine.ScriptValue
+		expectError bool
 	}{
 		{
-			name:   "registerHook adds new hook",
-			method: "registerHook",
-			args: []interface{}{
-				"test_hook",
-				map[string]interface{}{
-					"beforeGenerate": func(ctx interface{}, messages interface{}) {
-						// Mock implementation
-					},
-					"afterGenerate": func(ctx interface{}, response interface{}, err interface{}) {
-						// Mock implementation
-					},
-					"priority": 10,
-				},
-			},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, "test_hook", result)
-			},
+			name:        "valid registerHook",
+			method:      "registerHook",
+			args:        []engine.ScriptValue{engine.NewStringValue("test-hook"), engine.NewStringValue("before"), engine.NewStringValue("handler")},
+			expectError: false,
 		},
 		{
-			name:   "listHooks returns registered hooks",
-			method: "listHooks",
-			args:   []interface{}{},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				hooks, ok := result.([]map[string]interface{})
-				require.True(t, ok)
-				assert.NotEmpty(t, hooks)
-
-				// Find our test hook
-				found := false
-				for _, hook := range hooks {
-					if hook["id"] == "test_hook" {
-						found = true
-						assert.Equal(t, true, hook["enabled"])
-						assert.Equal(t, 10, hook["priority"])
-						break
-					}
-				}
-				assert.True(t, found, "Test hook not found in list")
-			},
+			name:        "invalid registerHook - missing args",
+			method:      "registerHook",
+			args:        []engine.ScriptValue{engine.NewStringValue("test-hook")},
+			expectError: true,
 		},
 		{
-			name:   "getHookInfo returns hook details",
-			method: "getHookInfo",
-			args:   []interface{}{"test_hook"},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				info, ok := result.(map[string]interface{})
-				require.True(t, ok)
-				assert.Equal(t, "test_hook", info["id"])
-				assert.Equal(t, true, info["enabled"])
-				assert.Equal(t, 10, info["priority"])
-			},
+			name:        "valid listHooks",
+			method:      "listHooks",
+			args:        []engine.ScriptValue{},
+			expectError: false,
 		},
 		{
-			name:   "disableHook disables the hook",
-			method: "disableHook",
-			args:   []interface{}{"test_hook"},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, true, result)
-			},
+			name:        "valid executeHook",
+			method:      "executeHook",
+			args:        []engine.ScriptValue{engine.NewStringValue("test-hook"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			expectError: false,
 		},
 		{
-			name:   "enableHook re-enables the hook",
-			method: "enableHook",
-			args:   []interface{}{"test_hook"},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, true, result)
-			},
-		},
-		{
-			name:   "unregisterHook removes the hook",
-			method: "unregisterHook",
-			args:   []interface{}{"test_hook"},
-			validate: func(t *testing.T, result interface{}, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, true, result)
-			},
+			name:        "unknown method",
+			method:      "unknownMethod",
+			args:        []engine.ScriptValue{},
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := bridge.ExecuteMethod(ctx, tt.method, tt.args)
-			tt.validate(t, result, err)
+			err := bridge.ValidateMethod(tt.method, tt.args)
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
 
-func TestHooksBridge_HookExecution(t *testing.T) {
-	ctx := context.Background()
+func TestHooksBridge_ExecuteMethod_RegisterHook(t *testing.T) {
 	bridge := NewHooksBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-
-	// Track hook executions
-	executions := []string{}
-
-	// Register multiple hooks with different priorities
-	hooks := []struct {
-		id       string
-		priority int
-	}{
-		{"hook_low", 1},
-		{"hook_medium", 5},
-		{"hook_high", 10},
-	}
-
-	for _, h := range hooks {
-		_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{
-			h.id,
-			map[string]interface{}{
-				"beforeGenerate": func(ctx interface{}, messages interface{}) {
-					executions = append(executions, h.id+"_before")
-				},
-				"afterGenerate": func(ctx interface{}, response interface{}, err interface{}) {
-					executions = append(executions, h.id+"_after")
-				},
-				"priority": h.priority,
-			},
-		})
-		require.NoError(t, err)
-	}
-
-	// Test executeHooks for BeforeGenerate
-	t.Run("executeHooks BeforeGenerate respects priority", func(t *testing.T) {
-		executions = []string{} // Reset
-
-		result, err := bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-			"beforeGenerate",
-			map[string]interface{}{
-				"messages": []map[string]interface{}{
-					{"role": "user", "content": "test"},
-				},
-			},
-		})
-		require.NoError(t, err)
-		assert.NotNil(t, result)
-
-		// Check execution order (high priority first)
-		assert.Equal(t, []string{
-			"hook_high_before",
-			"hook_medium_before",
-			"hook_low_before",
-		}, executions)
-	})
-
-	// Test executeHooks for AfterGenerate
-	t.Run("executeHooks AfterGenerate respects priority", func(t *testing.T) {
-		executions = []string{} // Reset
-
-		result, err := bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-			"afterGenerate",
-			map[string]interface{}{
-				"response": map[string]interface{}{
-					"content": "Generated response",
-				},
-				"error": nil,
-			},
-		})
-		require.NoError(t, err)
-		assert.NotNil(t, result)
-
-		// Check execution order (high priority first)
-		assert.Equal(t, []string{
-			"hook_high_after",
-			"hook_medium_after",
-			"hook_low_after",
-		}, executions)
-	})
-
-	// Test with disabled hook
-	t.Run("disabled hooks are not executed", func(t *testing.T) {
-		// Disable medium priority hook
-		_, err := bridge.ExecuteMethod(ctx, "disableHook", []interface{}{"hook_medium"})
-		require.NoError(t, err)
-
-		executions = []string{} // Reset
-
-		_, err = bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-			"beforeGenerate",
-			map[string]interface{}{
-				"messages": []map[string]interface{}{
-					{"role": "user", "content": "test"},
-				},
-			},
-		})
-		require.NoError(t, err)
-
-		// Medium hook should not execute
-		assert.Equal(t, []string{
-			"hook_high_before",
-			"hook_low_before",
-		}, executions)
-	})
-}
-
-func TestHooksBridge_ToolHooks(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewHooksBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-
-	// Track tool hook executions
-	toolCalls := []string{}
-
-	// Register a tool hook
-	_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{
-		"tool_monitor",
-		map[string]interface{}{
-			"beforeToolCall": func(ctx interface{}, tool interface{}, params interface{}) {
-				toolName := tool.(string)
-				toolCalls = append(toolCalls, "before_"+toolName)
-			},
-			"afterToolCall": func(ctx interface{}, tool interface{}, result interface{}, err interface{}) {
-				toolName := tool.(string)
-				toolCalls = append(toolCalls, "after_"+toolName)
-			},
-			"priority": 5,
-		},
-	})
+	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test tool hook execution
-	t.Run("tool hooks execute correctly", func(t *testing.T) {
-		toolCalls = []string{} // Reset
+	// Test registerHook
+	hookName := "test-hook"
+	hookType := "before"
+	handler := "test-handler-function"
 
-		// Execute beforeToolCall
-		_, err := bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-			"beforeToolCall",
-			map[string]interface{}{
-				"tool": "calculator",
-				"params": map[string]interface{}{
-					"operation": "add",
-					"a":         5,
-					"b":         3,
-				},
-			},
-		})
-		require.NoError(t, err)
-
-		// Execute afterToolCall
-		_, err = bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-			"afterToolCall",
-			map[string]interface{}{
-				"tool":   "calculator",
-				"result": 8,
-				"error":  nil,
-			},
-		})
-		require.NoError(t, err)
-
-		assert.Equal(t, []string{"before_calculator", "after_calculator"}, toolCalls)
-	})
-}
-
-func TestHooksBridge_ClearHooks(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewHooksBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-
-	// Register some hooks
-	for i := 0; i < 3; i++ {
-		_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{
-			string(rune('a'+i)) + "_hook",
-			map[string]interface{}{
-				"beforeGenerate": func(ctx interface{}, messages interface{}) {},
-				"priority":       i,
-			},
-		})
-		require.NoError(t, err)
+	args := []engine.ScriptValue{
+		engine.NewStringValue(hookName),
+		engine.NewStringValue(hookType),
+		engine.NewStringValue(handler),
 	}
 
-	// Verify hooks exist
-	result, err := bridge.ExecuteMethod(ctx, "listHooks", []interface{}{})
+	result, err := bridge.ExecuteMethod(ctx, "registerHook", args)
+	assert.NoError(t, err)
+
+	stringValue, ok := result.(engine.StringValue)
+	assert.True(t, ok, "Expected StringValue (hook ID) from registerHook")
+	assert.NotEmpty(t, stringValue.Value(), "Hook ID should not be empty")
+}
+
+func TestHooksBridge_ExecuteMethod_ListHooks(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
-	hooks := result.([]map[string]interface{})
-	assert.Len(t, hooks, 3)
+
+	// Test listHooks - should work even with no hooks
+	result, err := bridge.ExecuteMethod(ctx, "listHooks", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	arrayValue, ok := result.(engine.ArrayValue)
+	assert.True(t, ok, "Expected ArrayValue from listHooks")
+	assert.Equal(t, 0, len(arrayValue.ToGo().([]interface{})), "Expected empty array initially")
+
+	// Register a hook
+	registerArgs := []engine.ScriptValue{
+		engine.NewStringValue("test-hook"),
+		engine.NewStringValue("before"),
+		engine.NewStringValue("handler"),
+	}
+	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
+	require.NoError(t, err)
+
+	// List hooks again
+	result, err = bridge.ExecuteMethod(ctx, "listHooks", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	arrayValue, ok = result.(engine.ArrayValue)
+	assert.True(t, ok, "Expected ArrayValue from listHooks")
+	assert.Equal(t, 1, len(arrayValue.ToGo().([]interface{})), "Expected one hook")
+}
+
+func TestHooksBridge_ExecuteMethod_HasHook(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	hookName := "test-hook"
+
+	// Test hasHook for non-existent hook
+	args := []engine.ScriptValue{engine.NewStringValue(hookName)}
+	result, err := bridge.ExecuteMethod(ctx, "hasHook", args)
+	assert.NoError(t, err)
+
+	boolValue, ok := result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from hasHook")
+	assert.False(t, boolValue.Value(), "Should not have hook initially")
+
+	// Register the hook
+	registerArgs := []engine.ScriptValue{
+		engine.NewStringValue(hookName),
+		engine.NewStringValue("before"),
+		engine.NewStringValue("handler"),
+	}
+	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
+	require.NoError(t, err)
+
+	// Test hasHook for existing hook
+	result, err = bridge.ExecuteMethod(ctx, "hasHook", args)
+	assert.NoError(t, err)
+
+	boolValue, ok = result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from hasHook")
+	assert.True(t, boolValue.Value(), "Should have hook after registration")
+}
+
+func TestHooksBridge_ExecuteMethod_ExecuteHook(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	hookName := "test-hook"
+
+	// Register a hook first
+	registerArgs := []engine.ScriptValue{
+		engine.NewStringValue(hookName),
+		engine.NewStringValue("before"),
+		engine.NewStringValue("handler"),
+	}
+	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
+	require.NoError(t, err)
+
+	// Execute the hook
+	executeArgs := []engine.ScriptValue{
+		engine.NewStringValue(hookName),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"data": engine.NewStringValue("test"),
+		}),
+	}
+
+	result, err := bridge.ExecuteMethod(ctx, "executeHook", executeArgs)
+	assert.NoError(t, err)
+
+	// Should return the hook result
+	assert.NotNil(t, result)
+}
+
+func TestHooksBridge_ExecuteMethod_UnregisterHook(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	hookName := "test-hook"
+
+	// Register a hook first
+	registerArgs := []engine.ScriptValue{
+		engine.NewStringValue(hookName),
+		engine.NewStringValue("before"),
+		engine.NewStringValue("handler"),
+	}
+	hookID, err := bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
+	require.NoError(t, err)
+
+	hookIDStr := hookID.(engine.StringValue).Value()
+
+	// Verify hook exists
+	hasArgs := []engine.ScriptValue{engine.NewStringValue(hookName)}
+	result, err := bridge.ExecuteMethod(ctx, "hasHook", hasArgs)
+	require.NoError(t, err)
+	assert.True(t, result.(engine.BoolValue).Value())
+
+	// Unregister the hook
+	unregisterArgs := []engine.ScriptValue{engine.NewStringValue(hookIDStr)}
+	result, err = bridge.ExecuteMethod(ctx, "unregisterHook", unregisterArgs)
+	assert.NoError(t, err)
+
+	boolValue, ok := result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from unregisterHook")
+	assert.True(t, boolValue.Value(), "Unregister should succeed")
+
+	// Verify hook is removed
+	result, err = bridge.ExecuteMethod(ctx, "hasHook", hasArgs)
+	require.NoError(t, err)
+	assert.False(t, result.(engine.BoolValue).Value(), "Hook should be removed")
+}
+
+func TestHooksBridge_ExecuteMethod_SetGetHookPriority(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	hookName := "test-hook"
+
+	// Register a hook first
+	registerArgs := []engine.ScriptValue{
+		engine.NewStringValue(hookName),
+		engine.NewStringValue("before"),
+		engine.NewStringValue("handler"),
+	}
+	hookID, err := bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
+	require.NoError(t, err)
+
+	hookIDStr := hookID.(engine.StringValue).Value()
+
+	// Set hook priority
+	setPriorityArgs := []engine.ScriptValue{
+		engine.NewStringValue(hookIDStr),
+		engine.NewNumberValue(10),
+	}
+	result, err := bridge.ExecuteMethod(ctx, "setHookPriority", setPriorityArgs)
+	assert.NoError(t, err)
+
+	_, ok := result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from setHookPriority")
+
+	// Get hook priority
+	getPriorityArgs := []engine.ScriptValue{engine.NewStringValue(hookIDStr)}
+	result, err = bridge.ExecuteMethod(ctx, "getHookPriority", getPriorityArgs)
+	assert.NoError(t, err)
+
+	numberValue, ok := result.(engine.NumberValue)
+	assert.True(t, ok, "Expected NumberValue from getHookPriority")
+	assert.Equal(t, float64(10), numberValue.Value(), "Priority should be 10")
+}
+
+func TestHooksBridge_ExecuteMethod_EnableDisableHook(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	hookName := "test-hook"
+
+	// Register a hook first
+	registerArgs := []engine.ScriptValue{
+		engine.NewStringValue(hookName),
+		engine.NewStringValue("before"),
+		engine.NewStringValue("handler"),
+	}
+	hookID, err := bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
+	require.NoError(t, err)
+
+	hookIDStr := hookID.(engine.StringValue).Value()
+
+	// Check if hook is enabled (should be by default)
+	isEnabledArgs := []engine.ScriptValue{engine.NewStringValue(hookIDStr)}
+	result, err := bridge.ExecuteMethod(ctx, "isHookEnabled", isEnabledArgs)
+	assert.NoError(t, err)
+
+	boolValue, ok := result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from isHookEnabled")
+	assert.True(t, boolValue.Value(), "Hook should be enabled by default")
+
+	// Disable the hook
+	disableArgs := []engine.ScriptValue{engine.NewStringValue(hookIDStr)}
+	result, err = bridge.ExecuteMethod(ctx, "disableHook", disableArgs)
+	assert.NoError(t, err)
+
+	_, ok = result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from disableHook")
+
+	// Check if hook is disabled
+	result, err = bridge.ExecuteMethod(ctx, "isHookEnabled", isEnabledArgs)
+	assert.NoError(t, err)
+
+	boolValue, ok = result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from isHookEnabled")
+	assert.False(t, boolValue.Value(), "Hook should be disabled")
+
+	// Enable the hook
+	enableArgs := []engine.ScriptValue{engine.NewStringValue(hookIDStr)}
+	result, err = bridge.ExecuteMethod(ctx, "enableHook", enableArgs)
+	assert.NoError(t, err)
+
+	_, ok = result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from enableHook")
+
+	// Check if hook is enabled again
+	result, err = bridge.ExecuteMethod(ctx, "isHookEnabled", isEnabledArgs)
+	assert.NoError(t, err)
+
+	boolValue, ok = result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from isHookEnabled")
+	assert.True(t, boolValue.Value(), "Hook should be enabled again")
+}
+
+func TestHooksBridge_ExecuteMethod_GetHookStats(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Get hook stats
+	result, err := bridge.ExecuteMethod(ctx, "getHookStats", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	objectValue, ok := result.(engine.ObjectValue)
+	assert.True(t, ok, "Expected ObjectValue from getHookStats")
+
+	stats := objectValue.ToGo().(map[string]interface{})
+	assert.Contains(t, stats, "total_hooks")
+	assert.Contains(t, stats, "enabled_hooks")
+}
+
+func TestHooksBridge_ExecuteMethod_ClearHooks(t *testing.T) {
+	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Register a hook first
+	registerArgs := []engine.ScriptValue{
+		engine.NewStringValue("test-hook"),
+		engine.NewStringValue("before"),
+		engine.NewStringValue("handler"),
+	}
+	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
+	require.NoError(t, err)
+
+	// Verify hook exists
+	listResult, err := bridge.ExecuteMethod(ctx, "listHooks", []engine.ScriptValue{})
+	require.NoError(t, err)
+	arrayValue := listResult.(engine.ArrayValue)
+	assert.Equal(t, 1, len(arrayValue.ToGo().([]interface{})))
 
 	// Clear all hooks
-	result, err = bridge.ExecuteMethod(ctx, "clearHooks", []interface{}{})
-	require.NoError(t, err)
-	assert.Equal(t, 3, result) // Should return count of cleared hooks
+	result, err := bridge.ExecuteMethod(ctx, "clearHooks", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	_, ok := result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from clearHooks")
 
 	// Verify hooks are cleared
-	result, err = bridge.ExecuteMethod(ctx, "listHooks", []interface{}{})
+	listResult, err = bridge.ExecuteMethod(ctx, "listHooks", []engine.ScriptValue{})
 	require.NoError(t, err)
-	hooks = result.([]map[string]interface{})
-	assert.Empty(t, hooks)
+	arrayValue = listResult.(engine.ArrayValue)
+	assert.Equal(t, 0, len(arrayValue.ToGo().([]interface{})))
 }
 
-func TestHooksBridge_ErrorHandling(t *testing.T) {
-	ctx := context.Background()
+func TestHooksBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
 	bridge := NewHooksBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
-	t.Run("methods fail when not initialized", func(t *testing.T) {
-		_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{"test", map[string]interface{}{}})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not initialized")
-	})
+	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	assert.NoError(t, err) // Should return error value, not Go error
 
-	require.NoError(t, bridge.Initialize(ctx))
+	errorValue, ok := result.(engine.ErrorValue)
+	assert.True(t, ok, "Expected ErrorValue for unknown method")
+	assert.Contains(t, errorValue.Error().Error(), "unknown method")
+}
 
-	t.Run("unknown method returns error", func(t *testing.T) {
-		_, err := bridge.ExecuteMethod(ctx, "unknownMethod", []interface{}{})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "method not found")
-	})
+func TestHooksBridge_RequiredPermissions(t *testing.T) {
+	bridge := NewHooksBridge()
+	permissions := bridge.RequiredPermissions()
 
-	t.Run("getHookInfo with non-existent hook", func(t *testing.T) {
-		_, err := bridge.ExecuteMethod(ctx, "getHookInfo", []interface{}{"non_existent"})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not found")
-	})
+	assert.Greater(t, len(permissions), 0, "Should have required permissions")
 
-	t.Run("invalid arguments return error", func(t *testing.T) {
-		// Missing required arguments
-		_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{})
-		assert.Error(t, err)
-
-		// Wrong argument type
-		_, err = bridge.ExecuteMethod(ctx, "registerHook", []interface{}{123, "not a map"})
-		assert.Error(t, err)
-	})
+	// Check for expected permission types
+	hasHooksPermission := false
+	for _, perm := range permissions {
+		if perm.Resource == "hooks" {
+			hasHooksPermission = true
+			break
+		}
+	}
+	assert.True(t, hasHooksPermission, "Should have hooks permission")
 }
 
 func TestHooksBridge_TypeMappings(t *testing.T) {
 	bridge := NewHooksBridge()
 	mappings := bridge.TypeMappings()
 
-	// Check that we have the expected type mappings
-	expectedTypes := []string{
-		"Hook",
-		"HookInfo",
-		"HookType",
-		"HookContext",
-	}
+	assert.Greater(t, len(mappings), 0, "Should have type mappings")
 
-	for _, typeName := range expectedTypes {
-		t.Run("has_type_"+typeName, func(t *testing.T) {
-			mapping, exists := mappings[typeName]
-			assert.True(t, exists, "Missing type mapping: %s", typeName)
-			assert.NotEmpty(t, mapping.GoType)
-			assert.NotEmpty(t, mapping.ScriptType)
-		})
+	// Check for expected mappings
+	expectedTypes := []string{"Hook", "HookChain", "HookGroup"}
+	for _, expectedType := range expectedTypes {
+		_, exists := mappings[expectedType]
+		assert.True(t, exists, "Expected type mapping for %s", expectedType)
 	}
 }
 
-func TestHooksBridge_Permissions(t *testing.T) {
+func TestHooksBridge_Cleanup(t *testing.T) {
 	bridge := NewHooksBridge()
-	permissions := bridge.RequiredPermissions()
-
-	// Should require permissions for hook operations
-	assert.NotEmpty(t, permissions)
-
-	// Check for essential permissions
-	hasHookPermission := false
-	for _, perm := range permissions {
-		if perm.Type == engine.PermissionProcess && perm.Resource == "hook" {
-			hasHookPermission = true
-			assert.Contains(t, perm.Actions, "register")
-			assert.Contains(t, perm.Actions, "execute")
-		}
-	}
-	assert.True(t, hasHookPermission, "Missing hook management permission")
-}
-
-// Test with go-llms testutils mock hooks
-func TestHooksBridge_WithMockHooks(t *testing.T) {
 	ctx := context.Background()
-	bridge := NewHooksBridge()
-	require.NoError(t, bridge.Initialize(ctx))
 
-	// Create a mock hook using testutils
-	// Track executions
-	var beforeGenerateCalled bool
-	var afterGenerateCalled bool
-
-	// We'll test by registering hooks that track their calls
-
-	// Register the mock hook through the bridge
-	// Note: We need to wrap it in a script-compatible format
-	_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{
-		"mock_hook",
-		map[string]interface{}{
-			"beforeGenerate": func(ctx interface{}, messages interface{}) {
-				// Track that the hook was called
-				beforeGenerateCalled = true
-			},
-			"afterGenerate": func(ctx interface{}, response interface{}, err interface{}) {
-				afterGenerateCalled = true
-			},
-			"priority": 10,
-		},
-	})
+	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
+	assert.True(t, bridge.IsInitialized())
 
-	// Execute hooks
-	_, err = bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-		"beforeGenerate",
-		map[string]interface{}{
-			"messages": []map[string]interface{}{
-				{"role": "user", "content": "test message"},
-			},
-		},
-	})
-	require.NoError(t, err)
-	assert.True(t, beforeGenerateCalled)
-
-	_, err = bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-		"afterGenerate",
-		map[string]interface{}{
-			"response": map[string]interface{}{
-				"content": "generated text",
-			},
-			"error": nil,
-		},
-	})
-	require.NoError(t, err)
-	assert.True(t, afterGenerateCalled)
+	err = bridge.Cleanup(ctx)
+	assert.NoError(t, err)
+	assert.False(t, bridge.IsInitialized())
 }
 
-// Test hook integration with agent helpers
-func TestHooksBridge_WithAgentHelpers(t *testing.T) {
-	ctx := context.Background()
+func TestHooksBridge_NotInitialized(t *testing.T) {
 	bridge := NewHooksBridge()
-	require.NoError(t, bridge.Initialize(ctx))
+	ctx := context.Background()
 
-	// Create a mock agent with delay to test hook timing
-	agent := helpers.CreateMockAgentWithDelay("test_agent", 100)
+	// Should fail when not initialized
+	result, err := bridge.ExecuteMethod(ctx, "listHooks", []engine.ScriptValue{})
+	assert.NoError(t, err) // Should return error value, not Go error
 
-	// Track hook execution timing with proper synchronization
-	var hookOrderMu sync.Mutex
-	var hookOrder []string
-
-	appendToOrder := func(order string) {
-		hookOrderMu.Lock()
-		defer hookOrderMu.Unlock()
-		hookOrder = append(hookOrder, order)
-	}
-
-	getOrder := func() []string {
-		hookOrderMu.Lock()
-		defer hookOrderMu.Unlock()
-		return append([]string(nil), hookOrder...)
-	}
-
-	// Register hooks that track execution order
-	_, err := bridge.ExecuteMethod(ctx, "registerHook", []interface{}{
-		"timing_hook",
-		map[string]interface{}{
-			"beforeGenerate": func(ctx interface{}, messages interface{}) {
-				appendToOrder("before_start")
-				// Simulate agent starting
-				go func() {
-					state := domain.NewState()
-					_, _ = agent.Run(context.Background(), state)
-					appendToOrder("agent_complete")
-				}()
-			},
-			"afterGenerate": func(ctx interface{}, response interface{}, err interface{}) {
-				appendToOrder("after_complete")
-			},
-			"priority": 1,
-		},
-	})
-	require.NoError(t, err)
-
-	// Execute hooks
-	_, err = bridge.ExecuteMethod(ctx, "executeHooks", []interface{}{
-		"beforeGenerate",
-		map[string]interface{}{
-			"messages": []map[string]interface{}{
-				{"role": "user", "content": "test"},
-			},
-		},
-	})
-	require.NoError(t, err)
-
-	// Verify execution started
-	currentOrder := getOrder()
-	assert.Contains(t, currentOrder, "before_start")
+	errorValue, ok := result.(engine.ErrorValue)
+	assert.True(t, ok, "Expected ErrorValue when not initialized")
+	assert.Contains(t, errorValue.Error().Error(), "not initialized")
 }

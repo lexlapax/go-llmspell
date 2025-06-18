@@ -168,7 +168,7 @@ func (db *DebugBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method calls
-func (db *DebugBridge) ValidateMethod(name string, args []interface{}) error {
+func (db *DebugBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !db.IsInitialized() {
 		return fmt.Errorf("debug bridge not initialized")
 	}
@@ -227,31 +227,62 @@ func (db *DebugBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
+// ExecuteMethod executes a bridge method
+func (db *DebugBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	switch name {
+	case "debugPrintf":
+		err := db.debugPrintf(ctx, args)
+		return engine.NewNilValue(), err
+	case "debugPrintln":
+		err := db.debugPrintln(ctx, args)
+		return engine.NewNilValue(), err
+	case "isDebugEnabled":
+		return db.isDebugEnabled(ctx, args)
+	case "enableDebugComponent":
+		err := db.enableDebugComponent(ctx, args)
+		return engine.NewNilValue(), err
+	case "disableDebugComponent":
+		err := db.disableDebugComponent(ctx, args)
+		return engine.NewNilValue(), err
+	case "listEnabledComponents":
+		return db.listEnabledComponents(ctx, args)
+	case "setCustomLogger":
+		err := db.setCustomLogger(ctx, args)
+		return engine.NewNilValue(), err
+	case "getDebugEnvironment":
+		return db.getDebugEnvironment(ctx, args)
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
+}
+
 // Bridge method implementations
 
 // debugPrintf logs formatted debug message for component
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) debugPrintf(ctx context.Context, args []interface{}) error {
+func (db *DebugBridge) debugPrintf(ctx context.Context, args []engine.ScriptValue) error {
 	if err := db.ValidateMethod("debugPrintf", args); err != nil {
 		return err
 	}
 
-	component, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("component must be a string")
 	}
+	component := args[0].(engine.StringValue).Value()
 
-	format, ok := args[1].(string)
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeString {
 		return fmt.Errorf("format must be a string")
 	}
+	format := args[1].(engine.StringValue).Value()
 
 	// Convert args if provided
 	var formatArgs []interface{}
-	if len(args) > 2 {
-		if argsArray, ok := args[2].([]interface{}); ok {
-			formatArgs = argsArray
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeArray {
+		arrayVal := args[2].(engine.ArrayValue)
+		formatArgs = make([]interface{}, len(arrayVal.Elements()))
+		for i, elem := range arrayVal.Elements() {
+			formatArgs[i] = elem.ToGo()
 		}
 	}
 
@@ -269,20 +300,20 @@ func (db *DebugBridge) debugPrintf(ctx context.Context, args []interface{}) erro
 // debugPrintln logs debug message for component
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) debugPrintln(ctx context.Context, args []interface{}) error {
+func (db *DebugBridge) debugPrintln(ctx context.Context, args []engine.ScriptValue) error {
 	if err := db.ValidateMethod("debugPrintln", args); err != nil {
 		return err
 	}
 
-	component, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("component must be a string")
 	}
+	component := args[0].(engine.StringValue).Value()
 
-	message, ok := args[1].(string)
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeString {
 		return fmt.Errorf("message must be a string")
 	}
+	message := args[1].(engine.StringValue).Value()
 
 	// Check if component is enabled for debugging
 	if !db.isComponentEnabled(component) {
@@ -298,36 +329,36 @@ func (db *DebugBridge) debugPrintln(ctx context.Context, args []interface{}) err
 // isDebugEnabled checks if debug logging is enabled for component
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) isDebugEnabled(ctx context.Context, args []interface{}) (interface{}, error) {
+func (db *DebugBridge) isDebugEnabled(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := db.ValidateMethod("isDebugEnabled", args); err != nil {
 		return nil, err
 	}
 
-	component, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("component must be a string")
 	}
+	component := args[0].(engine.StringValue).Value()
 
 	// Check go-llms debug enabled components
 	// Since go-llms doesn't expose EnabledComponents, we simulate by testing
 	// if debug output would be produced
 	enabled := db.isComponentEnabled(component)
 
-	return enabled, nil
+	return engine.NewBoolValue(enabled), nil
 }
 
 // enableDebugComponent enables debug logging for specific component
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) enableDebugComponent(ctx context.Context, args []interface{}) error {
+func (db *DebugBridge) enableDebugComponent(ctx context.Context, args []engine.ScriptValue) error {
 	if err := db.ValidateMethod("enableDebugComponent", args); err != nil {
 		return err
 	}
 
-	component, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("component must be a string")
 	}
+	component := args[0].(engine.StringValue).Value()
 
 	db.mu.Lock()
 	db.components[component] = true
@@ -339,15 +370,15 @@ func (db *DebugBridge) enableDebugComponent(ctx context.Context, args []interfac
 // disableDebugComponent disables debug logging for specific component
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) disableDebugComponent(ctx context.Context, args []interface{}) error {
+func (db *DebugBridge) disableDebugComponent(ctx context.Context, args []engine.ScriptValue) error {
 	if err := db.ValidateMethod("disableDebugComponent", args); err != nil {
 		return err
 	}
 
-	component, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return fmt.Errorf("component must be a string")
 	}
+	component := args[0].(engine.StringValue).Value()
 
 	db.mu.Lock()
 	db.components[component] = false
@@ -359,7 +390,7 @@ func (db *DebugBridge) disableDebugComponent(ctx context.Context, args []interfa
 // listEnabledComponents gets list of components with debug logging enabled
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) listEnabledComponents(ctx context.Context, args []interface{}) (interface{}, error) {
+func (db *DebugBridge) listEnabledComponents(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := db.ValidateMethod("listEnabledComponents", args); err != nil {
 		return nil, err
 	}
@@ -367,39 +398,41 @@ func (db *DebugBridge) listEnabledComponents(ctx context.Context, args []interfa
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	var enabled []string
+	var enabled []engine.ScriptValue
 	for component, isEnabled := range db.components {
 		if isEnabled {
-			enabled = append(enabled, component)
+			enabled = append(enabled, engine.NewStringValue(component))
 		}
 	}
 
-	return enabled, nil
+	return engine.NewArrayValue(enabled), nil
 }
 
 // setCustomLogger sets custom logger for debug output
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) setCustomLogger(ctx context.Context, args []interface{}) error {
+func (db *DebugBridge) setCustomLogger(ctx context.Context, args []engine.ScriptValue) error {
 	if err := db.ValidateMethod("setCustomLogger", args); err != nil {
 		return err
 	}
 
-	config, ok := args[0].(map[string]interface{})
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
 		return fmt.Errorf("config must be an object")
 	}
+	configObj := args[0].(engine.ObjectValue).Fields()
 
 	// Create custom logger based on config
 	logger := log.Default()
 
-	if prefix, ok := config["prefix"].(string); ok {
+	if prefixVal, ok := configObj["prefix"]; ok && prefixVal.Type() == engine.TypeString {
+		prefix := prefixVal.(engine.StringValue).Value()
 		// In a real implementation, we'd create a logger with the custom prefix
 		// For now, we acknowledge the configuration
 		_ = prefix
 	}
 
-	if flags, ok := config["flags"].(string); ok {
+	if flagsVal, ok := configObj["flags"]; ok && flagsVal.Type() == engine.TypeString {
+		flags := flagsVal.(engine.StringValue).Value()
 		// Configure logger flags based on the flags string
 		// For now, we acknowledge the configuration
 		_ = flags
@@ -416,17 +449,24 @@ func (db *DebugBridge) setCustomLogger(ctx context.Context, args []interface{}) 
 // getDebugEnvironment gets current GO_LLMS_DEBUG environment configuration
 //
 //nolint:unused // Bridge method called via reflection
-func (db *DebugBridge) getDebugEnvironment(ctx context.Context, args []interface{}) (interface{}, error) {
+func (db *DebugBridge) getDebugEnvironment(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := db.ValidateMethod("getDebugEnvironment", args); err != nil {
 		return nil, err
 	}
 
 	// Return environment configuration
-	return map[string]interface{}{
-		"go_llms_debug_env":  db.getGoLLMSDebugEnv(),
-		"enabled_components": db.getEnabledComponentsFromEnv(),
-		"compilation_mode":   db.getCompilationMode(),
-	}, nil
+	enabledComponents := db.getEnabledComponentsFromEnv()
+	componentValues := make([]engine.ScriptValue, len(enabledComponents))
+	for i, comp := range enabledComponents {
+		componentValues[i] = engine.NewStringValue(comp)
+	}
+
+	result := map[string]engine.ScriptValue{
+		"go_llms_debug_env":  engine.NewStringValue(db.getGoLLMSDebugEnv()),
+		"enabled_components": engine.NewArrayValue(componentValues),
+		"compilation_mode":   engine.NewStringValue(db.getCompilationMode()),
+	}
+	return engine.NewObjectValue(result), nil
 }
 
 // Helper methods

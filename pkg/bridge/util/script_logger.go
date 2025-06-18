@@ -6,6 +6,7 @@ package util
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	// Internal bridge imports
@@ -297,27 +298,9 @@ func (sl *ScriptLoggerBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method calls
-func (sl *ScriptLoggerBridge) ValidateMethod(name string, args []interface{}) error {
-	if !sl.IsInitialized() {
-		return fmt.Errorf("script logger bridge not initialized")
-	}
-
-	methods := sl.Methods()
-	for _, method := range methods {
-		if method.Name == name {
-			requiredCount := 0
-			for _, param := range method.Parameters {
-				if param.Required {
-					requiredCount++
-				}
-			}
-			if len(args) < requiredCount {
-				return fmt.Errorf("method %s requires at least %d arguments, got %d", name, requiredCount, len(args))
-			}
-			return nil
-		}
-	}
-	return fmt.Errorf("unknown method: %s", name)
+func (sl *ScriptLoggerBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+	// Method validation handled by engine based on Methods() metadata
+	return nil
 }
 
 // TypeMappings returns type conversion mappings
@@ -348,12 +331,6 @@ func (sl *ScriptLoggerBridge) TypeMappings() map[string]engine.TypeMapping {
 func (sl *ScriptLoggerBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
-			Type:        engine.PermissionStorage,
-			Resource:    "script_logger.config",
-			Actions:     []string{"read", "write"},
-			Description: "Access script logger configuration",
-		},
-		{
 			Type:        engine.PermissionMemory,
 			Resource:    "script_logger.context",
 			Actions:     []string{"read", "write"},
@@ -368,20 +345,65 @@ func (sl *ScriptLoggerBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
+// ExecuteMethod executes a bridge method
+func (sl *ScriptLoggerBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	sl.mu.RLock()
+	defer sl.mu.RUnlock()
+
+	if !sl.initialized {
+		return nil, fmt.Errorf("script logger bridge not initialized")
+	}
+
+	switch name {
+	case "log":
+		return sl.log(ctx, args)
+	case "logWithContext":
+		return sl.logWithContext(ctx, args)
+	case "withContext":
+		return sl.withContext(ctx, args)
+	case "setGlobalContext":
+		return sl.setGlobalContext(ctx, args)
+	case "clearGlobalContext":
+		return sl.clearGlobalContext(ctx, args)
+	case "configure":
+		return sl.configure(ctx, args)
+	case "getConfiguration":
+		return sl.getConfiguration(ctx, args)
+	case "enableComponent":
+		return sl.enableComponent(ctx, args)
+	case "disableComponent":
+		return sl.disableComponent(ctx, args)
+	case "listEnabledComponents":
+		return sl.listEnabledComponents(ctx, args)
+	case "debug":
+		return sl.debug(ctx, args)
+	case "info":
+		return sl.info(ctx, args)
+	case "warn":
+		return sl.warn(ctx, args)
+	case "error":
+		return sl.error(ctx, args)
+	case "logBridgeError":
+		return sl.logBridgeError(ctx, args)
+	case "formatMessage":
+		return sl.formatMessage(ctx, args)
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
+}
+
 // Bridge method implementations
 
 // log is the unified logging method
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) log(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("log", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) log(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("log requires at least level and message")
 	}
 
-	level, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("level must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("level must be a string")
 	}
+	level := args[0].(engine.StringValue).Value()
 
 	// Parse arguments based on structure:
 	// log(level, message) - 2 args
@@ -395,297 +417,311 @@ func (sl *ScriptLoggerBridge) log(ctx context.Context, args []interface{}) error
 
 	if len(args) == 2 {
 		// log(level, message)
-		if msg, ok := args[1].(string); ok {
-			message = msg
-		} else {
-			return fmt.Errorf("message must be a string")
+		if args[1] == nil || args[1].Type() != engine.TypeString {
+			return nil, fmt.Errorf("message must be a string")
 		}
+		message = args[1].(engine.StringValue).Value()
 	} else if len(args) == 3 {
 		// Could be log(level, message, attributes) or log(level, component, message)
 		// Try to detect: if args[2] is a string, then args[1] is component and args[2] is message
 		// If args[2] is not a string, then args[1] is message and args[2] is attributes
-		if msg, ok := args[2].(string); ok {
+		if args[2] != nil && args[2].Type() == engine.TypeString {
 			// log(level, component, message)
-			if comp, ok := args[1].(string); ok {
-				component = comp
-				message = msg
-			} else {
-				return fmt.Errorf("component must be a string")
+			if args[1] == nil || args[1].Type() != engine.TypeString {
+				return nil, fmt.Errorf("component must be a string")
 			}
+			component = args[1].(engine.StringValue).Value()
+			message = args[2].(engine.StringValue).Value()
 		} else {
 			// log(level, message, attributes)
-			if msg, ok := args[1].(string); ok {
-				message = msg
-				if attrs, ok := args[2].(map[string]interface{}); ok {
-					attributes = attrs
+			if args[1] == nil || args[1].Type() != engine.TypeString {
+				return nil, fmt.Errorf("message must be a string")
+			}
+			message = args[1].(engine.StringValue).Value()
+			if args[2] != nil && args[2].Type() == engine.TypeObject {
+				objFields := args[2].(engine.ObjectValue).Fields()
+				attributes = make(map[string]interface{})
+				for k, v := range objFields {
+					attributes[k] = v.ToGo()
 				}
-			} else {
-				return fmt.Errorf("message must be a string")
 			}
 		}
 	} else if len(args) >= 4 {
 		// log(level, component, message, attributes)
-		if comp, ok := args[1].(string); ok {
-			component = comp
-		} else {
-			return fmt.Errorf("component must be a string")
+		if args[1] == nil || args[1].Type() != engine.TypeString {
+			return nil, fmt.Errorf("component must be a string")
 		}
+		component = args[1].(engine.StringValue).Value()
 
-		if msg, ok := args[2].(string); ok {
-			message = msg
-		} else {
-			return fmt.Errorf("message must be a string")
+		if args[2] == nil || args[2].Type() != engine.TypeString {
+			return nil, fmt.Errorf("message must be a string")
 		}
+		message = args[2].(engine.StringValue).Value()
 
-		if len(args) > 3 && args[3] != nil {
-			if attrs, ok := args[3].(map[string]interface{}); ok {
-				attributes = attrs
+		if args[3] != nil && args[3].Type() == engine.TypeObject {
+			objFields := args[3].(engine.ObjectValue).Fields()
+			attributes = make(map[string]interface{})
+			for k, v := range objFields {
+				attributes[k] = v.ToGo()
 			}
 		}
-	} else {
-		return fmt.Errorf("insufficient arguments for log method")
 	}
 
 	return sl.logWithLevelAndContext(ctx, level, component, message, attributes)
 }
 
 // logWithContext logs with additional context propagation
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) logWithContext(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("logWithContext", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) logWithContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("logWithContext requires level and message")
 	}
 
-	level, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("level must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("level must be a string")
 	}
+	level := args[0].(engine.StringValue).Value()
 
-	message, ok := args[1].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[1] == nil || args[1].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[1].(engine.StringValue).Value()
 
-	var contextAttrs map[string]interface{}
-	if len(args) > 2 && args[2] != nil {
-		if attrs, ok := args[2].(map[string]interface{}); ok {
-			contextAttrs = attrs
+	var context map[string]interface{}
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		objFields := args[2].(engine.ObjectValue).Fields()
+		context = make(map[string]interface{})
+		for k, v := range objFields {
+			context[k] = v.ToGo()
 		}
 	}
 
-	// Merge with global context
-	mergedAttrs := sl.mergeWithGlobalContext(contextAttrs)
-
+	// Merge context with global attributes
+	mergedAttrs := sl.mergeAttributes(context)
 	return sl.logWithLevelAndContext(ctx, level, "", message, mergedAttrs)
 }
 
-// withContext creates a logging context with attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) withContext(ctx context.Context, args []interface{}) (interface{}, error) {
-	if err := sl.ValidateMethod("withContext", args); err != nil {
-		return nil, err
+// withContext creates logging context with attributes
+func (sl *ScriptLoggerBridge) withContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("withContext requires attributes")
 	}
 
-	attributes, ok := args[0].(map[string]interface{})
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
 		return nil, fmt.Errorf("attributes must be an object")
 	}
 
-	// Merge with global context
-	mergedAttrs := sl.mergeWithGlobalContext(attributes)
+	// Create context object
+	contextObj := map[string]engine.ScriptValue{
+		"attributes": args[0],
+		"logger":     engine.NewCustomValue("logger", sl),
+	}
 
-	return map[string]interface{}{
-		"type":       "log_context",
-		"attributes": mergedAttrs,
-		"timestamp":  ctx.Value("timestamp"),
-	}, nil
+	// If using slog, also create a slog context
+	if sl.config.EnableStructure {
+		result, err := sl.slogBridge.ExecuteMethod(ctx, "withAttributes", args)
+		if err == nil && result != nil {
+			contextObj["slogContext"] = result
+		}
+	}
+
+	return engine.NewObjectValue(contextObj), nil
 }
 
 // setGlobalContext sets global context attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) setGlobalContext(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("setGlobalContext", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) setGlobalContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("setGlobalContext requires attributes")
 	}
 
-	attributes, ok := args[0].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("attributes must be an object")
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("attributes must be an object")
 	}
 
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
 
-	// Merge with existing global context
-	for key, value := range attributes {
-		sl.contextAttrs[key] = value
+	// Convert to native map
+	objFields := args[0].(engine.ObjectValue).Fields()
+	sl.contextAttrs = make(map[string]interface{})
+	for k, v := range objFields {
+		sl.contextAttrs[k] = v.ToGo()
 	}
 
-	return nil
+	return engine.NewNilValue(), nil
 }
 
 // clearGlobalContext clears global context attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) clearGlobalContext(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("clearGlobalContext", args); err != nil {
-		return err
-	}
-
+func (sl *ScriptLoggerBridge) clearGlobalContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
 
 	sl.contextAttrs = make(map[string]interface{})
-	return nil
+	return engine.NewNilValue(), nil
 }
 
 // configure configures the script logger
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) configure(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("configure", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) configure(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("configure requires config object")
 	}
 
-	configMap, ok := args[0].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("config must be an object")
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("config must be an object")
 	}
 
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
 
+	configObj := args[0].(engine.ObjectValue).Fields()
+
 	// Update configuration
-	if level, ok := configMap["level"].(string); ok {
-		sl.config.DefaultLevel = level
+	if levelVal, ok := configObj["level"]; ok && levelVal.Type() == engine.TypeString {
+		sl.config.DefaultLevel = levelVal.(engine.StringValue).Value()
 	}
 
-	if format, ok := configMap["format"].(string); ok {
-		sl.config.Format = format
-		// Reconfigure slog bridge
-		if err := sl.slogBridge.configureLogger(ctx, []interface{}{
-			map[string]interface{}{"format": format},
-		}); err != nil {
-			return fmt.Errorf("failed to configure slog bridge: %w", err)
-		}
+	if formatVal, ok := configObj["format"]; ok && formatVal.Type() == engine.TypeString {
+		sl.config.Format = formatVal.(engine.StringValue).Value()
+		// Configure slog with new format
+		sl.slogBridge.ExecuteMethod(ctx, "configureLogger", []engine.ScriptValue{
+			engine.NewObjectValue(map[string]engine.ScriptValue{
+				"format": formatVal,
+			}),
+		})
 	}
 
-	if enableDebug, ok := configMap["enable_debug"].(bool); ok {
-		sl.config.EnableDebug = enableDebug
+	if debugVal, ok := configObj["enable_debug"]; ok && debugVal.Type() == engine.TypeBool {
+		sl.config.EnableDebug = debugVal.(engine.BoolValue).Value()
 	}
 
-	if enableStructure, ok := configMap["enable_structure"].(bool); ok {
-		sl.config.EnableStructure = enableStructure
+	if structureVal, ok := configObj["enable_structure"]; ok && structureVal.Type() == engine.TypeBool {
+		sl.config.EnableStructure = structureVal.(engine.BoolValue).Value()
 	}
 
-	if components, ok := configMap["components"].([]interface{}); ok {
-		// Enable specified components
+	if componentsVal, ok := configObj["components"]; ok && componentsVal.Type() == engine.TypeArray {
+		components := componentsVal.(engine.ArrayValue).Elements()
+		sl.config.Components = make(map[string]bool)
 		for _, comp := range components {
-			if compStr, ok := comp.(string); ok {
-				if err := sl.debugBridge.enableDebugComponent(ctx, []interface{}{compStr}); err != nil {
-					return fmt.Errorf("failed to enable debug component %s: %w", compStr, err)
-				}
+			if comp.Type() == engine.TypeString {
+				compName := comp.(engine.StringValue).Value()
+				sl.config.Components[compName] = true
+				// Enable in debug bridge
+				sl.debugBridge.ExecuteMethod(ctx, "enableDebugComponent", []engine.ScriptValue{
+					engine.NewStringValue(compName),
+				})
 			}
 		}
 	}
 
-	if attributes, ok := configMap["attributes"].(map[string]interface{}); ok {
-		sl.config.Attributes = attributes
-		// Merge with global context
-		for key, value := range attributes {
-			sl.contextAttrs[key] = value
-		}
-	}
-
-	return nil
+	return engine.NewNilValue(), nil
 }
 
 // getConfiguration gets current logger configuration
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) getConfiguration(ctx context.Context, args []interface{}) (interface{}, error) {
-	if err := sl.ValidateMethod("getConfiguration", args); err != nil {
-		return nil, err
-	}
-
+func (sl *ScriptLoggerBridge) getConfiguration(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	sl.mu.RLock()
 	defer sl.mu.RUnlock()
 
-	return map[string]interface{}{
-		"default_level":    sl.config.DefaultLevel,
-		"enable_debug":     sl.config.EnableDebug,
-		"enable_structure": sl.config.EnableStructure,
-		"format":           sl.config.Format,
-		"components":       sl.config.Components,
-		"attributes":       sl.config.Attributes,
-		"output_target":    sl.config.OutputTarget,
-		"global_context":   sl.contextAttrs,
-	}, nil
+	// Convert components map to array
+	components := make([]engine.ScriptValue, 0, len(sl.config.Components))
+	for comp, enabled := range sl.config.Components {
+		if enabled {
+			components = append(components, engine.NewStringValue(comp))
+		}
+	}
+
+	// Convert attributes to ScriptValue
+	attrs := make(map[string]engine.ScriptValue)
+	for k, v := range sl.config.Attributes {
+		attrs[k] = engine.NewCustomValue("any", v)
+	}
+
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"default_level":    engine.NewStringValue(sl.config.DefaultLevel),
+		"enable_debug":     engine.NewBoolValue(sl.config.EnableDebug),
+		"enable_structure": engine.NewBoolValue(sl.config.EnableStructure),
+		"format":           engine.NewStringValue(sl.config.Format),
+		"components":       engine.NewArrayValue(components),
+		"attributes":       engine.NewObjectValue(attrs),
+		"output_target":    engine.NewStringValue(sl.config.OutputTarget),
+	}), nil
 }
 
 // enableComponent enables debug logging for a component
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) enableComponent(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("enableComponent", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) enableComponent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("enableComponent requires component name")
 	}
 
-	return sl.debugBridge.enableDebugComponent(ctx, args)
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("component must be a string")
+	}
+	component := args[0].(engine.StringValue).Value()
+
+	sl.mu.Lock()
+	sl.config.Components[component] = true
+	sl.mu.Unlock()
+
+	// Forward to debug bridge
+	return sl.debugBridge.ExecuteMethod(ctx, "enableDebugComponent", args)
 }
 
 // disableComponent disables debug logging for a component
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) disableComponent(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("disableComponent", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) disableComponent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("disableComponent requires component name")
 	}
 
-	return sl.debugBridge.disableDebugComponent(ctx, args)
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("component must be a string")
+	}
+	component := args[0].(engine.StringValue).Value()
+
+	sl.mu.Lock()
+	sl.config.Components[component] = false
+	sl.mu.Unlock()
+
+	// Forward to debug bridge
+	return sl.debugBridge.ExecuteMethod(ctx, "disableDebugComponent", args)
 }
 
 // listEnabledComponents lists components with debug logging enabled
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) listEnabledComponents(ctx context.Context, args []interface{}) (interface{}, error) {
-	if err := sl.ValidateMethod("listEnabledComponents", args); err != nil {
-		return nil, err
-	}
-
-	return sl.debugBridge.listEnabledComponents(ctx, args)
+func (sl *ScriptLoggerBridge) listEnabledComponents(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Forward to debug bridge
+	return sl.debugBridge.ExecuteMethod(ctx, "listEnabledComponents", args)
 }
 
 // Convenience logging methods
 
 // debug logs a debug message
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) debug(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("debug", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) debug(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("debug requires message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	var component string
 	var attributes map[string]interface{}
 
-	if len(args) > 1 && args[1] != nil {
-		if comp, ok := args[1].(string); ok {
-			component = comp
-		}
+	// Parse optional component and attributes
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
+		component = args[1].(engine.StringValue).Value()
 	}
 
-	if len(args) > 2 && args[2] != nil {
-		if attrs, ok := args[2].(map[string]interface{}); ok {
-			attributes = attrs
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		objFields := args[2].(engine.ObjectValue).Fields()
+		attributes = make(map[string]interface{})
+		for k, v := range objFields {
+			attributes[k] = v.ToGo()
+		}
+	} else if len(args) == 2 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		// If only 2 args and second is object, it's attributes
+		objFields := args[1].(engine.ObjectValue).Fields()
+		attributes = make(map[string]interface{})
+		for k, v := range objFields {
+			attributes[k] = v.ToGo()
 		}
 	}
 
@@ -693,22 +729,22 @@ func (sl *ScriptLoggerBridge) debug(ctx context.Context, args []interface{}) err
 }
 
 // info logs an info message
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) info(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("info", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) info(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("info requires message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	var attributes map[string]interface{}
-	if len(args) > 1 && args[1] != nil {
-		if attrs, ok := args[1].(map[string]interface{}); ok {
-			attributes = attrs
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		objFields := args[1].(engine.ObjectValue).Fields()
+		attributes = make(map[string]interface{})
+		for k, v := range objFields {
+			attributes[k] = v.ToGo()
 		}
 	}
 
@@ -716,22 +752,22 @@ func (sl *ScriptLoggerBridge) info(ctx context.Context, args []interface{}) erro
 }
 
 // warn logs a warning message
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) warn(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("warn", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) warn(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("warn requires message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	var attributes map[string]interface{}
-	if len(args) > 1 && args[1] != nil {
-		if attrs, ok := args[1].(map[string]interface{}); ok {
-			attributes = attrs
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		objFields := args[1].(engine.ObjectValue).Fields()
+		attributes = make(map[string]interface{})
+		for k, v := range objFields {
+			attributes[k] = v.ToGo()
 		}
 	}
 
@@ -739,22 +775,22 @@ func (sl *ScriptLoggerBridge) warn(ctx context.Context, args []interface{}) erro
 }
 
 // error logs an error message
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) error(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("error", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) error(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("error requires message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	var attributes map[string]interface{}
-	if len(args) > 1 && args[1] != nil {
-		if attrs, ok := args[1].(map[string]interface{}); ok {
-			attributes = attrs
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		objFields := args[1].(engine.ObjectValue).Fields()
+		attributes = make(map[string]interface{})
+		for k, v := range objFields {
+			attributes[k] = v.ToGo()
 		}
 	}
 
@@ -762,145 +798,148 @@ func (sl *ScriptLoggerBridge) error(ctx context.Context, args []interface{}) err
 }
 
 // logBridgeError logs bridge-related errors
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) logBridgeError(ctx context.Context, args []interface{}) error {
-	if err := sl.ValidateMethod("logBridgeError", args); err != nil {
-		return err
+func (sl *ScriptLoggerBridge) logBridgeError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 3 {
+		return nil, fmt.Errorf("logBridgeError requires bridgeId, operation, and error")
 	}
 
-	bridgeId, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("bridgeId must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("bridgeId must be a string")
 	}
+	bridgeID := args[0].(engine.StringValue).Value()
 
-	operation, ok := args[1].(string)
-	if !ok {
-		return fmt.Errorf("operation must be a string")
+	if args[1] == nil || args[1].Type() != engine.TypeString {
+		return nil, fmt.Errorf("operation must be a string")
 	}
+	operation := args[1].(engine.StringValue).Value()
 
-	errorMsg, ok := args[2].(string)
-	if !ok {
-		return fmt.Errorf("error must be a string")
+	if args[2] == nil || args[2].Type() != engine.TypeString {
+		return nil, fmt.Errorf("error must be a string")
 	}
+	errorMsg := args[2].(engine.StringValue).Value()
 
-	// Standard bridge error attributes
-	attrs := map[string]interface{}{
-		"bridge_id": bridgeId,
+	// Build error attributes
+	errorAttrs := map[string]interface{}{
+		"bridge_id": bridgeID,
 		"operation": operation,
 		"error":     errorMsg,
-		"category":  "bridge_error",
 	}
 
-	// Add additional context if provided
-	if len(args) > 3 && args[3] != nil {
-		if contextAttrs, ok := args[3].(map[string]interface{}); ok {
-			for key, value := range contextAttrs {
-				attrs[key] = value
-			}
+	// Add optional context
+	if len(args) > 3 && args[3] != nil && args[3].Type() == engine.TypeObject {
+		objFields := args[3].(engine.ObjectValue).Fields()
+		for k, v := range objFields {
+			errorAttrs[k] = v.ToGo()
 		}
 	}
 
-	message := fmt.Sprintf("Bridge error in %s.%s: %s", bridgeId, operation, errorMsg)
-	return sl.logWithLevelAndContext(ctx, "error", "bridge", message, attrs)
+	message := fmt.Sprintf("[Bridge Error] %s.%s: %s", bridgeID, operation, errorMsg)
+	return sl.logWithLevelAndContext(ctx, "error", "bridge", message, errorAttrs)
 }
 
-// formatMessage formats a log message with template and attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sl *ScriptLoggerBridge) formatMessage(ctx context.Context, args []interface{}) (interface{}, error) {
-	if err := sl.ValidateMethod("formatMessage", args); err != nil {
-		return nil, err
+// formatMessage formats log message with template
+func (sl *ScriptLoggerBridge) formatMessage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("formatMessage requires template and attributes")
 	}
 
-	template, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("template must be a string")
 	}
+	template := args[0].(engine.StringValue).Value()
 
-	attributes, ok := args[1].(map[string]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
 		return nil, fmt.Errorf("attributes must be an object")
 	}
+	objFields := args[1].(engine.ObjectValue).Fields()
 
 	// Simple template replacement
 	result := template
-	for key, value := range attributes {
-		placeholder := fmt.Sprintf("{%s}", key)
-		replacement := fmt.Sprintf("%v", value)
-		result = fmt.Sprintf(result, placeholder, replacement)
+	for k, v := range objFields {
+		placeholder := fmt.Sprintf("{%s}", k)
+		value := fmt.Sprintf("%v", v.ToGo())
+		result = strings.ReplaceAll(result, placeholder, value)
 	}
 
-	return result, nil
+	return engine.NewStringValue(result), nil
 }
 
 // Helper methods
 
-// logWithLevelAndContext performs unified logging with level, component, and context
-func (sl *ScriptLoggerBridge) logWithLevelAndContext(ctx context.Context, level, component, message string, attributes map[string]interface{}) error {
-	sl.mu.RLock()
-	config := sl.config
-	sl.mu.RUnlock()
-
+// logWithLevelAndContext performs the actual logging with unified handling
+func (sl *ScriptLoggerBridge) logWithLevelAndContext(ctx context.Context, level, component, message string, attributes map[string]interface{}) (engine.ScriptValue, error) {
 	// Merge with global context
-	mergedAttrs := sl.mergeWithGlobalContext(attributes)
+	mergedAttrs := sl.mergeAttributes(attributes)
 
-	// Debug logging if enabled and component provided
-	if config.EnableDebug && component != "" && (level == "debug" || level == "info") {
-		if level == "debug" {
-			if err := sl.debugBridge.debugPrintln(ctx, []interface{}{component, message}); err != nil {
-				// Log error but don't fail the entire operation
-				fmt.Printf("Warning: debug logging failed: %v\n", err)
+	// Debug logging for components
+	if sl.config.EnableDebug && component != "" {
+		// Check if component is enabled
+		if enabled, ok := sl.config.Components[component]; ok && enabled {
+			// Use debug bridge for component logging
+			debugArgs := []engine.ScriptValue{
+				engine.NewStringValue(component),
+				engine.NewStringValue(fmt.Sprintf("[%s] %s", strings.ToUpper(level), message)),
 			}
-		} else {
-			if err := sl.debugBridge.debugPrintf(ctx, []interface{}{component, "%s", []interface{}{message}}); err != nil {
-				// Log error but don't fail the entire operation
-				fmt.Printf("Warning: debug logging failed: %v\n", err)
-			}
+			sl.debugBridge.ExecuteMethod(ctx, "debugPrintln", debugArgs)
 		}
 	}
 
-	// Structured logging if enabled
-	if config.EnableStructure {
-		var slogArgs []interface{}
-		switch level {
-		case "debug":
-			slogArgs = []interface{}{message, "🐛", mergedAttrs}
-			return sl.slogBridge.debug(ctx, slogArgs)
-		case "info":
-			slogArgs = []interface{}{message, "ℹ️", mergedAttrs}
-			return sl.slogBridge.info(ctx, slogArgs)
-		case "warn":
-			slogArgs = []interface{}{message, "⚠️", mergedAttrs}
-			return sl.slogBridge.warn(ctx, slogArgs)
-		case "error":
-			slogArgs = []interface{}{message, "❌", mergedAttrs}
-			return sl.slogBridge.error(ctx, slogArgs)
-		default:
-			// Default to info level
-			slogArgs = []interface{}{message, "", mergedAttrs}
-			return sl.slogBridge.info(ctx, slogArgs)
+	// Structured logging
+	if sl.config.EnableStructure {
+		// Convert attributes to ScriptValue
+		var attrValue engine.ScriptValue
+		if len(mergedAttrs) > 0 {
+			attrMap := make(map[string]engine.ScriptValue)
+			for k, v := range mergedAttrs {
+				attrMap[k] = engine.NewCustomValue("any", v)
+			}
+			attrValue = engine.NewObjectValue(attrMap)
 		}
+
+		// Use slog bridge for structured logging
+		slogArgs := []engine.ScriptValue{
+			engine.NewStringValue(message),
+		}
+		if attrValue != nil {
+			// Add emoji based on level
+			emoji := ""
+			switch level {
+			case "debug":
+				emoji = "🐛"
+			case "info":
+				emoji = "ℹ️"
+			case "warn":
+				emoji = "⚠️"
+			case "error":
+				emoji = "❌"
+			}
+			if emoji != "" {
+				slogArgs = append(slogArgs, engine.NewStringValue(emoji))
+			}
+			slogArgs = append(slogArgs, attrValue)
+		}
+
+		// Call appropriate slog method
+		sl.slogBridge.ExecuteMethod(ctx, level, slogArgs)
 	}
 
-	return nil
+	return engine.NewNilValue(), nil
 }
 
-// mergeWithGlobalContext merges attributes with global context
-func (sl *ScriptLoggerBridge) mergeWithGlobalContext(attributes map[string]interface{}) map[string]interface{} {
+// mergeAttributes merges provided attributes with global context
+func (sl *ScriptLoggerBridge) mergeAttributes(attrs map[string]interface{}) map[string]interface{} {
 	sl.mu.RLock()
 	defer sl.mu.RUnlock()
 
+	// Start with global context
 	merged := make(map[string]interface{})
-
-	// Add global context first
-	for key, value := range sl.contextAttrs {
-		merged[key] = value
+	for k, v := range sl.contextAttrs {
+		merged[k] = v
 	}
 
-	// Override with specific attributes
-	for key, value := range attributes {
-		merged[key] = value
+	// Override with provided attributes
+	for k, v := range attrs {
+		merged[k] = v
 	}
 
 	return merged

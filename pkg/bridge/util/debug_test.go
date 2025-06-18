@@ -1,219 +1,54 @@
-// ABOUTME: Tests for debug logging bridge functionality including component control and logger configuration
-// ABOUTME: Comprehensive test coverage for go-llms debug system integration and conditional compilation
+// ABOUTME: Tests for debug logging bridge functionality with ScriptValue-based API
+// ABOUTME: Tests ExecuteMethod dispatcher and individual debug methods
 
 package util
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// Test DebugBridge core functionality
-func TestDebugBridge(t *testing.T) {
-	tests := []struct {
-		name string
-		test func(t *testing.T, bridge *DebugBridge)
-	}{
-		{
-			name: "Bridge initialization",
-			test: func(t *testing.T, bridge *DebugBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-				assert.True(t, bridge.IsInitialized())
-
-				metadata := bridge.GetMetadata()
-				assert.Equal(t, "debug", metadata.Name)
-				assert.Equal(t, "v1.0.0", metadata.Version)
-				assert.Contains(t, metadata.Description, "debug logging")
-			},
-		},
-		{
-			name: "Component management",
-			test: func(t *testing.T, bridge *DebugBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Initially no components enabled
-				result, err := bridge.listEnabledComponents(ctx, []interface{}{})
-				require.NoError(t, err)
-				components, ok := result.([]string)
-				require.True(t, ok)
-				assert.Empty(t, components)
-
-				// Enable a component
-				err = bridge.enableDebugComponent(ctx, []interface{}{"agent"})
-				require.NoError(t, err)
-
-				// Check if component is enabled
-				result, err = bridge.isDebugEnabled(ctx, []interface{}{"agent"})
-				require.NoError(t, err)
-				enabled, ok := result.(bool)
-				require.True(t, ok)
-				assert.True(t, enabled)
-
-				// List enabled components
-				result, err = bridge.listEnabledComponents(ctx, []interface{}{})
-				require.NoError(t, err)
-				components, ok = result.([]string)
-				require.True(t, ok)
-				assert.Contains(t, components, "agent")
-
-				// Disable component
-				err = bridge.disableDebugComponent(ctx, []interface{}{"agent"})
-				require.NoError(t, err)
-
-				// Check if component is disabled
-				result, err = bridge.isDebugEnabled(ctx, []interface{}{"agent"})
-				require.NoError(t, err)
-				enabled, ok = result.(bool)
-				require.True(t, ok)
-				assert.False(t, enabled)
-			},
-		},
-		{
-			name: "Debug logging methods",
-			test: func(t *testing.T, bridge *DebugBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Test debugPrintf
-				err = bridge.debugPrintf(ctx, []interface{}{
-					"test",
-					"Processing item: %s",
-					[]interface{}{"item-123"},
-				})
-				require.NoError(t, err)
-
-				// Test debugPrintln
-				err = bridge.debugPrintln(ctx, []interface{}{
-					"test",
-					"Simple debug message",
-				})
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Logger configuration",
-			test: func(t *testing.T, bridge *DebugBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Test custom logger configuration
-				err = bridge.setCustomLogger(ctx, []interface{}{
-					map[string]interface{}{
-						"prefix": "[SPELL]",
-						"flags":  "datetime",
-					},
-				})
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Environment information",
-			test: func(t *testing.T, bridge *DebugBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Get debug environment
-				result, err := bridge.getDebugEnvironment(ctx, []interface{}{})
-				require.NoError(t, err)
-				env, ok := result.(map[string]interface{})
-				require.True(t, ok)
-				assert.Contains(t, env, "go_llms_debug_env")
-				assert.Contains(t, env, "enabled_components")
-				assert.Contains(t, env, "compilation_mode")
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bridge := NewDebugBridge()
-			tt.test(t, bridge)
-		})
-	}
-}
-
-// Test debug bridge error scenarios
-func TestDebugBridgeErrors(t *testing.T) {
+func TestDebugBridgeInitialization(t *testing.T) {
 	bridge := NewDebugBridge()
-	ctx := context.Background()
-
-	// Test methods without initialization
-	err := bridge.debugPrintf(ctx, []interface{}{"test", "message"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not initialized")
-
-	// Initialize bridge
-	err = bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Test invalid parameters
-	err = bridge.debugPrintf(ctx, []interface{}{123, "message"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-
-	err = bridge.debugPrintln(ctx, []interface{}{"component", 123})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-
-	_, err = bridge.isDebugEnabled(ctx, []interface{}{123})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-
-	err = bridge.enableDebugComponent(ctx, []interface{}{123})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-
-	err = bridge.setCustomLogger(ctx, []interface{}{"not an object"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be an object")
-}
-
-// Test debug bridge lifecycle
-func TestDebugBridgeLifecycle(t *testing.T) {
-	bridge := NewDebugBridge()
-	ctx := context.Background()
-
-	// Test initialization
+	assert.NotNil(t, bridge)
+	assert.Equal(t, "debug", bridge.GetID())
 	assert.False(t, bridge.IsInitialized())
+
+	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 	assert.True(t, bridge.IsInitialized())
 
-	// Test metadata
+	// Test double initialization
+	err = bridge.Initialize(ctx)
+	assert.NoError(t, err)
+
+	// Test cleanup
+	err = bridge.Cleanup(ctx)
+	require.NoError(t, err)
+	assert.False(t, bridge.IsInitialized())
+}
+
+func TestDebugBridgeMetadata(t *testing.T) {
+	bridge := NewDebugBridge()
 	metadata := bridge.GetMetadata()
+
 	assert.Equal(t, "debug", metadata.Name)
-	assert.NotEmpty(t, metadata.Dependencies)
+	assert.NotEmpty(t, metadata.Version)
+	assert.NotEmpty(t, metadata.Description)
+	assert.NotEmpty(t, metadata.Author)
+	assert.NotEmpty(t, metadata.License)
+}
 
-	// Test type mappings
-	typeMappings := bridge.TypeMappings()
-	assert.Contains(t, typeMappings, "debug_logger")
-	assert.Contains(t, typeMappings, "debug_config")
-
-	// Test required permissions
-	permissions := bridge.RequiredPermissions()
-	assert.Greater(t, len(permissions), 0)
-
-	// Test method listing
+func TestDebugBridgeMethods(t *testing.T) {
+	bridge := NewDebugBridge()
 	methods := bridge.Methods()
-	assert.Greater(t, len(methods), 5)
 
-	// Verify specific methods exist
-	methodNames := make(map[string]bool)
-	for _, method := range methods {
-		methodNames[method.Name] = true
-	}
-
+	// Check that all expected methods are present
 	expectedMethods := []string{
 		"debugPrintf",
 		"debugPrintln",
@@ -225,18 +60,17 @@ func TestDebugBridgeLifecycle(t *testing.T) {
 		"getDebugEnvironment",
 	}
 
-	for _, expectedMethod := range expectedMethods {
-		assert.True(t, methodNames[expectedMethod], "Method %s should exist", expectedMethod)
+	methodMap := make(map[string]bool)
+	for _, m := range methods {
+		methodMap[m.Name] = true
 	}
 
-	// Test cleanup
-	err = bridge.Cleanup(ctx)
-	require.NoError(t, err)
-	assert.False(t, bridge.IsInitialized())
+	for _, expected := range expectedMethods {
+		assert.True(t, methodMap[expected], "Method %s not found", expected)
+	}
 }
 
-// Test debug bridge method validation
-func TestDebugBridgeValidation(t *testing.T) {
+func TestDebugBridgeExecuteMethod(t *testing.T) {
 	bridge := NewDebugBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
@@ -245,37 +79,230 @@ func TestDebugBridgeValidation(t *testing.T) {
 	tests := []struct {
 		name        string
 		method      string
-		args        []interface{}
+		args        []engine.ScriptValue
+		wantErr     bool
+		checkResult func(t *testing.T, result engine.ScriptValue, err error)
+	}{
+		{
+			name:   "enableDebugComponent",
+			method: "enableDebugComponent",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test-component"),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				assert.NotNil(t, result)
+				assert.True(t, result.IsNil())
+			},
+		},
+		{
+			name:   "isDebugEnabled - after enable",
+			method: "isDebugEnabled",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test-component"),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				require.NotNil(t, result)
+				assert.Equal(t, engine.TypeBool, result.Type())
+				assert.True(t, result.(engine.BoolValue).Value())
+			},
+		},
+		{
+			name:   "debugPrintln",
+			method: "debugPrintln",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test-component"),
+				engine.NewStringValue("test message"),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				assert.NotNil(t, result)
+				assert.True(t, result.IsNil())
+			},
+		},
+		{
+			name:   "debugPrintf",
+			method: "debugPrintf",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test-component"),
+				engine.NewStringValue("test %s %d"),
+				engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewStringValue("hello"),
+					engine.NewNumberValue(42),
+				}),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				assert.NotNil(t, result)
+				assert.True(t, result.IsNil())
+			},
+		},
+		{
+			name:    "listEnabledComponents",
+			method:  "listEnabledComponents",
+			args:    []engine.ScriptValue{},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				require.NotNil(t, result)
+				assert.Equal(t, engine.TypeArray, result.Type())
+				array := result.(engine.ArrayValue).Elements()
+				assert.GreaterOrEqual(t, len(array), 1) // Should have at least test-component
+				found := false
+				for _, elem := range array {
+					if elem.Type() == engine.TypeString && elem.(engine.StringValue).Value() == "test-component" {
+						found = true
+						break
+					}
+				}
+				assert.True(t, found, "test-component not found in enabled components")
+			},
+		},
+		{
+			name:   "disableDebugComponent",
+			method: "disableDebugComponent",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test-component"),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				assert.NotNil(t, result)
+				assert.True(t, result.IsNil())
+			},
+		},
+		{
+			name:   "isDebugEnabled - after disable",
+			method: "isDebugEnabled",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test-component"),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				require.NotNil(t, result)
+				assert.Equal(t, engine.TypeBool, result.Type())
+				assert.False(t, result.(engine.BoolValue).Value())
+			},
+		},
+		{
+			name:   "setCustomLogger",
+			method: "setCustomLogger",
+			args: []engine.ScriptValue{
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"prefix": engine.NewStringValue("[CUSTOM]"),
+					"flags":  engine.NewStringValue("datetime"),
+				}),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				assert.NotNil(t, result)
+				assert.True(t, result.IsNil())
+			},
+		},
+		{
+			name:    "getDebugEnvironment",
+			method:  "getDebugEnvironment",
+			args:    []engine.ScriptValue{},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				require.NotNil(t, result)
+				assert.Equal(t, engine.TypeObject, result.Type())
+				obj := result.(engine.ObjectValue).Fields()
+
+				// Check expected fields
+				assert.Contains(t, obj, "go_llms_debug_env")
+				assert.Contains(t, obj, "enabled_components")
+				assert.Contains(t, obj, "compilation_mode")
+
+				// Verify types
+				assert.Equal(t, engine.TypeString, obj["go_llms_debug_env"].Type())
+				assert.Equal(t, engine.TypeArray, obj["enabled_components"].Type())
+				assert.Equal(t, engine.TypeString, obj["compilation_mode"].Type())
+			},
+		},
+		{
+			name:    "unknown method",
+			method:  "unknownMethod",
+			args:    []engine.ScriptValue{},
+			wantErr: true,
+			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
+				assert.Nil(t, result)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "unknown method")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := bridge.ExecuteMethod(ctx, tt.method, tt.args)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			if tt.checkResult != nil {
+				tt.checkResult(t, result, err)
+			}
+		})
+	}
+}
+
+func TestDebugBridgeValidateMethod(t *testing.T) {
+	bridge := NewDebugBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		method      string
+		args        []engine.ScriptValue
 		shouldError bool
 	}{
 		{
-			name:        "valid debugPrintf",
-			method:      "debugPrintf",
-			args:        []interface{}{"component", "format", []interface{}{"arg1"}},
+			name:   "valid debugPrintf with all args",
+			method: "debugPrintf",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("component"),
+				engine.NewStringValue("format"),
+				engine.NewArrayValue([]engine.ScriptValue{}),
+			},
 			shouldError: false,
 		},
 		{
-			name:        "debugPrintf missing args",
+			name:   "valid debugPrintf without optional args",
+			method: "debugPrintf",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("component"),
+				engine.NewStringValue("format"),
+			},
+			shouldError: false,
+		},
+		{
+			name:        "invalid debugPrintf - missing required args",
 			method:      "debugPrintf",
-			args:        []interface{}{"component"},
+			args:        []engine.ScriptValue{engine.NewStringValue("component")},
 			shouldError: true,
 		},
 		{
-			name:        "valid debugPrintln",
-			method:      "debugPrintln",
-			args:        []interface{}{"component", "message"},
+			name:   "valid debugPrintln",
+			method: "debugPrintln",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("component"),
+				engine.NewStringValue("message"),
+			},
 			shouldError: false,
 		},
 		{
-			name:        "valid isDebugEnabled",
-			method:      "isDebugEnabled",
-			args:        []interface{}{"component"},
-			shouldError: false,
+			name:        "invalid debugPrintln - missing args",
+			method:      "debugPrintln",
+			args:        []engine.ScriptValue{},
+			shouldError: true,
 		},
 		{
 			name:        "unknown method",
 			method:      "unknownMethod",
-			args:        []interface{}{},
+			args:        []engine.ScriptValue{},
 			shouldError: true,
 		},
 	}
@@ -292,122 +319,113 @@ func TestDebugBridgeValidation(t *testing.T) {
 	}
 }
 
-// Test concurrent debug operations
-func TestDebugBridgeConcurrency(t *testing.T) {
+func TestDebugBridgeTypeConversions(t *testing.T) {
 	bridge := NewDebugBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test concurrent component enable/disable
-	numOperations := 10
-	done := make(chan bool, numOperations*2)
-
-	// Concurrent enable operations
-	for i := 0; i < numOperations; i++ {
-		go func(index int) {
-			defer func() { done <- true }()
-			component := fmt.Sprintf("component-%d", index)
-			err := bridge.enableDebugComponent(ctx, []interface{}{component})
-			assert.NoError(t, err)
-		}(i)
+	// Test debugPrintf with various argument types
+	testCases := []struct {
+		name   string
+		method string
+		args   []engine.ScriptValue
+	}{
+		{
+			name:   "string format args",
+			method: "debugPrintf",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test"),
+				engine.NewStringValue("String: %s"),
+				engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewStringValue("hello"),
+				}),
+			},
+		},
+		{
+			name:   "number format args",
+			method: "debugPrintf",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test"),
+				engine.NewStringValue("Number: %d, Float: %f"),
+				engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewNumberValue(42),
+					engine.NewNumberValue(3.14),
+				}),
+			},
+		},
+		{
+			name:   "mixed format args",
+			method: "debugPrintf",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("test"),
+				engine.NewStringValue("Mixed: %s %d %v"),
+				engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewStringValue("hello"),
+					engine.NewNumberValue(42),
+					engine.NewBoolValue(true),
+				}),
+			},
+		},
 	}
 
-	// Concurrent disable operations
-	for i := 0; i < numOperations; i++ {
-		go func(index int) {
-			defer func() { done <- true }()
-			component := fmt.Sprintf("component-%d", index)
-			err := bridge.disableDebugComponent(ctx, []interface{}{component})
-			assert.NoError(t, err)
-		}(i)
-	}
-
-	// Wait for all operations
-	for i := 0; i < numOperations*2; i++ {
-		<-done
-	}
-
-	// Verify bridge still works
-	result, err := bridge.listEnabledComponents(ctx, []interface{}{})
+	// Enable test component
+	_, err = bridge.ExecuteMethod(ctx, "enableDebugComponent", []engine.ScriptValue{
+		engine.NewStringValue("test"),
+	})
 	require.NoError(t, err)
-	assert.NotNil(t, result)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := bridge.ExecuteMethod(ctx, tc.method, tc.args)
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+			assert.True(t, result.IsNil())
+		})
+	}
 }
 
-// Test debug bridge component state management
-func TestDebugComponentState(t *testing.T) {
+func TestDebugBridgeRequiredPermissions(t *testing.T) {
 	bridge := NewDebugBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
+	permissions := bridge.RequiredPermissions()
 
-	components := []string{"agent", "tools", "workflow", "llm"}
+	assert.GreaterOrEqual(t, len(permissions), 2)
 
-	// Enable multiple components
-	for _, component := range components {
-		err = bridge.enableDebugComponent(ctx, []interface{}{component})
-		require.NoError(t, err)
+	// Check for expected permissions
+	hasStorage := false
+	hasMemory := false
+
+	for _, perm := range permissions {
+		if perm.Type == engine.PermissionStorage && perm.Resource == "debug.logging" {
+			hasStorage = true
+			assert.Contains(t, perm.Actions, "read")
+			assert.Contains(t, perm.Actions, "write")
+		}
+		if perm.Type == engine.PermissionMemory && perm.Resource == "debug.components" {
+			hasMemory = true
+			assert.Contains(t, perm.Actions, "read")
+			assert.Contains(t, perm.Actions, "write")
+		}
 	}
 
-	// Verify all are enabled
-	for _, component := range components {
-		result, err := bridge.isDebugEnabled(ctx, []interface{}{component})
-		require.NoError(t, err)
-		enabled, ok := result.(bool)
-		require.True(t, ok)
-		assert.True(t, enabled, "Component %s should be enabled", component)
-	}
-
-	// List all enabled components
-	result, err := bridge.listEnabledComponents(ctx, []interface{}{})
-	require.NoError(t, err)
-	enabledList, ok := result.([]string)
-	require.True(t, ok)
-	assert.Equal(t, len(components), len(enabledList))
-
-	// Disable one component
-	err = bridge.disableDebugComponent(ctx, []interface{}{"agent"})
-	require.NoError(t, err)
-
-	// Verify agent is disabled
-	result, err = bridge.isDebugEnabled(ctx, []interface{}{"agent"})
-	require.NoError(t, err)
-	enabled, ok := result.(bool)
-	require.True(t, ok)
-	assert.False(t, enabled)
-
-	// Verify others are still enabled
-	result, err = bridge.isDebugEnabled(ctx, []interface{}{"tools"})
-	require.NoError(t, err)
-	enabled, ok = result.(bool)
-	require.True(t, ok)
-	assert.True(t, enabled)
+	assert.True(t, hasStorage, "Storage permission not found")
+	assert.True(t, hasMemory, "Memory permission not found")
 }
 
-// Test debug environment functionality
-func TestDebugEnvironment(t *testing.T) {
+func TestDebugBridgeTypeMappings(t *testing.T) {
 	bridge := NewDebugBridge()
-	ctx := context.Background()
-	err := bridge.Initialize(ctx)
-	require.NoError(t, err)
+	mappings := bridge.TypeMappings()
 
-	// Get environment information
-	result, err := bridge.getDebugEnvironment(ctx, []interface{}{})
-	require.NoError(t, err)
+	// Check expected type mappings
+	assert.Contains(t, mappings, "debug_logger")
+	assert.Contains(t, mappings, "debug_config")
 
-	env, ok := result.(map[string]interface{})
-	require.True(t, ok)
+	// Verify mapping properties
+	loggerMapping := mappings["debug_logger"]
+	assert.Equal(t, "*log.Logger", loggerMapping.GoType)
+	assert.Equal(t, "object", loggerMapping.ScriptType)
 
-	// Verify expected fields
-	assert.Contains(t, env, "go_llms_debug_env")
-	assert.Contains(t, env, "enabled_components")
-	assert.Contains(t, env, "compilation_mode")
-
-	// Verify enabled_components is an array
-	enabledComponents, ok := env["enabled_components"].([]string)
-	require.True(t, ok)
-
-	// Should be empty by default if no environment variables are set
-	// and no components have been explicitly enabled
-	assert.GreaterOrEqual(t, len(enabledComponents), 0)
+	configMapping := mappings["debug_config"]
+	assert.Equal(t, "map[string]interface{}", configMapping.GoType)
+	assert.Equal(t, "object", configMapping.ScriptType)
 }

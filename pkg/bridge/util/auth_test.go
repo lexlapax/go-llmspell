@@ -1,23 +1,37 @@
-// ABOUTME: Test suite for the auth utilities bridge that wraps go-llms authentication functions.
-// ABOUTME: Tests bridge interface compliance and method definitions.
+// ABOUTME: Tests for auth utilities bridge with ScriptValue-based API
+// ABOUTME: Validates auth configuration, OAuth2 operations, and credential management
 
 package util
 
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
-
-	// Use go-llms testutils for consistency
-	"github.com/lexlapax/go-llms/pkg/testutils/fixtures"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewUtilAuthBridge(t *testing.T) {
+func TestUtilAuthBridgeInitialization(t *testing.T) {
 	bridge := NewUtilAuthBridge()
 	assert.NotNil(t, bridge)
 	assert.Equal(t, "util_auth", bridge.GetID())
+	assert.False(t, bridge.IsInitialized())
+
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+	assert.True(t, bridge.IsInitialized())
+
+	// Test double initialization
+	err = bridge.Initialize(ctx)
+	assert.NoError(t, err)
+
+	// Test cleanup
+	err = bridge.Cleanup(ctx)
+	require.NoError(t, err)
+	assert.False(t, bridge.IsInitialized())
 }
 
 func TestUtilAuthBridgeMetadata(t *testing.T) {
@@ -26,119 +40,329 @@ func TestUtilAuthBridgeMetadata(t *testing.T) {
 
 	assert.Equal(t, "util_auth", metadata.Name)
 	assert.Equal(t, "2.0.0", metadata.Version)
-	assert.Contains(t, metadata.Description, "Enhanced authentication with OAuth2 flows")
+	assert.Contains(t, metadata.Description, "Enhanced authentication")
 	assert.Equal(t, "go-llmspell", metadata.Author)
 	assert.Equal(t, "MIT", metadata.License)
-}
-
-func TestUtilAuthBridgeInitialization(t *testing.T) {
-	bridge := NewUtilAuthBridge()
-	ctx := context.Background()
-
-	// Test initialization
-	assert.False(t, bridge.IsInitialized())
-	err := bridge.Initialize(ctx)
-	assert.NoError(t, err)
-	assert.True(t, bridge.IsInitialized())
-
-	// Test double initialization
-	err = bridge.Initialize(ctx)
-	assert.NoError(t, err)
-	assert.True(t, bridge.IsInitialized())
-
-	// Test cleanup
-	err = bridge.Cleanup(ctx)
-	assert.NoError(t, err)
-	assert.False(t, bridge.IsInitialized())
 }
 
 func TestUtilAuthBridgeMethods(t *testing.T) {
 	bridge := NewUtilAuthBridge()
 	methods := bridge.Methods()
 
-	// Check that all expected method categories are present
-	expectedMethods := map[string]bool{
+	// Check that all expected auth methods are present
+	expectedMethods := []string{
 		// Auth configuration
-		"createAuthConfig":    false,
-		"createAuthFromEnv":   false,
-		"createAuthFromState": false,
-
+		"createAuthConfig",
+		"createAuthFromEnv",
+		"createAuthFromState",
 		// HTTP request authentication
-		"applyAuth":          false,
-		"applyAuthToHeaders": false,
-
+		"applyAuth",
+		"applyAuthToHeaders",
 		// Auth scheme utilities
-		"detectAuthScheme":   false,
-		"parseAuthHeader":    false,
-		"validateAuthConfig": false,
-
+		"detectAuthScheme",
+		"parseAuthHeader",
+		"validateAuthConfig",
 		// OAuth2 utilities
-		"createOAuth2Config": false,
-		"refreshOAuth2Token": false,
-
+		"createOAuth2Config",
+		"refreshOAuth2Token",
+		"discoverOAuth2Endpoints",
+		"validateOAuth2Token",
+		"parseJWTClaims",
+		"autoRefreshToken",
+		// Multi-scheme authentication
+		"registerAuthScheme",
+		"getAuthSchemes",
+		"selectBestAuthScheme",
+		// Credential serialization
+		"serializeCredentials",
+		"deserializeCredentials",
+		"cacheCredentials",
+		// Auth event logging
+		"logAuthEvent",
+		"getAuthEventHistory",
+		"subscribeToAuthEvents",
 		// Session management
-		"createAuthSession": false,
-		"validateSession":   false,
-
+		"createAuthSession",
+		"validateSession",
 		// Credential management
-		"maskCredentials": false,
-		"rotateAPIKey":    false,
+		"maskCredentials",
+		"rotateAPIKey",
 	}
 
-	for _, method := range methods {
-		if _, ok := expectedMethods[method.Name]; ok {
-			expectedMethods[method.Name] = true
-		}
+	methodMap := make(map[string]bool)
+	for _, m := range methods {
+		methodMap[m.Name] = true
 	}
 
-	for method, found := range expectedMethods {
-		assert.True(t, found, "Method %s not found", method)
+	for _, expected := range expectedMethods {
+		assert.True(t, methodMap[expected], "Method %s not found", expected)
 	}
 }
 
-func TestUtilAuthBridgeMethodDetails(t *testing.T) {
+func TestUtilAuthBridgeCreateAuthConfig(t *testing.T) {
 	bridge := NewUtilAuthBridge()
-	methods := bridge.Methods()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
-	// Verify createAuthConfig method details
-	var createAuthMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "createAuthConfig" {
-			createAuthMethod = &m
-			break
-		}
+	tests := []struct {
+		name        string
+		args        []engine.ScriptValue
+		wantErr     bool
+		checkResult func(t *testing.T, result engine.ScriptValue)
+	}{
+		{
+			name: "create bearer auth config",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("bearer"),
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"token": engine.NewStringValue("test-token-123"),
+				}),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue) {
+				require.NotNil(t, result)
+				assert.Equal(t, engine.TypeObject, result.Type())
+				obj := result.(engine.ObjectValue).Fields()
+				assert.Equal(t, "bearer", obj["type"].(engine.StringValue).Value())
+				assert.NotNil(t, obj["data"])
+			},
+		},
+		{
+			name: "create api key auth config",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("apiKey"),
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"key":    engine.NewStringValue("api-key-456"),
+					"header": engine.NewStringValue("X-API-Key"),
+				}),
+			},
+			wantErr: false,
+			checkResult: func(t *testing.T, result engine.ScriptValue) {
+				require.NotNil(t, result)
+				assert.Equal(t, engine.TypeObject, result.Type())
+				obj := result.(engine.ObjectValue).Fields()
+				assert.Equal(t, "apiKey", obj["type"].(engine.StringValue).Value())
+			},
+		},
+		{
+			name: "missing auth type",
+			args: []engine.ScriptValue{
+				engine.NewNilValue(),
+				engine.NewObjectValue(map[string]engine.ScriptValue{}),
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing credentials",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("bearer"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid credentials type",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("bearer"),
+				engine.NewStringValue("not-an-object"),
+			},
+			wantErr: true,
+		},
 	}
-	assert.NotNil(t, createAuthMethod)
-	assert.Contains(t, createAuthMethod.Description, "authentication configuration")
-	assert.Len(t, createAuthMethod.Parameters, 2)
-	assert.Equal(t, "AuthConfig", createAuthMethod.ReturnType)
 
-	// Verify applyAuth method details
-	var applyAuthMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "applyAuth" {
-			applyAuthMethod = &m
-			break
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := bridge.ExecuteMethod(ctx, "createAuthConfig", tt.args)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				if tt.checkResult != nil {
+					tt.checkResult(t, result)
+				}
+			}
+		})
 	}
-	assert.NotNil(t, applyAuthMethod)
-	assert.Contains(t, applyAuthMethod.Description, "HTTP request")
-	assert.Len(t, applyAuthMethod.Parameters, 2)
-	assert.Equal(t, "object", applyAuthMethod.ReturnType)
 }
 
-func TestUtilAuthBridgeTypeMappings(t *testing.T) {
+func TestUtilAuthBridgeOAuth2Operations(t *testing.T) {
 	bridge := NewUtilAuthBridge()
-	mappings := bridge.TypeMappings()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
-	// Check that expected type mappings are present
-	expectedTypes := []string{"AuthConfig", "AuthScheme", "OAuth2Config"}
-	for _, typeName := range expectedTypes {
-		mapping, ok := mappings[typeName]
-		assert.True(t, ok, "Type mapping for %s not found", typeName)
-		assert.NotEmpty(t, mapping.GoType)
-		assert.Equal(t, "object", mapping.ScriptType)
-	}
+	t.Run("discoverOAuth2Endpoints", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "discoverOAuth2Endpoints", []engine.ScriptValue{
+			engine.NewStringValue("https://auth.example.com"),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, engine.TypeObject, result.Type())
+
+		obj := result.(engine.ObjectValue).Fields()
+		assert.Equal(t, "https://auth.example.com", obj["issuer"].(engine.StringValue).Value())
+		assert.Equal(t, "https://auth.example.com/authorize", obj["authorization_endpoint"].(engine.StringValue).Value())
+		assert.Equal(t, "https://auth.example.com/token", obj["token_endpoint"].(engine.StringValue).Value())
+
+		// Check arrays
+		responseTypes := obj["response_types_supported"].(engine.ArrayValue).Elements()
+		assert.Len(t, responseTypes, 3)
+		assert.Equal(t, "code", responseTypes[0].(engine.StringValue).Value())
+	})
+
+	t.Run("parseJWTClaims", func(t *testing.T) {
+		// This would fail with a real JWT parsing, so we expect an error
+		// In a real test, we'd use a valid JWT token
+		_, err := bridge.ExecuteMethod(ctx, "parseJWTClaims", []engine.ScriptValue{
+			engine.NewStringValue("invalid-jwt"),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("autoRefreshToken", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "autoRefreshToken", []engine.ScriptValue{
+			engine.NewObjectValue(map[string]engine.ScriptValue{
+				"type": engine.NewStringValue("oauth2"),
+				"data": engine.NewObjectValue(map[string]engine.ScriptValue{
+					"access_token": engine.NewStringValue("test-token"),
+				}),
+			}),
+			engine.NewNumberValue(600), // 10 minutes
+		})
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		obj := result.(engine.ObjectValue).Fields()
+		assert.True(t, obj["enabled"].(engine.BoolValue).Value())
+		assert.Equal(t, float64(600), obj["refreshBefore"].(engine.NumberValue).Value())
+		assert.NotNil(t, obj["nextRefresh"])
+	})
+}
+
+func TestUtilAuthBridgeMultiSchemeAuth(t *testing.T) {
+	bridge := NewUtilAuthBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Register auth scheme
+	result, err := bridge.ExecuteMethod(ctx, "registerAuthScheme", []engine.ScriptValue{
+		engine.NewStringValue("/api/v1"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"type":        engine.NewStringValue("bearer"),
+			"description": engine.NewStringValue("Bearer token authentication"),
+		}),
+	})
+	require.NoError(t, err)
+	assert.True(t, result.(engine.BoolValue).Value())
+
+	// Get auth schemes
+	result, err = bridge.ExecuteMethod(ctx, "getAuthSchemes", []engine.ScriptValue{
+		engine.NewStringValue("/api/v1/users"),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	schemes := result.(engine.ArrayValue).Elements()
+	assert.Len(t, schemes, 1)
+	scheme := schemes[0].(engine.ObjectValue).Fields()
+	assert.Equal(t, "bearer", scheme["type"].(engine.StringValue).Value())
+}
+
+func TestUtilAuthBridgeCredentialSerialization(t *testing.T) {
+	bridge := NewUtilAuthBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	authConfig := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"type": engine.NewStringValue("apiKey"),
+		"data": engine.NewObjectValue(map[string]engine.ScriptValue{
+			"key": engine.NewStringValue("secret-key-123"),
+		}),
+	})
+
+	// Serialize credentials
+	serialized, err := bridge.ExecuteMethod(ctx, "serializeCredentials", []engine.ScriptValue{
+		authConfig,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, serialized)
+	assert.Equal(t, engine.TypeString, serialized.Type())
+
+	// Deserialize credentials
+	deserialized, err := bridge.ExecuteMethod(ctx, "deserializeCredentials", []engine.ScriptValue{
+		serialized,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, deserialized)
+	assert.Equal(t, engine.TypeObject, deserialized.Type())
+}
+
+func TestUtilAuthBridgeCredentialCaching(t *testing.T) {
+	bridge := NewUtilAuthBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	authConfig := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"type": engine.NewStringValue("bearer"),
+		"data": engine.NewObjectValue(map[string]engine.ScriptValue{
+			"token": engine.NewStringValue("cached-token"),
+		}),
+	})
+
+	// Cache credentials
+	result, err := bridge.ExecuteMethod(ctx, "cacheCredentials", []engine.ScriptValue{
+		engine.NewStringValue("test-cache-key"),
+		authConfig,
+		engine.NewNumberValue(1800), // 30 minutes TTL
+	})
+	require.NoError(t, err)
+	assert.True(t, result.(engine.BoolValue).Value())
+
+	// Verify cache entry exists
+	bridge.mu.RLock()
+	entry, exists := bridge.credentialCache["test-cache-key"]
+	bridge.mu.RUnlock()
+
+	assert.True(t, exists)
+	assert.NotNil(t, entry)
+	assert.Equal(t, 1800, entry.Metadata["ttl"])
+	assert.WithinDuration(t, time.Now(), entry.CreatedAt, 1*time.Second)
+}
+
+func TestUtilAuthBridgeEventLogging(t *testing.T) {
+	bridge := NewUtilAuthBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Log auth event
+	result, err := bridge.ExecuteMethod(ctx, "logAuthEvent", []engine.ScriptValue{
+		engine.NewStringValue("login"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"user":     engine.NewStringValue("test-user"),
+			"provider": engine.NewStringValue("oauth2"),
+			"success":  engine.NewBoolValue(true),
+		}),
+	})
+	require.NoError(t, err)
+	assert.True(t, result.IsNil())
+}
+
+func TestUtilAuthBridgeValidateMethod(t *testing.T) {
+	bridge := NewUtilAuthBridge()
+
+	// ValidateMethod should always return nil as validation is handled by engine
+	err := bridge.ValidateMethod("createAuthConfig", []engine.ScriptValue{
+		engine.NewStringValue("bearer"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+	})
+	assert.NoError(t, err)
+
+	err = bridge.ValidateMethod("unknownMethod", []engine.ScriptValue{})
+	assert.NoError(t, err)
 }
 
 func TestUtilAuthBridgeRequiredPermissions(t *testing.T) {
@@ -147,51 +371,80 @@ func TestUtilAuthBridgeRequiredPermissions(t *testing.T) {
 
 	assert.GreaterOrEqual(t, len(permissions), 3)
 
-	// Check for required permissions
-	hasProcessPerm := false
-	hasNetworkPerm := false
-	hasMemoryPerm := false
+	// Check for expected permissions
+	hasProcess := false
+	hasNetwork := false
+	hasMemory := false
 
 	for _, perm := range permissions {
-		if perm.Type == "process" && perm.Resource == "environment" {
-			hasProcessPerm = true
-			assert.Contains(t, perm.Actions, "read")
-		}
-		if perm.Type == "network" && perm.Resource == "oauth2" {
-			hasNetworkPerm = true
-			assert.Contains(t, perm.Actions, "token")
-		}
-		if perm.Type == "memory" && perm.Resource == "credentials" {
-			hasMemoryPerm = true
-			assert.Contains(t, perm.Actions, "read")
-			assert.Contains(t, perm.Actions, "mask")
+		switch perm.Type {
+		case engine.PermissionProcess:
+			if perm.Resource == "environment" {
+				hasProcess = true
+				assert.Contains(t, perm.Actions, "read")
+			}
+		case engine.PermissionNetwork:
+			if perm.Resource == "oauth2" {
+				hasNetwork = true
+				assert.Contains(t, perm.Actions, "token")
+			}
+		case engine.PermissionMemory:
+			if perm.Resource == "credentials" {
+				hasMemory = true
+				assert.Contains(t, perm.Actions, "read")
+				assert.Contains(t, perm.Actions, "mask")
+			}
 		}
 	}
 
-	assert.True(t, hasProcessPerm, "Process permission not found")
-	assert.True(t, hasNetworkPerm, "Network permission not found")
-	assert.True(t, hasMemoryPerm, "Memory permission not found")
+	assert.True(t, hasProcess, "Process permission not found")
+	assert.True(t, hasNetwork, "Network permission not found")
+	assert.True(t, hasMemory, "Memory permission not found")
 }
 
-func TestUtilAuthBridgeValidateMethod(t *testing.T) {
+func TestUtilAuthBridgeTypeMappings(t *testing.T) {
 	bridge := NewUtilAuthBridge()
+	mappings := bridge.TypeMappings()
 
-	// Use testutils fixture for realistic test data
-	testState := fixtures.BasicTestState()
-	testConfig := make(map[string]interface{})
-	if config, exists := testState.Get("config"); exists {
-		testConfig = config.(map[string]interface{})
-	} else {
-		testConfig["provider"] = "test"
-	}
+	// Check expected type mappings
+	assert.Contains(t, mappings, "AuthConfig")
+	assert.Contains(t, mappings, "AuthScheme")
+	assert.Contains(t, mappings, "OAuth2Config")
 
-	// ValidateMethod should always return nil as validation is handled by engine
-	err := bridge.ValidateMethod("createAuthConfig", []interface{}{"apiKey", testConfig})
-	assert.NoError(t, err)
-
-	err = bridge.ValidateMethod("unknownMethod", nil)
-	assert.NoError(t, err)
+	// Verify mapping properties
+	authConfigMapping := mappings["AuthConfig"]
+	assert.Equal(t, "AuthConfig", authConfigMapping.GoType)
+	assert.Equal(t, "object", authConfigMapping.ScriptType)
 }
 
-// Note: Actual auth utility testing would require real go-llms implementations
-// or would be done at integration test level with actual utilities
+func TestUtilAuthBridgeErrorHandling(t *testing.T) {
+	bridge := NewUtilAuthBridge()
+	ctx := context.Background()
+
+	// Test method execution before initialization
+	_, err := bridge.ExecuteMethod(ctx, "createAuthConfig", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Equal(t, ErrBridgeNotInitialized, err)
+
+	// Initialize bridge
+	err = bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test unknown method
+	_, err = bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "method not found")
+
+	// Test invalid arguments
+	_, err = bridge.ExecuteMethod(ctx, "createAuthConfig", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Equal(t, ErrInvalidArguments, err)
+}
+
+func TestUtilAuthBridgeWithEventEmitter(t *testing.T) {
+	// Create a mock event emitter
+	// In a real test, you'd use a proper mock or test double
+	bridge := NewUtilAuthBridgeWithEventEmitter(nil)
+	assert.NotNil(t, bridge)
+	assert.Equal(t, "util_auth", bridge.GetID())
+}

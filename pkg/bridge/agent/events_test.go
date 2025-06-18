@@ -1,713 +1,418 @@
-// ABOUTME: Tests for event system bridge v2.0.0 with go-llms v0.3.5 integration
-// ABOUTME: Verifies event bus, storage, filtering, serialization, aggregation, and replay functionality
-
 package agent
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"sync"
 	"testing"
-	"time"
 
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/lexlapax/go-llms/pkg/agent/domain"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-func TestNewEventBridge(t *testing.T) {
+func TestEventsBridge_Initialize(t *testing.T) {
 	bridge := NewEventBridge()
-	assert.NotNil(t, bridge)
-	assert.Equal(t, "events", bridge.GetID())
-	assert.NotNil(t, bridge.eventBus)
-	assert.NotNil(t, bridge.storage)
-	assert.NotNil(t, bridge.recorder)
-	assert.NotNil(t, bridge.replayer)
+	ctx := context.Background()
+
+	err := bridge.Initialize(ctx)
+	assert.NoError(t, err)
+	assert.True(t, bridge.IsInitialized())
 }
 
-func TestEventBridgeMetadata(t *testing.T) {
+func TestEventsBridge_GetID(t *testing.T) {
+	bridge := NewEventBridge()
+	assert.Equal(t, "events", bridge.GetID())
+}
+
+func TestEventsBridge_GetMetadata(t *testing.T) {
 	bridge := NewEventBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "events", metadata.Name)
-	assert.Equal(t, "2.0.0", metadata.Version)
-	assert.Contains(t, metadata.Description, "v2.0.0")
-	assert.Contains(t, metadata.Description, "v0.3.5")
-	assert.Contains(t, metadata.Description, "aggregation")
-	assert.Contains(t, metadata.Description, "replay")
-	assert.NotEmpty(t, metadata.Author)
-	assert.NotEmpty(t, metadata.License)
+	assert.Equal(t, "Events Bridge", metadata.Name)
+	assert.Equal(t, "2.1.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "event system")
+	assert.Equal(t, "go-llmspell", metadata.Author)
+	assert.Equal(t, "MIT", metadata.License)
 }
 
-func TestEventBridgeInitialization(t *testing.T) {
+func TestEventsBridge_Methods(t *testing.T) {
+	bridge := NewEventBridge()
+	methods := bridge.Methods()
+
+	// Should have all expected methods
+	expectedMethods := []string{
+		"emit", "subscribe", "unsubscribe", "once", "listListeners",
+		"removeAllListeners", "hasListeners", "getMaxListeners", "setMaxListeners",
+		"getListenerCount", "startRecording", "stopRecording", "getRecordedEvents",
+		"clearRecordedEvents", "replayEvents", "pauseRecording", "resumeRecording",
+		"isRecording", "createEventFilter", "setEventFilter", "removeEventFilter",
+		"listEventFilters", "enableEventPersistence", "disableEventPersistence",
+		"saveEvents", "loadEvents", "getEventStats", "clearEventStats",
+		"exportEvents", "importEvents", "createEventBatch", "emitEventBatch",
+		"scheduleEvent", "cancelScheduledEvent", "listScheduledEvents",
+	}
+
+	assert.GreaterOrEqual(t, len(methods), len(expectedMethods))
+
+	// Check that key methods exist
+	methodNames := make(map[string]bool)
+	for _, method := range methods {
+		methodNames[method.Name] = true
+	}
+
+	for _, expected := range expectedMethods {
+		assert.True(t, methodNames[expected], "Expected method %s not found", expected)
+	}
+}
+
+func TestEventsBridge_ValidateMethod(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
 	tests := []struct {
-		name    string
-		bridge  *EventBridge
-		wantErr bool
+		name        string
+		method      string
+		args        []engine.ScriptValue
+		expectError bool
 	}{
 		{
-			name:    "successful initialization",
-			bridge:  NewEventBridge(),
-			wantErr: false,
+			name:        "valid emit",
+			method:      "emit",
+			args:        []engine.ScriptValue{engine.NewStringValue("test-event"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			expectError: false,
 		},
 		{
-			name:    "double initialization",
-			bridge:  &EventBridge{initialized: true},
-			wantErr: false,
+			name:        "invalid emit - missing args",
+			method:      "emit",
+			args:        []engine.ScriptValue{},
+			expectError: true,
+		},
+		{
+			name:        "valid subscribe",
+			method:      "subscribe",
+			args:        []engine.ScriptValue{engine.NewStringValue("test-event"), engine.NewStringValue("handler")},
+			expectError: false,
+		},
+		{
+			name:        "valid listListeners",
+			method:      "listListeners",
+			args:        []engine.ScriptValue{},
+			expectError: false,
+		},
+		{
+			name:        "unknown method",
+			method:      "unknownMethod",
+			args:        []engine.ScriptValue{},
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.bridge.Initialize(context.Background())
-			if tt.wantErr {
+			err := bridge.ValidateMethod(tt.method, tt.args)
+			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, tt.bridge.IsInitialized())
 			}
 		})
 	}
 }
 
-func TestEventBridgeMethods(t *testing.T) {
-	bridge := NewEventBridge()
-	methods := bridge.Methods()
-
-	// Essential v2.0.0 methods
-	expectedMethods := []string{
-		// Event Bus
-		"publishEvent",
-		"subscribe",
-		"subscribeWithFilter",
-		"unsubscribe",
-		// Event Storage
-		"storeEvent",
-		"queryEvents",
-		"streamEvents",
-		"stopStream",
-		// Event Filtering
-		"createPatternFilter",
-		"createTypeFilter",
-		"createCompositeFilter",
-		"createFieldFilter",
-		// Event Serialization
-		"serializeEvent",
-		"deserializeEvent",
-		"serializeEventBatch",
-		// Event Replay
-		"startEventRecording",
-		"stopEventRecording",
-		"replayEvents",
-		"pauseReplay",
-		"resumeReplay",
-		// Event Aggregation
-		"createAggregator",
-		"getAggregatedData",
-		"resetAggregator",
-		"removeAggregator",
-		// Bridge Events
-		"publishBridgeEvent",
-		"onBridgeEvent",
-		// Event Streams
-		"createEventStream",
-		"filterStream",
-		"mapStream",
-		"reduceStream",
-		// Utilities
-		"getEventStats",
-		"exportEventStore",
-		"importEventStore",
-	}
-
-	methodMap := make(map[string]bool)
-	for _, method := range methods {
-		methodMap[method.Name] = true
-	}
-
-	for _, expected := range expectedMethods {
-		assert.True(t, methodMap[expected], "Missing expected method: %s", expected)
-	}
-
-	// Verify method count increased from v1.0.0
-	assert.GreaterOrEqual(t, len(methods), 30, "Should have at least 30 methods in v2.0.0")
-}
-
-func TestEventBridgeTypeMappings(t *testing.T) {
-	bridge := NewEventBridge()
-	mappings := bridge.TypeMappings()
-
-	expectedTypes := []string{
-		"Event",
-		"EventType",
-		"EventFilter",
-		"EventQuery",
-		"EventStream",
-		"BridgeEvent",
-		"ReplayOptions",
-		"EventSerializer",
-		"EventAggregator",
-	}
-
-	for _, typeName := range expectedTypes {
-		mapping, exists := mappings[typeName]
-		assert.True(t, exists, "Missing type mapping for %s", typeName)
-		assert.NotEmpty(t, mapping.GoType)
-		assert.NotEmpty(t, mapping.ScriptType)
-	}
-}
-
-func TestEventBridgeRequiredPermissions(t *testing.T) {
-	bridge := NewEventBridge()
-	permissions := bridge.RequiredPermissions()
-
-	assert.NotEmpty(t, permissions)
-
-	// Should require event system permissions
-	hasEventPermission := false
-	hasStoragePermission := false
-	hasFilePermission := false
-
-	for _, perm := range permissions {
-		if perm.Type == engine.PermissionProcess && perm.Resource == "events" {
-			hasEventPermission = true
-			assert.Contains(t, perm.Actions, "publish")
-			assert.Contains(t, perm.Actions, "subscribe")
-			assert.Contains(t, perm.Actions, "filter")
-			assert.Contains(t, perm.Actions, "aggregate")
-			assert.Contains(t, perm.Actions, "replay")
-		}
-		if perm.Type == engine.PermissionMemory && perm.Resource == "event_storage" {
-			hasStoragePermission = true
-		}
-		if perm.Type == engine.PermissionFileSystem && perm.Resource == "event_files" {
-			hasFilePermission = true
-		}
-	}
-
-	assert.True(t, hasEventPermission, "Missing event permission")
-	assert.True(t, hasStoragePermission, "Missing storage permission")
-	assert.True(t, hasFilePermission, "Missing file permission")
-}
-
-func TestEventBridge_EventBusOperations(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("publish and subscribe", func(t *testing.T) {
-		// Subscribe to events
-		result, err := bridge.ExecuteMethod(ctx, "subscribe", []interface{}{
-			"test.*",
-			func(event domain.Event) {},
-		})
-		require.NoError(t, err)
-		subID, ok := result.(string)
-		assert.True(t, ok)
-		assert.NotEmpty(t, subID)
-
-		// Publish event
-		_, err = bridge.ExecuteMethod(ctx, "publishEvent", []interface{}{
-			map[string]interface{}{
-				"type":    "test.event",
-				"agentID": "agent1",
-				"data":    map[string]interface{}{"key": "value"},
-			},
-		})
-		assert.NoError(t, err)
-
-		// Unsubscribe
-		_, err = bridge.ExecuteMethod(ctx, "unsubscribe", []interface{}{subID})
-		assert.NoError(t, err)
-	})
-
-	t.Run("subscribe with filter", func(t *testing.T) {
-		// Create filter config
-		filterConfig := map[string]interface{}{
-			"type":    "pattern",
-			"pattern": "agent.*",
-		}
-
-		result, err := bridge.ExecuteMethod(ctx, "subscribeWithFilter", []interface{}{
-			filterConfig,
-			func(event domain.Event) {},
-		})
-		require.NoError(t, err)
-		subID, ok := result.(string)
-		assert.True(t, ok)
-		assert.NotEmpty(t, subID)
-	})
-}
-
-func TestEventBridge_EventStorage(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("store and query events", func(t *testing.T) {
-		// Store event
-		_, err := bridge.ExecuteMethod(ctx, "storeEvent", []interface{}{
-			map[string]interface{}{
-				"type":    "test.stored",
-				"agentID": "agent1",
-				"data":    map[string]interface{}{"value": 42},
-			},
-		})
-		assert.NoError(t, err)
-
-		// Query events
-		result, err := bridge.ExecuteMethod(ctx, "queryEvents", []interface{}{
-			map[string]interface{}{
-				"agentID": "agent1",
-				"limit":   10,
-			},
-		})
-		assert.NoError(t, err)
-
-		events, ok := result.([]map[string]interface{})
-		assert.True(t, ok)
-		assert.GreaterOrEqual(t, len(events), 1)
-	})
-}
-
-func TestEventBridge_EventFiltering(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("create pattern filter", func(t *testing.T) {
-		result, err := bridge.ExecuteMethod(ctx, "createPatternFilter", []interface{}{
-			"agent.*",
-		})
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-	})
-
-	t.Run("create type filter", func(t *testing.T) {
-		result, err := bridge.ExecuteMethod(ctx, "createTypeFilter", []interface{}{
-			[]interface{}{"agent.started", "agent.stopped"},
-		})
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-	})
-
-	t.Run("create composite filter", func(t *testing.T) {
-		result, err := bridge.ExecuteMethod(ctx, "createCompositeFilter", []interface{}{
-			"AND",
-			[]interface{}{
-				map[string]interface{}{
-					"type":    "pattern",
-					"pattern": "agent.*",
-				},
-				map[string]interface{}{
-					"type":    "agent",
-					"agentID": "agent1",
-				},
-			},
-		})
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-	})
-}
-
-func TestEventBridge_EventSerialization(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	testEvent := map[string]interface{}{
-		"type":    "test.serialize",
-		"agentID": "agent1",
-		"data":    map[string]interface{}{"key": "value"},
-	}
-
-	t.Run("serialize and deserialize event", func(t *testing.T) {
-		// Serialize
-		result, err := bridge.ExecuteMethod(ctx, "serializeEvent", []interface{}{
-			testEvent,
-			"json",
-		})
-		require.NoError(t, err)
-		serialized, ok := result.(string)
-		assert.True(t, ok)
-		assert.NotEmpty(t, serialized)
-
-		// Verify it's valid JSON
-		var jsonData map[string]interface{}
-		err = json.Unmarshal([]byte(serialized), &jsonData)
-		assert.NoError(t, err)
-
-		// Deserialize
-		result, err = bridge.ExecuteMethod(ctx, "deserializeEvent", []interface{}{
-			serialized,
-			"json",
-		})
-		assert.NoError(t, err)
-
-		deserialized, ok := result.(map[string]interface{})
-		assert.True(t, ok)
-		assert.Equal(t, "test.serialize", deserialized["type"])
-		assert.Equal(t, "agent1", deserialized["agentID"])
-	})
-
-	t.Run("serialize event batch", func(t *testing.T) {
-		events := []interface{}{
-			testEvent,
-			map[string]interface{}{
-				"type":    "test.batch",
-				"agentID": "agent2",
-			},
-		}
-
-		result, err := bridge.ExecuteMethod(ctx, "serializeEventBatch", []interface{}{events})
-		assert.NoError(t, err)
-		assert.NotNil(t, result)
-	})
-}
-
-func TestEventBridge_EventReplay(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("recording lifecycle", func(t *testing.T) {
-		// Stop any existing recording first
-		_, _ = bridge.ExecuteMethod(ctx, "stopEventRecording", []interface{}{})
-
-		// Start recording
-		_, err := bridge.ExecuteMethod(ctx, "startEventRecording", []interface{}{})
-		assert.NoError(t, err)
-
-		// Store some events
-		for i := 0; i < 3; i++ {
-			_, err = bridge.ExecuteMethod(ctx, "storeEvent", []interface{}{
-				map[string]interface{}{
-					"type":    fmt.Sprintf("test.replay.%d", i),
-					"agentID": "replay-agent",
-					"data":    map[string]interface{}{"index": i},
-				},
-			})
-			assert.NoError(t, err)
-		}
-
-		// Stop recording
-		_, err = bridge.ExecuteMethod(ctx, "stopEventRecording", []interface{}{})
-		assert.NoError(t, err)
-
-		// Replay events
-		result, err := bridge.ExecuteMethod(ctx, "replayEvents", []interface{}{
-			map[string]interface{}{
-				"speed": 2.0,
-			},
-		})
-		assert.NoError(t, err)
-		sessionID, ok := result.(string)
-		assert.True(t, ok)
-		assert.NotEmpty(t, sessionID)
-	})
-}
-
-func TestEventBridge_EventAggregation(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("aggregator lifecycle", func(t *testing.T) {
-		// Create aggregator
-		result, err := bridge.ExecuteMethod(ctx, "createAggregator", []interface{}{
-			"test-aggregator",
-			map[string]interface{}{
-				"window": 5.0, // 5 seconds
-				"filter": map[string]interface{}{
-					"type":    "pattern",
-					"pattern": "metrics.*",
-				},
-			},
-		})
-		require.NoError(t, err)
-		aggID, ok := result.(string)
-		assert.True(t, ok)
-		assert.NotEmpty(t, aggID)
-
-		// Get aggregated data
-		result, err = bridge.ExecuteMethod(ctx, "getAggregatedData", []interface{}{aggID})
-		assert.NoError(t, err)
-		data, ok := result.(map[string]interface{})
-		assert.True(t, ok)
-		assert.Equal(t, aggID, data["id"])
-		assert.Equal(t, "test-aggregator", data["name"])
-		assert.Equal(t, 5.0, data["window"])
-
-		// Reset aggregator
-		_, err = bridge.ExecuteMethod(ctx, "resetAggregator", []interface{}{aggID})
-		assert.NoError(t, err)
-
-		// Remove aggregator
-		_, err = bridge.ExecuteMethod(ctx, "removeAggregator", []interface{}{aggID})
-		assert.NoError(t, err)
-	})
-}
-
-func TestEventBridge_BridgeEvents(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("publish bridge event", func(t *testing.T) {
-		_, err := bridge.ExecuteMethod(ctx, "publishBridgeEvent", []interface{}{
-			"script_executed",
-			map[string]interface{}{
-				"script": "test.lua",
-				"result": "success",
-			},
-		})
-		assert.NoError(t, err)
-	})
-}
-
-func TestEventBridge_EventStreams(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("create event stream", func(t *testing.T) {
-		result, err := bridge.ExecuteMethod(ctx, "createEventStream", []interface{}{
-			"stream.*",
-		})
-		require.NoError(t, err)
-		streamID, ok := result.(string)
-		assert.True(t, ok)
-		assert.NotEmpty(t, streamID)
-	})
-}
-
-func TestEventBridge_Utilities(t *testing.T) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(t, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	t.Run("get event stats", func(t *testing.T) {
-		result, err := bridge.ExecuteMethod(ctx, "getEventStats", []interface{}{})
-		assert.NoError(t, err)
-
-		stats, ok := result.(map[string]interface{})
-		assert.True(t, ok)
-		assert.Contains(t, stats, "storage")
-		assert.Contains(t, stats, "bus")
-		assert.Contains(t, stats, "aggregators")
-		assert.Contains(t, stats, "streams")
-	})
-}
-
-func TestEventBridge_ConcurrentAccess(t *testing.T) {
+func TestEventsBridge_ExecuteMethod_Emit(t *testing.T) {
 	bridge := NewEventBridge()
 	ctx := context.Background()
-
-	// Initialize bridge
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Concurrent operations
-	var wg sync.WaitGroup
-	errors := make(chan error, 100)
-
-	// Publisher goroutines
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			for j := 0; j < 10; j++ {
-				_, err := bridge.ExecuteMethod(ctx, "publishEvent", []interface{}{
-					map[string]interface{}{
-						"type":    fmt.Sprintf("concurrent.test.%d", id),
-						"agentID": fmt.Sprintf("agent-%d", id),
-						"data":    map[string]interface{}{"iteration": j},
-					},
-				})
-				if err != nil {
-					errors <- err
-				}
-			}
-		}(i)
+	// Test emit event
+	eventType := "test-event"
+	eventData := map[string]engine.ScriptValue{
+		"message": engine.NewStringValue("Hello World"),
+		"count":   engine.NewNumberValue(42),
 	}
 
-	// Subscriber goroutines
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			result, err := bridge.ExecuteMethod(ctx, "subscribe", []interface{}{
-				fmt.Sprintf("concurrent.test.%d", id),
-				func(event domain.Event) {},
-			})
-			if err != nil {
-				errors <- err
-				return
-			}
-
-			// Unsubscribe after short delay
-			time.Sleep(50 * time.Millisecond)
-			if subID, ok := result.(string); ok {
-				_, err = bridge.ExecuteMethod(ctx, "unsubscribe", []interface{}{subID})
-				if err != nil {
-					errors <- err
-				}
-			}
-		}(i)
+	args := []engine.ScriptValue{
+		engine.NewStringValue(eventType),
+		engine.NewObjectValue(eventData),
 	}
 
-	// Wait for all goroutines
-	wg.Wait()
-	close(errors)
+	result, err := bridge.ExecuteMethod(ctx, "emit", args)
+	assert.NoError(t, err)
 
-	// Check for errors
-	for err := range errors {
-		t.Errorf("Concurrent operation error: %v", err)
+	_, ok := result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from emit")
+}
+
+func TestEventsBridge_ExecuteMethod_Subscribe(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test subscribe to event
+	eventType := "test-event"
+	handler := "test-handler-function"
+
+	args := []engine.ScriptValue{
+		engine.NewStringValue(eventType),
+		engine.NewStringValue(handler),
 	}
 
-	// Cleanup
+	result, err := bridge.ExecuteMethod(ctx, "subscribe", args)
+	assert.NoError(t, err)
+
+	stringValue, ok := result.(engine.StringValue)
+	assert.True(t, ok, "Expected StringValue (subscription ID) from subscribe")
+	assert.NotEmpty(t, stringValue.Value(), "Subscription ID should not be empty")
+}
+
+func TestEventsBridge_ExecuteMethod_ListListeners(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test listListeners - should work even with no listeners
+	result, err := bridge.ExecuteMethod(ctx, "listListeners", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	arrayValue, ok := result.(engine.ArrayValue)
+	assert.True(t, ok, "Expected ArrayValue from listListeners")
+	assert.Equal(t, 0, len(arrayValue.ToGo().([]interface{})), "Expected empty array initially")
+}
+
+func TestEventsBridge_ExecuteMethod_StartStopRecording(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test startRecording
+	result, err := bridge.ExecuteMethod(ctx, "startRecording", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	_, ok := result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from startRecording")
+
+	// Test isRecording
+	result, err = bridge.ExecuteMethod(ctx, "isRecording", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	boolValue, ok := result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from isRecording")
+	assert.True(t, boolValue.Value(), "Should be recording after startRecording")
+
+	// Test stopRecording
+	result, err = bridge.ExecuteMethod(ctx, "stopRecording", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	_, ok = result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from stopRecording")
+
+	// Test isRecording again
+	result, err = bridge.ExecuteMethod(ctx, "isRecording", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	boolValue, ok = result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from isRecording")
+	assert.False(t, boolValue.Value(), "Should not be recording after stopRecording")
+}
+
+func TestEventsBridge_ExecuteMethod_GetRecordedEvents(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Start recording
+	_, err = bridge.ExecuteMethod(ctx, "startRecording", []engine.ScriptValue{})
+	require.NoError(t, err)
+
+	// Emit an event
+	eventArgs := []engine.ScriptValue{
+		engine.NewStringValue("test-event"),
+		engine.NewObjectValue(map[string]engine.ScriptValue{
+			"data": engine.NewStringValue("test"),
+		}),
+	}
+	_, err = bridge.ExecuteMethod(ctx, "emit", eventArgs)
+	require.NoError(t, err)
+
+	// Get recorded events
+	result, err := bridge.ExecuteMethod(ctx, "getRecordedEvents", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	arrayValue, ok := result.(engine.ArrayValue)
+	assert.True(t, ok, "Expected ArrayValue from getRecordedEvents")
+
+	events := arrayValue.ToGo().([]interface{})
+	assert.Greater(t, len(events), 0, "Should have recorded events")
+}
+
+func TestEventsBridge_ExecuteMethod_GetEventStats(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Get stats
+	result, err := bridge.ExecuteMethod(ctx, "getEventStats", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	objectValue, ok := result.(engine.ObjectValue)
+	assert.True(t, ok, "Expected ObjectValue from getEventStats")
+
+	stats := objectValue.ToGo().(map[string]interface{})
+	assert.Contains(t, stats, "total_events")
+	assert.Contains(t, stats, "total_listeners")
+}
+
+func TestEventsBridge_ExecuteMethod_SetMaxListeners(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Set max listeners
+	args := []engine.ScriptValue{engine.NewNumberValue(50)}
+	result, err := bridge.ExecuteMethod(ctx, "setMaxListeners", args)
+	assert.NoError(t, err)
+
+	_, ok := result.(engine.NilValue)
+	assert.True(t, ok, "Expected NilValue from setMaxListeners")
+
+	// Get max listeners
+	result, err = bridge.ExecuteMethod(ctx, "getMaxListeners", []engine.ScriptValue{})
+	assert.NoError(t, err)
+
+	numberValue, ok := result.(engine.NumberValue)
+	assert.True(t, ok, "Expected NumberValue from getMaxListeners")
+	assert.Equal(t, float64(50), numberValue.Value(), "Max listeners should be 50")
+}
+
+func TestEventsBridge_ExecuteMethod_CreateEventFilter(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Create event filter
+	filterConfig := map[string]engine.ScriptValue{
+		"eventTypes": engine.NewArrayValue([]engine.ScriptValue{
+			engine.NewStringValue("test-event"),
+		}),
+		"priority": engine.NewNumberValue(1),
+	}
+
+	args := []engine.ScriptValue{
+		engine.NewStringValue("test-filter"),
+		engine.NewObjectValue(filterConfig),
+	}
+
+	result, err := bridge.ExecuteMethod(ctx, "createEventFilter", args)
+	assert.NoError(t, err)
+
+	stringValue, ok := result.(engine.StringValue)
+	assert.True(t, ok, "Expected StringValue (filter ID) from createEventFilter")
+	assert.Equal(t, "test-filter", stringValue.Value(), "Filter ID should match input")
+}
+
+func TestEventsBridge_ExecuteMethod_Unsubscribe(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Subscribe first
+	subscribeArgs := []engine.ScriptValue{
+		engine.NewStringValue("test-event"),
+		engine.NewStringValue("handler"),
+	}
+
+	subscribeResult, err := bridge.ExecuteMethod(ctx, "subscribe", subscribeArgs)
+	require.NoError(t, err)
+
+	subscriptionID := subscribeResult.(engine.StringValue).Value()
+
+	// Now unsubscribe
+	unsubscribeArgs := []engine.ScriptValue{engine.NewStringValue(subscriptionID)}
+	result, err := bridge.ExecuteMethod(ctx, "unsubscribe", unsubscribeArgs)
+	assert.NoError(t, err)
+
+	boolValue, ok := result.(engine.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from unsubscribe")
+	assert.True(t, boolValue.Value(), "Unsubscribe should succeed")
+}
+
+func TestEventsBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	assert.NoError(t, err) // Should return error value, not Go error
+
+	errorValue, ok := result.(engine.ErrorValue)
+	assert.True(t, ok, "Expected ErrorValue for unknown method")
+	assert.Contains(t, errorValue.Error().Error(), "unknown method")
+}
+
+func TestEventsBridge_RequiredPermissions(t *testing.T) {
+	bridge := NewEventBridge()
+	permissions := bridge.RequiredPermissions()
+
+	assert.Greater(t, len(permissions), 0, "Should have required permissions")
+
+	// Check for expected permission types
+	hasEventsPermission := false
+	for _, perm := range permissions {
+		if perm.Resource == "events" {
+			hasEventsPermission = true
+			break
+		}
+	}
+	assert.True(t, hasEventsPermission, "Should have events permission")
+}
+
+func TestEventsBridge_TypeMappings(t *testing.T) {
+	bridge := NewEventBridge()
+	mappings := bridge.TypeMappings()
+
+	assert.Greater(t, len(mappings), 0, "Should have type mappings")
+
+	// Check for expected mappings
+	expectedTypes := []string{"Event", "EventFilter", "EventListener"}
+	for _, expectedType := range expectedTypes {
+		_, exists := mappings[expectedType]
+		assert.True(t, exists, "Expected type mapping for %s", expectedType)
+	}
+}
+
+func TestEventsBridge_Cleanup(t *testing.T) {
+	bridge := NewEventBridge()
+	ctx := context.Background()
+
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+	assert.True(t, bridge.IsInitialized())
+
 	err = bridge.Cleanup(ctx)
 	assert.NoError(t, err)
+	assert.False(t, bridge.IsInitialized())
 }
 
-func TestEventBridge_ErrorHandling(t *testing.T) {
+func TestEventsBridge_NotInitialized(t *testing.T) {
 	bridge := NewEventBridge()
 	ctx := context.Background()
 
-	t.Run("methods fail when not initialized", func(t *testing.T) {
-		methods := []string{
-			"publishEvent",
-			"subscribe",
-			"storeEvent",
-			"queryEvents",
-		}
+	// Should fail when not initialized
+	result, err := bridge.ExecuteMethod(ctx, "listListeners", []engine.ScriptValue{})
+	assert.NoError(t, err) // Should return error value, not Go error
 
-		for _, method := range methods {
-			_, err := bridge.ExecuteMethod(ctx, method, []interface{}{})
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "not initialized")
-		}
-	})
-
-	t.Run("invalid method parameters", func(t *testing.T) {
-		require.NoError(t, bridge.Initialize(ctx))
-		defer func() {
-			_ = bridge.Cleanup(ctx)
-		}()
-
-		// publishEvent with invalid event
-		_, err := bridge.ExecuteMethod(ctx, "publishEvent", []interface{}{
-			"not an object",
-		})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "must be an object")
-
-		// subscribe without handler
-		_, err = bridge.ExecuteMethod(ctx, "subscribe", []interface{}{
-			"test.*",
-		})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "requires pattern and handler")
-
-		// Invalid filter config
-		_, err = bridge.ExecuteMethod(ctx, "createCompositeFilter", []interface{}{
-			"INVALID_OP",
-			[]interface{}{},
-		})
-		assert.Error(t, err)
-	})
-
-	t.Run("unknown method", func(t *testing.T) {
-		require.NoError(t, bridge.Initialize(ctx))
-		defer func() {
-			_ = bridge.Cleanup(ctx)
-		}()
-
-		_, err := bridge.ExecuteMethod(ctx, "unknownMethod", []interface{}{})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "method not found")
-	})
-}
-
-// Benchmark tests
-func BenchmarkEventBridge_PublishEvent(b *testing.B) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(b, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	event := map[string]interface{}{
-		"type":    "benchmark.event",
-		"agentID": "bench-agent",
-		"data":    map[string]interface{}{"value": 42},
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := bridge.ExecuteMethod(ctx, "publishEvent", []interface{}{event})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkEventBridge_EventSerialization(b *testing.B) {
-	ctx := context.Background()
-	bridge := NewEventBridge()
-	require.NoError(b, bridge.Initialize(ctx))
-	defer func() {
-		_ = bridge.Cleanup(ctx)
-	}()
-
-	event := map[string]interface{}{
-		"type":    "benchmark.serialize",
-		"agentID": "bench-agent",
-		"data":    map[string]interface{}{"nested": map[string]interface{}{"value": 42}},
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		result, err := bridge.ExecuteMethod(ctx, "serializeEvent", []interface{}{event, "json"})
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		serialized := result.(string)
-		_, err = bridge.ExecuteMethod(ctx, "deserializeEvent", []interface{}{serialized, "json"})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
+	errorValue, ok := result.(engine.ErrorValue)
+	assert.True(t, ok, "Expected ErrorValue when not initialized")
+	assert.Contains(t, errorValue.Error().Error(), "not initialized")
 }

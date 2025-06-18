@@ -211,7 +211,7 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 			"schemaVersion": engine.NewStringValue(inventory.Metadata.SchemaVersion),
 		}
 		models := convertModelsToScriptValue(inventory.Models)
-		
+
 		result := map[string]engine.ScriptValue{
 			"metadata": engine.NewObjectValue(metadata),
 			"models":   models,
@@ -304,7 +304,7 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 		return engine.NewArrayValue(values), nil
 
 	case "getModel":
-		if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString || 
+		if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString ||
 			args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("getModel requires registryName and modelID parameters")
 		}
@@ -354,7 +354,7 @@ func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
 		"inputPer1kTokens":  engine.NewNumberValue(m.Pricing.InputPer1kTokens),
 		"outputPer1kTokens": engine.NewNumberValue(m.Pricing.OutputPer1kTokens),
 	}
-	
+
 	fields := map[string]engine.ScriptValue{
 		"provider":         engine.NewStringValue(m.Provider),
 		"name":             engine.NewStringValue(m.Name),
@@ -415,7 +415,7 @@ func convertCapabilitiesToScriptValue(c domain.Capabilities) engine.ScriptValue 
 		"read":  engine.NewBoolValue(c.File.Read),
 		"write": engine.NewBoolValue(c.File.Write),
 	}
-	
+
 	fields := map[string]engine.ScriptValue{
 		"text":            engine.NewObjectValue(textFields),
 		"image":           engine.NewObjectValue(imageFields),
