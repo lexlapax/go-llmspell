@@ -416,7 +416,7 @@ func (b *UtilAuthBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
-func (b *UtilAuthBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *UtilAuthBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -446,389 +446,493 @@ func (b *UtilAuthBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	if !b.initialized {
-		return nil, errors.New("bridge not initialized")
+		return nil, ErrBridgeNotInitialized
 	}
 
 	switch name {
 	case "createAuthConfig":
-		if len(args) < 2 {
-			return nil, errors.New("invalid arguments")
-		}
-		authType, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("auth type must be string")
-		}
-		credentials, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, errors.New("credentials must be object")
-		}
-
-		// Create AuthConfig using go-llms auth package
-		config := &llmauth.AuthConfig{
-			Type: authType,
-			Data: credentials,
-		}
-		return config, nil
-
+		return b.createAuthConfig(ctx, args)
 	case "applyAuth":
-		if len(args) < 2 {
-			return nil, errors.New("invalid arguments")
-		}
-		// In a real implementation, we'd need to handle the HTTP request object
-		// This is a simplified version
-		_, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, errors.New("auth config must be object")
-		}
-
-		// Would call llmauth.ApplyAuth here with actual HTTP request
-		// For now, just return success
-		return true, nil
-
+		return b.applyAuth(ctx, args)
 	case "detectAuthSchemeFromState":
-		if len(args) < 2 {
-			return nil, errors.New("invalid arguments")
-		}
-		// Would call llmauth.DetectAuthSchemeFromState
-		// This requires integration with state system
-		return &llmauth.AuthScheme{
-			Type:        "bearer",
-			Description: "Detected auth scheme",
-		}, nil
-
-	// Enhanced OAuth2 operations (go-llms v0.3.5)
+		return b.detectAuthSchemeFromState(ctx, args)
 	case "discoverOAuth2Endpoints":
-		if len(args) < 1 {
-			return nil, errors.New("invalid arguments")
-		}
-		issuerURL, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("issuerURL must be string")
-		}
-
-		// Since go-llms doesn't have .well-known discovery, we'll simulate it
-		// In a real implementation, this would make HTTP request to .well-known/openid-configuration
-		wellKnownURL := strings.TrimSuffix(issuerURL, "/") + "/.well-known/openid-configuration"
-
-		// Log auth event for discovery attempt
-		if b.eventEmitter != nil {
-			b.eventEmitter.EmitCustom("auth.discovery.attempt", map[string]interface{}{
-				"issuerURL":    issuerURL,
-				"wellKnownURL": wellKnownURL,
-				"timestamp":    time.Now(),
-			})
-		}
-
-		// Return simulated discovery response
-		return map[string]interface{}{
-			"issuer":                   issuerURL,
-			"authorization_endpoint":   issuerURL + "/authorize",
-			"token_endpoint":           issuerURL + "/token",
-			"userinfo_endpoint":        issuerURL + "/userinfo",
-			"jwks_uri":                 issuerURL + "/jwks",
-			"response_types_supported": []string{"code", "token", "id_token"},
-			"grant_types_supported":    []string{"authorization_code", "client_credentials", "refresh_token"},
-		}, nil
-
+		return b.discoverOAuth2Endpoints(ctx, args)
 	case "validateOAuth2Token":
-		if len(args) < 1 {
-			return nil, errors.New("invalid arguments")
-		}
-		token, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("token must be string")
-		}
-
-		// Parse JWT claims without verification (using go-llms capability)
-		claims, err := llmauth.ParseJWTClaims(token)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse token: %w", err)
-		}
-
-		// Convert claims to map for script access
-		claimsMap := map[string]interface{}{
-			"exp": claims.Exp,
-			"iat": claims.Iat,
-			"sub": claims.Sub,
-			"aud": claims.Aud,
-			"iss": claims.Iss,
-		}
-
-		// If schema provided, validate against it
-		if len(args) > 1 && args[1] != nil {
-			if schemaMap, ok := args[1].(map[string]interface{}); ok {
-				// Convert to schema and validate
-				schemaJSON, _ := llmjson.Marshal(schemaMap)
-				schema := &schemaDomain.Schema{}
-				if err := llmjson.Unmarshal(schemaJSON, schema); err == nil {
-					claimsJSON, _ := llmjson.Marshal(claimsMap)
-					validationResult, _ := b.validator.Validate(schema, string(claimsJSON))
-					if validationResult != nil && !validationResult.Valid {
-						return map[string]interface{}{
-							"valid":  false,
-							"claims": claimsMap,
-							"errors": validationResult.Errors,
-						}, nil
-					}
-				}
-			}
-		}
-
-		// Check expiration
-		isExpired := claims.Exp > 0 && time.Now().Unix() > claims.Exp
-
-		return map[string]interface{}{
-			"valid":   !isExpired,
-			"claims":  claimsMap,
-			"expired": isExpired,
-		}, nil
-
+		return b.validateOAuth2Token(ctx, args)
 	case "parseJWTClaims":
-		if len(args) < 1 {
-			return nil, errors.New("invalid arguments")
-		}
-		token, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("token must be string")
-		}
-
-		claims, err := llmauth.ParseJWTClaims(token)
-		if err != nil {
-			return nil, err
-		}
-
-		// Convert to map for script access
-		return map[string]interface{}{
-			"exp": claims.Exp,
-			"iat": claims.Iat,
-			"sub": claims.Sub,
-			"aud": claims.Aud,
-			"iss": claims.Iss,
-		}, nil
-
+		return b.parseJWTClaims(ctx, args)
 	case "autoRefreshToken":
-		if len(args) < 1 {
-			return nil, errors.New("invalid arguments")
-		}
-		authConfig, ok := args[0].(*llmauth.AuthConfig)
-		if !ok {
-			// Try to convert from map
-			if configMap, ok := args[0].(map[string]interface{}); ok {
-				authConfig = &llmauth.AuthConfig{
-					Type: configMap["type"].(string),
-					Data: configMap,
-				}
-			} else {
-				return nil, errors.New("authConfig must be AuthConfig")
-			}
-		}
-
-		refreshBefore := 300 // Default 5 minutes
-		if len(args) > 1 && args[1] != nil {
-			if rb, ok := args[1].(float64); ok {
-				refreshBefore = int(rb)
-			}
-		}
-
-		// Set up auto-refresh metadata
-		return map[string]interface{}{
-			"enabled":       true,
-			"refreshBefore": refreshBefore,
-			"authConfig":    authConfig,
-			"nextRefresh":   time.Now().Add(time.Duration(refreshBefore) * time.Second),
-		}, nil
-
-	// Multi-scheme authentication
+		return b.autoRefreshToken(ctx, args)
 	case "registerAuthScheme":
-		if len(args) < 2 {
-			return nil, errors.New("invalid arguments")
-		}
-		endpoint, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("endpoint must be string")
-		}
-		scheme, ok := args[1].(*llmauth.AuthScheme)
-		if !ok {
-			// Try to convert from map
-			if schemeMap, ok := args[1].(map[string]interface{}); ok {
-				scheme = &llmauth.AuthScheme{
-					Type:        schemeMap["type"].(string),
-					Description: schemeMap["description"].(string),
-				}
-			} else {
-				return nil, errors.New("scheme must be AuthScheme")
-			}
-		}
-
-		b.mu.Lock()
-		b.authSchemes[endpoint] = scheme
-		b.mu.Unlock()
-
-		// Log auth event
-		if b.eventEmitter != nil {
-			b.eventEmitter.EmitCustom("auth.scheme.registered", map[string]interface{}{
-				"endpoint":  endpoint,
-				"scheme":    scheme.Type,
-				"timestamp": time.Now(),
-			})
-		}
-
-		return true, nil
-
+		return b.registerAuthScheme(ctx, args)
 	case "getAuthSchemes":
-		if len(args) < 1 {
-			return nil, errors.New("invalid arguments")
-		}
-		endpoint, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("endpoint must be string")
-		}
-
-		schemes := []interface{}{}
-		for ep, scheme := range b.authSchemes {
-			// Simple pattern matching
-			if strings.HasPrefix(endpoint, ep) || strings.HasPrefix(ep, endpoint) {
-				schemes = append(schemes, scheme)
-			}
-		}
-
-		return schemes, nil
-
-	// Credential serialization
+		return b.getAuthSchemes(ctx, args)
 	case "serializeCredentials":
-		if len(args) < 1 {
-			return nil, errors.New("invalid arguments")
-		}
-		authConfig, ok := args[0].(*llmauth.AuthConfig)
-		if !ok {
-			// Try to convert from map
-			if configMap, ok := args[0].(map[string]interface{}); ok {
-				authConfig = &llmauth.AuthConfig{
-					Type: configMap["type"].(string),
-					Data: configMap,
-				}
-			} else {
-				return nil, errors.New("authConfig must be AuthConfig")
-			}
-		}
-
-		// Serialize to JSON (in production, would encrypt if key provided)
-		serialized, err := llmjson.Marshal(authConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to serialize: %w", err)
-		}
-
-		// Log event
-		if b.eventEmitter != nil {
-			b.eventEmitter.EmitCustom("auth.credentials.serialized", map[string]interface{}{
-				"type":      authConfig.Type,
-				"timestamp": time.Now(),
-			})
-		}
-
-		return string(serialized), nil
-
+		return b.serializeCredentials(ctx, args)
 	case "deserializeCredentials":
-		if len(args) < 1 {
-			return nil, errors.New("invalid arguments")
-		}
-		serialized, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("serialized must be string")
-		}
-
-		// Deserialize from JSON (in production, would decrypt if key provided)
-		var authConfig llmauth.AuthConfig
-		if err := llmjson.UnmarshalFromString(serialized, &authConfig); err != nil {
-			return nil, fmt.Errorf("failed to deserialize: %w", err)
-		}
-
-		return &authConfig, nil
-
+		return b.deserializeCredentials(ctx, args)
 	case "cacheCredentials":
-		if len(args) < 2 {
-			return nil, errors.New("invalid arguments")
-		}
-		key, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("key must be string")
-		}
-		authConfig, ok := args[1].(*llmauth.AuthConfig)
-		if !ok {
-			// Try to convert from map
-			if configMap, ok := args[1].(map[string]interface{}); ok {
-				authConfig = &llmauth.AuthConfig{
-					Type: configMap["type"].(string),
-					Data: configMap,
-				}
-			} else {
-				return nil, errors.New("authConfig must be AuthConfig")
-			}
-		}
-
-		ttl := 3600 // Default 1 hour
-		if len(args) > 2 && args[2] != nil {
-			if ttlFloat, ok := args[2].(float64); ok {
-				ttl = int(ttlFloat)
-			}
-		}
-
-		// Cache the credentials
-		b.mu.Lock()
-		b.credentialCache[key] = &credentialEntry{
-			AuthConfig: authConfig,
-			CreatedAt:  time.Now(),
-			LastUsed:   time.Now(),
-			RefreshAt:  time.Now().Add(time.Duration(ttl) * time.Second),
-			Metadata: map[string]interface{}{
-				"ttl": ttl,
-			},
-		}
-		b.mu.Unlock()
-
-		return true, nil
-
-	// Auth event logging
+		return b.cacheCredentials(ctx, args)
 	case "logAuthEvent":
-		if len(args) < 2 {
-			return nil, errors.New("invalid arguments")
-		}
-		eventType, ok := args[0].(string)
-		if !ok {
-			return nil, errors.New("eventType must be string")
-		}
-		metadata, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, errors.New("metadata must be object")
-		}
-
-		// Add timestamp and emit event
-		metadata["timestamp"] = time.Now()
-		metadata["eventType"] = eventType
-
-		if b.eventEmitter != nil {
-			b.eventEmitter.EmitCustom("auth.event."+eventType, metadata)
-		}
-
-		// Also emit to event bus if available
-		if b.eventBus != nil {
-			event := domain.Event{
-				ID:        fmt.Sprintf("auth_%s_%d", eventType, time.Now().UnixNano()),
-				Type:      domain.EventType("auth." + eventType),
-				Timestamp: time.Now(),
-				Data:      metadata,
-			}
-			b.eventBus.Publish(event)
-		}
-
-		return nil, nil
-
+		return b.logAuthEvent(ctx, args)
 	default:
-		return nil, errors.New("method not found")
+		return nil, fmt.Errorf("%w: %s", ErrMethodNotFound, name)
 	}
+}
+
+// Helper method implementations
+
+func (b *UtilAuthBridge) createAuthConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("auth type must be string")
+	}
+	authType := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("credentials must be object")
+	}
+	credentials := args[1].(engine.ObjectValue).Fields()
+
+	// Convert ScriptValue map to native map
+	credMap := make(map[string]interface{})
+	for k, v := range credentials {
+		credMap[k] = v.ToGo()
+	}
+
+	// Create AuthConfig using go-llms auth package
+	config := &llmauth.AuthConfig{
+		Type: authType,
+		Data: credMap,
+	}
+
+	// Return as object with fields
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"type": engine.NewStringValue(config.Type),
+		"data": engine.NewObjectValue(credentials),
+	}), nil
+}
+
+func (b *UtilAuthBridge) applyAuth(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+
+	// In a real implementation, we'd need to handle the HTTP request object
+	// This is a simplified version
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("auth config must be object")
+	}
+
+	// Would call llmauth.ApplyAuth here with actual HTTP request
+	// For now, just return success
+	return engine.NewBoolValue(true), nil
+}
+
+func (b *UtilAuthBridge) detectAuthSchemeFromState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+
+	// Would call llmauth.DetectAuthSchemeFromState
+	// This requires integration with state system
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"type":        engine.NewStringValue("bearer"),
+		"description": engine.NewStringValue("Detected auth scheme"),
+	}), nil
+}
+
+func (b *UtilAuthBridge) discoverOAuth2Endpoints(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("issuerURL must be string")
+	}
+	issuerURL := args[0].(engine.StringValue).Value()
+
+	// Since go-llms doesn't have .well-known discovery, we'll simulate it
+	wellKnownURL := strings.TrimSuffix(issuerURL, "/") + "/.well-known/openid-configuration"
+
+	// Log auth event for discovery attempt
+	if b.eventEmitter != nil {
+		b.eventEmitter.EmitCustom("auth.discovery.attempt", map[string]interface{}{
+			"issuerURL":    issuerURL,
+			"wellKnownURL": wellKnownURL,
+			"timestamp":    time.Now(),
+		})
+	}
+
+	// Convert response types array
+	responseTypes := []engine.ScriptValue{
+		engine.NewStringValue("code"),
+		engine.NewStringValue("token"),
+		engine.NewStringValue("id_token"),
+	}
+
+	// Convert grant types array
+	grantTypes := []engine.ScriptValue{
+		engine.NewStringValue("authorization_code"),
+		engine.NewStringValue("client_credentials"),
+		engine.NewStringValue("refresh_token"),
+	}
+
+	// Return simulated discovery response
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"issuer":                   engine.NewStringValue(issuerURL),
+		"authorization_endpoint":   engine.NewStringValue(issuerURL + "/authorize"),
+		"token_endpoint":           engine.NewStringValue(issuerURL + "/token"),
+		"userinfo_endpoint":        engine.NewStringValue(issuerURL + "/userinfo"),
+		"jwks_uri":                 engine.NewStringValue(issuerURL + "/jwks"),
+		"response_types_supported": engine.NewArrayValue(responseTypes),
+		"grant_types_supported":    engine.NewArrayValue(grantTypes),
+	}), nil
+}
+
+func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("token must be string")
+	}
+	token := args[0].(engine.StringValue).Value()
+
+	// Parse JWT claims without verification (using go-llms capability)
+	claims, err := llmauth.ParseJWTClaims(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	// Convert claims to ScriptValue map
+	claimsMap := map[string]engine.ScriptValue{
+		"exp": engine.NewNumberValue(float64(claims.Exp)),
+		"iat": engine.NewNumberValue(float64(claims.Iat)),
+		"sub": engine.NewStringValue(claims.Sub),
+		"aud": engine.NewStringValue(claims.Aud),
+		"iss": engine.NewStringValue(claims.Iss),
+	}
+
+	// If schema provided, validate against it
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		schemaObj := args[1].(engine.ObjectValue).Fields()
+		// Convert to native map for marshaling
+		schemaMap := make(map[string]interface{})
+		for k, v := range schemaObj {
+			schemaMap[k] = v.ToGo()
+		}
+
+		// Convert to schema and validate
+		schemaJSON, _ := llmjson.Marshal(schemaMap)
+		schema := &schemaDomain.Schema{}
+		if err := llmjson.Unmarshal(schemaJSON, schema); err == nil {
+			// Convert claims to native for validation
+			claimsNative := make(map[string]interface{})
+			for k, v := range claimsMap {
+				claimsNative[k] = v.ToGo()
+			}
+			claimsJSON, _ := llmjson.Marshal(claimsNative)
+			validationResult, _ := b.validator.Validate(schema, string(claimsJSON))
+			if validationResult != nil && !validationResult.Valid {
+				// Convert errors to ScriptValue array
+				errorValues := make([]engine.ScriptValue, len(validationResult.Errors))
+				for i, errMsg := range validationResult.Errors {
+					errorValues[i] = engine.NewStringValue(fmt.Sprintf("%v", errMsg))
+				}
+
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"valid":  engine.NewBoolValue(false),
+					"claims": engine.NewObjectValue(claimsMap),
+					"errors": engine.NewArrayValue(errorValues),
+				}), nil
+			}
+		}
+	}
+
+	// Check expiration
+	isExpired := claims.Exp > 0 && time.Now().Unix() > claims.Exp
+
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"valid":   engine.NewBoolValue(!isExpired),
+		"claims":  engine.NewObjectValue(claimsMap),
+		"expired": engine.NewBoolValue(isExpired),
+	}), nil
+}
+
+func (b *UtilAuthBridge) parseJWTClaims(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("token must be string")
+	}
+	token := args[0].(engine.StringValue).Value()
+
+	claims, err := llmauth.ParseJWTClaims(token)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to ScriptValue map
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"exp": engine.NewNumberValue(float64(claims.Exp)),
+		"iat": engine.NewNumberValue(float64(claims.Iat)),
+		"sub": engine.NewStringValue(claims.Sub),
+		"aud": engine.NewStringValue(claims.Aud),
+		"iss": engine.NewStringValue(claims.Iss),
+	}), nil
+}
+
+func (b *UtilAuthBridge) autoRefreshToken(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	// Extract auth config from args
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("authConfig must be object")
+	}
+
+	refreshBefore := 300 // Default 5 minutes
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeNumber {
+		refreshBefore = int(args[1].(engine.NumberValue).Value())
+	}
+
+	// Set up auto-refresh metadata
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"enabled":       engine.NewBoolValue(true),
+		"refreshBefore": engine.NewNumberValue(float64(refreshBefore)),
+		"authConfig":    args[0],
+		"nextRefresh":   engine.NewStringValue(time.Now().Add(time.Duration(refreshBefore) * time.Second).Format(time.RFC3339)),
+	}), nil
+}
+
+func (b *UtilAuthBridge) registerAuthScheme(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("endpoint must be string")
+	}
+	endpoint := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("scheme must be object")
+	}
+	schemeObj := args[1].(engine.ObjectValue).Fields()
+
+	// Extract scheme type and description
+	schemeType := ""
+	schemeDesc := ""
+	if typeVal, ok := schemeObj["type"]; ok && typeVal.Type() == engine.TypeString {
+		schemeType = typeVal.(engine.StringValue).Value()
+	}
+	if descVal, ok := schemeObj["description"]; ok && descVal.Type() == engine.TypeString {
+		schemeDesc = descVal.(engine.StringValue).Value()
+	}
+
+	scheme := &llmauth.AuthScheme{
+		Type:        schemeType,
+		Description: schemeDesc,
+	}
+
+	b.mu.Lock()
+	b.authSchemes[endpoint] = scheme
+	b.mu.Unlock()
+
+	// Log auth event
+	if b.eventEmitter != nil {
+		b.eventEmitter.EmitCustom("auth.scheme.registered", map[string]interface{}{
+			"endpoint":  endpoint,
+			"scheme":    scheme.Type,
+			"timestamp": time.Now(),
+		})
+	}
+
+	return engine.NewBoolValue(true), nil
+}
+
+func (b *UtilAuthBridge) getAuthSchemes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("endpoint must be string")
+	}
+	endpoint := args[0].(engine.StringValue).Value()
+
+	schemes := []engine.ScriptValue{}
+	for ep, scheme := range b.authSchemes {
+		// Simple pattern matching
+		if strings.HasPrefix(endpoint, ep) || strings.HasPrefix(ep, endpoint) {
+			schemeValue := engine.NewObjectValue(map[string]engine.ScriptValue{
+				"type":        engine.NewStringValue(scheme.Type),
+				"description": engine.NewStringValue(scheme.Description),
+			})
+			schemes = append(schemes, schemeValue)
+		}
+	}
+
+	return engine.NewArrayValue(schemes), nil
+}
+
+func (b *UtilAuthBridge) serializeCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("authConfig must be object")
+	}
+
+	// Convert ScriptValue to native for serialization
+	authConfigObj := args[0].(engine.ObjectValue).Fields()
+	authConfigNative := make(map[string]interface{})
+	for k, v := range authConfigObj {
+		authConfigNative[k] = v.ToGo()
+	}
+
+	// Serialize to JSON (in production, would encrypt if key provided)
+	serialized, err := llmjson.Marshal(authConfigNative)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize: %w", err)
+	}
+
+	// Log event
+	if b.eventEmitter != nil {
+		b.eventEmitter.EmitCustom("auth.credentials.serialized", map[string]interface{}{
+			"timestamp": time.Now(),
+		})
+	}
+
+	return engine.NewStringValue(string(serialized)), nil
+}
+
+func (b *UtilAuthBridge) deserializeCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("serialized must be string")
+	}
+	serialized := args[0].(engine.StringValue).Value()
+
+	// Deserialize from JSON (in production, would decrypt if key provided)
+	var authConfigNative map[string]interface{}
+	if err := llmjson.UnmarshalFromString(serialized, &authConfigNative); err != nil {
+		return nil, fmt.Errorf("failed to deserialize: %w", err)
+	}
+
+	// Convert to ScriptValue
+	authConfigFields := make(map[string]engine.ScriptValue)
+	for k, v := range authConfigNative {
+		authConfigFields[k] = engine.NewCustomValue("any", v)
+	}
+
+	return engine.NewObjectValue(authConfigFields), nil
+}
+
+func (b *UtilAuthBridge) cacheCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("key must be string")
+	}
+	key := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("authConfig must be object")
+	}
+
+	ttl := 3600 // Default 1 hour
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeNumber {
+		ttl = int(args[2].(engine.NumberValue).Value())
+	}
+
+	// Convert authConfig to native
+	authConfigObj := args[1].(engine.ObjectValue).Fields()
+	authConfigNative := make(map[string]interface{})
+	for k, v := range authConfigObj {
+		authConfigNative[k] = v.ToGo()
+	}
+
+	authConfig := &llmauth.AuthConfig{
+		Type: "cached",
+		Data: authConfigNative,
+	}
+
+	// Cache the credentials
+	b.mu.Lock()
+	b.credentialCache[key] = &credentialEntry{
+		AuthConfig: authConfig,
+		CreatedAt:  time.Now(),
+		LastUsed:   time.Now(),
+		RefreshAt:  time.Now().Add(time.Duration(ttl) * time.Second),
+		Metadata: map[string]interface{}{
+			"ttl": ttl,
+		},
+	}
+	b.mu.Unlock()
+
+	return engine.NewBoolValue(true), nil
+}
+
+func (b *UtilAuthBridge) logAuthEvent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("eventType must be string")
+	}
+	eventType := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("metadata must be object")
+	}
+	metadataObj := args[1].(engine.ObjectValue).Fields()
+
+	// Convert metadata to native
+	metadata := make(map[string]interface{})
+	for k, v := range metadataObj {
+		metadata[k] = v.ToGo()
+	}
+
+	// Add timestamp and emit event
+	metadata["timestamp"] = time.Now()
+	metadata["eventType"] = eventType
+
+	if b.eventEmitter != nil {
+		b.eventEmitter.EmitCustom("auth.event."+eventType, metadata)
+	}
+
+	// Also emit to event bus if available
+	if b.eventBus != nil {
+		event := domain.Event{
+			ID:        fmt.Sprintf("auth_%s_%d", eventType, time.Now().UnixNano()),
+			Type:      domain.EventType("auth." + eventType),
+			Timestamp: time.Now(),
+			Data:      metadata,
+		}
+		b.eventBus.Publish(event)
+	}
+
+	return engine.NewNilValue(), nil
 }

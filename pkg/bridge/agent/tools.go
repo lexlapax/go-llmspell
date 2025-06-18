@@ -525,13 +525,10 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		return engine.NewStringValue(help), nil
 
 	case "getToolExamples":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getToolExamples requires name parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("getToolExamples requires name parameter as string")
 		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
+		name := args[0].(engine.StringValue).Value()
 
 		var examples []domain.ToolExample
 
@@ -547,29 +544,27 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			}
 		}
 
-		result := make([]map[string]interface{}, 0, len(examples))
+		result := make([]engine.ScriptValue, 0, len(examples))
 		for _, ex := range examples {
-			result = append(result, map[string]interface{}{
-				"name":        ex.Name,
-				"description": ex.Description,
-				"input":       ex.Input,
-				"output":      ex.Output,
-			})
+			exampleData := map[string]engine.ScriptValue{
+				"name":        engine.NewStringValue(ex.Name),
+				"description": engine.NewStringValue(ex.Description),
+				"input":       convertInterfaceToScriptValue(ex.Input),
+				"output":      convertInterfaceToScriptValue(ex.Output),
+			}
+			result = append(result, engine.NewObjectValue(exampleData))
 		}
-		return result, nil
+		return engine.NewArrayValue(result), nil
 
 	case "createTool":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("createTool requires name parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("createTool requires name parameter as string")
 		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
+		name := args[0].(engine.StringValue).Value()
 
 		// Check custom tools first
 		if tool, exists := b.customTools[name]; exists {
-			return toolToWrapper(name, tool), nil
+			return convertInterfaceToScriptValue(toolToWrapper(name, tool)), nil
 		}
 
 		// Create from discovery
@@ -578,16 +573,16 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return nil, err
 		}
 
-		return toolToWrapper(name, tool), nil
+		return convertInterfaceToScriptValue(toolToWrapper(name, tool)), nil
 
 	case "executeTool":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("executeTool requires name and params parameters")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
+		name := args[0].(engine.StringValue).Value()
 		params := args[1]
 
 		var tool domain.Tool
@@ -615,15 +610,19 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return nil, fmt.Errorf("tool execution failed: %w", err)
 		}
 
-		return result, nil
+		return convertInterfaceToScriptValue(result), nil
 
 	case "registerCustomTool":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("registerCustomTool requires tool parameter")
 		}
-		toolDef, ok := args[0].(map[string]interface{})
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeObject {
 			return nil, fmt.Errorf("tool must be object")
+		}
+		toolDefObj := args[0].(engine.ObjectValue)
+		toolDef := make(map[string]interface{})
+		for k, v := range toolDefObj.Fields() {
+			toolDef[k] = convertScriptValueToInterface(v)
 		}
 
 		name, ok := toolDef["name"].(string)
@@ -638,18 +637,18 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		}
 
 		b.customTools[name] = tool
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	// Schema validation methods (Task 1.4.9.1)
 	case "executeToolValidated":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("executeToolValidated requires name and params parameters")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		params := args[1]
+		name := args[0].(engine.StringValue).Value()
+		params := convertScriptValueToInterface(args[1])
 
 		// Track execution start time
 		startTime := time.Now()
@@ -683,11 +682,11 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			if !inputValidation.Valid {
 				// Update metrics
 				b.updateExecutionMetrics(name, false, time.Since(startTime), fmt.Errorf("input validation failed"))
-				return map[string]interface{}{
-					"success":          false,
-					"error":            "Input validation failed",
-					"validationErrors": inputValidation.Errors,
-				}, nil
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"success":          engine.NewBoolValue(false),
+					"error":            engine.NewStringValue("Input validation failed"),
+					"validationErrors": convertInterfaceToScriptValue(inputValidation.Errors),
+				}), nil
 			}
 		}
 
@@ -701,10 +700,10 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		b.updateExecutionMetrics(name, err == nil, time.Since(startTime), err)
 
 		if err != nil {
-			return map[string]interface{}{
-				"success": false,
-				"error":   err.Error(),
-			}, nil
+			return engine.NewObjectValue(map[string]engine.ScriptValue{
+				"success": engine.NewBoolValue(false),
+				"error":   engine.NewStringValue(err.Error()),
+			}), nil
 		}
 
 		// Validate output
@@ -713,31 +712,31 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			outputValidation, _ = b.validator.ValidateStruct(outputSchema, result)
 			if !outputValidation.Valid {
 				// Still return the result but with validation warnings
-				return map[string]interface{}{
-					"success":                  true,
-					"result":                   result,
-					"outputValidationWarnings": outputValidation.Errors,
-				}, nil
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"success":                  engine.NewBoolValue(true),
+					"result":                   convertInterfaceToScriptValue(result),
+					"outputValidationWarnings": convertInterfaceToScriptValue(outputValidation.Errors),
+				}), nil
 			}
 		}
 
 		// Store validation report
 		b.storeValidationReport(name, inputValidation, outputValidation)
 
-		return map[string]interface{}{
-			"success": true,
-			"result":  result,
-		}, nil
+		return engine.NewObjectValue(map[string]engine.ScriptValue{
+			"success": engine.NewBoolValue(true),
+			"result":  convertInterfaceToScriptValue(result),
+		}), nil
 
 	case "validateToolInput":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("validateToolInput requires name and params parameters")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		params := args[1]
+		name := args[0].(engine.StringValue).Value()
+		params := convertScriptValueToInterface(args[1])
 
 		// Get parameter schema
 		var paramSchema *schemaDomain.Schema
@@ -750,10 +749,10 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		}
 
 		if paramSchema == nil {
-			return map[string]interface{}{
-				"valid":   true,
-				"message": "No schema available for validation",
-			}, nil
+			return engine.NewObjectValue(map[string]engine.ScriptValue{
+				"valid":   engine.NewBoolValue(true),
+				"message": engine.NewStringValue("No schema available for validation"),
+			}), nil
 		}
 
 		result, err := b.validator.ValidateStruct(paramSchema, params)
@@ -761,20 +760,20 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return nil, fmt.Errorf("validation error: %w", err)
 		}
 
-		return map[string]interface{}{
-			"valid":  result.Valid,
-			"errors": result.Errors,
-		}, nil
+		return engine.NewObjectValue(map[string]engine.ScriptValue{
+			"valid":  engine.NewBoolValue(result.Valid),
+			"errors": convertInterfaceToScriptValue(result.Errors),
+		}), nil
 
 	case "validateToolOutput":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("validateToolOutput requires name and output parameters")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		output := args[1]
+		name := args[0].(engine.StringValue).Value()
+		output := convertScriptValueToInterface(args[1])
 
 		// Get output schema
 		var outputSchema *schemaDomain.Schema
@@ -787,10 +786,10 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		}
 
 		if outputSchema == nil {
-			return map[string]interface{}{
-				"valid":   true,
-				"message": "No schema available for validation",
-			}, nil
+			return engine.NewObjectValue(map[string]engine.ScriptValue{
+				"valid":   engine.NewBoolValue(true),
+				"message": engine.NewStringValue("No schema available for validation"),
+			}), nil
 		}
 
 		result, err := b.validator.ValidateStruct(outputSchema, output)
@@ -798,29 +797,29 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return nil, fmt.Errorf("validation error: %w", err)
 		}
 
-		return map[string]interface{}{
-			"valid":  result.Valid,
-			"errors": result.Errors,
-		}, nil
+		return engine.NewObjectValue(map[string]engine.ScriptValue{
+			"valid":  engine.NewBoolValue(result.Valid),
+			"errors": convertInterfaceToScriptValue(result.Errors),
+		}), nil
 
 	case "getValidationReport":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("getValidationReport requires name parameter")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
+		name := args[0].(engine.StringValue).Value()
 
 		if report, exists := b.validationReports[name]; exists {
-			return map[string]interface{}{
-				"toolName":         report.ToolName,
-				"timestamp":        report.Timestamp.Format(time.RFC3339),
-				"inputValidation":  report.InputValidation,
-				"outputValidation": report.OutputValidation,
-				"schemaIssues":     report.SchemaIssues,
-				"recommendations":  report.Recommendations,
-			}, nil
+			return engine.NewObjectValue(map[string]engine.ScriptValue{
+				"toolName":         engine.NewStringValue(report.ToolName),
+				"timestamp":        engine.NewStringValue(report.Timestamp.Format(time.RFC3339)),
+				"inputValidation":  convertInterfaceToScriptValue(report.InputValidation),
+				"outputValidation": convertInterfaceToScriptValue(report.OutputValidation),
+				"schemaIssues":     convertInterfaceToScriptValue(report.SchemaIssues),
+				"recommendations":  convertInterfaceToScriptValue(report.Recommendations),
+			}), nil
 		}
 
 		return nil, fmt.Errorf("no validation report found for tool: %s", name)
@@ -830,15 +829,15 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		if len(args) < 1 {
 			return nil, fmt.Errorf("generateToolDocumentation requires name parameter")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
+		name := args[0].(engine.StringValue).Value()
 
 		format := "markdown" // default
 		if len(args) > 1 {
-			if f, ok := args[1].(string); ok {
-				format = f
+			if args[1] != nil && args[1].Type() == engine.TypeString {
+				format = args[1].(engine.StringValue).Value()
 			}
 		}
 
@@ -873,7 +872,7 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			if err != nil {
 				return nil, err
 			}
-			return doc, nil
+			return engine.NewStringValue(doc), nil
 		case "openapi":
 			spec, err := docs.GenerateToolOpenAPI(ctx, []bridge.ToolInfo{toolInfo}, b.docConfig)
 			if err != nil {
@@ -884,7 +883,7 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			if err != nil {
 				return nil, err
 			}
-			return string(jsonBytes), nil
+			return engine.NewStringValue(string(jsonBytes)), nil
 		case "json":
 			doc, err := docs.GenerateToolDocumentation(toolInfo)
 			if err != nil {
@@ -895,7 +894,7 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			if err != nil {
 				return nil, err
 			}
-			return string(jsonBytes), nil
+			return engine.NewStringValue(string(jsonBytes)), nil
 		default:
 			return nil, fmt.Errorf("unsupported format: %s", format)
 		}
@@ -903,14 +902,18 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	case "generateAllToolsDocs":
 		format := "markdown" // default
 		if len(args) > 0 {
-			if f, ok := args[0].(string); ok {
-				format = f
+			if args[0] != nil && args[0].Type() == engine.TypeString {
+				format = args[0].(engine.StringValue).Value()
 			}
 		}
 
 		switch format {
 		case "markdown":
-			return b.docGenerator.GenerateMarkdownForAllTools(ctx)
+			doc, err := b.docGenerator.GenerateMarkdownForAllTools(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return engine.NewStringValue(doc), nil
 		case "openapi":
 			spec, err := b.docGenerator.GenerateOpenAPIForAllTools(ctx)
 			if err != nil {
@@ -920,7 +923,7 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			if err != nil {
 				return nil, err
 			}
-			return string(jsonBytes), nil
+			return engine.NewStringValue(string(jsonBytes)), nil
 		case "json":
 			docs, err := b.docGenerator.GenerateDocsForAllTools(ctx)
 			if err != nil {
@@ -930,7 +933,7 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			if err != nil {
 				return nil, err
 			}
-			return string(jsonBytes), nil
+			return engine.NewStringValue(string(jsonBytes)), nil
 		default:
 			return nil, fmt.Errorf("unsupported format: %s", format)
 		}
@@ -939,38 +942,46 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 		if len(args) < 1 {
 			return nil, fmt.Errorf("generateToolPlayground requires name parameter")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
+		name := args[0].(engine.StringValue).Value()
 
 		// Generate interactive HTML playground
-		return b.generatePlaygroundHTML(name)
+		html, err := b.generatePlaygroundHTML(name)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewStringValue(html), nil
 
 	case "generateSDKSnippet":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("generateSDKSnippet requires name and language parameters")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		language, ok := args[1].(string)
-		if !ok {
+		if args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("language must be string")
 		}
+		name := args[0].(engine.StringValue).Value()
+		language := args[1].(engine.StringValue).Value()
 
-		return b.generateSDKSnippet(name, language)
+		snippet, err := b.generateSDKSnippet(name, language)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewStringValue(snippet), nil
 
 	// Execution analytics methods (Task 1.4.9.3)
 	case "getToolMetrics":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("getToolMetrics requires name parameter")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
+		name := args[0].(engine.StringValue).Value()
 
 		b.metricsLock.RLock()
 		metrics, exists := b.executionMetrics[name]
@@ -980,51 +991,58 @@ func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 			return nil, fmt.Errorf("no metrics found for tool: %s", name)
 		}
 
-		return b.metricsToMap(metrics), nil
+		return convertInterfaceToScriptValue(b.metricsToMap(metrics)), nil
 
 	case "getAllToolsMetrics":
 		b.metricsLock.RLock()
 		defer b.metricsLock.RUnlock()
 
-		result := make([]map[string]interface{}, 0, len(b.executionMetrics))
+		result := make([]engine.ScriptValue, 0, len(b.executionMetrics))
 		for _, metrics := range b.executionMetrics {
-			result = append(result, b.metricsToMap(metrics))
+			result = append(result, convertInterfaceToScriptValue(b.metricsToMap(metrics)))
 		}
 
-		return result, nil
+		return engine.NewArrayValue(result), nil
 
 	case "getToolUsageReport":
 		period := "day" // default
 		if len(args) > 0 {
-			if p, ok := args[0].(string); ok {
-				period = p
+			if args[0] != nil && args[0].Type() == engine.TypeString {
+				period = args[0].(engine.StringValue).Value()
 			}
 		}
 
-		return b.generateUsageReport(period)
+		report, err := b.generateUsageReport(period)
+		if err != nil {
+			return nil, err
+		}
+		return convertInterfaceToScriptValue(report), nil
 
 	case "enableToolProfiling":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("enableToolProfiling requires name parameter")
 		}
-		_, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
 
 		// Enable profiling for all tools
 		b.profiler.Enable()
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "getToolAnomalies":
 		var toolName string
 		if len(args) > 0 {
-			if n, ok := args[0].(string); ok {
-				toolName = n
+			if args[0] != nil && args[0].Type() == engine.TypeString {
+				toolName = args[0].(engine.StringValue).Value()
 			}
 		}
 
-		return b.detectAnomalies(toolName)
+		anomalies, err := b.detectAnomalies(toolName)
+		if err != nil {
+			return nil, err
+		}
+		return convertInterfaceToScriptValue(anomalies), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
@@ -1099,6 +1117,36 @@ func convertInterfaceToScriptValue(v interface{}) engine.ScriptValue {
 	default:
 		// Fallback to string representation
 		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+}
+
+// convertScriptValueToInterface converts ScriptValue to interface{} for go-llms compatibility
+func convertScriptValueToInterface(v engine.ScriptValue) interface{} {
+	switch v.Type() {
+	case engine.TypeString:
+		return v.(engine.StringValue).Value()
+	case engine.TypeNumber:
+		return v.(engine.NumberValue).Value()
+	case engine.TypeBool:
+		return v.(engine.BoolValue).Value()
+	case engine.TypeNil:
+		return nil
+	case engine.TypeArray:
+		arr := v.(engine.ArrayValue).Elements()
+		result := make([]interface{}, len(arr))
+		for i, item := range arr {
+			result[i] = convertScriptValueToInterface(item)
+		}
+		return result
+	case engine.TypeObject:
+		obj := v.(engine.ObjectValue).Fields()
+		result := make(map[string]interface{})
+		for k, val := range obj {
+			result[k] = convertScriptValueToInterface(val)
+		}
+		return result
+	default:
+		return v.ToGo()
 	}
 }
 
@@ -1182,7 +1230,7 @@ func customToolToScriptValue(name string, tool domain.Tool) map[string]engine.Sc
 		"isDeterministic":      engine.NewBoolValue(tool.IsDeterministic()),
 		"isDestructive":        engine.NewBoolValue(tool.IsDestructive()),
 		"requiresConfirmation": engine.NewBoolValue(tool.RequiresConfirmation()),
-		"estimatedLatency":     engine.NewStringValue(tool.EstimatedLatency().String()),
+		"estimatedLatency":     engine.NewStringValue(tool.EstimatedLatency()),
 		"usageInstructions":    engine.NewStringValue(tool.UsageInstructions()),
 		"constraints":          convertInterfaceToScriptValue(tool.Constraints()),
 		"errorGuidance":        convertInterfaceToScriptValue(tool.ErrorGuidance()),
@@ -1431,7 +1479,7 @@ func (b *ToolsBridge) toolToSchemaScriptValue(tool domain.Tool) map[string]engin
 		Name:          tool.Name(),
 		Description:   tool.Description(),
 		Parameters:    tool.ParameterSchema(),
-		Output:        tool.OutputSchema(), 
+		Output:        tool.OutputSchema(),
 		Examples:      tool.Examples(),
 		Constraints:   tool.Constraints(),
 		ErrorGuidance: tool.ErrorGuidance(),

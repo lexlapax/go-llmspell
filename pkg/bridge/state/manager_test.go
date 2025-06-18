@@ -24,6 +24,45 @@ import (
 
 // Test helper functions using go-llms testutils patterns
 
+// toScriptValue converts test values to ScriptValue for testing
+func toScriptValue(v interface{}) engine.ScriptValue {
+	switch val := v.(type) {
+	case string:
+		return engine.NewStringValue(val)
+	case float64:
+		return engine.NewNumberValue(val)
+	case int:
+		return engine.NewNumberValue(float64(val))
+	case bool:
+		return engine.NewBoolValue(val)
+	case nil:
+		return engine.NewNilValue()
+	case []interface{}:
+		elements := make([]engine.ScriptValue, len(val))
+		for i, elem := range val {
+			elements[i] = toScriptValue(elem)
+		}
+		return engine.NewArrayValue(elements)
+	case map[string]interface{}:
+		fields := make(map[string]engine.ScriptValue)
+		for k, v := range val {
+			fields[k] = toScriptValue(v)
+		}
+		return engine.NewObjectValue(fields)
+	default:
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+}
+
+// toScriptValues converts multiple test values to ScriptValue slice
+func toScriptValues(values ...interface{}) []engine.ScriptValue {
+	result := make([]engine.ScriptValue, len(values))
+	for i, v := range values {
+		result[i] = toScriptValue(v)
+	}
+	return result
+}
+
 // setupTestBridge creates and initializes a state manager bridge for testing
 func setupTestBridge(t *testing.T) (*StateManagerBridge, context.Context) {
 	t.Helper()
@@ -1013,12 +1052,12 @@ func (m *MockScriptEngine) Initialize(config engine.EngineConfig) error {
 	return nil
 }
 
-func (m *MockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
-	return nil, nil
+func (m *MockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (engine.ScriptValue, error) {
+	return engine.NewNilValue(), nil
 }
 
-func (m *MockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
-	return nil, nil
+func (m *MockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (engine.ScriptValue, error) {
+	return engine.NewNilValue(), nil
 }
 
 func (m *MockScriptEngine) Shutdown() error {
@@ -1033,12 +1072,12 @@ func (m *MockScriptEngine) GetBridge(name string) (engine.Bridge, error) {
 	return nil, nil
 }
 
-func (m *MockScriptEngine) ToNative(scriptValue interface{}) (interface{}, error) {
-	return scriptValue, nil
+func (m *MockScriptEngine) ToNative(scriptValue engine.ScriptValue) (interface{}, error) {
+	return scriptValue.ToGo(), nil
 }
 
-func (m *MockScriptEngine) FromNative(goValue interface{}) (interface{}, error) {
-	return goValue, nil
+func (m *MockScriptEngine) FromNative(goValue interface{}) (engine.ScriptValue, error) {
+	return toScriptValue(goValue), nil
 }
 
 func (m *MockScriptEngine) Name() string {
@@ -1288,7 +1327,7 @@ func TestStateManagerBridge_ErrorHandling(t *testing.T) {
 			bridge, ctx := tt.setup()
 
 			// Use reflection to call the method directly on the bridge
-			_, err := bridge.ExecuteMethod(ctx, tt.method, []interface{}{tt.args})
+			_, err := bridge.ExecuteMethod(ctx, tt.method, toScriptValues(tt.args))
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tt.expectedErr)
 		})
@@ -1305,21 +1344,21 @@ func TestStateManagerBridge_InterfaceCompliance(t *testing.T) {
 		{
 			name: "ValidateMethod with valid method",
 			test: func(t *testing.T) {
-				err := bridge.ValidateMethod("createState", []interface{}{})
+				err := bridge.ValidateMethod("createState", toScriptValues())
 				assert.NoError(t, err)
 			},
 		},
 		{
 			name: "ValidateMethod with invalid method",
 			test: func(t *testing.T) {
-				err := bridge.ValidateMethod("nonexistent", []interface{}{})
+				err := bridge.ValidateMethod("nonexistent", toScriptValues())
 				assert.Error(t, err)
 			},
 		},
 		{
 			name: "ExecuteMethod with unknown method",
 			test: func(t *testing.T) {
-				_, err := bridge.ExecuteMethod(ctx, "unknownMethod", []interface{}{})
+				_, err := bridge.ExecuteMethod(ctx, "unknownMethod", toScriptValues())
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "method not found")
 			},
@@ -1337,21 +1376,25 @@ func TestStateManagerBridge_DirectStateOperations(t *testing.T) {
 
 	// Test createState using go-llms fixtures pattern
 	t.Run("createState returns valid state", func(t *testing.T) {
-		result, err := bridge.ExecuteMethod(ctx, "createState", []interface{}{map[string]interface{}{}})
+		result, err := bridge.ExecuteMethod(ctx, "createState", toScriptValues(map[string]interface{}{}))
 		assert.NoError(t, err)
 
-		stateObj, ok := result.(map[string]interface{})
-		assert.True(t, ok, "createState should return state object")
-		assert.NotEmpty(t, stateObj["id"], "Created state should have ID")
+		assert.NotNil(t, result, "createState should return result")
+		assert.Equal(t, engine.TypeObject, result.Type(), "createState should return object")
+		stateObj := result.(engine.ObjectValue).Fields()
+		stateId, exists := stateObj["id"]
+		assert.True(t, exists, "Created state should have ID field")
+		assert.NotNil(t, stateId, "Created state ID should not be nil")
 	})
 
 	// Test listStates initially empty
 	t.Run("listStates initially empty", func(t *testing.T) {
-		result, err := bridge.ExecuteMethod(ctx, "listStates", []interface{}{map[string]interface{}{}})
+		result, err := bridge.ExecuteMethod(ctx, "listStates", toScriptValues(map[string]interface{}{}))
 		assert.NoError(t, err)
 
-		states, ok := result.([]interface{})
-		assert.True(t, ok, "listStates should return slice")
+		assert.NotNil(t, result, "listStates should return result")
+		assert.Equal(t, engine.TypeArray, result.Type(), "listStates should return array")
+		states := result.(engine.ArrayValue).Elements()
 		assert.Empty(t, states, "Initial state list should be empty")
 	})
 }
@@ -1370,12 +1413,12 @@ func TestStateManagerBridge_BuiltinTransforms(t *testing.T) {
 				"__state": testState,
 			}
 
-			_, err := bridge.ExecuteMethod(ctx, "applyTransform", []interface{}{
+			_, err := bridge.ExecuteMethod(ctx, "applyTransform", toScriptValues(
+				transformName,
 				map[string]interface{}{
-					"name":  transformName,
 					"state": stateScript,
 				},
-			})
+			))
 
 			// Transform should exist (may fail due to conversion but not due to missing transform)
 			if err != nil {

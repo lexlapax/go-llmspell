@@ -140,100 +140,14 @@ func (b *WorkflowBridge) Methods() []engine.MethodInfo {
 				{Name: "name", Type: "string", Description: "Workflow name", Required: true},
 				{Name: "config", Type: "object", Description: "Sequential workflow configuration", Required: true},
 			},
-			ReturnType: "WorkflowAgent",
-		},
-		{
-			Name:        "createParallelWorkflow",
-			Description: "Create a parallel workflow that executes steps concurrently",
-			Parameters: []engine.ParameterInfo{
-				{Name: "name", Type: "string", Description: "Workflow name", Required: true},
-				{Name: "config", Type: "object", Description: "Parallel workflow configuration", Required: true},
-			},
-			ReturnType: "WorkflowAgent",
-		},
-		{
-			Name:        "createConditionalWorkflow",
-			Description: "Create a conditional workflow with branching logic",
-			Parameters: []engine.ParameterInfo{
-				{Name: "name", Type: "string", Description: "Workflow name", Required: true},
-				{Name: "config", Type: "object", Description: "Conditional workflow configuration", Required: true},
-			},
-			ReturnType: "WorkflowAgent",
-		},
-		{
-			Name:        "createLoopWorkflow",
-			Description: "Create a loop workflow for iterative processing",
-			Parameters: []engine.ParameterInfo{
-				{Name: "name", Type: "string", Description: "Workflow name", Required: true},
-				{Name: "config", Type: "object", Description: "Loop workflow configuration", Required: true},
-			},
-			ReturnType: "WorkflowAgent",
-		},
-		// Step management
-		{
-			Name:        "addWorkflowStep",
-			Description: "Add a step to a workflow",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "step", Type: "object", Description: "Step configuration", Required: true},
-			},
-			ReturnType: "void",
-		},
-		{
-			Name:        "removeWorkflowStep",
-			Description: "Remove a step from a workflow",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "stepID", Type: "string", Description: "Step ID to remove", Required: true},
-			},
-			ReturnType: "void",
-		},
-		{
-			Name:        "getWorkflowSteps",
-			Description: "Get all steps in a workflow",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-			},
-			ReturnType: "array",
-		},
-		{
-			Name:        "updateWorkflowStep",
-			Description: "Update a workflow step configuration",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "stepID", Type: "string", Description: "Step ID", Required: true},
-				{Name: "config", Type: "object", Description: "Updated step configuration", Required: true},
-			},
-			ReturnType: "void",
-		},
-		{
-			Name:        "reorderWorkflowSteps",
-			Description: "Reorder steps in a sequential workflow",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "stepOrder", Type: "array", Description: "New step order (array of step IDs)", Required: true},
-			},
-			ReturnType: "void",
-		},
-		// Workflow configuration
-		{
-			Name:        "setWorkflowConfig",
-			Description: "Update workflow configuration",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "config", Type: "object", Description: "Workflow configuration", Required: true},
-			},
-			ReturnType: "void",
-		},
-		{
-			Name:        "getWorkflowConfig",
-			Description: "Get workflow configuration",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-			},
 			ReturnType: "object",
 		},
-		// Execution methods
+		{
+			Name:        "listWorkflows",
+			Description: "List all registered workflows",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "array",
+		},
 		{
 			Name:        "executeWorkflow",
 			Description: "Execute a workflow synchronously",
@@ -243,128 +157,97 @@ func (b *WorkflowBridge) Methods() []engine.MethodInfo {
 			},
 			ReturnType: "any",
 		},
+		// Export/Import functionality
 		{
-			Name:        "executeWorkflowAsync",
-			Description: "Execute a workflow asynchronously",
+			Name:        "exportWorkflow",
+			Description: "Export workflow to specified format",
 			Parameters: []engine.ParameterInfo{
 				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "input", Type: "any", Description: "Workflow input", Required: false},
+				{Name: "format", Type: "string", Description: "Export format", Required: false},
 			},
-			ReturnType: "channel",
-		},
-		// Workflow state and status
-		{
-			Name:        "getWorkflowStatus",
-			Description: "Get the current status of a workflow",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-			},
-			ReturnType: "WorkflowStatus",
+			ReturnType: "string",
 		},
 		{
-			Name:        "getWorkflowState",
-			Description: "Get the current state of a workflow",
+			Name:        "importWorkflow",
+			Description: "Import workflow from data",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
+				{Name: "data", Type: "string", Description: "Workflow data", Required: true},
+				{Name: "format", Type: "string", Description: "Data format", Required: false},
 			},
-			ReturnType: "WorkflowState",
+			ReturnType: "object",
 		},
 		{
-			Name:        "setWorkflowState",
-			Description: "Set the state of a workflow",
+			Name:        "validateWorkflowData",
+			Description: "Validate workflow data format",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "state", Type: "WorkflowState", Description: "New workflow state", Required: true},
+				{Name: "data", Type: "string", Description: "Workflow data", Required: true},
+				{Name: "format", Type: "string", Description: "Data format", Required: false},
 			},
-			ReturnType: "void",
+			ReturnType: "object",
 		},
-		// Execution control
+		// Script step functionality
 		{
-			Name:        "pauseWorkflow",
-			Description: "Pause a running workflow",
+			Name:        "registerScriptHandler",
+			Description: "Register a script handler for a language",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
+				{Name: "language", Type: "string", Description: "Script language", Required: true},
+				{Name: "handler", Type: "object", Description: "Handler configuration", Required: true},
 			},
 			ReturnType: "void",
 		},
 		{
-			Name:        "resumeWorkflow",
-			Description: "Resume a paused workflow",
+			Name:        "createScriptStep",
+			Description: "Create a script step",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
+				{Name: "name", Type: "string", Description: "Step name", Required: true},
+				{Name: "language", Type: "string", Description: "Script language", Required: true},
+				{Name: "script", Type: "string", Description: "Script code", Required: true},
+				{Name: "config", Type: "object", Description: "Step configuration", Required: false},
 			},
-			ReturnType: "void",
+			ReturnType: "object",
 		},
 		{
-			Name:        "cancelWorkflow",
-			Description: "Cancel a running workflow",
+			Name:        "validateScriptStep",
+			Description: "Validate a script step",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
+				{Name: "step", Type: "object", Description: "Script step", Required: true},
 			},
-			ReturnType: "void",
+			ReturnType: "object",
+		},
+		// Template functionality
+		{
+			Name:        "listTemplates",
+			Description: "List available templates",
+			Parameters: []engine.ParameterInfo{
+				{Name: "category", Type: "string", Description: "Template category", Required: false},
+				{Name: "tags", Type: "array", Description: "Template tags", Required: false},
+			},
+			ReturnType: "array",
 		},
 		{
-			Name:        "retryWorkflowStep",
-			Description: "Retry a failed workflow step",
+			Name:        "getTemplate",
+			Description: "Get template by ID",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "stepID", Type: "string", Description: "Step ID to retry", Required: true},
+				{Name: "templateID", Type: "string", Description: "Template ID", Required: true},
 			},
-			ReturnType: "void",
-		},
-		// Workflow management
-		{
-			Name:        "listWorkflows",
-			Description: "List all registered workflows",
-			Parameters:  []engine.ParameterInfo{},
-			ReturnType:  "array",
+			ReturnType: "object",
 		},
 		{
-			Name:        "getWorkflow",
-			Description: "Get a workflow by ID",
+			Name:        "createFromTemplate",
+			Description: "Create workflow from template",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
+				{Name: "templateID", Type: "string", Description: "Template ID", Required: true},
+				{Name: "variables", Type: "object", Description: "Template variables", Required: false},
 			},
-			ReturnType: "WorkflowAgent",
+			ReturnType: "object",
 		},
 		{
-			Name:        "removeWorkflow",
-			Description: "Remove a workflow",
+			Name:        "registerTemplate",
+			Description: "Register a new template",
 			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
+				{Name: "template", Type: "object", Description: "Template data", Required: true},
 			},
-			ReturnType: "void",
-		},
-		// Error handling
-		{
-			Name:        "setWorkflowErrorHandler",
-			Description: "Set error handler for a workflow",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "handler", Type: "function", Description: "Error handler function", Required: true},
-			},
-			ReturnType: "void",
-		},
-		// Hooks and events
-		{
-			Name:        "setWorkflowHook",
-			Description: "Set a lifecycle hook for a workflow",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "hookType", Type: "string", Description: "Hook type (beforeStep, afterStep, etc.)", Required: true},
-				{Name: "handler", Type: "function", Description: "Hook handler function", Required: true},
-			},
-			ReturnType: "void",
-		},
-		{
-			Name:        "subscribeToWorkflowEvents",
-			Description: "Subscribe to workflow events",
-			Parameters: []engine.ParameterInfo{
-				{Name: "workflowID", Type: "string", Description: "Workflow ID", Required: true},
-				{Name: "eventType", Type: "string", Description: "Event type to subscribe to", Required: false},
-				{Name: "handler", Type: "function", Description: "Event handler", Required: true},
-			},
-			ReturnType: "string", // subscription ID
+			ReturnType: "string",
 		},
 	}
 }
@@ -388,56 +271,11 @@ func (b *WorkflowBridge) TypeMappings() map[string]engine.TypeMapping {
 			GoType:     "WorkflowDefinition",
 			ScriptType: "object",
 		},
-		"WorkflowStatus": {
-			GoType:     "WorkflowStatus",
-			ScriptType: "object",
-		},
-		"WorkflowConfig": {
-			GoType:     "WorkflowConfig",
-			ScriptType: "object",
-		},
-		"SequentialConfig": {
-			GoType:     "SequentialConfig",
-			ScriptType: "object",
-		},
-		"ParallelConfig": {
-			GoType:     "ParallelConfig",
-			ScriptType: "object",
-		},
-		"ConditionalConfig": {
-			GoType:     "ConditionalConfig",
-			ScriptType: "object",
-		},
-		"LoopConfig": {
-			GoType:     "LoopConfig",
-			ScriptType: "object",
-		},
-		"ErrorHandler": {
-			GoType:     "ErrorHandler",
-			ScriptType: "function",
-		},
-		"StepResult": {
-			GoType:     "StepResult",
-			ScriptType: "object",
-		},
-		"ErrorAction": {
-			GoType:     "ErrorAction",
-			ScriptType: "string",
-		},
-		"BranchCondition": {
-			GoType:     "BranchCondition",
-			ScriptType: "object",
-		},
-		"LoopCondition": {
-			GoType:     "LoopCondition",
-			ScriptType: "object",
-		},
 	}
 }
 
 // ValidateMethod validates method calls
-func (b *WorkflowBridge) ValidateMethod(name string, args []interface{}) error {
-	// Method validation handled by engine based on Methods() metadata
+func (b *WorkflowBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	return nil
 }
 
@@ -459,15 +297,554 @@ func (b *WorkflowBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// Helper methods for type conversion and workflow management
-
-// getWorkflow retrieves a workflow by ID
-//
-//nolint:unused // will be used when implementing workflow methods
-func (b *WorkflowBridge) getWorkflow(id string) (bridge.BaseAgent, error) {
+// ExecuteMethod executes a bridge method
+func (b *WorkflowBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
+	if !b.initialized {
+		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
+	}
+
+	switch name {
+	case "createSequentialWorkflow":
+		return b.createSequentialWorkflow(args)
+
+	case "listWorkflows":
+		return b.listWorkflows()
+
+	case "executeWorkflow":
+		return b.executeWorkflow(ctx, args)
+
+	case "exportWorkflow":
+		return b.exportWorkflow(args)
+
+	case "importWorkflow":
+		return b.importWorkflow(args)
+
+	case "validateWorkflowData":
+		return b.validateWorkflowData(args)
+
+	case "registerScriptHandler":
+		return b.registerScriptHandler(args)
+
+	case "createScriptStep":
+		return b.createScriptStep(args)
+
+	case "validateScriptStep":
+		return b.validateScriptStep(args)
+
+	case "listTemplates":
+		return b.listTemplates(args)
+
+	case "getTemplate":
+		return b.getTemplate(args)
+
+	case "createFromTemplate":
+		return b.createFromTemplate(args)
+
+	case "registerTemplate":
+		return b.registerTemplate(args)
+
+	default:
+		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
+	}
+}
+
+// Method implementations
+
+func (b *WorkflowBridge) createSequentialWorkflow(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return engine.NewErrorValue(fmt.Errorf("createSequentialWorkflow requires name and config parameters")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("name must be string")), nil
+	}
+	name := args[0].(engine.StringValue).Value()
+
+	if args[1].Type() != engine.TypeObject {
+		return engine.NewErrorValue(fmt.Errorf("config must be object")), nil
+	}
+	config := args[1].ToGo().(map[string]interface{})
+
+	// Create workflow result
+	result := map[string]engine.ScriptValue{
+		"id":     engine.NewStringValue(fmt.Sprintf("workflow-%s", name)),
+		"type":   engine.NewStringValue("sequential"),
+		"name":   engine.NewStringValue(name),
+		"config": convertWorkflowToScriptValue(config),
+	}
+	return engine.NewObjectValue(result), nil
+}
+
+func (b *WorkflowBridge) listWorkflows() (engine.ScriptValue, error) {
+	workflows := make([]engine.ScriptValue, 0, len(b.workflows))
+	for id, workflow := range b.workflows {
+		workflowData := map[string]engine.ScriptValue{
+			"id":   engine.NewStringValue(id),
+			"type": engine.NewStringValue(string(workflow.Type())),
+			"name": engine.NewStringValue(workflow.Name()),
+		}
+		workflows = append(workflows, engine.NewObjectValue(workflowData))
+	}
+	return engine.NewArrayValue(workflows), nil
+}
+
+func (b *WorkflowBridge) executeWorkflow(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("executeWorkflow requires workflowID parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("workflowID must be string")), nil
+	}
+	workflowID := args[0].(engine.StringValue).Value()
+
+	workflow, err := b.getWorkflow(workflowID)
+	if err != nil {
+		return engine.NewErrorValue(err), nil
+	}
+
+	// Create input state
+	inputState := domain.NewState()
+	if len(args) > 1 && args[1] != nil {
+		if args[1].Type() == engine.TypeObject {
+			inputData := args[1].ToGo().(map[string]interface{})
+			for k, v := range inputData {
+				inputState.Set(k, v)
+			}
+		}
+	}
+
+	// Execute workflow
+	resultState, err := workflow.Run(ctx, inputState)
+	if err != nil {
+		return engine.NewErrorValue(fmt.Errorf("workflow execution failed: %w", err)), nil
+	}
+
+	// Return result state values
+	return convertWorkflowToScriptValue(resultState.Values()), nil
+}
+
+func (b *WorkflowBridge) exportWorkflow(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("exportWorkflow requires workflowID parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("workflowID must be string")), nil
+	}
+	workflowID := args[0].(engine.StringValue).Value()
+
+	format := "json"
+	if len(args) > 1 && args[1] != nil {
+		if args[1].Type() == engine.TypeString {
+			format = args[1].(engine.StringValue).Value()
+		}
+	}
+
+	// Check cache first
+	cacheKey := fmt.Sprintf("%s:%s", workflowID, format)
+	if cached, exists := b.serializerCache[cacheKey]; exists {
+		return engine.NewStringValue(string(cached)), nil
+	}
+
+	// Get workflow and serialize
+	wf, err := b.getWorkflow(workflowID)
+	if err != nil {
+		return engine.NewErrorValue(err), nil
+	}
+
+	// Create workflow definition from agent
+	def := &workflow.WorkflowDefinition{
+		Name:        wf.Name(),
+		Description: wf.Description(),
+		Steps:       []workflow.WorkflowStep{},
+	}
+
+	serializer := b.serializers[format]
+	if serializer == nil {
+		return engine.NewErrorValue(fmt.Errorf("unsupported format: %s", format)), nil
+	}
+
+	data, err := serializer.Serialize(def)
+	if err != nil {
+		return engine.NewErrorValue(fmt.Errorf("serialization failed: %w", err)), nil
+	}
+
+	// Cache the result
+	b.serializerCache[cacheKey] = data
+
+	return engine.NewStringValue(string(data)), nil
+}
+
+func (b *WorkflowBridge) importWorkflow(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("importWorkflow requires data parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("data must be string")), nil
+	}
+	data := args[0].(engine.StringValue).Value()
+
+	format := "json"
+	if len(args) > 1 && args[1] != nil {
+		if args[1].Type() == engine.TypeString {
+			format = args[1].(engine.StringValue).Value()
+		}
+	}
+
+	serializer := b.serializers[format]
+	if serializer == nil {
+		return engine.NewErrorValue(fmt.Errorf("unsupported format: %s", format)), nil
+	}
+
+	def, err := serializer.Deserialize([]byte(data))
+	if err != nil {
+		return engine.NewErrorValue(fmt.Errorf("deserialization failed: %w", err)), nil
+	}
+
+	// Create workflow from definition
+	result := map[string]engine.ScriptValue{
+		"id":          engine.NewStringValue(fmt.Sprintf("workflow-%s", def.Name)),
+		"name":        engine.NewStringValue(def.Name),
+		"description": engine.NewStringValue(def.Description),
+		"steps":       engine.NewNumberValue(float64(len(def.Steps))),
+	}
+	return engine.NewObjectValue(result), nil
+}
+
+func (b *WorkflowBridge) validateWorkflowData(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("validateWorkflowData requires data parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("data must be string")), nil
+	}
+	data := args[0].(engine.StringValue).Value()
+
+	format := "json"
+	if len(args) > 1 && args[1] != nil {
+		if args[1].Type() == engine.TypeString {
+			format = args[1].(engine.StringValue).Value()
+		}
+	}
+
+	serializer := b.serializers[format]
+	if serializer == nil {
+		return engine.NewErrorValue(fmt.Errorf("unsupported format: %s", format)), nil
+	}
+
+	_, err := serializer.Deserialize([]byte(data))
+
+	result := map[string]engine.ScriptValue{
+		"valid":  engine.NewBoolValue(err == nil),
+		"format": engine.NewStringValue(format),
+	}
+
+	if err != nil {
+		result["error"] = engine.NewStringValue(err.Error())
+	}
+
+	return engine.NewObjectValue(result), nil
+}
+
+func (b *WorkflowBridge) registerScriptHandler(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return engine.NewErrorValue(fmt.Errorf("registerScriptHandler requires language and handler parameters")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("language must be string")), nil
+	}
+	language := args[0].(engine.StringValue).Value()
+
+	if args[1].Type() != engine.TypeObject {
+		return engine.NewErrorValue(fmt.Errorf("handler must be object")), nil
+	}
+	handlerConfig := args[1].ToGo().(map[string]interface{})
+
+	// Create handler from config
+	handler := ScriptStepHandler{
+		Language: language,
+		Metadata: handlerConfig,
+	}
+
+	b.scriptHandlers[language] = handler
+	return engine.NewNilValue(), nil
+}
+
+func (b *WorkflowBridge) createScriptStep(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 3 {
+		return engine.NewErrorValue(fmt.Errorf("createScriptStep requires name, language, and script parameters")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("name must be string")), nil
+	}
+	name := args[0].(engine.StringValue).Value()
+
+	if args[1].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("language must be string")), nil
+	}
+	language := args[1].(engine.StringValue).Value()
+
+	if args[2].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("script must be string")), nil
+	}
+	script := args[2].(engine.StringValue).Value()
+
+	// Check if handler exists
+	if _, exists := b.scriptHandlers[language]; !exists {
+		return engine.NewErrorValue(fmt.Errorf("no handler for language: %s", language)), nil
+	}
+
+	// Create script step
+	stepID := fmt.Sprintf("script-%s-%s", language, name)
+
+	stepConfig := map[string]engine.ScriptValue{
+		"id":       engine.NewStringValue(stepID),
+		"name":     engine.NewStringValue(name),
+		"language": engine.NewStringValue(language),
+		"script":   engine.NewStringValue(script),
+		"type":     engine.NewStringValue("script"),
+	}
+
+	if len(args) > 3 && args[3] != nil {
+		if args[3].Type() == engine.TypeObject {
+			config := args[3].ToGo().(map[string]interface{})
+			if desc, ok := config["description"].(string); ok {
+				stepConfig["description"] = engine.NewStringValue(desc)
+			}
+			if env, ok := config["environment"].(map[string]interface{}); ok {
+				stepConfig["environment"] = convertWorkflowToScriptValue(env)
+			}
+		}
+	}
+
+	return engine.NewObjectValue(stepConfig), nil
+}
+
+func (b *WorkflowBridge) validateScriptStep(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("validateScriptStep requires step parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeObject {
+		return engine.NewErrorValue(fmt.Errorf("step must be object")), nil
+	}
+	stepData := args[0].ToGo().(map[string]interface{})
+
+	language, _ := stepData["language"].(string)
+	script, _ := stepData["script"].(string)
+
+	handler, exists := b.scriptHandlers[language]
+	if !exists {
+		result := map[string]engine.ScriptValue{
+			"valid": engine.NewBoolValue(false),
+			"error": engine.NewStringValue(fmt.Sprintf("no handler for language: %s", language)),
+		}
+		return engine.NewObjectValue(result), nil
+	}
+
+	var err error
+	if handler.Validator != nil {
+		err = handler.Validator(script)
+	}
+
+	result := map[string]engine.ScriptValue{
+		"valid":    engine.NewBoolValue(err == nil),
+		"language": engine.NewStringValue(language),
+	}
+
+	if err != nil {
+		result["error"] = engine.NewStringValue(err.Error())
+	}
+
+	return engine.NewObjectValue(result), nil
+}
+
+func (b *WorkflowBridge) listTemplates(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	var templates []*workflow.WorkflowTemplate
+
+	if len(args) > 0 && args[0] != nil {
+		if args[0].Type() == engine.TypeString {
+			category := args[0].(engine.StringValue).Value()
+			templates = workflow.ListTemplatesByCategory(category)
+		}
+	} else if len(args) > 1 && args[1] != nil {
+		if args[1].Type() == engine.TypeArray {
+			tagsArray := args[1].ToGo().([]interface{})
+			tags := make([]string, len(tagsArray))
+			for i, tag := range tagsArray {
+				if tagStr, ok := tag.(string); ok {
+					tags[i] = tagStr
+				}
+			}
+			templates = workflow.SearchTemplates(tags)
+		}
+	} else {
+		templates = workflow.ListTemplates()
+	}
+
+	// Include local templates
+	for _, tmpl := range b.templateRegistry {
+		templates = append(templates, tmpl)
+	}
+
+	result := make([]engine.ScriptValue, len(templates))
+	for i, tmpl := range templates {
+		templateData := map[string]engine.ScriptValue{
+			"id":          engine.NewStringValue(tmpl.ID),
+			"name":        engine.NewStringValue(tmpl.Name),
+			"description": engine.NewStringValue(tmpl.Description),
+			"category":    engine.NewStringValue(tmpl.Category),
+		}
+
+		// Convert tags to ScriptValue array
+		tags := make([]engine.ScriptValue, len(tmpl.Tags))
+		for j, tag := range tmpl.Tags {
+			tags[j] = engine.NewStringValue(tag)
+		}
+		templateData["tags"] = engine.NewArrayValue(tags)
+
+		result[i] = engine.NewObjectValue(templateData)
+	}
+
+	return engine.NewArrayValue(result), nil
+}
+
+func (b *WorkflowBridge) getTemplate(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("getTemplate requires templateID parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("templateID must be string")), nil
+	}
+	templateID := args[0].(engine.StringValue).Value()
+
+	// Check local registry first
+	if tmpl, exists := b.templateRegistry[templateID]; exists {
+		result := map[string]engine.ScriptValue{
+			"id":          engine.NewStringValue(tmpl.ID),
+			"name":        engine.NewStringValue(tmpl.Name),
+			"description": engine.NewStringValue(tmpl.Description),
+			"category":    engine.NewStringValue(tmpl.Category),
+		}
+
+		// Convert tags
+		tags := make([]engine.ScriptValue, len(tmpl.Tags))
+		for i, tag := range tmpl.Tags {
+			tags[i] = engine.NewStringValue(tag)
+		}
+		result["tags"] = engine.NewArrayValue(tags)
+
+		return engine.NewObjectValue(result), nil
+	}
+
+	// Check global registry
+	tmpl, err := workflow.GetTemplate(templateID)
+	if err != nil {
+		return engine.NewErrorValue(err), nil
+	}
+
+	result := map[string]engine.ScriptValue{
+		"id":          engine.NewStringValue(tmpl.ID),
+		"name":        engine.NewStringValue(tmpl.Name),
+		"description": engine.NewStringValue(tmpl.Description),
+		"category":    engine.NewStringValue(tmpl.Category),
+	}
+
+	// Convert tags
+	tags := make([]engine.ScriptValue, len(tmpl.Tags))
+	for i, tag := range tmpl.Tags {
+		tags[i] = engine.NewStringValue(tag)
+	}
+	result["tags"] = engine.NewArrayValue(tags)
+
+	return engine.NewObjectValue(result), nil
+}
+
+func (b *WorkflowBridge) createFromTemplate(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("createFromTemplate requires templateID parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("templateID must be string")), nil
+	}
+	templateID := args[0].(engine.StringValue).Value()
+
+	variables := make(map[string]interface{})
+	if len(args) > 1 && args[1] != nil {
+		if args[1].Type() == engine.TypeObject {
+			variables = args[1].ToGo().(map[string]interface{})
+		}
+	}
+
+	def, err := workflow.ApplyTemplate(templateID, variables)
+	if err != nil {
+		return engine.NewErrorValue(fmt.Errorf("failed to apply template: %w", err)), nil
+	}
+
+	result := map[string]engine.ScriptValue{
+		"id":           engine.NewStringValue(fmt.Sprintf("workflow-%s", def.Name)),
+		"name":         engine.NewStringValue(def.Name),
+		"description":  engine.NewStringValue(def.Description),
+		"fromTemplate": engine.NewStringValue(templateID),
+	}
+	return engine.NewObjectValue(result), nil
+}
+
+func (b *WorkflowBridge) registerTemplate(args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return engine.NewErrorValue(fmt.Errorf("registerTemplate requires template parameter")), nil
+	}
+
+	if args[0].Type() != engine.TypeObject {
+		return engine.NewErrorValue(fmt.Errorf("template must be object")), nil
+	}
+	templateData := args[0].ToGo().(map[string]interface{})
+
+	// Create template from data
+	id, _ := templateData["id"].(string)
+	name, _ := templateData["name"].(string)
+	description, _ := templateData["description"].(string)
+
+	tmpl := &workflow.WorkflowTemplate{
+		ID:          id,
+		Name:        name,
+		Description: description,
+	}
+
+	if category, ok := templateData["category"].(string); ok {
+		tmpl.Category = category
+	}
+
+	if tagsInterface, ok := templateData["tags"].([]interface{}); ok {
+		tags := make([]string, len(tagsInterface))
+		for i, tag := range tagsInterface {
+			if tagStr, ok := tag.(string); ok {
+				tags[i] = tagStr
+			}
+		}
+		tmpl.Tags = tags
+	}
+
+	// Store in local registry
+	b.templateRegistry[tmpl.ID] = tmpl
+
+	return engine.NewStringValue(tmpl.ID), nil
+}
+
+// Helper methods
+
+// getWorkflow retrieves a workflow by ID
+func (b *WorkflowBridge) getWorkflow(id string) (bridge.BaseAgent, error) {
 	workflow, exists := b.workflows[id]
 	if !exists {
 		return nil, fmt.Errorf("workflow %s not found", id)
@@ -476,12 +853,7 @@ func (b *WorkflowBridge) getWorkflow(id string) (bridge.BaseAgent, error) {
 }
 
 // registerWorkflow registers a workflow in the bridge
-//
-//nolint:unused // will be used when implementing workflow creation methods
 func (b *WorkflowBridge) registerWorkflow(workflow bridge.BaseAgent) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	if _, exists := b.workflows[workflow.ID()]; exists {
 		return fmt.Errorf("workflow %s already registered", workflow.ID())
 	}
@@ -496,14 +868,12 @@ func (b *WorkflowBridge) initializeDefaultScriptHandlers() {
 	b.scriptHandlers["javascript"] = ScriptStepHandler{
 		Language: "javascript",
 		Validator: func(script string) error {
-			// Basic JavaScript validation
 			if script == "" {
 				return fmt.Errorf("empty script")
 			}
 			return nil
 		},
 		Executor: func(ctx context.Context, script string, env map[string]interface{}) (interface{}, error) {
-			// Placeholder - would use actual JavaScript engine
 			return map[string]interface{}{
 				"result": "JavaScript execution placeholder",
 				"script": script,
@@ -526,7 +896,6 @@ func (b *WorkflowBridge) initializeDefaultScriptHandlers() {
 			return nil
 		},
 		Executor: func(ctx context.Context, script string, env map[string]interface{}) (interface{}, error) {
-			// Placeholder - would use actual Lua engine
 			return map[string]interface{}{
 				"result": "Lua execution placeholder",
 				"script": script,
@@ -549,7 +918,6 @@ func (b *WorkflowBridge) initializeDefaultScriptHandlers() {
 			return nil
 		},
 		Executor: func(ctx context.Context, script string, env map[string]interface{}) (interface{}, error) {
-			// Placeholder - would use actual Tengo engine
 			return map[string]interface{}{
 				"result": "Tengo execution placeholder",
 				"script": script,
@@ -564,12 +932,7 @@ func (b *WorkflowBridge) initializeDefaultScriptHandlers() {
 }
 
 // removeWorkflowInternal removes a workflow from the bridge
-//
-//nolint:unused // will be used when implementing removeWorkflow method
 func (b *WorkflowBridge) removeWorkflowInternal(id string) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	workflow, exists := b.workflows[id]
 	if !exists {
 		return fmt.Errorf("workflow %s not found", id)
@@ -584,419 +947,39 @@ func (b *WorkflowBridge) removeWorkflowInternal(id string) error {
 	return nil
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *WorkflowBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	if !b.initialized {
-		return nil, fmt.Errorf("bridge not initialized")
+// convertWorkflowToScriptValue converts a Go interface{} to engine.ScriptValue
+func convertWorkflowToScriptValue(v interface{}) engine.ScriptValue {
+	if v == nil {
+		return engine.NewNilValue()
 	}
 
-	switch name {
-	case "createSequentialWorkflow":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("createSequentialWorkflow requires name and config parameters")
+	switch val := v.(type) {
+	case string:
+		return engine.NewStringValue(val)
+	case bool:
+		return engine.NewBoolValue(val)
+	case int:
+		return engine.NewNumberValue(float64(val))
+	case int64:
+		return engine.NewNumberValue(float64(val))
+	case float64:
+		return engine.NewNumberValue(val)
+	case float32:
+		return engine.NewNumberValue(float64(val))
+	case map[string]interface{}:
+		result := make(map[string]engine.ScriptValue)
+		for k, mv := range val {
+			result[k] = convertWorkflowToScriptValue(mv)
 		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
+		return engine.NewObjectValue(result)
+	case []interface{}:
+		result := make([]engine.ScriptValue, len(val))
+		for i, av := range val {
+			result[i] = convertWorkflowToScriptValue(av)
 		}
-		config, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("config must be object")
-		}
-
-		// Placeholder until go-llms workflow package is available
-		// Will create actual workflow using workflow.NewSequentialWorkflow
-		return map[string]interface{}{
-			"id":     fmt.Sprintf("workflow-%s", name),
-			"type":   "sequential",
-			"name":   name,
-			"config": config,
-		}, nil
-
-	case "listWorkflows":
-		workflows := make([]map[string]interface{}, 0, len(b.workflows))
-		for id, workflow := range b.workflows {
-			workflows = append(workflows, map[string]interface{}{
-				"id":   id,
-				"type": workflow.Type(),
-				"name": workflow.Name(),
-			})
-		}
-		return workflows, nil
-
-	case "executeWorkflow":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("executeWorkflow requires workflowID parameter")
-		}
-		workflowID, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("workflowID must be string")
-		}
-
-		workflow, err := b.getWorkflow(workflowID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Create input state
-		inputState := domain.NewState()
-		if len(args) > 1 && args[1] != nil {
-			if inputData, ok := args[1].(map[string]interface{}); ok {
-				for k, v := range inputData {
-					inputState.Set(k, v)
-				}
-			}
-		}
-
-		// Execute workflow
-		resultState, err := workflow.Run(ctx, inputState)
-		if err != nil {
-			return nil, fmt.Errorf("workflow execution failed: %w", err)
-		}
-
-		// Return result state values
-		return resultState.Values(), nil
-
-	// Task 1.4.10.1: Workflow Import/Export
-	case "exportWorkflow":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("exportWorkflow requires workflowID parameter")
-		}
-		workflowID, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("workflowID must be string")
-		}
-
-		format := "json"
-		if len(args) > 1 && args[1] != nil {
-			if f, ok := args[1].(string); ok {
-				format = f
-			}
-		}
-
-		// Check cache first
-		cacheKey := fmt.Sprintf("%s:%s", workflowID, format)
-		if cached, exists := b.serializerCache[cacheKey]; exists {
-			return string(cached), nil
-		}
-
-		// Get workflow and serialize
-		wf, err := b.getWorkflow(workflowID)
-		if err != nil {
-			return nil, err
-		}
-
-		// Create workflow definition from agent
-		def := &workflow.WorkflowDefinition{
-			Name:        wf.Name(),
-			Description: wf.Description(),
-			Steps:       []workflow.WorkflowStep{},
-		}
-
-		serializer := b.serializers[format]
-		if serializer == nil {
-			return nil, fmt.Errorf("unsupported format: %s", format)
-		}
-
-		data, err := serializer.Serialize(def)
-		if err != nil {
-			return nil, fmt.Errorf("serialization failed: %w", err)
-		}
-
-		// Cache the result
-		b.serializerCache[cacheKey] = data
-
-		return string(data), nil
-
-	case "importWorkflow":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("importWorkflow requires data parameter")
-		}
-		data, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("data must be string")
-		}
-
-		format := "json"
-		if len(args) > 1 && args[1] != nil {
-			if f, ok := args[1].(string); ok {
-				format = f
-			}
-		}
-
-		serializer := b.serializers[format]
-		if serializer == nil {
-			return nil, fmt.Errorf("unsupported format: %s", format)
-		}
-
-		def, err := serializer.Deserialize([]byte(data))
-		if err != nil {
-			return nil, fmt.Errorf("deserialization failed: %w", err)
-		}
-
-		// Create workflow from definition
-		return map[string]interface{}{
-			"id":          fmt.Sprintf("workflow-%s", def.Name),
-			"name":        def.Name,
-			"description": def.Description,
-			"steps":       len(def.Steps),
-		}, nil
-
-	case "validateWorkflowData":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("validateWorkflowData requires data parameter")
-		}
-		data, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("data must be string")
-		}
-
-		format := "json"
-		if len(args) > 1 && args[1] != nil {
-			if f, ok := args[1].(string); ok {
-				format = f
-			}
-		}
-
-		serializer := b.serializers[format]
-		if serializer == nil {
-			return nil, fmt.Errorf("unsupported format: %s", format)
-		}
-
-		_, err := serializer.Deserialize([]byte(data))
-		if err != nil {
-			return map[string]interface{}{
-				"valid":  false,
-				"error":  err.Error(),
-				"format": format,
-			}, nil
-		}
-
-		return map[string]interface{}{
-			"valid":  true,
-			"format": format,
-		}, nil
-
-	// Task 1.4.10.2: Script Step Handlers
-	case "registerScriptHandler":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("registerScriptHandler requires language and handler parameters")
-		}
-		language, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("language must be string")
-		}
-		handlerConfig, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("handler must be object")
-		}
-
-		// Create handler from config
-		handler := ScriptStepHandler{
-			Language: language,
-			Metadata: handlerConfig,
-		}
-
-		b.scriptHandlers[language] = handler
-		return nil, nil
-
-	case "createScriptStep":
-		if len(args) < 3 {
-			return nil, fmt.Errorf("createScriptStep requires name, language, and script parameters")
-		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
-		language, ok := args[1].(string)
-		if !ok {
-			return nil, fmt.Errorf("language must be string")
-		}
-		script, ok := args[2].(string)
-		if !ok {
-			return nil, fmt.Errorf("script must be string")
-		}
-
-		// Check if handler exists in our bridge
-		if _, exists := b.scriptHandlers[language]; !exists {
-			return nil, fmt.Errorf("no handler for language: %s", language)
-		}
-
-		// Create script step metadata (since we can't use workflow.ScriptStep directly)
-		stepID := fmt.Sprintf("script-%s-%s", language, name)
-
-		// Store step configuration for later use
-		stepConfig := map[string]interface{}{
-			"id":       stepID,
-			"name":     name,
-			"language": language,
-			"script":   script,
-			"type":     "script",
-		}
-
-		if len(args) > 3 && args[3] != nil {
-			if config, ok := args[3].(map[string]interface{}); ok {
-				if desc, ok := config["description"].(string); ok {
-					stepConfig["description"] = desc
-				}
-				if env, ok := config["environment"].(map[string]interface{}); ok {
-					stepConfig["environment"] = env
-				}
-			}
-		}
-
-		return stepConfig, nil
-
-	case "validateScriptStep":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("validateScriptStep requires step parameter")
-		}
-		stepData, ok := args[0].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("step must be object")
-		}
-
-		language, _ := stepData["language"].(string)
-		script, _ := stepData["script"].(string)
-
-		handler, exists := b.scriptHandlers[language]
-		if !exists {
-			return map[string]interface{}{
-				"valid": false,
-				"error": fmt.Sprintf("no handler for language: %s", language),
-			}, nil
-		}
-
-		if handler.Validator != nil {
-			if err := handler.Validator(script); err != nil {
-				return map[string]interface{}{
-					"valid": false,
-					"error": err.Error(),
-				}, nil
-			}
-		}
-
-		return map[string]interface{}{
-			"valid":    true,
-			"language": language,
-		}, nil
-
-	// Task 1.4.10.3: Workflow Templates
-	case "listTemplates":
-		var templates []*workflow.WorkflowTemplate
-
-		if len(args) > 0 && args[0] != nil {
-			if category, ok := args[0].(string); ok {
-				templates = workflow.ListTemplatesByCategory(category)
-			}
-		} else if len(args) > 1 && args[1] != nil {
-			if tags, ok := args[1].([]string); ok {
-				templates = workflow.SearchTemplates(tags)
-			}
-		} else {
-			templates = workflow.ListTemplates()
-		}
-
-		// Include local templates
-		for _, tmpl := range b.templateRegistry {
-			templates = append(templates, tmpl)
-		}
-
-		result := make([]map[string]interface{}, len(templates))
-		for i, tmpl := range templates {
-			result[i] = map[string]interface{}{
-				"id":          tmpl.ID,
-				"name":        tmpl.Name,
-				"description": tmpl.Description,
-				"category":    tmpl.Category,
-				"tags":        tmpl.Tags,
-			}
-		}
-
-		return result, nil
-
-	case "getTemplate":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getTemplate requires templateID parameter")
-		}
-		templateID, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("templateID must be string")
-		}
-
-		// Check local registry first
-		if tmpl, exists := b.templateRegistry[templateID]; exists {
-			return tmpl, nil
-		}
-
-		// Check global registry
-		tmpl, err := workflow.GetTemplate(templateID)
-		if err != nil {
-			return nil, err
-		}
-
-		return tmpl, nil
-
-	case "createFromTemplate":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("createFromTemplate requires templateID parameter")
-		}
-		templateID, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("templateID must be string")
-		}
-
-		variables := make(map[string]interface{})
-		if len(args) > 1 && args[1] != nil {
-			if vars, ok := args[1].(map[string]interface{}); ok {
-				variables = vars
-			}
-		}
-
-		def, err := workflow.ApplyTemplate(templateID, variables)
-		if err != nil {
-			return nil, fmt.Errorf("failed to apply template: %w", err)
-		}
-
-		return map[string]interface{}{
-			"id":           fmt.Sprintf("workflow-%s", def.Name),
-			"name":         def.Name,
-			"description":  def.Description,
-			"fromTemplate": templateID,
-		}, nil
-
-	case "registerTemplate":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("registerTemplate requires template parameter")
-		}
-		templateData, ok := args[0].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("template must be object")
-		}
-
-		// Create template from data
-		tmpl := &workflow.WorkflowTemplate{
-			ID:          templateData["id"].(string),
-			Name:        templateData["name"].(string),
-			Description: templateData["description"].(string),
-		}
-
-		if category, ok := templateData["category"].(string); ok {
-			tmpl.Category = category
-		}
-		if tags, ok := templateData["tags"].([]string); ok {
-			tmpl.Tags = tags
-		}
-
-		// Store in local registry
-		b.templateRegistry[tmpl.ID] = tmpl
-
-		return tmpl.ID, nil
-
+		return engine.NewArrayValue(result)
 	default:
-		return nil, fmt.Errorf("method not found: %s", name)
+		// For unknown types, convert to string representation
+		return engine.NewStringValue(fmt.Sprintf("%v", val))
 	}
 }

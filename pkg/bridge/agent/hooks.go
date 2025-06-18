@@ -192,46 +192,82 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 }
 
 // ExecuteMethod runs a bridge method
-func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []interface{}) (interface{}, error) {
+func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if !b.IsInitialized() {
 		return nil, fmt.Errorf("bridge not initialized")
 	}
 
 	switch method {
 	case "registerHook":
-		return b.registerHook(ctx, args)
+		id, err := b.registerHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewStringValue(id.(string)), nil
 	case "unregisterHook":
-		return b.unregisterHook(ctx, args)
+		exists, err := b.unregisterHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewBoolValue(exists.(bool)), nil
 	case "listHooks":
-		return b.listHooks(ctx)
+		hooks, err := b.listHooks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return convertHooksListToScriptValue(hooks.([]map[string]interface{})), nil
 	case "enableHook":
-		return b.enableHook(ctx, args)
+		ok, err := b.enableHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewBoolValue(ok.(bool)), nil
 	case "disableHook":
-		return b.disableHook(ctx, args)
+		ok, err := b.disableHook(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewBoolValue(ok.(bool)), nil
 	case "getHookInfo":
-		return b.getHookInfo(ctx, args)
+		info, err := b.getHookInfo(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return convertHookInfoToScriptValue(info.(map[string]interface{})), nil
 	case "executeHooks":
-		return b.executeHooks(ctx, args)
+		results, err := b.executeHooks(ctx, args)
+		if err != nil {
+			return nil, err
+		}
+		return convertExecuteResultsToScriptValue(results.([]interface{})), nil
 	case "clearHooks":
-		return b.clearHooks(ctx)
+		count, err := b.clearHooks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNumberValue(float64(count.(int))), nil
 	default:
 		return nil, fmt.Errorf("method not found: %s", method)
 	}
 }
 
-func (b *HooksBridge) registerHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (b *HooksBridge) registerHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("registerHook requires id and definition arguments")
 	}
 
-	id, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
+	id := args[0].(engine.StringValue).Value()
 
-	definition, ok := args[1].(map[string]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
 		return nil, fmt.Errorf("definition must be an object")
+	}
+	definitionObj := args[1].(engine.ObjectValue).Fields()
+	definition := make(map[string]interface{})
+	for k, v := range definitionObj {
+		definition[k] = v.ToGo()
 	}
 
 	hook := &scriptHook{
@@ -267,15 +303,15 @@ func (b *HooksBridge) registerHook(ctx context.Context, args []interface{}) (int
 	return id, nil
 }
 
-func (b *HooksBridge) unregisterHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (b *HooksBridge) unregisterHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("unregisterHook requires id argument")
 	}
 
-	id, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
+	id := args[0].(engine.StringValue).Value()
 
 	b.mu.Lock()
 	_, exists := b.hooks[id]
@@ -309,15 +345,15 @@ func (b *HooksBridge) listHooks(ctx context.Context) (interface{}, error) {
 	return result, nil
 }
 
-func (b *HooksBridge) enableHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (b *HooksBridge) enableHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("enableHook requires id argument")
 	}
 
-	id, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
+	id := args[0].(engine.StringValue).Value()
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -330,15 +366,15 @@ func (b *HooksBridge) enableHook(ctx context.Context, args []interface{}) (inter
 	return false, fmt.Errorf("hook not found: %s", id)
 }
 
-func (b *HooksBridge) disableHook(ctx context.Context, args []interface{}) (interface{}, error) {
+func (b *HooksBridge) disableHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("disableHook requires id argument")
 	}
 
-	id, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
+	id := args[0].(engine.StringValue).Value()
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -351,15 +387,15 @@ func (b *HooksBridge) disableHook(ctx context.Context, args []interface{}) (inte
 	return false, fmt.Errorf("hook not found: %s", id)
 }
 
-func (b *HooksBridge) getHookInfo(ctx context.Context, args []interface{}) (interface{}, error) {
+func (b *HooksBridge) getHookInfo(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getHookInfo requires id argument")
 	}
 
-	id, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
+	id := args[0].(engine.StringValue).Value()
 
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -375,19 +411,23 @@ func (b *HooksBridge) getHookInfo(ctx context.Context, args []interface{}) (inte
 	return nil, fmt.Errorf("hook not found: %s", id)
 }
 
-func (b *HooksBridge) executeHooks(ctx context.Context, args []interface{}) (interface{}, error) {
+func (b *HooksBridge) executeHooks(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("executeHooks requires type and context arguments")
 	}
 
-	hookType, ok := args[0].(string)
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeString {
 		return nil, fmt.Errorf("type must be a string")
 	}
+	hookType := args[0].(engine.StringValue).Value()
 
-	hookContext, ok := args[1].(map[string]interface{})
-	if !ok {
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
 		return nil, fmt.Errorf("context must be an object")
+	}
+	hookContextObj := args[1].(engine.ObjectValue).Fields()
+	hookContext := make(map[string]interface{})
+	for k, v := range hookContextObj {
+		hookContext[k] = v.ToGo()
 	}
 
 	// Get hooks sorted by priority
@@ -531,33 +571,33 @@ func (b *HooksBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 }
 
 // ValidateMethod validates method arguments before execution
-func (b *HooksBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *HooksBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	switch name {
 	case "registerHook":
 		if len(args) < 2 {
 			return fmt.Errorf("registerHook requires id and definition arguments")
 		}
-		if _, ok := args[0].(string); !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return fmt.Errorf("id must be a string")
 		}
-		if _, ok := args[1].(map[string]interface{}); !ok {
+		if args[1] == nil || args[1].Type() != engine.TypeObject {
 			return fmt.Errorf("definition must be an object")
 		}
 	case "unregisterHook", "enableHook", "disableHook", "getHookInfo":
 		if len(args) < 1 {
 			return fmt.Errorf("%s requires id argument", name)
 		}
-		if _, ok := args[0].(string); !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return fmt.Errorf("id must be a string")
 		}
 	case "executeHooks":
 		if len(args) < 2 {
 			return fmt.Errorf("executeHooks requires type and context arguments")
 		}
-		if _, ok := args[0].(string); !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return fmt.Errorf("type must be a string")
 		}
-		if _, ok := args[1].(map[string]interface{}); !ok {
+		if args[1] == nil || args[1].Type() != engine.TypeObject {
 			return fmt.Errorf("context must be an object")
 		}
 	case "listHooks", "clearHooks":
@@ -570,3 +610,60 @@ func (b *HooksBridge) ValidateMethod(name string, args []interface{}) error {
 
 // Ensure HooksBridge implements the Bridge interface
 var _ engine.Bridge = (*HooksBridge)(nil)
+
+// Helper functions for ScriptValue conversions
+func convertHooksListToScriptValue(hooks []map[string]interface{}) engine.ScriptValue {
+	result := make([]engine.ScriptValue, len(hooks))
+	for i, hook := range hooks {
+		result[i] = convertHookInfoToScriptValue(hook)
+	}
+	return engine.NewArrayValue(result)
+}
+
+func convertHookInfoToScriptValue(info map[string]interface{}) engine.ScriptValue {
+	result := make(map[string]engine.ScriptValue)
+	for k, v := range info {
+		result[k] = hookInterfaceToScriptValue(v)
+	}
+	return engine.NewObjectValue(result)
+}
+
+func convertExecuteResultsToScriptValue(results []interface{}) engine.ScriptValue {
+	scriptResults := make([]engine.ScriptValue, len(results))
+	for i, r := range results {
+		scriptResults[i] = hookInterfaceToScriptValue(r)
+	}
+	return engine.NewArrayValue(scriptResults)
+}
+
+func hookInterfaceToScriptValue(v interface{}) engine.ScriptValue {
+	switch val := v.(type) {
+	case string:
+		return engine.NewStringValue(val)
+	case float64:
+		return engine.NewNumberValue(val)
+	case int:
+		return engine.NewNumberValue(float64(val))
+	case int64:
+		return engine.NewNumberValue(float64(val))
+	case bool:
+		return engine.NewBoolValue(val)
+	case nil:
+		return engine.NewNilValue()
+	case []interface{}:
+		values := make([]engine.ScriptValue, len(val))
+		for i, item := range val {
+			values[i] = hookInterfaceToScriptValue(item)
+		}
+		return engine.NewArrayValue(values)
+	case map[string]interface{}:
+		values := make(map[string]engine.ScriptValue)
+		for k, v := range val {
+			values[k] = hookInterfaceToScriptValue(v)
+		}
+		return engine.NewObjectValue(values)
+	default:
+		// Fallback to string representation
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+}

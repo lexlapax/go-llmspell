@@ -176,10 +176,12 @@ func TestUtilBridgeValidateMethod(t *testing.T) {
 	testState.Set("last_error", testErr)
 
 	// ValidateMethod should always return nil as validation is handled by engine
-	err := bridge.ValidateMethod("isRetryableError", []interface{}{testErr})
+	err := bridge.ValidateMethod("isRetryableError", []engine.ScriptValue{
+		engine.NewCustomValue("error", testErr),
+	})
 	assert.NoError(t, err)
 
-	err = bridge.ValidateMethod("unknownMethod", nil)
+	err = bridge.ValidateMethod("unknownMethod", []engine.ScriptValue{})
 	assert.NoError(t, err)
 }
 

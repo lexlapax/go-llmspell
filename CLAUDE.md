@@ -11,7 +11,12 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 ✅ **Phase 1 COMPLETE** [2025-06-17]: 38+ bridges, zero business logic duplication  
 ✅ **Phase 2.1-2.2 COMPLETE** [2025-06-18]: Core Engine Components - LuaEngine fully implemented  
 ✅ **Phase 2.3.1 COMPLETE** [2025-06-19]: Module System Architecture  
-🚧 **Phase 2.3.2 NEXT**: Async/Coroutine Support - Foundation for bridge operations
+🚧 **Phase 2.3.2 IN PROGRESS**: ScriptValue Type System Refactoring - Converting bridges from []interface{} to []engine.ScriptValue
+
+### Latest Progress [2025-06-19]
+✅ **util/* bridges COMPLETE** - All 8 util bridges converted (auth, debug, errors, json, script_logger, slog, llm, util)
+✅ **state/* bridges COMPLETE** - Both state bridges converted (manager, context) with comprehensive tests
+🚧 **agent/* bridges STARTED** - Beginning systematic conversion of 6 agent bridges
 
 ## Architecture
 
@@ -24,22 +29,41 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Implementation Workflow
 
-1. **Read TODO.md** - Current Phase 2.3.2 tasks (Async/Coroutine Support)
-2. **TDD mandatory** - Write tests first, then implement
-3. **Bridge-first** - Wrap go-llms, never reimplement business logic
-4. **Run `make all`** - Complete dev cycle (fmt, vet, lint, test, build)
-5. **Update TODO-DONE.md** - Mark completed tasks with timestamps
+1. **Read TODO.md** - Current Phase 2.3.2 tasks (ScriptValue Refactoring)
+2. **Backup Pattern** - mv old.go old.go.backup → create new from scratch → compare methods
+3. **TDD mandatory** - Write tests first, then implement  
+4. **Bridge-first** - Wrap go-llms, never reimplement business logic
+5. **Run `make all`** - Complete dev cycle (fmt, vet, lint, test, build)
+6. **Update TODO-DONE.md** - Mark completed tasks with timestamps
 
-## Phase 2.3.2: Async/Coroutine Support
+### ScriptValue Conversion Rules
+- ExecuteMethod(ctx, name, args []engine.ScriptValue) (engine.ScriptValue, error)
+- ValidateMethod(name, args []engine.ScriptValue) error  
+- Use engine.NewXXXValue() constructors for return values
+- Type check with args[i].Type() == engine.TypeString before casting
+- Helper: convertToScriptValue() for complex conversions
 
-**Current Focus**: Building async foundation for bridge operations
+## Phase 2.3.2: ScriptValue Type System Refactoring
 
-- Task 2.3.2.1: Async Runtime (`/pkg/engine/gopherlua/async.go`)
-- Task 2.3.2.2: Channel Integration (`/pkg/engine/gopherlua/channels.go`)  
-- Task 2.3.2.3: Async Bridge Methods (`/pkg/engine/gopherlua/async_bridges.go`)
-- Task 2.3.2.4: Async Testing (`/pkg/engine/gopherlua/async_test.go`)
+**Current Focus**: Converting all bridges from []interface{} to []engine.ScriptValue for type safety and consistency
 
-**Why First**: Bridge adapters need async foundation for streaming, timeouts, and concurrency.
+### Progress Summary [2025-06-19]
+- ✅ **util/auth.go** - Rewritten from scratch with ScriptValue (backup pattern)
+- ✅ **util/debug.go** - Converted in-place with ExecuteMethod dispatcher  
+- ✅ **util/errors.go** - Rewritten from scratch with ScriptValue
+- ✅ **util/json.go** - Rewritten from scratch with ScriptValue
+- ✅ **util/script_logger.go** - Rewritten from scratch, unified logger
+- ✅ **util/slog.go** - Rewritten from scratch with ScriptValue
+- ✅ **util/llm.go** - Converted in-place with minimal changes
+- ✅ **util/util.go** - Converted in-place with minimal changes
+- ✅ **state/manager.go** - Converted in-place to ScriptValue
+- ✅ **state/context.go** - Rewritten from scratch (45KB vs 109KB backup - focused on core functionality)
+- 🚧 **agent/agent.go** - STARTED: Backed up, ready for rewrite
+
+### Next: agent/* bridges (6 remaining)
+- agent.go, events.go, hooks.go, tool_registry.go, tools.go, workflow.go
+
+**Pattern**: backup-old-file → create-new-from-scratch → compare-methods → backup-test-file → create-new-test
 
 ## Commands
 

@@ -593,12 +593,15 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 
 	switch name {
 	case "createSchema":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("createSchema requires definition parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeObject {
+			return nil, fmt.Errorf("createSchema requires definition parameter as object")
 		}
-		def, ok := args[0].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("definition must be object")
+		defObj := args[0].(engine.ObjectValue).Fields()
+
+		// Convert ScriptValue map to interface{} map
+		def := make(map[string]interface{})
+		for k, v := range defObj {
+			def[k] = v.ToGo()
 		}
 
 		schema, err := scriptToSchema(def)
@@ -606,44 +609,46 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to create schema: %w", err)
 		}
 
-		return schemaToScript(schema), nil
+		return convertSchemaToScriptValue(schema), nil
 
 	case "createProperty":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("createProperty requires type parameter")
+		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+			return nil, fmt.Errorf("createProperty requires type parameter as string")
 		}
-		propType, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("type must be string")
-		}
+		propType := args[0].(engine.StringValue).Value()
 
 		prop := &schemaDomain.Property{
 			Type: propType,
 		}
 
 		// Apply options if provided
-		if len(args) > 1 {
-			if options, ok := args[1].(map[string]interface{}); ok {
-				applyPropertyOptions(prop, options)
+		if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+			options := make(map[string]interface{})
+			for k, v := range args[1].(engine.ObjectValue).Fields() {
+				options[k] = v.ToGo()
 			}
+			applyPropertyOptions(prop, options)
 		}
 
-		return propertyToScript(prop), nil
+		return engine.NewObjectValue(propertyToScriptValue(prop)), nil
 
 	case "validateJSON":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("validateJSON requires schema and data parameters")
 		}
 
-		schemaDef, ok := args[0].(map[string]interface{})
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeObject {
 			return nil, fmt.Errorf("schema must be object")
 		}
+		schemaDef := make(map[string]interface{})
+		for k, v := range args[0].(engine.ObjectValue).Fields() {
+			schemaDef[k] = v.ToGo()
+		}
 
-		data, ok := args[1].(string)
-		if !ok {
+		if args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("data must be string")
 		}
+		data := args[1].(engine.StringValue).Value()
 
 		schema, err := scriptToSchema(schemaDef)
 		if err != nil {
@@ -655,19 +660,22 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("validation failed: %w", err)
 		}
 
-		return validationResultToScript(result), nil
+		return convertValidationResultToScriptValue(result), nil
 
 	case "validateStruct":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("validateStruct requires schema and struct parameters")
 		}
 
-		schemaDef, ok := args[0].(map[string]interface{})
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeObject {
 			return nil, fmt.Errorf("schema must be object")
 		}
+		schemaDef := make(map[string]interface{})
+		for k, v := range args[0].(engine.ObjectValue).Fields() {
+			schemaDef[k] = v.ToGo()
+		}
 
-		structData := args[1]
+		structData := args[1].ToGo()
 
 		schema, err := scriptToSchema(schemaDef)
 		if err != nil {
@@ -679,7 +687,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("validation failed: %w", err)
 		}
 
-		return validationResultToScript(result), nil
+		return convertValidationResultToScriptValue(result), nil
 
 	case "generateSchemaFromType":
 		if len(args) < 1 {
@@ -695,31 +703,34 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("convertJSONSchema requires jsonSchema parameter")
 		}
 
-		jsonSchema, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("jsonSchema must be string")
 		}
+		jsonSchema := args[0].(engine.StringValue).Value()
 
 		var schema schemaDomain.Schema
 		if err := json.Unmarshal([]byte(jsonSchema), &schema); err != nil {
 			return nil, fmt.Errorf("invalid JSON schema: %w", err)
 		}
 
-		return schemaToScript(&schema), nil
+		return convertSchemaToScriptValue(&schema), nil
 
 	case "saveSchema":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("saveSchema requires id and schema parameters")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
-		schemaDef, ok := args[1].(map[string]interface{})
-		if !ok {
+		if args[1] == nil || args[1].Type() != engine.TypeObject {
 			return nil, fmt.Errorf("schema must be object")
+		}
+		schemaDef := make(map[string]interface{})
+		for k, v := range args[1].(engine.ObjectValue).Fields() {
+			schemaDef[k] = v.ToGo()
 		}
 
 		schema, err := scriptToSchema(schemaDef)
@@ -731,17 +742,17 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to save schema: %w", err)
 		}
 
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "getSchema":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("getSchema requires id parameter")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
 		// Use file repo if available, otherwise memory repo
 		repo := b.repository
@@ -762,33 +773,33 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			}
 		}
 
-		return schemaToScript(schema), nil
+		return convertSchemaToScriptValue(schema), nil
 
 	case "deleteSchema":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("deleteSchema requires id parameter")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
 		if err := b.repository.Delete(id); err != nil {
 			return nil, fmt.Errorf("failed to delete schema: %w", err)
 		}
 
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "initializeFileRepository":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("initializeFileRepository requires directory parameter")
 		}
 
-		directory, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("directory must be string")
 		}
+		directory := args[0].(engine.StringValue).Value()
 
 		// Create file-based repository
 		fileRepo, err := repository.NewFileSchemaRepository(directory)
@@ -797,21 +808,24 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 		}
 
 		b.fileRepo = fileRepo
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "saveSchemaVersion":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("saveSchemaVersion requires id and schema parameters")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
-		schemaDef, ok := args[1].(map[string]interface{})
-		if !ok {
+		if args[1] == nil || args[1].Type() != engine.TypeObject {
 			return nil, fmt.Errorf("schema must be object")
+		}
+		schemaDef := make(map[string]interface{})
+		for k, v := range args[1].(engine.ObjectValue).Fields() {
+			schemaDef[k] = v.ToGo()
 		}
 
 		schema, err := scriptToSchema(schemaDef)
@@ -836,32 +850,34 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if data, err := os.ReadFile(metadataPath); err == nil {
 				var metadata repository.SchemaMetadata
 				if json.Unmarshal(data, &metadata) == nil {
-					return map[string]interface{}{
-						"id":             metadata.ID,
-						"latestVersion":  metadata.LatestVersion,
-						"currentVersion": metadata.CurrentVersion,
-						"totalVersions":  metadata.TotalVersions,
-					}, nil
+					result := map[string]engine.ScriptValue{
+						"id":             engine.NewStringValue(metadata.ID),
+						"latestVersion":  engine.NewNumberValue(float64(metadata.LatestVersion)),
+						"currentVersion": engine.NewNumberValue(float64(metadata.CurrentVersion)),
+						"totalVersions":  engine.NewNumberValue(float64(metadata.TotalVersions)),
+					}
+					return engine.NewObjectValue(result), nil
 				}
 			}
 		}
 
-		return map[string]interface{}{"saved": true}, nil
+		result := map[string]engine.ScriptValue{"saved": engine.NewBoolValue(true)}
+		return engine.NewObjectValue(result), nil
 
 	case "getSchemaVersion":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("getSchemaVersion requires id and version parameters")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
-		version, err := getIntValue(args[1])
-		if err != nil {
-			return nil, fmt.Errorf("version must be number: %w", err)
+		if args[1] == nil || args[1].Type() != engine.TypeNumber {
+			return nil, fmt.Errorf("version must be number")
 		}
+		version := int(args[1].(engine.NumberValue).Value())
 
 		// Use file repo if available
 		repo := b.repository
@@ -877,7 +893,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if err != nil {
 				return nil, fmt.Errorf("failed to get schema version: %w", err)
 			}
-			return schemaToScript(schema), nil
+			return convertSchemaToScriptValue(schema), nil
 		}
 
 		return nil, fmt.Errorf("repository does not support versioning")
@@ -887,10 +903,10 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("listSchemaVersions requires id parameter")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
 		// Use file repo if available
 		repo := b.repository
@@ -904,7 +920,12 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if err != nil {
 				return nil, fmt.Errorf("failed to list schema versions: %w", err)
 			}
-			return versions, nil
+			// Convert []int to ScriptValue array
+			scriptVersions := make([]engine.ScriptValue, len(versions))
+			for i, v := range versions {
+				scriptVersions[i] = engine.NewNumberValue(float64(v))
+			}
+			return engine.NewArrayValue(scriptVersions), nil
 		}
 
 		// For memory repo, get from versions
@@ -913,12 +934,12 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if err != nil {
 				return nil, fmt.Errorf("failed to list schema versions: %w", err)
 			}
-			// Extract just the version numbers
-			var versionNumbers []int
-			for _, v := range versions {
-				versionNumbers = append(versionNumbers, v.Version)
+			// Extract just the version numbers and convert to ScriptValue
+			scriptVersions := make([]engine.ScriptValue, len(versions))
+			for i, v := range versions {
+				scriptVersions[i] = engine.NewNumberValue(float64(v.Version))
 			}
-			return versionNumbers, nil
+			return engine.NewArrayValue(scriptVersions), nil
 		}
 
 		return nil, fmt.Errorf("repository does not support versioning")
@@ -928,15 +949,15 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("setCurrentSchemaVersion requires id and version parameters")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
-		version, err := getIntValue(args[1])
-		if err != nil {
-			return nil, fmt.Errorf("version must be number: %w", err)
+		if args[1] == nil || args[1].Type() != engine.TypeNumber {
+			return nil, fmt.Errorf("version must be number")
 		}
+		version := int(args[1].(engine.NumberValue).Value())
 
 		// Use file repo if available
 		repo := b.repository
@@ -949,7 +970,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if err := fileRepo.SetCurrentVersion(id, version); err != nil {
 				return nil, fmt.Errorf("failed to set current version: %w", err)
 			}
-			return nil, nil
+			return engine.NewNilValue(), nil
 		}
 
 		// For memory repo
@@ -957,7 +978,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if err := memRepo.SetCurrentVersion(id, version); err != nil {
 				return nil, fmt.Errorf("failed to set current version: %w", err)
 			}
-			return nil, nil
+			return engine.NewNilValue(), nil
 		}
 
 		return nil, fmt.Errorf("repository does not support versioning")
@@ -967,10 +988,10 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("registerMigrator requires name and migrator parameters")
 		}
 
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
+		name := args[0].(engine.StringValue).Value()
 
 		// Create a script-based migrator wrapper
 		migrator := &scriptMigrator{
@@ -978,34 +999,32 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 		}
 
 		b.migrators[name] = migrator
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "migrateSchema":
 		if len(args) < 3 {
 			return nil, fmt.Errorf("migrateSchema requires id, fromVersion, and toVersion parameters")
 		}
 
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
+		id := args[0].(engine.StringValue).Value()
 
-		fromVersion, err := getIntValue(args[1])
-		if err != nil {
-			return nil, fmt.Errorf("fromVersion must be number: %w", err)
+		if args[1] == nil || args[1].Type() != engine.TypeNumber {
+			return nil, fmt.Errorf("fromVersion must be number")
 		}
+		fromVersion := int(args[1].(engine.NumberValue).Value())
 
-		toVersion, err := getIntValue(args[2])
-		if err != nil {
-			return nil, fmt.Errorf("toVersion must be number: %w", err)
+		if args[2] == nil || args[2].Type() != engine.TypeNumber {
+			return nil, fmt.Errorf("toVersion must be number")
 		}
+		toVersion := int(args[2].(engine.NumberValue).Value())
 
 		// Get migrator name if provided
 		migratorName := "default"
-		if len(args) > 3 {
-			if name, ok := args[3].(string); ok {
-				migratorName = name
-			}
+		if len(args) > 3 && args[3] != nil && args[3].Type() == engine.TypeString {
+			migratorName = args[3].(engine.StringValue).Value()
 		}
 
 		// Use file repo if available
@@ -1031,7 +1050,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 				return nil, fmt.Errorf("failed to get migrated schema: %w", err)
 			}
 
-			return schemaToScript(schema), nil
+			return convertSchemaToScriptValue(schema), nil
 		}
 
 		return nil, fmt.Errorf("repository does not support migration")
@@ -1043,19 +1062,15 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if err != nil {
 				return nil, fmt.Errorf("failed to export repository: %w", err)
 			}
-			return string(data), nil
+			return engine.NewStringValue(string(data)), nil
 		}
 
 		return nil, fmt.Errorf("repository does not support export")
 
 	case "importRepository":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("importRepository requires data parameter")
-		}
-
-		data, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("data must be string")
+		data, err := ValidateStringArg(args, 0, "data")
+		if err != nil {
+			return nil, err
 		}
 
 		// Check if repo supports import
@@ -1063,7 +1078,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			if err := memRepo.Import([]byte(data)); err != nil {
 				return nil, fmt.Errorf("failed to import repository: %w", err)
 			}
-			return nil, nil
+			return engine.NewNilValue(), nil
 		}
 
 		return nil, fmt.Errorf("repository does not support import")
@@ -1079,16 +1094,12 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to generate schema from tags: %w", err)
 		}
 
-		return schemaToScript(schema), nil
+		return engine.NewObjectValue(ConvertMapToScriptValue(schemaToScript(schema))), nil
 
 	case "setTagPriority":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("setTagPriority requires tags parameter")
-		}
-
-		tags, ok := args[0].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("tags must be array")
+		tags, err := ValidateArrayArg(args, 0, "tags")
+		if err != nil {
+			return nil, err
 		}
 
 		// Convert to string slice
@@ -1108,7 +1119,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("tag generator does not support priority setting")
 		}
 
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "registerTagParser":
 		if len(args) < 2 {
@@ -1132,7 +1143,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("tag generator does not support custom parsers")
 		}
 
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "extractValidationRules":
 		if len(args) < 1 {
@@ -1145,7 +1156,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to extract validation rules: %w", err)
 		}
 
-		return rules, nil
+		return engine.NewStringValue(rules), nil
 
 	case "generateWithDocumentation":
 		if len(args) < 1 {
@@ -1165,7 +1176,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to generate schema with documentation: %w", err)
 		}
 
-		return schemaToScript(schema), nil
+		return engine.NewObjectValue(ConvertMapToScriptValue(schemaToScript(schema))), nil
 
 	// Schema Import/Export methods
 	case "exportToJSONSchema":
@@ -1195,7 +1206,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to export to JSON Schema: %w", err)
 		}
 
-		return jsonSchema, nil
+		return engine.NewStringValue(jsonSchema), nil
 
 	case "exportToOpenAPI":
 		if len(args) < 1 {
@@ -1224,7 +1235,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to export to OpenAPI: %w", err)
 		}
 
-		return openAPISchema, nil
+		return engine.NewStringValue(openAPISchema), nil
 
 	case "importFromFile":
 		if len(args) < 1 {
@@ -1248,7 +1259,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to import from file: %w", err)
 		}
 
-		return schemaToScript(schema), nil
+		return engine.NewObjectValue(ConvertMapToScriptValue(schemaToScript(schema))), nil
 
 	case "importFromString":
 		if len(args) < 1 {
@@ -1272,7 +1283,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to import from string: %w", err)
 		}
 
-		return schemaToScript(schema), nil
+		return engine.NewObjectValue(ConvertMapToScriptValue(schemaToScript(schema))), nil
 
 	case "convertFormat":
 		if len(args) < 3 {
@@ -1304,7 +1315,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to convert format: %w", err)
 		}
 
-		return converted, nil
+		return engine.NewStringValue(converted), nil
 
 	case "mergeSchemas":
 		if len(args) < 1 {
@@ -1382,7 +1393,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to generate diff: %w", err)
 		}
 
-		return diff, nil
+		return engine.NewStringValue(diff), nil
 
 	case "exportCollection":
 		if len(args) < 1 {
@@ -1416,7 +1427,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to export collection: %w", err)
 		}
 
-		return collection, nil
+		return engine.NewStringValue(collection), nil
 
 	case "importCollection":
 		if len(args) < 1 {
@@ -1440,7 +1451,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to import collection: %w", err)
 		}
 
-		return results, nil
+		return engine.NewStringValue(results), nil
 
 	// Custom Validators (Task 1.4.5.4)
 	case "registerCustomValidator":
@@ -1461,7 +1472,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 		customValidator := b.createCustomValidatorWrapper(validatorFunc)
 		validation.RegisterCustomValidator(name, customValidator)
 
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "unregisterCustomValidator":
 		if len(args) < 1 {
@@ -1479,14 +1490,14 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 		// Note: go-llms doesn't provide unregister functionality,
 		// but we track our own registry
 
-		return existed, nil
+		return engine.NewStringValue(existed), nil
 
 	case "listCustomValidators":
 		validators := make([]string, 0, len(b.customValidators))
 		for name := range b.customValidators {
 			validators = append(validators, name)
 		}
-		return validators, nil
+		return engine.NewStringValue(validators), nil
 
 	case "validateWithCustom":
 		if len(args) < 2 {
@@ -1512,7 +1523,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("custom validation failed: %w", err)
 		}
 
-		return result, nil
+		return engine.NewStringValue(result), nil
 
 	case "validateAsync":
 		if len(args) < 3 {
@@ -1532,7 +1543,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("failed to enqueue async validation: %w", err)
 		}
 
-		return requestID, nil
+		return engine.NewStringValue(requestID), nil
 
 	case "getValidationMetrics":
 		return b.getValidationMetrics(), nil
@@ -1546,7 +1557,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 		}
 
 		cleared := b.clearValidationCache(pattern)
-		return cleared, nil
+		return engine.NewStringValue(cleared), nil
 
 	case "registerConditionalValidator":
 		if len(args) < 3 {
@@ -1566,7 +1577,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			"validator": validator,
 		}
 
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "validateConditional":
 		if len(args) < 2 {
@@ -1592,7 +1603,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 			return nil, fmt.Errorf("conditional validation failed: %w", err)
 		}
 
-		return result, nil
+		return engine.NewStringValue(result), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
@@ -1710,7 +1721,7 @@ func scriptToSchema(def map[string]interface{}) (*schemaDomain.Schema, error) {
 		}
 	}
 
-	return schema, nil
+	return engine.NewStringValue(schema), nil
 }
 
 func scriptToProperty(def map[string]interface{}) (*schemaDomain.Property, error) {
@@ -1722,7 +1733,7 @@ func scriptToProperty(def map[string]interface{}) (*schemaDomain.Property, error
 
 	applyPropertyOptions(prop, def)
 
-	return prop, nil
+	return engine.NewStringValue(prop), nil
 }
 
 func applyPropertyOptions(prop *schemaDomain.Property, options map[string]interface{}) {
@@ -1781,6 +1792,164 @@ func applyPropertyOptions(prop *schemaDomain.Property, options map[string]interf
 				prop.Enum = append(prop.Enum, s)
 			}
 		}
+	}
+}
+
+// Helper functions for ScriptValue conversions
+func convertSchemaToScriptValue(schema *schemaDomain.Schema) engine.ScriptValue {
+	return engine.NewObjectValue(schemaToScriptValue(schema))
+}
+
+func schemaToScriptValue(schema *schemaDomain.Schema) map[string]engine.ScriptValue {
+	result := map[string]engine.ScriptValue{
+		"type": engine.NewStringValue(schema.Type),
+	}
+
+	if schema.Description != "" {
+		result["description"] = engine.NewStringValue(schema.Description)
+	}
+
+	if schema.Title != "" {
+		result["title"] = engine.NewStringValue(schema.Title)
+	}
+
+	// Convert properties
+	if len(schema.Properties) > 0 {
+		props := make(map[string]engine.ScriptValue)
+		for name, prop := range schema.Properties {
+			props[name] = engine.NewObjectValue(propertyToScriptValue(prop))
+		}
+		result["properties"] = engine.NewObjectValue(props)
+	}
+
+	// Convert required fields
+	if len(schema.Required) > 0 {
+		required := make([]engine.ScriptValue, len(schema.Required))
+		for i, r := range schema.Required {
+			required[i] = engine.NewStringValue(r)
+		}
+		result["required"] = engine.NewArrayValue(required)
+	}
+
+	return result
+}
+
+func propertyToScriptValue(prop *schemaDomain.Property) map[string]engine.ScriptValue {
+	result := map[string]engine.ScriptValue{
+		"type": engine.NewStringValue(prop.Type),
+	}
+
+	if prop.Description != "" {
+		result["description"] = engine.NewStringValue(prop.Description)
+	}
+
+	if prop.Format != "" {
+		result["format"] = engine.NewStringValue(prop.Format)
+	}
+
+	if prop.Pattern != "" {
+		result["pattern"] = engine.NewStringValue(prop.Pattern)
+	}
+
+	// Numeric constraints
+	if prop.Minimum != nil {
+		result["minimum"] = engine.NewNumberValue(*prop.Minimum)
+	}
+
+	if prop.Maximum != nil {
+		result["maximum"] = engine.NewNumberValue(*prop.Maximum)
+	}
+
+	// String constraints
+	if prop.MinLength != nil {
+		result["minLength"] = engine.NewNumberValue(float64(*prop.MinLength))
+	}
+
+	if prop.MaxLength != nil {
+		result["maxLength"] = engine.NewNumberValue(float64(*prop.MaxLength))
+	}
+
+	// Array constraints
+	if prop.MinItems != nil {
+		result["minItems"] = engine.NewNumberValue(float64(*prop.MinItems))
+	}
+
+	if prop.MaxItems != nil {
+		result["maxItems"] = engine.NewNumberValue(float64(*prop.MaxItems))
+	}
+
+	if prop.UniqueItems != nil {
+		result["uniqueItems"] = engine.NewBoolValue(*prop.UniqueItems)
+	}
+
+	// Enum values
+	if len(prop.Enum) > 0 {
+		enumValues := make([]engine.ScriptValue, len(prop.Enum))
+		for i, e := range prop.Enum {
+			enumValues[i] = engine.NewStringValue(e)
+		}
+		result["enum"] = engine.NewArrayValue(enumValues)
+	}
+
+	return result
+}
+
+func convertValidationResultToScriptValue(result *schemaDomain.ValidationResult) engine.ScriptValue {
+	return engine.NewObjectValue(validationResultToScriptValue(result))
+}
+
+func validationResultToScriptValue(result *schemaDomain.ValidationResult) map[string]engine.ScriptValue {
+	res := map[string]engine.ScriptValue{
+		"valid": engine.NewBoolValue(result.Valid),
+	}
+
+	if len(result.Errors) > 0 {
+		errors := make([]engine.ScriptValue, len(result.Errors))
+		for i, err := range result.Errors {
+			errMap := map[string]engine.ScriptValue{
+				"field":   engine.NewStringValue(err.Field),
+				"message": engine.NewStringValue(err.Message),
+			}
+			if err.Value != nil {
+				errMap["value"] = convertInterfaceToScriptValue(err.Value)
+			}
+			errors[i] = engine.NewObjectValue(errMap)
+		}
+		res["errors"] = engine.NewArrayValue(errors)
+	}
+
+	return res
+}
+
+func convertInterfaceToScriptValue(v interface{}) engine.ScriptValue {
+	switch val := v.(type) {
+	case string:
+		return engine.NewStringValue(val)
+	case float64:
+		return engine.NewNumberValue(val)
+	case int:
+		return engine.NewNumberValue(float64(val))
+	case int64:
+		return engine.NewNumberValue(float64(val))
+	case bool:
+		return engine.NewBoolValue(val)
+	case nil:
+		return engine.NewNilValue()
+	case []interface{}:
+		values := make([]engine.ScriptValue, len(val))
+		for i, item := range val {
+			values[i] = convertInterfaceToScriptValue(item)
+		}
+		return engine.NewArrayValue(values)
+	case map[string]interface{}:
+		values := make(map[string]engine.ScriptValue)
+		for k, v := range val {
+			values[k] = convertInterfaceToScriptValue(v)
+		}
+		return engine.NewObjectValue(values)
+	default:
+		// Fallback to string representation
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
 	}
 }
 
@@ -1930,7 +2099,7 @@ func getNumericValue(val interface{}) *float64 {
 func getIntValue(val interface{}) (int, error) {
 	switch v := val.(type) {
 	case int:
-		return v, nil
+		return engine.NewStringValue(v), nil
 	case int32:
 		return int(v), nil
 	case int64:
@@ -2017,7 +2186,7 @@ func (b *SchemaBridge) extractValidationRulesFromStruct(source interface{}) ([]i
 		}
 	}
 
-	return rules, nil
+	return engine.NewStringValue(rules), nil
 }
 
 // extractRulesFromField extracts validation rules from a specific field
@@ -2099,7 +2268,7 @@ func (b *SchemaBridge) generateSchemaWithDocumentation(source interface{}, inclu
 	// Enhance with additional documentation
 	t := reflect.TypeOf(source)
 	if t == nil {
-		return schema, nil
+		return engine.NewStringValue(schema), nil
 	}
 
 	// Handle pointers
@@ -2108,7 +2277,7 @@ func (b *SchemaBridge) generateSchemaWithDocumentation(source interface{}, inclu
 	}
 
 	if t.Kind() != reflect.Struct {
-		return schema, nil
+		return engine.NewStringValue(schema), nil
 	}
 
 	// Enhance properties with additional documentation
@@ -2134,7 +2303,7 @@ func (b *SchemaBridge) generateSchemaWithDocumentation(source interface{}, inclu
 	// Add schema-level documentation
 	b.enhanceSchemaDocumentation(t, schema)
 
-	return schema, nil
+	return engine.NewStringValue(schema), nil
 }
 
 // getFieldNameForDoc gets the field name for documentation (similar to tag generator logic)
@@ -2291,7 +2460,7 @@ func (b *SchemaBridge) exportToOpenAPI(schema *schemaDomain.Schema, version stri
 		}
 	}
 
-	return openAPISchema, nil
+	return engine.NewStringValue(openAPISchema), nil
 }
 
 // importFromFile imports a schema from a file
@@ -2338,7 +2507,7 @@ func (b *SchemaBridge) convertFormat(schema *schemaDomain.Schema, fromFormat, to
 	case "openapi":
 		return b.exportToOpenAPI(schema, "3.1.0")
 	case "internal":
-		return schemaToScript(schema), nil
+		return engine.NewObjectValue(ConvertMapToScriptValue(schemaToScript(schema))), nil
 	default:
 		return nil, fmt.Errorf("unsupported target format: %s", toFormat)
 	}
@@ -2385,7 +2554,7 @@ func (b *SchemaBridge) mergeSchemas(schemas []*schemaDomain.Schema, strategy str
 		}
 	}
 
-	return merged, nil
+	return engine.NewStringValue(merged), nil
 }
 
 // generateDiff generates a diff between two schemas
@@ -2429,13 +2598,13 @@ func (b *SchemaBridge) generateDiff(oldSchema, newSchema *schemaDomain.Schema, f
 	// Format the output
 	switch format {
 	case "json":
-		return diff, nil
+		return engine.NewStringValue(diff), nil
 	case "text":
 		return b.formatDiffAsText(diff), nil
 	case "detailed":
 		return b.formatDiffDetailed(diff), nil
 	default:
-		return diff, nil
+		return engine.NewStringValue(diff), nil
 	}
 }
 
@@ -2473,7 +2642,7 @@ func (b *SchemaBridge) exportCollection(schemaIds []string, format string) (inte
 		}
 	}
 
-	return collection, nil
+	return engine.NewStringValue(collection), nil
 }
 
 // importCollection imports a collection of schemas
@@ -2540,7 +2709,7 @@ func (b *SchemaBridge) importCollection(collection map[string]interface{}, overw
 		})
 	}
 
-	return results, nil
+	return engine.NewStringValue(results), nil
 }
 
 // Helper functions for import/export
@@ -2668,7 +2837,7 @@ func (b *SchemaBridge) convertJSONSchemaToInternal(data map[string]interface{}) 
 		}
 	}
 
-	return schema, nil
+	return engine.NewStringValue(schema), nil
 }
 
 // convertOpenAPIToInternal converts OpenAPI schema to internal format
@@ -2978,7 +3147,7 @@ func (b *SchemaBridge) enqueueAsyncValidation(schemaDef map[string]interface{}, 
 		b.validationMetrics.mutex.Lock()
 		b.validationMetrics.AsyncValidations++
 		b.validationMetrics.mutex.Unlock()
-		return requestID, nil
+		return engine.NewStringValue(requestID), nil
 	default:
 		return "", fmt.Errorf("async validation queue is full")
 	}

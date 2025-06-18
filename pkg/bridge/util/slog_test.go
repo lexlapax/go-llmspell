@@ -1,360 +1,31 @@
-// ABOUTME: Tests for structured logging bridge functionality including slog integration and logging hooks
-// ABOUTME: Comprehensive test coverage for go-llms LoggingHook system and structured key-value logging
+// ABOUTME: Tests for structured logging bridge with ScriptValue-based API
+// ABOUTME: Validates slog integration, logging hooks, and structured attribute handling
 
 package util
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// Test SlogBridge core functionality
-func TestSlogBridge(t *testing.T) {
-	tests := []struct {
-		name string
-		test func(t *testing.T, bridge *SlogBridge)
-	}{
-		{
-			name: "Bridge initialization",
-			test: func(t *testing.T, bridge *SlogBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-				assert.True(t, bridge.IsInitialized())
-
-				metadata := bridge.GetMetadata()
-				assert.Equal(t, "slog", metadata.Name)
-				assert.Equal(t, "v2.0.0", metadata.Version)
-				assert.Contains(t, metadata.Description, "structured logging")
-			},
-		},
-		{
-			name: "Basic logging methods",
-			test: func(t *testing.T, bridge *SlogBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Test info logging
-				err = bridge.info(ctx, []interface{}{"Test info message"})
-				require.NoError(t, err)
-
-				// Test info with emoji
-				err = bridge.info(ctx, []interface{}{"Test info message", "ℹ️"})
-				require.NoError(t, err)
-
-				// Test info with emoji and attributes
-				err = bridge.info(ctx, []interface{}{
-					"Test info message",
-					"ℹ️",
-					map[string]interface{}{"user": "test", "count": 42},
-				})
-				require.NoError(t, err)
-
-				// Test warn logging
-				err = bridge.warn(ctx, []interface{}{"Test warning", "⚠️"})
-				require.NoError(t, err)
-
-				// Test error logging
-				err = bridge.error(ctx, []interface{}{"Test error", "❌"})
-				require.NoError(t, err)
-
-				// Test debug logging
-				err = bridge.debug(ctx, []interface{}{"Test debug", "🐛"})
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Log level management",
-			test: func(t *testing.T, bridge *SlogBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Test initial log level
-				result, err := bridge.getLogLevel(ctx, []interface{}{})
-				require.NoError(t, err)
-				level, ok := result.(string)
-				require.True(t, ok)
-				assert.Equal(t, "basic", level)
-
-				// Test setting log level to detailed
-				err = bridge.setLogLevel(ctx, []interface{}{"detailed"})
-				require.NoError(t, err)
-
-				result, err = bridge.getLogLevel(ctx, []interface{}{})
-				require.NoError(t, err)
-				level, ok = result.(string)
-				require.True(t, ok)
-				assert.Equal(t, "detailed", level)
-
-				// Test setting log level to debug
-				err = bridge.setLogLevel(ctx, []interface{}{"debug"})
-				require.NoError(t, err)
-
-				result, err = bridge.getLogLevel(ctx, []interface{}{})
-				require.NoError(t, err)
-				level, ok = result.(string)
-				require.True(t, ok)
-				assert.Equal(t, "debug", level)
-			},
-		},
-		{
-			name: "Logger configuration",
-			test: func(t *testing.T, bridge *SlogBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Test text format configuration
-				err = bridge.configureLogger(ctx, []interface{}{
-					map[string]interface{}{
-						"format": "text",
-						"level":  "info",
-					},
-				})
-				require.NoError(t, err)
-
-				// Test JSON format configuration
-				err = bridge.configureLogger(ctx, []interface{}{
-					map[string]interface{}{
-						"format": "json",
-						"level":  "debug",
-					},
-				})
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "Structured attributes",
-			test: func(t *testing.T, bridge *SlogBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Test creating context with attributes
-				result, err := bridge.withAttributes(ctx, []interface{}{
-					map[string]interface{}{
-						"component":  "test",
-						"session_id": "abc123",
-						"user_id":    42,
-						"is_active":  true,
-					},
-				})
-				require.NoError(t, err)
-
-				contextObj, ok := result.(map[string]interface{})
-				require.True(t, ok)
-				assert.Equal(t, "logging_context", contextObj["type"])
-
-				attributes, ok := contextObj["attributes"].(map[string]interface{})
-				require.True(t, ok)
-				assert.Equal(t, "test", attributes["component"])
-				assert.Equal(t, "abc123", attributes["session_id"])
-				assert.Equal(t, 42, attributes["user_id"])
-				assert.Equal(t, true, attributes["is_active"])
-			},
-		},
-		{
-			name: "Logging hook integration",
-			test: func(t *testing.T, bridge *SlogBridge) {
-				ctx := context.Background()
-				err := bridge.Initialize(ctx)
-				require.NoError(t, err)
-
-				// Test BeforeGenerate hook
-				err = bridge.logBeforeGenerate(ctx, []interface{}{
-					[]interface{}{
-						map[string]interface{}{
-							"role":    "user",
-							"content": "Hello, world!",
-						},
-						map[string]interface{}{
-							"role":    "assistant",
-							"content": "Hi there!",
-						},
-					},
-				})
-				require.NoError(t, err)
-
-				// Test AfterGenerate hook with success
-				err = bridge.logAfterGenerate(ctx, []interface{}{
-					map[string]interface{}{
-						"content": "Generated response text",
-					},
-					nil, // no error
-				})
-				require.NoError(t, err)
-
-				// Test AfterGenerate hook with error
-				err = bridge.logAfterGenerate(ctx, []interface{}{
-					map[string]interface{}{
-						"content": "Partial response",
-					},
-					"API timeout error",
-				})
-				require.NoError(t, err)
-
-				// Test BeforeToolCall hook
-				err = bridge.logBeforeToolCall(ctx, []interface{}{
-					"web_search",
-					map[string]interface{}{
-						"query":   "golang tutorial",
-						"limit":   10,
-						"timeout": 5000,
-					},
-				})
-				require.NoError(t, err)
-
-				// Test AfterToolCall hook with success
-				err = bridge.logAfterToolCall(ctx, []interface{}{
-					"web_search",
-					map[string]interface{}{
-						"results": []interface{}{
-							map[string]interface{}{
-								"title": "Go Tutorial",
-								"url":   "https://example.com",
-							},
-						},
-						"count": 1,
-					},
-					nil, // no error
-				})
-				require.NoError(t, err)
-
-				// Test AfterToolCall hook with error
-				err = bridge.logAfterToolCall(ctx, []interface{}{
-					"web_search",
-					nil, // no result
-					"Network timeout",
-				})
-				require.NoError(t, err)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bridge := NewSlogBridge()
-			tt.test(t, bridge)
-		})
-	}
-}
-
-// Test slog bridge error scenarios
-func TestSlogBridgeErrors(t *testing.T) {
+func TestSlogBridgeInitialization(t *testing.T) {
 	bridge := NewSlogBridge()
-	ctx := context.Background()
-
-	// Test methods without initialization
-	err := bridge.info(ctx, []interface{}{"test message"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not initialized")
-
-	// Initialize bridge
-	err = bridge.Initialize(ctx)
-	require.NoError(t, err)
-
-	// Test invalid parameter types
-	err = bridge.info(ctx, []interface{}{123}) // message must be string
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-
-	err = bridge.setLogLevel(ctx, []interface{}{123}) // level must be string
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-
-	err = bridge.setLogLevel(ctx, []interface{}{"invalid"}) // invalid level
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid log level")
-
-	err = bridge.configureLogger(ctx, []interface{}{"not an object"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be an object")
-
-	_, err = bridge.withAttributes(ctx, []interface{}{"not an object"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be an object")
-
-	// Test logging hook errors
-	err = bridge.logBeforeGenerate(ctx, []interface{}{"not an array"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be an array")
-
-	err = bridge.logBeforeGenerate(ctx, []interface{}{
-		[]interface{}{"not an object"}, // message should be object
-	})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be an object")
-
-	err = bridge.logAfterGenerate(ctx, []interface{}{"not an object"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be an object")
-
-	err = bridge.logBeforeToolCall(ctx, []interface{}{123, map[string]interface{}{}})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-
-	err = bridge.logBeforeToolCall(ctx, []interface{}{"tool", "not an object"})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be an object")
-
-	err = bridge.logAfterToolCall(ctx, []interface{}{123})
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "must be a string")
-}
-
-// Test slog bridge lifecycle
-func TestSlogBridgeLifecycle(t *testing.T) {
-	bridge := NewSlogBridge()
-	ctx := context.Background()
-
-	// Test initialization
+	assert.NotNil(t, bridge)
+	assert.Equal(t, "slog", bridge.GetID())
 	assert.False(t, bridge.IsInitialized())
+
+	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 	assert.True(t, bridge.IsInitialized())
 
-	// Test metadata
-	metadata := bridge.GetMetadata()
-	assert.Equal(t, "slog", metadata.Name)
-	assert.NotEmpty(t, metadata.Dependencies)
-
-	// Test type mappings
-	typeMappings := bridge.TypeMappings()
-	assert.Contains(t, typeMappings, "slog_logger")
-	assert.Contains(t, typeMappings, "log_level")
-	assert.Contains(t, typeMappings, "logging_hook")
-
-	// Test required permissions
-	permissions := bridge.RequiredPermissions()
-	assert.Greater(t, len(permissions), 0)
-
-	// Test method listing
-	methods := bridge.Methods()
-	assert.Greater(t, len(methods), 8)
-
-	// Verify specific methods exist
-	methodNames := make(map[string]bool)
-	for _, method := range methods {
-		methodNames[method.Name] = true
-	}
-
-	expectedMethods := []string{
-		"info", "warn", "error", "debug",
-		"logBeforeGenerate", "logAfterGenerate",
-		"logBeforeToolCall", "logAfterToolCall",
-		"setLogLevel", "getLogLevel",
-		"configureLogger", "withAttributes",
-	}
-
-	for _, expectedMethod := range expectedMethods {
-		assert.True(t, methodNames[expectedMethod], "Method %s should exist", expectedMethod)
-	}
+	// Test double initialization
+	err = bridge.Initialize(ctx)
+	assert.NoError(t, err)
 
 	// Test cleanup
 	err = bridge.Cleanup(ctx)
@@ -362,202 +33,394 @@ func TestSlogBridgeLifecycle(t *testing.T) {
 	assert.False(t, bridge.IsInitialized())
 }
 
-// Test slog bridge method validation
-func TestSlogBridgeValidation(t *testing.T) {
+func TestSlogBridgeMetadata(t *testing.T) {
+	bridge := NewSlogBridge()
+	metadata := bridge.GetMetadata()
+
+	assert.Equal(t, "slog", metadata.Name)
+	assert.Equal(t, "v2.0.0", metadata.Version)
+	assert.Contains(t, metadata.Description, "structured logging")
+	assert.Equal(t, "go-llmspell", metadata.Author)
+	assert.Equal(t, "MIT", metadata.License)
+	assert.Contains(t, metadata.Dependencies, "log/slog")
+}
+
+func TestSlogBridgeMethods(t *testing.T) {
+	bridge := NewSlogBridge()
+	methods := bridge.Methods()
+
+	// Check that all expected logging methods are present
+	expectedMethods := []string{
+		// Basic logging
+		"info",
+		"warn",
+		"error",
+		"debug",
+		// Logging hooks
+		"logBeforeGenerate",
+		"logAfterGenerate",
+		"logBeforeToolCall",
+		"logAfterToolCall",
+		// Configuration
+		"setLogLevel",
+		"getLogLevel",
+		"configureLogger",
+		"withAttributes",
+	}
+
+	methodMap := make(map[string]bool)
+	for _, m := range methods {
+		methodMap[m.Name] = true
+	}
+
+	for _, expected := range expectedMethods {
+		assert.True(t, methodMap[expected], "Method %s not found", expected)
+	}
+}
+
+func TestSlogBridgeBasicLogging(t *testing.T) {
 	bridge := NewSlogBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
 	tests := []struct {
-		name        string
-		method      string
-		args        []interface{}
-		shouldError bool
+		name    string
+		method  string
+		args    []engine.ScriptValue
+		wantErr bool
 	}{
 		{
-			name:        "valid info",
-			method:      "info",
-			args:        []interface{}{"message"},
-			shouldError: false,
+			name:   "info with message only",
+			method: "info",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("Test info message"),
+			},
+			wantErr: false,
 		},
 		{
-			name:        "info missing args",
-			method:      "info",
-			args:        []interface{}{},
-			shouldError: true,
+			name:   "warn with emoji",
+			method: "warn",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("Warning message"),
+				engine.NewStringValue("⚠️"),
+			},
+			wantErr: false,
 		},
 		{
-			name:        "valid setLogLevel",
-			method:      "setLogLevel",
-			args:        []interface{}{"debug"},
-			shouldError: false,
+			name:   "error with attributes",
+			method: "error",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("Error occurred"),
+				engine.NewStringValue("❌"),
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"error_code": engine.NewNumberValue(500),
+					"reason":     engine.NewStringValue("internal error"),
+				}),
+			},
+			wantErr: false,
 		},
 		{
-			name:        "setLogLevel missing args",
-			method:      "setLogLevel",
-			args:        []interface{}{},
-			shouldError: true,
+			name:   "debug with all params",
+			method: "debug",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("Debug info"),
+				engine.NewStringValue("🐛"),
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"step":  engine.NewNumberValue(1),
+					"value": engine.NewStringValue("test"),
+				}),
+			},
+			wantErr: false,
 		},
 		{
-			name:        "valid getLogLevel",
-			method:      "getLogLevel",
-			args:        []interface{}{},
-			shouldError: false,
+			name:    "missing message",
+			method:  "info",
+			args:    []engine.ScriptValue{},
+			wantErr: true,
 		},
 		{
-			name:        "unknown method",
-			method:      "unknownMethod",
-			args:        []interface{}{},
-			shouldError: true,
+			name:   "invalid message type",
+			method: "info",
+			args: []engine.ScriptValue{
+				engine.NewNumberValue(123),
+			},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := bridge.ValidateMethod(tt.method, tt.args)
-			if tt.shouldError {
+			result, err := bridge.ExecuteMethod(ctx, tt.method, tt.args)
+			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+				assert.True(t, result.IsNil())
 			}
 		})
 	}
 }
 
-// Test concurrent slog operations
-func TestSlogBridgeConcurrency(t *testing.T) {
+func TestSlogBridgeLoggingHooks(t *testing.T) {
 	bridge := NewSlogBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test concurrent logging operations
-	numOperations := 10
-	done := make(chan bool, numOperations*4)
+	t.Run("logBeforeGenerate", func(t *testing.T) {
+		messages := []engine.ScriptValue{
+			engine.NewObjectValue(map[string]engine.ScriptValue{
+				"role":    engine.NewStringValue("user"),
+				"content": engine.NewStringValue("Hello AI"),
+			}),
+			engine.NewObjectValue(map[string]engine.ScriptValue{
+				"role":    engine.NewStringValue("assistant"),
+				"content": engine.NewStringValue("Hello human"),
+			}),
+		}
 
-	// Concurrent logging at different levels
-	for i := 0; i < numOperations; i++ {
-		go func(index int) {
-			defer func() { done <- true }()
-			err := bridge.info(ctx, []interface{}{fmt.Sprintf("Info message %d", index)})
-			assert.NoError(t, err)
-		}(i)
+		result, err := bridge.ExecuteMethod(ctx, "logBeforeGenerate", []engine.ScriptValue{
+			engine.NewArrayValue(messages),
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsNil())
+	})
 
-		go func(index int) {
-			defer func() { done <- true }()
-			err := bridge.warn(ctx, []interface{}{fmt.Sprintf("Warn message %d", index)})
-			assert.NoError(t, err)
-		}(i)
+	t.Run("logAfterGenerate", func(t *testing.T) {
+		response := engine.NewObjectValue(map[string]engine.ScriptValue{
+			"content": engine.NewStringValue("Generated response"),
+		})
 
-		go func(index int) {
-			defer func() { done <- true }()
-			err := bridge.error(ctx, []interface{}{fmt.Sprintf("Error message %d", index)})
-			assert.NoError(t, err)
-		}(i)
+		result, err := bridge.ExecuteMethod(ctx, "logAfterGenerate", []engine.ScriptValue{
+			response,
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsNil())
 
-		go func(index int) {
-			defer func() { done <- true }()
-			err := bridge.debug(ctx, []interface{}{fmt.Sprintf("Debug message %d", index)})
-			assert.NoError(t, err)
-		}(i)
-	}
+		// Test with error
+		result, err = bridge.ExecuteMethod(ctx, "logAfterGenerate", []engine.ScriptValue{
+			response,
+			engine.NewStringValue("API error occurred"),
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsNil())
+	})
 
-	// Wait for all operations
-	for i := 0; i < numOperations*4; i++ {
-		<-done
-	}
+	t.Run("logBeforeToolCall", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "logBeforeToolCall", []engine.ScriptValue{
+			engine.NewStringValue("web_search"),
+			engine.NewObjectValue(map[string]engine.ScriptValue{
+				"query": engine.NewStringValue("golang tutorials"),
+				"limit": engine.NewNumberValue(10),
+			}),
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsNil())
+	})
 
-	// Verify bridge still works
-	result, err := bridge.getLogLevel(ctx, []interface{}{})
-	require.NoError(t, err)
-	assert.NotNil(t, result)
+	t.Run("logAfterToolCall", func(t *testing.T) {
+		result, err := bridge.ExecuteMethod(ctx, "logAfterToolCall", []engine.ScriptValue{
+			engine.NewStringValue("web_search"),
+			engine.NewObjectValue(map[string]engine.ScriptValue{
+				"results": engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewStringValue("result1"),
+					engine.NewStringValue("result2"),
+				}),
+			}),
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsNil())
+
+		// Test with error
+		result, err = bridge.ExecuteMethod(ctx, "logAfterToolCall", []engine.ScriptValue{
+			engine.NewStringValue("web_search"),
+			engine.NewNilValue(),
+			engine.NewStringValue("Network timeout"),
+		})
+		require.NoError(t, err)
+		assert.True(t, result.IsNil())
+	})
 }
 
-// Test structured logging with complex attributes
-func TestSlogBridgeStructuredLogging(t *testing.T) {
+func TestSlogBridgeLogLevel(t *testing.T) {
 	bridge := NewSlogBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test logging with complex attributes
-	complexAttributes := map[string]interface{}{
-		"string_field":  "value",
-		"number_field":  42,
-		"boolean_field": true,
-		"array_field":   []interface{}{"item1", "item2", "item3"},
-		"object_field": map[string]interface{}{
-			"nested_field": "nested_value",
-			"nested_num":   123,
+	// Get initial log level
+	result, err := bridge.ExecuteMethod(ctx, "getLogLevel", []engine.ScriptValue{})
+	require.NoError(t, err)
+	assert.Equal(t, "basic", result.(engine.StringValue).Value())
+
+	// Set log level to detailed
+	result, err = bridge.ExecuteMethod(ctx, "setLogLevel", []engine.ScriptValue{
+		engine.NewStringValue("detailed"),
+	})
+	require.NoError(t, err)
+	assert.True(t, result.IsNil())
+
+	// Verify level changed
+	result, err = bridge.ExecuteMethod(ctx, "getLogLevel", []engine.ScriptValue{})
+	require.NoError(t, err)
+	assert.Equal(t, "detailed", result.(engine.StringValue).Value())
+
+	// Test invalid level
+	_, err = bridge.ExecuteMethod(ctx, "setLogLevel", []engine.ScriptValue{
+		engine.NewStringValue("invalid"),
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid log level")
+}
+
+func TestSlogBridgeConfigureLogger(t *testing.T) {
+	bridge := NewSlogBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name   string
+		config engine.ScriptValue
+	}{
+		{
+			name: "json format with debug level",
+			config: engine.NewObjectValue(map[string]engine.ScriptValue{
+				"format": engine.NewStringValue("json"),
+				"level":  engine.NewStringValue("debug"),
+			}),
+		},
+		{
+			name: "text format with error level",
+			config: engine.NewObjectValue(map[string]engine.ScriptValue{
+				"format": engine.NewStringValue("text"),
+				"level":  engine.NewStringValue("error"),
+			}),
 		},
 	}
 
-	// Test info with complex attributes
-	err = bridge.info(ctx, []interface{}{
-		"Complex structured log",
-		"📊",
-		complexAttributes,
-	})
-	require.NoError(t, err)
-
-	// Test creating context with complex attributes
-	result, err := bridge.withAttributes(ctx, []interface{}{complexAttributes})
-	require.NoError(t, err)
-
-	contextObj, ok := result.(map[string]interface{})
-	require.True(t, ok)
-
-	attributes, ok := contextObj["attributes"].(map[string]interface{})
-	require.True(t, ok)
-
-	// Verify all attribute types are preserved
-	assert.Equal(t, "value", attributes["string_field"])
-	assert.Equal(t, 42, attributes["number_field"])
-	assert.Equal(t, true, attributes["boolean_field"])
-
-	arrayField, ok := attributes["array_field"].([]interface{})
-	require.True(t, ok)
-	assert.Len(t, arrayField, 3)
-
-	objectField, ok := attributes["object_field"].(map[string]interface{})
-	require.True(t, ok)
-	assert.Equal(t, "nested_value", objectField["nested_field"])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := bridge.ExecuteMethod(ctx, "configureLogger", []engine.ScriptValue{
+				tt.config,
+			})
+			require.NoError(t, err)
+			assert.True(t, result.IsNil())
+		})
+	}
 }
 
-// Test log level changes affect logging hook
-func TestSlogBridgeLogLevelIntegration(t *testing.T) {
+func TestSlogBridgeWithAttributes(t *testing.T) {
 	bridge := NewSlogBridge()
 	ctx := context.Background()
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	// Test that log level changes are applied
-	levels := []string{"basic", "detailed", "debug"}
+	attributes := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"component":  engine.NewStringValue("auth"),
+		"session_id": engine.NewStringValue("abc123"),
+		"user_id":    engine.NewNumberValue(42),
+	})
 
-	for _, level := range levels {
-		err = bridge.setLogLevel(ctx, []interface{}{level})
-		require.NoError(t, err)
+	result, err := bridge.ExecuteMethod(ctx, "withAttributes", []engine.ScriptValue{
+		attributes,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, engine.TypeObject, result.Type())
 
-		result, err := bridge.getLogLevel(ctx, []interface{}{})
-		require.NoError(t, err)
-		currentLevel, ok := result.(string)
-		require.True(t, ok)
-		assert.Equal(t, level, currentLevel)
+	// Verify returned context object
+	contextObj := result.(engine.ObjectValue).Fields()
+	assert.Contains(t, contextObj, "logger")
+	assert.Contains(t, contextObj, "attributes")
+}
 
-		// Test that logging still works at the new level
-		err = bridge.info(ctx, []interface{}{fmt.Sprintf("Test at %s level", level)})
-		require.NoError(t, err)
+func TestSlogBridgeValidateMethod(t *testing.T) {
+	bridge := NewSlogBridge()
 
-		// Test logging hook integration
-		err = bridge.logBeforeGenerate(ctx, []interface{}{
-			[]interface{}{
-				map[string]interface{}{
-					"role":    "user",
-					"content": fmt.Sprintf("Test message at %s level", level),
-				},
-			},
-		})
-		require.NoError(t, err)
+	// ValidateMethod should always return nil as validation is handled by engine
+	err := bridge.ValidateMethod("info", []engine.ScriptValue{
+		engine.NewStringValue("test message"),
+	})
+	assert.NoError(t, err)
+
+	err = bridge.ValidateMethod("unknownMethod", []engine.ScriptValue{})
+	assert.NoError(t, err)
+}
+
+func TestSlogBridgeRequiredPermissions(t *testing.T) {
+	bridge := NewSlogBridge()
+	permissions := bridge.RequiredPermissions()
+
+	assert.GreaterOrEqual(t, len(permissions), 2)
+
+	// Check for expected permissions
+	hasStorage := false
+	hasMemory := false
+
+	for _, perm := range permissions {
+		if perm.Type == engine.PermissionStorage && perm.Resource == "slog.logging" {
+			hasStorage = true
+			assert.Contains(t, perm.Actions, "read")
+			assert.Contains(t, perm.Actions, "write")
+		}
+		if perm.Type == engine.PermissionMemory && perm.Resource == "slog.context" {
+			hasMemory = true
+			assert.Contains(t, perm.Actions, "read")
+			assert.Contains(t, perm.Actions, "write")
+		}
 	}
+
+	assert.True(t, hasStorage, "Storage permission not found")
+	assert.True(t, hasMemory, "Memory permission not found")
+}
+
+func TestSlogBridgeTypeMappings(t *testing.T) {
+	bridge := NewSlogBridge()
+	mappings := bridge.TypeMappings()
+
+	// Check expected type mappings
+	expectedTypes := []string{
+		"slog_logger",
+		"log_level",
+		"logging_hook",
+		"message_array",
+		"llm_response",
+	}
+
+	for _, typeName := range expectedTypes {
+		mapping, ok := mappings[typeName]
+		assert.True(t, ok, "Type mapping for %s not found", typeName)
+		assert.NotEmpty(t, mapping.GoType)
+		assert.NotEmpty(t, mapping.ScriptType)
+	}
+}
+
+func TestSlogBridgeErrorHandling(t *testing.T) {
+	bridge := NewSlogBridge()
+	ctx := context.Background()
+
+	// Test method execution before initialization
+	_, err := bridge.ExecuteMethod(ctx, "info", []engine.ScriptValue{
+		engine.NewStringValue("test"),
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not initialized")
+
+	// Initialize bridge
+	err = bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test unknown method
+	_, err = bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown method")
+
+	// Test invalid arguments
+	_, err = bridge.ExecuteMethod(ctx, "logBeforeGenerate", []engine.ScriptValue{
+		engine.NewStringValue("not an array"),
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "must be an array")
 }

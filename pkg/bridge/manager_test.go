@@ -93,8 +93,21 @@ func (m *mockBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-func (m *mockBridge) ValidateMethod(name string, args []interface{}) error {
+func (m *mockBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	return nil
+}
+
+func (m *mockBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if !m.IsInitialized() {
+		return nil, fmt.Errorf("bridge not initialized")
+	}
+	
+	switch name {
+	case "test":
+		return engine.NewStringValue("test result"), nil
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
 }
 
 func (m *mockBridge) TypeMappings() map[string]engine.TypeMapping {
@@ -572,12 +585,12 @@ func (m *mockScriptEngine) Cleanup() error {
 	return nil
 }
 
-func (m *mockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
-	return nil, nil
+func (m *mockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (engine.ScriptValue, error) {
+	return engine.NewNilValue(), nil
 }
 
-func (m *mockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (interface{}, error) {
-	return nil, nil
+func (m *mockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (engine.ScriptValue, error) {
+	return engine.NewNilValue(), nil
 }
 
 func (m *mockScriptEngine) Shutdown() error {
@@ -588,12 +601,26 @@ func (m *mockScriptEngine) GetBridge(name string) (engine.Bridge, error) {
 	return nil, nil
 }
 
-func (m *mockScriptEngine) ToNative(scriptValue interface{}) (interface{}, error) {
-	return scriptValue, nil
+func (m *mockScriptEngine) ToNative(scriptValue engine.ScriptValue) (interface{}, error) {
+	return scriptValue.ToGo(), nil
 }
 
-func (m *mockScriptEngine) FromNative(goValue interface{}) (interface{}, error) {
-	return goValue, nil
+func (m *mockScriptEngine) FromNative(goValue interface{}) (engine.ScriptValue, error) {
+	// Simple conversion - in a real engine this would be more sophisticated
+	switch v := goValue.(type) {
+	case nil:
+		return engine.NewNilValue(), nil
+	case bool:
+		return engine.NewBoolValue(v), nil
+	case float64:
+		return engine.NewNumberValue(v), nil
+	case int:
+		return engine.NewNumberValue(float64(v)), nil
+	case string:
+		return engine.NewStringValue(v), nil
+	default:
+		return engine.NewStringValue(fmt.Sprintf("%v", v)), nil
+	}
 }
 
 func (m *mockScriptEngine) Name() string {

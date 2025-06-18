@@ -402,7 +402,7 @@ func (b *UtilErrorsBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
-func (b *UtilErrorsBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *UtilErrorsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -426,7 +426,7 @@ func (b *UtilErrorsBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method
-func (b *UtilErrorsBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *UtilErrorsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -436,396 +436,580 @@ func (b *UtilErrorsBridge) ExecuteMethod(ctx context.Context, name string, args 
 
 	switch name {
 	case "createError":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("createError requires message parameter")
-		}
-		message, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("message must be string")
-		}
-
-		// Create base error
-		err := errors.NewError(message)
-
-		// Add metadata if provided
-		if len(args) > 1 && args[1] != nil {
-			if metadata, ok := args[1].(map[string]interface{}); ok {
-				err = err.WithContextMap(metadata)
-			}
-		}
-
-		return err, nil
-
+		return b.createError(ctx, args)
 	case "wrapError":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("wrapError requires error and message parameters")
-		}
-		originalErr, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-		message, ok := args[1].(string)
-		if !ok {
-			return nil, fmt.Errorf("message must be string")
-		}
-
-		// Wrap error
-		wrapped := errors.Wrap(originalErr, message)
-
-		// Add metadata if provided
-		if len(args) > 2 && args[2] != nil {
-			if metadata, ok := args[2].(map[string]interface{}); ok {
-				wrapped = wrapped.WithContextMap(metadata)
-			}
-		}
-
-		return wrapped, nil
-
+		return b.wrapError(ctx, args)
 	case "createErrorWithCode":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("createErrorWithCode requires code and message parameters")
-		}
-		code, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("code must be string")
-		}
-		message, ok := args[1].(string)
-		if !ok {
-			return nil, fmt.Errorf("message must be string")
-		}
-
-		// Create error with code
-		err := errors.NewErrorWithCode(code, message)
-
-		// Add metadata if provided
-		if len(args) > 2 && args[2] != nil {
-			if metadata, ok := args[2].(map[string]interface{}); ok {
-				err = err.WithContextMap(metadata)
-			}
-		}
-
-		return err, nil
-
+		return b.createErrorWithCode(ctx, args)
 	case "errorToJSON":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("errorToJSON requires error parameter")
-		}
-		err, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-
-		// Convert to SerializableError if needed
-		var serr errors.SerializableError
-		if se, ok := err.(errors.SerializableError); ok {
-			serr = se
-		} else {
-			// Wrap in SerializableError
-			serr = errors.NewError(err.Error())
-		}
-
-		// Serialize to JSON
-		data, jsonErr := json.Marshal(serr)
-		if jsonErr != nil {
-			return nil, fmt.Errorf("failed to serialize error: %w", jsonErr)
-		}
-
-		return string(data), nil
-
+		return b.errorToJSON(ctx, args)
 	case "errorFromJSON":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("errorFromJSON requires json parameter")
-		}
-		jsonStr, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("json must be string")
-		}
-
-		// Deserialize from JSON
-		serr, err := errors.ErrorFromJSON([]byte(jsonStr))
-		if err != nil {
-			return nil, fmt.Errorf("failed to deserialize error: %w", err)
-		}
-
-		return serr, nil
-
+		return b.errorFromJSON(ctx, args)
 	case "createExponentialBackoffStrategy":
-		if len(args) < 3 {
-			return nil, fmt.Errorf("createExponentialBackoffStrategy requires baseDelay, maxDelay, and maxRetries")
-		}
-
-		baseDelay, ok := args[0].(float64)
-		if !ok {
-			return nil, fmt.Errorf("baseDelay must be number")
-		}
-		maxDelay, ok := args[1].(float64)
-		if !ok {
-			return nil, fmt.Errorf("maxDelay must be number")
-		}
-		maxRetries, ok := args[2].(float64)
-		if !ok {
-			return nil, fmt.Errorf("maxRetries must be number")
-		}
-
-		strategy := errors.NewExponentialBackoffStrategy(
-			int(maxRetries),
-			time.Duration(baseDelay)*time.Millisecond,
-			time.Duration(maxDelay)*time.Millisecond,
-		)
-
-		return strategy, nil
-
+		return b.createExponentialBackoffStrategy(ctx, args)
 	case "createLinearBackoffStrategy":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("createLinearBackoffStrategy requires delay and maxRetries")
-		}
-
-		delay, ok := args[0].(float64)
-		if !ok {
-			return nil, fmt.Errorf("delay must be number")
-		}
-		maxRetries, ok := args[1].(float64)
-		if !ok {
-			return nil, fmt.Errorf("maxRetries must be number")
-		}
-
-		strategy := errors.NewLinearBackoffStrategy(
-			int(maxRetries),
-			time.Duration(delay)*time.Millisecond,
-		)
-
-		return strategy, nil
-
+		return b.createLinearBackoffStrategy(ctx, args)
 	case "categorizeError":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("categorizeError requires error parameter")
-		}
-		err, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-
-		// Categorize error based on type and metadata
-		category := b.categorizeError(err)
-		return category, nil
-
+		return b.categorizeError(ctx, args)
 	case "registerErrorCategory":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("registerErrorCategory requires name and config")
-		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
-		config, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("config must be object")
-		}
-
-		// Create category from config
-		category := ErrorCategory{
-			Name:        name,
-			Description: getStringFromMap(config, "description", ""),
-			Retryable:   getBoolFromMap(config, "retryable", false),
-			Fatal:       getBoolFromMap(config, "fatal", false),
-		}
-
-		b.errorCategories[name] = category
-		return nil, nil
-
+		return b.registerErrorCategory(ctx, args)
 	case "getErrorCategories":
-		// Return copy of categories
-		categories := make(map[string]interface{})
-		for name, cat := range b.errorCategories {
-			categories[name] = map[string]interface{}{
-				"name":        cat.Name,
-				"description": cat.Description,
-				"retryable":   cat.Retryable,
-				"fatal":       cat.Fatal,
-			}
-		}
-		return categories, nil
-
+		return b.getErrorCategories(ctx, args)
 	case "createErrorAggregator":
-		// Create new aggregator
-		aggregator := errors.NewErrorAggregator()
-		return aggregator, nil
-
+		return b.createErrorAggregator(ctx, args)
 	case "addError":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("addError requires aggregator and error")
-		}
-		aggregator, ok := args[0].(errors.ErrorAggregator)
-		if !ok {
-			return nil, fmt.Errorf("aggregator must be ErrorAggregator")
-		}
-		err, ok := args[1].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-
-		aggregator.Add(err)
-		return nil, nil
-
+		return b.addError(ctx, args)
 	case "aggregateErrors":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("aggregateErrors requires errors array")
-		}
-		errorsArray, ok := args[0].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("errors must be array")
-		}
-
-		// Create aggregator
-		aggregator := errors.NewErrorAggregator()
-
-		// Add all errors
-		for i, e := range errorsArray {
-			if err, ok := e.(error); ok {
-				aggregator.Add(err)
-			} else {
-				return nil, fmt.Errorf("element at index %d is not an error", i)
-			}
-		}
-
-		// Get message if provided
-		message := "Multiple errors occurred"
-		if len(args) > 1 && args[1] != nil {
-			if msg, ok := args[1].(string); ok {
-				message = msg
-			}
-		}
-
-		// Create aggregated error with message
-		if aggregator.HasErrors() {
-			// Get the base error and wrap with message
-			aggErr := aggregator.Error()
-			wrapped := errors.Wrap(aggErr, message)
-			return wrapped, nil
-		}
-
-		return nil, nil
-
+		return b.aggregateErrors(ctx, args)
 	case "emitErrorEvent":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("emitErrorEvent requires error parameter")
-		}
-		err, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-
-		// Get context if provided
-		eventContext := make(map[string]interface{})
-		if len(args) > 1 && args[1] != nil {
-			if ctx, ok := args[1].(map[string]interface{}); ok {
-				eventContext = ctx
-			}
-		}
-
-		// Add error information to context
-		eventContext["error"] = err.Error()
-		eventContext["timestamp"] = time.Now()
-
-		// Check if error is BaseError
-		if baseErr, ok := err.(*errors.BaseError); ok {
-			eventContext["code"] = baseErr.Code
-			eventContext["type"] = baseErr.Type
-			eventContext["metadata"] = baseErr.GetContext()
-		}
-
-		// Emit event
-		if b.eventEmitter != nil {
-			b.eventEmitter.EmitCustom("error.occurred", eventContext)
-		}
-
-		return nil, nil
-
+		return b.emitErrorEvent(ctx, args)
 	case "isRetryableError":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("isRetryableError requires error parameter")
-		}
-		err, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-
-		// Use go-llms helper function
-		return errors.IsRetryableError(err), nil
-
+		return b.isRetryableError(ctx, args)
 	case "isFatalError":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("isFatalError requires error parameter")
-		}
-		err, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-
-		// Use go-llms helper function
-		return errors.IsFatalError(err), nil
-
+		return b.isFatalError(ctx, args)
 	case "enrichError":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("enrichError requires error and context")
-		}
-		err, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-		context, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("context must be object")
-		}
-
-		// Enrich error with context - wrap if needed
-		if baseErr, ok := err.(*errors.BaseError); ok {
-			return baseErr.WithContextMap(context), nil
-		}
-		// Wrap and add context
-		wrapped := errors.Wrap(err, "enriched error")
-		return wrapped.WithContextMap(context), nil
-
+		return b.enrichError(ctx, args)
 	case "getErrorContext":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getErrorContext requires error parameter")
-		}
-		err, ok := args[0].(error)
-		if !ok {
-			return nil, fmt.Errorf("error must be an error type")
-		}
-
-		// Extract context from error
-		context := make(map[string]interface{})
-
-		// Extract context from error
-		if ctx := errors.GetErrorContext(err); ctx != nil {
-			for k, v := range ctx {
-				context[k] = v
-			}
-		}
-
-		return context, nil
-
+		return b.getErrorContext(ctx, args)
 	case "createErrorBuilder":
-		// Create new error builder
-		return &ErrorBuilder{
-			err: errors.NewError(""),
-		}, nil
-
+		return b.createErrorBuilder(ctx, args)
 	case "buildError":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("buildError requires builder parameter")
-		}
-		builder, ok := args[0].(*ErrorBuilder)
-		if !ok {
-			return nil, fmt.Errorf("builder must be ErrorBuilder")
-		}
-		return builder.err, nil
-
+		return b.buildError(ctx, args)
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
 	}
+}
+
+// Method implementations
+
+func (b *UtilErrorsBridge) createError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("createError requires message parameter")
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be string")
+	}
+	message := args[0].(engine.StringValue).Value()
+
+	// Create base error
+	err := errors.NewError(message)
+
+	// Add metadata if provided
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		objFields := args[1].(engine.ObjectValue).Fields()
+		metadata := make(map[string]interface{})
+		for k, v := range objFields {
+			metadata[k] = v.ToGo()
+		}
+		err = err.WithContextMap(metadata)
+	}
+
+	return engine.NewCustomValue("error", err), nil
+}
+
+func (b *UtilErrorsBridge) wrapError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("wrapError requires error and message parameters")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	originalErr, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	if args[1] == nil || args[1].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be string")
+	}
+	message := args[1].(engine.StringValue).Value()
+
+	// Wrap error
+	wrapped := errors.Wrap(originalErr, message)
+
+	// Add metadata if provided
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		objFields := args[2].(engine.ObjectValue).Fields()
+		metadata := make(map[string]interface{})
+		for k, v := range objFields {
+			metadata[k] = v.ToGo()
+		}
+		wrapped = wrapped.WithContextMap(metadata)
+	}
+
+	return engine.NewCustomValue("error", wrapped), nil
+}
+
+func (b *UtilErrorsBridge) createErrorWithCode(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("createErrorWithCode requires code and message parameters")
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("code must be string")
+	}
+	code := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be string")
+	}
+	message := args[1].(engine.StringValue).Value()
+
+	// Create error with code
+	err := errors.NewErrorWithCode(code, message)
+
+	// Add metadata if provided
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		objFields := args[2].(engine.ObjectValue).Fields()
+		metadata := make(map[string]interface{})
+		for k, v := range objFields {
+			metadata[k] = v.ToGo()
+		}
+		err = err.WithContextMap(metadata)
+	}
+
+	return engine.NewCustomValue("error", err), nil
+}
+
+func (b *UtilErrorsBridge) errorToJSON(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("errorToJSON requires error parameter")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	err, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	// Convert to SerializableError if needed
+	var serr errors.SerializableError
+	if se, ok := err.(errors.SerializableError); ok {
+		serr = se
+	} else {
+		// Wrap in SerializableError
+		serr = errors.NewError(err.Error())
+	}
+
+	// Serialize to JSON
+	data, jsonErr := json.Marshal(serr)
+	if jsonErr != nil {
+		return nil, fmt.Errorf("failed to serialize error: %w", jsonErr)
+	}
+
+	return engine.NewStringValue(string(data)), nil
+}
+
+func (b *UtilErrorsBridge) errorFromJSON(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("errorFromJSON requires json parameter")
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("json must be string")
+	}
+	jsonStr := args[0].(engine.StringValue).Value()
+
+	// Deserialize from JSON
+	serr, err := errors.ErrorFromJSON([]byte(jsonStr))
+	if err != nil {
+		return nil, fmt.Errorf("failed to deserialize error: %w", err)
+	}
+
+	return engine.NewCustomValue("error", serr), nil
+}
+
+func (b *UtilErrorsBridge) createExponentialBackoffStrategy(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 3 {
+		return nil, fmt.Errorf("createExponentialBackoffStrategy requires baseDelay, maxDelay, and maxRetries")
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeNumber {
+		return nil, fmt.Errorf("baseDelay must be number")
+	}
+	baseDelay := args[0].(engine.NumberValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeNumber {
+		return nil, fmt.Errorf("maxDelay must be number")
+	}
+	maxDelay := args[1].(engine.NumberValue).Value()
+
+	if args[2] == nil || args[2].Type() != engine.TypeNumber {
+		return nil, fmt.Errorf("maxRetries must be number")
+	}
+	maxRetries := args[2].(engine.NumberValue).Value()
+
+	strategy := errors.NewExponentialBackoffStrategy(
+		int(maxRetries),
+		time.Duration(baseDelay)*time.Millisecond,
+		time.Duration(maxDelay)*time.Millisecond,
+	)
+
+	return engine.NewCustomValue("RecoveryStrategy", strategy), nil
+}
+
+func (b *UtilErrorsBridge) createLinearBackoffStrategy(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("createLinearBackoffStrategy requires delay and maxRetries")
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeNumber {
+		return nil, fmt.Errorf("delay must be number")
+	}
+	delay := args[0].(engine.NumberValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeNumber {
+		return nil, fmt.Errorf("maxRetries must be number")
+	}
+	maxRetries := args[1].(engine.NumberValue).Value()
+
+	strategy := errors.NewLinearBackoffStrategy(
+		int(maxRetries),
+		time.Duration(delay)*time.Millisecond,
+	)
+
+	return engine.NewCustomValue("RecoveryStrategy", strategy), nil
+}
+
+func (b *UtilErrorsBridge) categorizeError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("categorizeError requires error parameter")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	err, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	// Categorize error based on type and metadata
+	category := b.categorizeErrorInternal(err)
+	return engine.NewStringValue(category), nil
+}
+
+func (b *UtilErrorsBridge) registerErrorCategory(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("registerErrorCategory requires name and config")
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("name must be string")
+	}
+	name := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("config must be object")
+	}
+	configObj := args[1].(engine.ObjectValue).Fields()
+	config := make(map[string]interface{})
+	for k, v := range configObj {
+		config[k] = v.ToGo()
+	}
+
+	// Create category from config
+	category := ErrorCategory{
+		Name:        name,
+		Description: getStringFromMap(config, "description", ""),
+		Retryable:   getBoolFromMap(config, "retryable", false),
+		Fatal:       getBoolFromMap(config, "fatal", false),
+	}
+
+	b.errorCategories[name] = category
+	return engine.NewNilValue(), nil
+}
+
+func (b *UtilErrorsBridge) getErrorCategories(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Return copy of categories
+	categories := make(map[string]engine.ScriptValue)
+	for name, cat := range b.errorCategories {
+		categories[name] = engine.NewObjectValue(map[string]engine.ScriptValue{
+			"name":        engine.NewStringValue(cat.Name),
+			"description": engine.NewStringValue(cat.Description),
+			"retryable":   engine.NewBoolValue(cat.Retryable),
+			"fatal":       engine.NewBoolValue(cat.Fatal),
+		})
+	}
+	return engine.NewObjectValue(categories), nil
+}
+
+func (b *UtilErrorsBridge) createErrorAggregator(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Create new aggregator
+	aggregator := errors.NewErrorAggregator()
+	return engine.NewCustomValue("ErrorAggregator", aggregator), nil
+}
+
+func (b *UtilErrorsBridge) addError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("addError requires aggregator and error")
+	}
+
+	// Get aggregator from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("aggregator must be ErrorAggregator")
+	}
+	aggVal := args[0].(engine.CustomValue)
+	aggregator, ok := aggVal.Value().(errors.ErrorAggregator)
+	if !ok {
+		return nil, fmt.Errorf("aggregator must be ErrorAggregator")
+	}
+
+	// Get error from custom value
+	if args[1] == nil || args[1].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	errVal := args[1].(engine.CustomValue)
+	err, ok := errVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	aggregator.Add(err)
+	return engine.NewNilValue(), nil
+}
+
+func (b *UtilErrorsBridge) aggregateErrors(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("aggregateErrors requires errors array")
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeArray {
+		return nil, fmt.Errorf("errors must be array")
+	}
+	errorsArray := args[0].(engine.ArrayValue).Elements()
+
+	// Create aggregator
+	aggregator := errors.NewErrorAggregator()
+
+	// Add all errors
+	for i, e := range errorsArray {
+		if e.Type() != engine.TypeCustom {
+			return nil, fmt.Errorf("element at index %d is not an error", i)
+		}
+		customVal := e.(engine.CustomValue)
+		if err, ok := customVal.Value().(error); ok {
+			aggregator.Add(err)
+		} else {
+			return nil, fmt.Errorf("element at index %d is not an error", i)
+		}
+	}
+
+	// Get message if provided
+	message := "Multiple errors occurred"
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
+		message = args[1].(engine.StringValue).Value()
+	}
+
+	// Create aggregated error with message
+	if aggregator.HasErrors() {
+		// Get the base error and wrap with message
+		aggErr := aggregator.Error()
+		wrapped := errors.Wrap(aggErr, message)
+		return engine.NewCustomValue("error", wrapped), nil
+	}
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *UtilErrorsBridge) emitErrorEvent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("emitErrorEvent requires error parameter")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	err, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	// Get context if provided
+	eventContext := make(map[string]interface{})
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		objFields := args[1].(engine.ObjectValue).Fields()
+		for k, v := range objFields {
+			eventContext[k] = v.ToGo()
+		}
+	}
+
+	// Add error information to context
+	eventContext["error"] = err.Error()
+	eventContext["timestamp"] = time.Now()
+
+	// Check if error is BaseError
+	if baseErr, ok := err.(*errors.BaseError); ok {
+		eventContext["code"] = baseErr.Code
+		eventContext["type"] = baseErr.Type
+		eventContext["metadata"] = baseErr.GetContext()
+	}
+
+	// Emit event
+	if b.eventEmitter != nil {
+		b.eventEmitter.EmitCustom("error.occurred", eventContext)
+	}
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *UtilErrorsBridge) isRetryableError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("isRetryableError requires error parameter")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	err, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	// Use go-llms helper function
+	return engine.NewBoolValue(errors.IsRetryableError(err)), nil
+}
+
+func (b *UtilErrorsBridge) isFatalError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("isFatalError requires error parameter")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	err, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	// Use go-llms helper function
+	return engine.NewBoolValue(errors.IsFatalError(err)), nil
+}
+
+func (b *UtilErrorsBridge) enrichError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("enrichError requires error and context")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	err, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("context must be object")
+	}
+	contextObj := args[1].(engine.ObjectValue).Fields()
+	context := make(map[string]interface{})
+	for k, v := range contextObj {
+		context[k] = v.ToGo()
+	}
+
+	// Enrich error with context - wrap if needed
+	if baseErr, ok := err.(*errors.BaseError); ok {
+		return engine.NewCustomValue("error", baseErr.WithContextMap(context)), nil
+	}
+	// Wrap and add context
+	wrapped := errors.Wrap(err, "enriched error")
+	return engine.NewCustomValue("error", wrapped.WithContextMap(context)), nil
+}
+
+func (b *UtilErrorsBridge) getErrorContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("getErrorContext requires error parameter")
+	}
+
+	// Get error from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+	customVal := args[0].(engine.CustomValue)
+	err, ok := customVal.Value().(error)
+	if !ok {
+		return nil, fmt.Errorf("error must be an error type")
+	}
+
+	// Extract context from error
+	context := make(map[string]engine.ScriptValue)
+
+	// Extract context from error
+	if ctx := errors.GetErrorContext(err); ctx != nil {
+		for k, v := range ctx {
+			// Convert each value to appropriate ScriptValue type
+			switch val := v.(type) {
+			case string:
+				context[k] = engine.NewStringValue(val)
+			case int, int32, int64, float32, float64:
+				context[k] = engine.NewNumberValue(toFloat64(val))
+			case bool:
+				context[k] = engine.NewBoolValue(val)
+			case nil:
+				context[k] = engine.NewNilValue()
+			case map[string]interface{}:
+				// Recursively convert map
+				objMap := make(map[string]engine.ScriptValue)
+				for mk, mv := range val {
+					objMap[mk] = convertToScriptValue(mv)
+				}
+				context[k] = engine.NewObjectValue(objMap)
+			case []interface{}:
+				// Convert array
+				arr := make([]engine.ScriptValue, len(val))
+				for i, item := range val {
+					arr[i] = convertToScriptValue(item)
+				}
+				context[k] = engine.NewArrayValue(arr)
+			default:
+				// For unknown types, convert to string
+				context[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+			}
+		}
+	}
+
+	return engine.NewObjectValue(context), nil
+}
+
+func (b *UtilErrorsBridge) createErrorBuilder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Create new error builder
+	builder := &ErrorBuilder{
+		err: errors.NewError(""),
+	}
+	return engine.NewCustomValue("ErrorBuilder", builder), nil
+}
+
+func (b *UtilErrorsBridge) buildError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("buildError requires builder parameter")
+	}
+
+	// Get builder from custom value
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("builder must be ErrorBuilder")
+	}
+	customVal := args[0].(engine.CustomValue)
+	builder, ok := customVal.Value().(*ErrorBuilder)
+	if !ok {
+		return nil, fmt.Errorf("builder must be ErrorBuilder")
+	}
+
+	return engine.NewCustomValue("error", builder.err), nil
 }
 
 // setupDefaultCategories sets up default error categories
@@ -873,8 +1057,8 @@ func (b *UtilErrorsBridge) setupDefaultCategories() {
 	}
 }
 
-// categorizeError categorizes an error based on its type and content
-func (b *UtilErrorsBridge) categorizeError(err error) string {
+// categorizeErrorInternal categorizes an error based on its type and content
+func (b *UtilErrorsBridge) categorizeErrorInternal(err error) string {
 	if err == nil {
 		return "unknown"
 	}
@@ -964,4 +1148,50 @@ func indexString(s, substr string) int {
 // ErrorBuilder provides fluent error construction
 type ErrorBuilder struct {
 	err *errors.BaseError
+}
+
+// Helper function to convert interface{} to ScriptValue
+func convertToScriptValue(v interface{}) engine.ScriptValue {
+	switch val := v.(type) {
+	case string:
+		return engine.NewStringValue(val)
+	case int, int32, int64, float32, float64:
+		return engine.NewNumberValue(toFloat64(val))
+	case bool:
+		return engine.NewBoolValue(val)
+	case nil:
+		return engine.NewNilValue()
+	case map[string]interface{}:
+		objMap := make(map[string]engine.ScriptValue)
+		for k, v := range val {
+			objMap[k] = convertToScriptValue(v)
+		}
+		return engine.NewObjectValue(objMap)
+	case []interface{}:
+		arr := make([]engine.ScriptValue, len(val))
+		for i, item := range val {
+			arr[i] = convertToScriptValue(item)
+		}
+		return engine.NewArrayValue(arr)
+	default:
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+}
+
+// Helper function to convert numeric types to float64
+func toFloat64(v interface{}) float64 {
+	switch val := v.(type) {
+	case int:
+		return float64(val)
+	case int32:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case float32:
+		return float64(val)
+	case float64:
+		return val
+	default:
+		return 0
+	}
 }

@@ -5,6 +5,7 @@ package util
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -361,7 +362,7 @@ func (b *UtilJSONBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
-func (b *UtilJSONBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *UtilJSONBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -379,7 +380,7 @@ func (b *UtilJSONBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -389,253 +390,521 @@ func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []
 
 	switch name {
 	case "marshal":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		result, err := llmjson.MarshalToString(args[0])
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-
+		return b.marshal(ctx, args)
 	case "marshalIndent":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		prefix := ""
-		indent := "  "
-		if len(args) > 1 && args[1] != nil {
-			prefix = args[1].(string)
-		}
-		if len(args) > 2 && args[2] != nil {
-			indent = args[2].(string)
-		}
-		data, err := llmjson.MarshalIndent(args[0], prefix, indent)
-		if err != nil {
-			return nil, err
-		}
-		return string(data), nil
-
+		return b.marshalIndent(ctx, args)
 	case "marshalToBytes":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		return llmjson.Marshal(args[0])
-
+		return b.marshalToBytes(ctx, args)
 	case "unmarshal":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		jsonStr, ok := args[0].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		var result interface{}
-		err := llmjson.UnmarshalFromString(jsonStr, &result)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-
+		return b.unmarshal(ctx, args)
 	case "unmarshalFromBytes":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		data, ok := args[0].([]byte)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		var result interface{}
-		err := llmjson.Unmarshal(data, &result)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-
+		return b.unmarshalFromBytes(ctx, args)
 	case "unmarshalStrict":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		jsonStr, ok := args[0].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		// For strict unmarshaling, we'd need to use the decoder with DisallowUnknownFields
-		// This is a simplified version
-		var result interface{}
-		err := llmjson.UnmarshalFromString(jsonStr, &result)
-		if err != nil {
-			return nil, err
-		}
-		return result, nil
-
+		return b.unmarshalStrict(ctx, args)
 	case "createEncoder":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		writer, ok := args[0].(io.Writer)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		return llmjson.NewEncoder(writer), nil
-
+		return b.createEncoder(ctx, args)
 	case "createDecoder":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		reader, ok := args[0].(io.Reader)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		return llmjson.NewDecoder(reader), nil
-
-	// Structured output operations (go-llms v0.3.5)
+		return b.createDecoder(ctx, args)
+	case "encodeStream":
+		return b.encodeStream(ctx, args)
+	case "decodeStream":
+		return b.decodeStream(ctx, args)
 	case "parseStructured":
-		if len(args) < 2 {
-			return nil, ErrInvalidArguments
-		}
-		output, ok := args[0].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		schemaMap, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-
-		// Convert script schema to go-llms schema
-		schema, err := b.convertToSchema(schemaMap)
-		if err != nil {
-			return nil, err
-		}
-
-		return b.processor.Process(schema, output)
-
+		return b.parseStructured(ctx, args)
 	case "parseWithRecovery":
-		if len(args) < 1 {
-			return nil, ErrInvalidArguments
-		}
-		output, ok := args[0].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-
-		// Use go-llms ExtractJSON for malformed content recovery
-		return processor.ExtractJSON(output), nil
-
+		return b.parseWithRecovery(ctx, args)
 	case "enhancePrompt":
-		if len(args) < 2 {
-			return nil, ErrInvalidArguments
-		}
-		prompt, ok := args[0].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		schemaMap, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-
-		// Convert script schema to go-llms schema
-		schema, err := b.convertToSchema(schemaMap)
-		if err != nil {
-			return nil, err
-		}
-
-		// Check for options
-		if len(args) > 2 && args[2] != nil {
-			if options, ok := args[2].(map[string]interface{}); ok {
-				return b.promptEnhancer.EnhanceWithOptions(prompt, schema, options)
-			}
-		}
-
-		return b.promptEnhancer.Enhance(prompt, schema)
-
-	// Format conversion operations (go-llms v0.3.5)
+		return b.enhancePrompt(ctx, args)
 	case "convertFormat":
-		if len(args) < 3 {
-			return nil, ErrInvalidArguments
-		}
-		data, ok := args[0].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		fromFormat, ok := args[1].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		toFormat, ok := args[2].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-
-		// Convert format strings to outputs.Format
-		from, err := b.stringToFormat(fromFormat)
-		if err != nil {
-			return nil, err
-		}
-		to, err := b.stringToFormat(toFormat)
-		if err != nil {
-			return nil, err
-		}
-
-		// Check for conversion options
-		var opts *outputs.ConversionOptions
-		if len(args) > 3 && args[3] != nil {
-			if optionsMap, ok := args[3].(map[string]interface{}); ok {
-				opts = b.convertToConversionOptions(optionsMap)
-			}
-		}
-
-		return b.converter.ConvertString(ctx, data, from, to, opts)
-
+		return b.convertFormat(ctx, args)
 	case "streamConvert":
-		if len(args) < 4 {
-			return nil, ErrInvalidArguments
-		}
-		reader, ok := args[0].(io.Reader)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		writer, ok := args[1].(io.Writer)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		fromFormat, ok := args[2].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-		toFormat, ok := args[3].(string)
-		if !ok {
-			return nil, ErrInvalidArguments
-		}
-
-		// Convert format strings to outputs.Format
-		from, err := b.stringToFormat(fromFormat)
-		if err != nil {
-			return nil, err
-		}
-		to, err := b.stringToFormat(toFormat)
-		if err != nil {
-			return nil, err
-		}
-
-		// Check for conversion options
-		var opts *outputs.ConversionOptions
-		if len(args) > 4 && args[4] != nil {
-			if optionsMap, ok := args[4].(map[string]interface{}); ok {
-				opts = b.convertToConversionOptions(optionsMap)
-			}
-		}
-
-		return nil, b.converter.StreamConvert(ctx, reader, writer, from, to, opts)
-
+		return b.streamConvert(ctx, args)
+	case "prettyPrint":
+		return b.prettyPrint(ctx, args)
+	case "minify":
+		return b.minify(ctx, args)
 	default:
 		return nil, ErrMethodNotFound
 	}
 }
 
-// Helper methods for structured output operations
+// Method implementations
+
+func (b *UtilJSONBridge) marshal(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	// Convert ScriptValue to native Go value
+	value := args[0].ToGo()
+
+	result, err := llmjson.MarshalToString(value)
+	if err != nil {
+		return nil, err
+	}
+	return engine.NewStringValue(result), nil
+}
+
+func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	value := args[0].ToGo()
+	prefix := ""
+	indent := "  "
+
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
+		prefix = args[1].(engine.StringValue).Value()
+	}
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
+		indent = args[2].(engine.StringValue).Value()
+	}
+
+	data, err := llmjson.MarshalIndent(value, prefix, indent)
+	if err != nil {
+		return nil, err
+	}
+	return engine.NewStringValue(string(data)), nil
+}
+
+func (b *UtilJSONBridge) marshalToBytes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	value := args[0].ToGo()
+	data, err := llmjson.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert []byte to array of numbers
+	scriptBytes := make([]engine.ScriptValue, len(data))
+	for i, b := range data {
+		scriptBytes[i] = engine.NewNumberValue(float64(b))
+	}
+	return engine.NewArrayValue(scriptBytes), nil
+}
+
+func (b *UtilJSONBridge) unmarshal(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, ErrInvalidArguments
+	}
+
+	jsonStr := args[0].(engine.StringValue).Value()
+	var result interface{}
+	err := llmjson.UnmarshalFromString(jsonStr, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonConvertToScriptValue(result), nil
+}
+
+func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeArray {
+		return nil, ErrInvalidArguments
+	}
+
+	// Convert array of numbers to []byte
+	elements := args[0].(engine.ArrayValue).Elements()
+	data := make([]byte, len(elements))
+	for i, elem := range elements {
+		if elem.Type() != engine.TypeNumber {
+			return nil, fmt.Errorf("byte array must contain only numbers")
+		}
+		data[i] = byte(elem.(engine.NumberValue).Value())
+	}
+
+	var result interface{}
+	err := llmjson.Unmarshal(data, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonConvertToScriptValue(result), nil
+}
+
+func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, ErrInvalidArguments
+	}
+
+	jsonStr := args[0].(engine.StringValue).Value()
+
+	// Check for disallowUnknownFields option
+	disallowUnknown := false
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeBool {
+		disallowUnknown = args[1].(engine.BoolValue).Value()
+	}
+
+	// For strict unmarshaling with DisallowUnknownFields, we need to use standard decoder
+	if disallowUnknown {
+		decoder := json.NewDecoder(strings.NewReader(jsonStr))
+		decoder.DisallowUnknownFields()
+
+		var result interface{}
+		if err := decoder.Decode(&result); err != nil {
+			return nil, err
+		}
+		return jsonConvertToScriptValue(result), nil
+	}
+
+	// Otherwise use go-llms unmarshal
+	var result interface{}
+	err := llmjson.UnmarshalFromString(jsonStr, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonConvertToScriptValue(result), nil
+}
+
+func (b *UtilJSONBridge) createEncoder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, ErrInvalidArguments
+	}
+
+	customVal := args[0].(engine.CustomValue)
+	writer, ok := customVal.Value().(io.Writer)
+	if !ok {
+		return nil, fmt.Errorf("argument must be io.Writer")
+	}
+
+	encoder := llmjson.NewEncoder(writer)
+	return engine.NewCustomValue("JSONEncoder", encoder), nil
+}
+
+func (b *UtilJSONBridge) createDecoder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, ErrInvalidArguments
+	}
+
+	customVal := args[0].(engine.CustomValue)
+	reader, ok := customVal.Value().(io.Reader)
+	if !ok {
+		return nil, fmt.Errorf("argument must be io.Reader")
+	}
+
+	decoder := llmjson.NewDecoder(reader)
+	return engine.NewCustomValue("JSONDecoder", decoder), nil
+}
+
+func (b *UtilJSONBridge) encodeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+
+	// Get encoder
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("encoder must be JSONEncoder")
+	}
+	customVal := args[0].(engine.CustomValue)
+	encoder, ok := customVal.Value().(*json.Encoder)
+	if !ok {
+		return nil, fmt.Errorf("encoder must be JSONEncoder")
+	}
+
+	// Get value to encode
+	value := args[1].ToGo()
+
+	if err := encoder.Encode(value); err != nil {
+		return nil, err
+	}
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+
+	// Get decoder
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("decoder must be JSONDecoder")
+	}
+	customVal := args[0].(engine.CustomValue)
+	decoder, ok := customVal.Value().(*json.Decoder)
+	if !ok {
+		return nil, fmt.Errorf("decoder must be JSONDecoder")
+	}
+
+	var result interface{}
+	if err := decoder.Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return jsonConvertToScriptValue(result), nil
+}
+
+func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("output must be string")
+	}
+	output := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("schema must be object")
+	}
+	schemaObj := args[1].(engine.ObjectValue).Fields()
+	schemaMap := make(map[string]interface{})
+	for k, v := range schemaObj {
+		schemaMap[k] = v.ToGo()
+	}
+
+	// Convert script schema to go-llms schema
+	schema, err := b.convertToSchema(schemaMap)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := b.processor.Process(schema, output)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonConvertToScriptValue(result), nil
+}
+
+func (b *UtilJSONBridge) parseWithRecovery(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("output must be string")
+	}
+	output := args[0].(engine.StringValue).Value()
+
+	// Use go-llms ExtractJSON for malformed content recovery
+	extracted := processor.ExtractJSON(output)
+	return engine.NewStringValue(extracted), nil
+}
+
+func (b *UtilJSONBridge) enhancePrompt(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("prompt must be string")
+	}
+	prompt := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("schema must be object")
+	}
+	schemaObj := args[1].(engine.ObjectValue).Fields()
+	schemaMap := make(map[string]interface{})
+	for k, v := range schemaObj {
+		schemaMap[k] = v.ToGo()
+	}
+
+	// Convert script schema to go-llms schema
+	schema, err := b.convertToSchema(schemaMap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for options
+	var enhanced string
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		optionsObj := args[2].(engine.ObjectValue).Fields()
+		options := make(map[string]interface{})
+		for k, v := range optionsObj {
+			options[k] = v.ToGo()
+		}
+		enhanced, err = b.promptEnhancer.EnhanceWithOptions(prompt, schema, options)
+	} else {
+		enhanced, err = b.promptEnhancer.Enhance(prompt, schema)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return engine.NewStringValue(enhanced), nil
+}
+
+func (b *UtilJSONBridge) convertFormat(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 3 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("data must be string")
+	}
+	data := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeString {
+		return nil, fmt.Errorf("fromFormat must be string")
+	}
+	fromFormat := args[1].(engine.StringValue).Value()
+
+	if args[2] == nil || args[2].Type() != engine.TypeString {
+		return nil, fmt.Errorf("toFormat must be string")
+	}
+	toFormat := args[2].(engine.StringValue).Value()
+
+	// Convert format strings to outputs.Format
+	from, err := b.stringToFormat(fromFormat)
+	if err != nil {
+		return nil, err
+	}
+	to, err := b.stringToFormat(toFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for conversion options
+	var opts *outputs.ConversionOptions
+	if len(args) > 3 && args[3] != nil && args[3].Type() == engine.TypeObject {
+		optionsObj := args[3].(engine.ObjectValue).Fields()
+		optionsMap := make(map[string]interface{})
+		for k, v := range optionsObj {
+			optionsMap[k] = v.ToGo()
+		}
+		opts = b.convertToConversionOptions(optionsMap)
+	}
+
+	result, err := b.converter.ConvertString(ctx, data, from, to, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return engine.NewStringValue(result), nil
+}
+
+func (b *UtilJSONBridge) streamConvert(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 4 {
+		return nil, ErrInvalidArguments
+	}
+
+	// Get reader
+	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("reader must be io.Reader")
+	}
+	readerVal := args[0].(engine.CustomValue)
+	reader, ok := readerVal.Value().(io.Reader)
+	if !ok {
+		return nil, fmt.Errorf("reader must be io.Reader")
+	}
+
+	// Get writer
+	if args[1] == nil || args[1].Type() != engine.TypeCustom {
+		return nil, fmt.Errorf("writer must be io.Writer")
+	}
+	writerVal := args[1].(engine.CustomValue)
+	writer, ok := writerVal.Value().(io.Writer)
+	if !ok {
+		return nil, fmt.Errorf("writer must be io.Writer")
+	}
+
+	if args[2] == nil || args[2].Type() != engine.TypeString {
+		return nil, fmt.Errorf("fromFormat must be string")
+	}
+	fromFormat := args[2].(engine.StringValue).Value()
+
+	if args[3] == nil || args[3].Type() != engine.TypeString {
+		return nil, fmt.Errorf("toFormat must be string")
+	}
+	toFormat := args[3].(engine.StringValue).Value()
+
+	// Convert format strings to outputs.Format
+	from, err := b.stringToFormat(fromFormat)
+	if err != nil {
+		return nil, err
+	}
+	to, err := b.stringToFormat(toFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for conversion options
+	var opts *outputs.ConversionOptions
+	if len(args) > 4 && args[4] != nil && args[4].Type() == engine.TypeObject {
+		optionsObj := args[4].(engine.ObjectValue).Fields()
+		optionsMap := make(map[string]interface{})
+		for k, v := range optionsObj {
+			optionsMap[k] = v.ToGo()
+		}
+		opts = b.convertToConversionOptions(optionsMap)
+	}
+
+	err = b.converter.StreamConvert(ctx, reader, writer, from, to, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *UtilJSONBridge) prettyPrint(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("json must be string")
+	}
+	jsonStr := args[0].(engine.StringValue).Value()
+
+	// Parse and reformat with indentation
+	var obj interface{}
+	if err := llmjson.UnmarshalFromString(jsonStr, &obj); err != nil {
+		return nil, err
+	}
+
+	data, err := llmjson.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	// Note: Color support would require additional terminal color library
+	// For now, just return formatted JSON
+	return engine.NewStringValue(string(data)), nil
+}
+
+func (b *UtilJSONBridge) minify(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, ErrInvalidArguments
+	}
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("json must be string")
+	}
+	jsonStr := args[0].(engine.StringValue).Value()
+
+	// Parse and reformat without whitespace
+	var obj interface{}
+	if err := llmjson.UnmarshalFromString(jsonStr, &obj); err != nil {
+		return nil, err
+	}
+
+	result, err := llmjson.MarshalToString(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return engine.NewStringValue(result), nil
+}
+
+// Helper methods
 
 // convertToSchema converts a script schema map to go-llms Schema
 func (b *UtilJSONBridge) convertToSchema(schemaMap map[string]interface{}) (*schemaDomain.Schema, error) {
@@ -695,4 +964,50 @@ func (b *UtilJSONBridge) convertToConversionOptions(optionsMap map[string]interf
 	}
 
 	return opts
+}
+
+// Helper function to convert interface{} to ScriptValue
+func jsonConvertToScriptValue(v interface{}) engine.ScriptValue {
+	switch val := v.(type) {
+	case string:
+		return engine.NewStringValue(val)
+	case int, int32, int64, float32, float64:
+		return engine.NewNumberValue(jsonToFloat64(val))
+	case bool:
+		return engine.NewBoolValue(val)
+	case nil:
+		return engine.NewNilValue()
+	case map[string]interface{}:
+		objMap := make(map[string]engine.ScriptValue)
+		for k, v := range val {
+			objMap[k] = jsonConvertToScriptValue(v)
+		}
+		return engine.NewObjectValue(objMap)
+	case []interface{}:
+		arr := make([]engine.ScriptValue, len(val))
+		for i, item := range val {
+			arr[i] = jsonConvertToScriptValue(item)
+		}
+		return engine.NewArrayValue(arr)
+	default:
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+}
+
+// Helper function to convert numeric types to float64
+func jsonToFloat64(v interface{}) float64 {
+	switch val := v.(type) {
+	case int:
+		return float64(val)
+	case int32:
+		return float64(val)
+	case int64:
+		return float64(val)
+	case float32:
+		return float64(val)
+	case float64:
+		return val
+	default:
+		return 0
+	}
 }

@@ -106,25 +106,27 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ Added ScriptValue-aware conversion functions
   
   - [ ] **Phase 4: Update Bridge Package** [IN PROGRESS - 2025-06-19]
+      **instruction - backup current file - create all new file with ScriptValue and compare methods against old file, repeat same for test file**
     - [ ] Update all bridge implementations to use ScriptValue (no backward compatibility needed)
     - [ ] Replace []interface{} with []ScriptValue in method args
     - [ ] Convert return values to appropriate ScriptValue types
     - [ ] Update type mappings for each bridge
     - ✅ ModelInfoBridge - Updated ValidateMethod and ExecuteMethod
-    - ✅ SchemaBridge - Already had updated signatures 
-    - ✅ GuardrailsBridge - Updated ValidateMethod, added ExecuteMethod, updated all methods
-    - ✅ MetricsBridge - ValidateMethod and ExecuteMethod updated, all methods converted
-    - ✅ TracingBridge - ValidateMethod and ExecuteMethod updated, all methods converted
-    - [ ] Agent package bridges (6 bridges)
+    - [ ] SchemaBridge - Needs ScriptValue conversion 
+    - ✅ Observability package bridges (3 bridges) - All converted to ScriptValue [2025-06-19]
+      - ✅ guardrails.go - Updated ValidateMethod, added ExecuteMethod, updated all methods
+      - ✅ metrics.go - ValidateMethod and ExecuteMethod updated, all methods converted
+      - ✅ tracing.go - ValidateMethod and ExecuteMethod updated, all methods converted
+    - ✅ Agent package bridges (6 bridges) - All converted to ScriptValue [2025-06-19]
       - ✅ agent.go - Already updated signatures
-      - [ ] tools.go - Partially updated, needs method implementation fixes
-      - [ ] hooks.go - Needs update
-      - [ ] events.go - Needs update
-      - [ ] workflow.go - Needs update
-      - [ ] tool_registry.go - Needs update
-    - [ ] LLM package bridges (3 bridges) - Need updates
-    - [ ] State package bridges (2 bridges) - Need updates
-    - [ ] Util package bridges (8 bridges) - Need updates
+      - ✅ tools.go - ScriptValue conversion complete [2025-06-19]
+      - ✅ hooks.go - ScriptValue conversion complete [2025-06-19]
+      - ✅ events.go - ScriptValue conversion complete [2025-06-19]
+      - ✅ workflow.go - ScriptValue conversion complete [2025-06-19]
+      - ✅ tool_registry.go - ScriptValue conversion complete [2025-06-19]
+    - ✅ LLM package bridges (3 bridges) - llm.go, pool.go, providers.go - ScriptValue conversion complete [2025-06-19]
+    - ✅ State package bridges (2 bridges) - manager.go, context.go - ScriptValue conversion complete [2025-06-19]
+    - ✅ Util package bridges (8 bridges) - auth, debug, errors, json, script_logger, slog, llm, util - ScriptValue conversion complete [2025-06-19]
   
   - [ ] **Phase 5: Update GopherLua Engine**
     - [ ] Create LValueToScriptValue(lua.LValue) ScriptValue converter

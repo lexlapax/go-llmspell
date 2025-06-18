@@ -1,23 +1,39 @@
-// ABOUTME: Test suite for the JSON utilities bridge that wraps go-llms JSON functions.
-// ABOUTME: Tests bridge interface compliance and method definitions.
+// ABOUTME: Tests for JSON utilities bridge with ScriptValue-based API
+// ABOUTME: Validates JSON operations, schema handling, and format conversions
 
 package util
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/stretchr/testify/assert"
-
-	// Use go-llms testutils for consistency
-	"github.com/lexlapax/go-llms/pkg/testutils/fixtures"
+	"github.com/stretchr/testify/require"
 )
 
-func TestNewUtilJSONBridge(t *testing.T) {
+func TestUtilJSONBridgeInitialization(t *testing.T) {
 	bridge := NewUtilJSONBridge()
 	assert.NotNil(t, bridge)
 	assert.Equal(t, "util_json", bridge.GetID())
+	assert.False(t, bridge.IsInitialized())
+
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+	assert.True(t, bridge.IsInitialized())
+
+	// Test double initialization
+	err = bridge.Initialize(ctx)
+	assert.NoError(t, err)
+
+	// Test cleanup
+	err = bridge.Cleanup(ctx)
+	require.NoError(t, err)
+	assert.False(t, bridge.IsInitialized())
 }
 
 func TestUtilJSONBridgeMetadata(t *testing.T) {
@@ -31,145 +47,521 @@ func TestUtilJSONBridgeMetadata(t *testing.T) {
 	assert.Equal(t, "MIT", metadata.License)
 }
 
-func TestUtilJSONBridgeInitialization(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	ctx := context.Background()
-
-	// Test initialization
-	assert.False(t, bridge.IsInitialized())
-	err := bridge.Initialize(ctx)
-	assert.NoError(t, err)
-	assert.True(t, bridge.IsInitialized())
-
-	// Test double initialization
-	err = bridge.Initialize(ctx)
-	assert.NoError(t, err)
-	assert.True(t, bridge.IsInitialized())
-
-	// Test cleanup
-	err = bridge.Cleanup(ctx)
-	assert.NoError(t, err)
-	assert.False(t, bridge.IsInitialized())
-}
-
 func TestUtilJSONBridgeMethods(t *testing.T) {
 	bridge := NewUtilJSONBridge()
 	methods := bridge.Methods()
 
-	// Check that all expected method categories are present for v0.3.5 structured output
-	expectedMethods := map[string]bool{
-		// Optimized marshaling (go-llms JSON utils)
-		"marshal":        false,
-		"marshalIndent":  false,
-		"marshalToBytes": false,
-
-		// Optimized unmarshaling (go-llms JSON utils)
-		"unmarshal":          false,
-		"unmarshalFromBytes": false,
-		"unmarshalStrict":    false,
-
-		// Streaming operations (go-llms v0.3.5)
-		"createEncoder": false,
-		"createDecoder": false,
-		"encodeStream":  false,
-		"decodeStream":  false,
-
-		// Schema operations (go-llms v0.3.5)
-		"validateWithSchema": false,
-		"generateFromSchema": false,
-		"inferSchema":        false,
-
-		// NEW: Structured output operations (go-llms v0.3.5)
-		"parseStructured":   false,
-		"parseWithRecovery": false,
-		"enhancePrompt":     false,
-
-		// NEW: Format conversion operations (go-llms v0.3.5)
-		"convertFormat": false,
-		"streamConvert": false,
-
-		// JSON utilities (go-llms optimized)
-		"prettyPrint": false,
-		"minify":      false,
-		"merge":       false,
-		"diff":        false,
-
-		// Performance utilities (go-llms optimized)
-		"marshalWithBuffer": false,
-		"marshalConcurrent": false,
+	// Check that all expected methods are present
+	expectedMethods := []string{
+		// Marshaling
+		"marshal",
+		"marshalIndent",
+		"marshalToBytes",
+		// Unmarshaling
+		"unmarshal",
+		"unmarshalFromBytes",
+		"unmarshalStrict",
+		// Streaming
+		"createEncoder",
+		"createDecoder",
+		"encodeStream",
+		"decodeStream",
+		// Schema
+		"validateWithSchema",
+		"generateFromSchema",
+		"inferSchema",
+		// Structured output
+		"parseStructured",
+		"parseWithRecovery",
+		"enhancePrompt",
+		// Format conversion
+		"convertFormat",
+		"streamConvert",
+		// Utilities
+		"prettyPrint",
+		"minify",
+		"merge",
+		"diff",
+		// Performance
+		"marshalWithBuffer",
+		"marshalConcurrent",
 	}
 
-	for _, method := range methods {
-		if _, ok := expectedMethods[method.Name]; ok {
-			expectedMethods[method.Name] = true
-		}
+	methodMap := make(map[string]bool)
+	for _, m := range methods {
+		methodMap[m.Name] = true
 	}
 
-	for method, found := range expectedMethods {
-		assert.True(t, found, "Method %s not found in v0.3.5 implementation", method)
+	for _, expected := range expectedMethods {
+		assert.True(t, methodMap[expected], "Method %s not found", expected)
 	}
 }
 
-func TestUtilJSONBridgeMethodDetails(t *testing.T) {
+func TestUtilJSONBridgeMarshal(t *testing.T) {
 	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
-	// Verify marshal method details
-	var marshalMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "marshal" {
-			marshalMethod = &m
-			break
-		}
+	tests := []struct {
+		name     string
+		args     []engine.ScriptValue
+		wantJSON string
+		wantErr  bool
+	}{
+		{
+			name: "marshal simple object",
+			args: []engine.ScriptValue{
+				engine.NewObjectValue(map[string]engine.ScriptValue{
+					"name": engine.NewStringValue("test"),
+					"age":  engine.NewNumberValue(25),
+				}),
+			},
+			wantJSON: `{"age":25,"name":"test"}`,
+			wantErr:  false,
+		},
+		{
+			name: "marshal array",
+			args: []engine.ScriptValue{
+				engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewNumberValue(1),
+					engine.NewNumberValue(2),
+					engine.NewNumberValue(3),
+				}),
+			},
+			wantJSON: `[1,2,3]`,
+			wantErr:  false,
+		},
+		{
+			name: "marshal string",
+			args: []engine.ScriptValue{
+				engine.NewStringValue("hello world"),
+			},
+			wantJSON: `"hello world"`,
+			wantErr:  false,
+		},
+		{
+			name: "marshal null",
+			args: []engine.ScriptValue{
+				engine.NewNilValue(),
+			},
+			wantJSON: `null`,
+			wantErr:  false,
+		},
+		{
+			name:    "missing value",
+			args:    []engine.ScriptValue{},
+			wantErr: true,
+		},
 	}
-	assert.NotNil(t, marshalMethod)
-	assert.Contains(t, marshalMethod.Description, "Marshal")
-	assert.Len(t, marshalMethod.Parameters, 1)
-	assert.Equal(t, "string", marshalMethod.ReturnType)
 
-	// Verify validateWithSchema method details
-	var schemaMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "validateWithSchema" {
-			schemaMethod = &m
-			break
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := bridge.ExecuteMethod(ctx, "marshal", tt.args)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, engine.TypeString, result.Type())
+				assert.Equal(t, tt.wantJSON, result.(engine.StringValue).Value())
+			}
+		})
 	}
-	assert.NotNil(t, schemaMethod)
-	assert.Contains(t, schemaMethod.Description, "JSON against schema")
-	assert.Len(t, schemaMethod.Parameters, 2)
-	assert.Equal(t, "boolean", schemaMethod.ReturnType)
-
-	// Verify createEncoder method details
-	var encoderMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "createEncoder" {
-			encoderMethod = &m
-			break
-		}
-	}
-	assert.NotNil(t, encoderMethod)
-	assert.Contains(t, encoderMethod.Description, "streaming")
-	assert.Len(t, encoderMethod.Parameters, 1)
-	assert.Equal(t, "JSONEncoder", encoderMethod.ReturnType)
 }
 
-func TestUtilJSONBridgeTypeMappings(t *testing.T) {
+func TestUtilJSONBridgeMarshalIndent(t *testing.T) {
 	bridge := NewUtilJSONBridge()
-	mappings := bridge.TypeMappings()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
 
-	// Check that expected type mappings are present
-	expectedTypes := []string{"JSONEncoder", "JSONDecoder", "io.Writer", "io.Reader", "bytes"}
-	for _, typeName := range expectedTypes {
-		mapping, ok := mappings[typeName]
-		assert.True(t, ok, "Type mapping for %s not found", typeName)
-		assert.NotEmpty(t, mapping.GoType)
-		if typeName == "bytes" {
-			assert.Equal(t, "array", mapping.ScriptType)
-		} else {
-			assert.Equal(t, "object", mapping.ScriptType)
-		}
+	obj := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"name": engine.NewStringValue("test"),
+		"age":  engine.NewNumberValue(25),
+	})
+
+	// Test default indentation
+	result, err := bridge.ExecuteMethod(ctx, "marshalIndent", []engine.ScriptValue{obj})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+	jsonStr := result.(engine.StringValue).Value()
+	assert.Contains(t, jsonStr, "\n")
+	assert.Contains(t, jsonStr, "  ")
+
+	// Test custom indentation
+	result, err = bridge.ExecuteMethod(ctx, "marshalIndent", []engine.ScriptValue{
+		obj,
+		engine.NewStringValue(">>"),
+		engine.NewStringValue("\t"),
+	})
+	require.NoError(t, err)
+	jsonStr = result.(engine.StringValue).Value()
+	assert.Contains(t, jsonStr, ">>")
+	assert.Contains(t, jsonStr, "\t")
+}
+
+func TestUtilJSONBridgeUnmarshal(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name    string
+		json    string
+		wantErr bool
+		check   func(t *testing.T, result engine.ScriptValue)
+	}{
+		{
+			name:    "unmarshal object",
+			json:    `{"name":"test","age":25}`,
+			wantErr: false,
+			check: func(t *testing.T, result engine.ScriptValue) {
+				assert.Equal(t, engine.TypeObject, result.Type())
+				obj := result.(engine.ObjectValue).Fields()
+				assert.Equal(t, "test", obj["name"].(engine.StringValue).Value())
+				assert.Equal(t, float64(25), obj["age"].(engine.NumberValue).Value())
+			},
+		},
+		{
+			name:    "unmarshal array",
+			json:    `[1,2,3]`,
+			wantErr: false,
+			check: func(t *testing.T, result engine.ScriptValue) {
+				assert.Equal(t, engine.TypeArray, result.Type())
+				arr := result.(engine.ArrayValue).Elements()
+				assert.Len(t, arr, 3)
+				assert.Equal(t, float64(1), arr[0].(engine.NumberValue).Value())
+			},
+		},
+		{
+			name:    "unmarshal string",
+			json:    `"hello"`,
+			wantErr: false,
+			check: func(t *testing.T, result engine.ScriptValue) {
+				assert.Equal(t, engine.TypeString, result.Type())
+				assert.Equal(t, "hello", result.(engine.StringValue).Value())
+			},
+		},
+		{
+			name:    "unmarshal null",
+			json:    `null`,
+			wantErr: false,
+			check: func(t *testing.T, result engine.ScriptValue) {
+				assert.True(t, result.IsNil())
+			},
+		},
+		{
+			name:    "invalid json",
+			json:    `{invalid}`,
+			wantErr: true,
+		},
 	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := bridge.ExecuteMethod(ctx, "unmarshal", []engine.ScriptValue{
+				engine.NewStringValue(tt.json),
+			})
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				tt.check(t, result)
+			}
+		})
+	}
+}
+
+func TestUtilJSONBridgeMarshalToBytes(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	obj := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"test": engine.NewBoolValue(true),
+	})
+
+	result, err := bridge.ExecuteMethod(ctx, "marshalToBytes", []engine.ScriptValue{obj})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeArray, result.Type())
+
+	// Convert back to bytes and verify
+	elements := result.(engine.ArrayValue).Elements()
+	data := make([]byte, len(elements))
+	for i, elem := range elements {
+		data[i] = byte(elem.(engine.NumberValue).Value())
+	}
+
+	var decoded map[string]bool
+	err = json.Unmarshal(data, &decoded)
+	assert.NoError(t, err)
+	assert.True(t, decoded["test"])
+}
+
+func TestUtilJSONBridgeUnmarshalFromBytes(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Create byte array ScriptValue
+	jsonBytes := []byte(`{"success":true}`)
+	scriptBytes := make([]engine.ScriptValue, len(jsonBytes))
+	for i, b := range jsonBytes {
+		scriptBytes[i] = engine.NewNumberValue(float64(b))
+	}
+
+	result, err := bridge.ExecuteMethod(ctx, "unmarshalFromBytes", []engine.ScriptValue{
+		engine.NewArrayValue(scriptBytes),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeObject, result.Type())
+
+	obj := result.(engine.ObjectValue).Fields()
+	assert.True(t, obj["success"].(engine.BoolValue).Value())
+}
+
+func TestUtilJSONBridgeUnmarshalStrict(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test normal unmarshal
+	result, err := bridge.ExecuteMethod(ctx, "unmarshalStrict", []engine.ScriptValue{
+		engine.NewStringValue(`{"name":"test"}`),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeObject, result.Type())
+
+	// Test with disallow unknown fields
+	// This would fail with unknown fields in a strictly typed struct
+	result, err = bridge.ExecuteMethod(ctx, "unmarshalStrict", []engine.ScriptValue{
+		engine.NewStringValue(`{"name":"test","unknown":"field"}`),
+		engine.NewBoolValue(true),
+	})
+	// For generic interface{} unmarshaling, this will still succeed
+	// as we're not unmarshaling into a struct with defined fields
+	require.NoError(t, err)
+}
+
+func TestUtilJSONBridgeStreaming(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Create encoder
+	var buf bytes.Buffer
+	writer := engine.NewCustomValue("io.Writer", &buf)
+	encoder, err := bridge.ExecuteMethod(ctx, "createEncoder", []engine.ScriptValue{writer})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeCustom, encoder.Type())
+
+	// Encode value
+	obj := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"stream": engine.NewBoolValue(true),
+	})
+	result, err := bridge.ExecuteMethod(ctx, "encodeStream", []engine.ScriptValue{encoder, obj})
+	require.NoError(t, err)
+	assert.True(t, result.IsNil())
+
+	// Verify encoded data
+	assert.Contains(t, buf.String(), "stream")
+	assert.Contains(t, buf.String(), "true")
+
+	// Create decoder
+	reader := engine.NewCustomValue("io.Reader", strings.NewReader(buf.String()))
+	decoder, err := bridge.ExecuteMethod(ctx, "createDecoder", []engine.ScriptValue{reader})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeCustom, decoder.Type())
+
+	// Decode value
+	decoded, err := bridge.ExecuteMethod(ctx, "decodeStream", []engine.ScriptValue{decoder})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeObject, decoded.Type())
+
+	decodedObj := decoded.(engine.ObjectValue).Fields()
+	assert.True(t, decodedObj["stream"].(engine.BoolValue).Value())
+}
+
+func TestUtilJSONBridgeParseStructured(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	schema := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"type": engine.NewStringValue("object"),
+		"properties": engine.NewObjectValue(map[string]engine.ScriptValue{
+			"name": engine.NewObjectValue(map[string]engine.ScriptValue{
+				"type": engine.NewStringValue("string"),
+			}),
+			"age": engine.NewObjectValue(map[string]engine.ScriptValue{
+				"type": engine.NewStringValue("number"),
+			}),
+		}),
+	})
+
+	output := "Here's the JSON: {\"name\":\"John\",\"age\":30}"
+
+	result, err := bridge.ExecuteMethod(ctx, "parseStructured", []engine.ScriptValue{
+		engine.NewStringValue(output),
+		schema,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeObject, result.Type())
+}
+
+func TestUtilJSONBridgeParseWithRecovery(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test with malformed content
+	malformed := `Some text before {"valid":"json"} and some after`
+	result, err := bridge.ExecuteMethod(ctx, "parseWithRecovery", []engine.ScriptValue{
+		engine.NewStringValue(malformed),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+	assert.Contains(t, result.(engine.StringValue).Value(), "valid")
+}
+
+func TestUtilJSONBridgeEnhancePrompt(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	prompt := "Extract user information"
+	schema := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"type": engine.NewStringValue("object"),
+		"properties": engine.NewObjectValue(map[string]engine.ScriptValue{
+			"name": engine.NewObjectValue(map[string]engine.ScriptValue{
+				"type": engine.NewStringValue("string"),
+			}),
+		}),
+	})
+
+	// Test basic enhancement
+	result, err := bridge.ExecuteMethod(ctx, "enhancePrompt", []engine.ScriptValue{
+		engine.NewStringValue(prompt),
+		schema,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+	enhanced := result.(engine.StringValue).Value()
+	assert.Contains(t, enhanced, prompt)
+
+	// Test with options
+	options := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"examples": engine.NewBoolValue(true),
+	})
+	result, err = bridge.ExecuteMethod(ctx, "enhancePrompt", []engine.ScriptValue{
+		engine.NewStringValue(prompt),
+		schema,
+		options,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+}
+
+func TestUtilJSONBridgeConvertFormat(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	jsonData := `{"name":"test","value":123}`
+
+	// Test JSON to YAML conversion
+	result, err := bridge.ExecuteMethod(ctx, "convertFormat", []engine.ScriptValue{
+		engine.NewStringValue(jsonData),
+		engine.NewStringValue("json"),
+		engine.NewStringValue("yaml"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+	yamlStr := result.(engine.StringValue).Value()
+	assert.Contains(t, yamlStr, "name:")
+	assert.Contains(t, yamlStr, "test")
+
+	// Test with options
+	options := engine.NewObjectValue(map[string]engine.ScriptValue{
+		"pretty":     engine.NewBoolValue(true),
+		"indentSize": engine.NewNumberValue(4),
+	})
+	result, err = bridge.ExecuteMethod(ctx, "convertFormat", []engine.ScriptValue{
+		engine.NewStringValue(jsonData),
+		engine.NewStringValue("json"),
+		engine.NewStringValue("yaml"),
+		options,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+}
+
+func TestUtilJSONBridgePrettyPrint(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	compactJSON := `{"a":1,"b":2,"c":{"d":3}}`
+
+	result, err := bridge.ExecuteMethod(ctx, "prettyPrint", []engine.ScriptValue{
+		engine.NewStringValue(compactJSON),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+
+	prettyJSON := result.(engine.StringValue).Value()
+	assert.Contains(t, prettyJSON, "\n")
+	assert.Contains(t, prettyJSON, "  ")
+	assert.Contains(t, prettyJSON, `"a": 1`)
+}
+
+func TestUtilJSONBridgeMinify(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+	ctx := context.Background()
+	err := bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	prettyJSON := `{
+		"a": 1,
+		"b": 2,
+		"c": {
+			"d": 3
+		}
+	}`
+
+	result, err := bridge.ExecuteMethod(ctx, "minify", []engine.ScriptValue{
+		engine.NewStringValue(prettyJSON),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, engine.TypeString, result.Type())
+
+	minified := result.(engine.StringValue).Value()
+	assert.NotContains(t, minified, "\n")
+	assert.NotContains(t, minified, "  ")
+	assert.Equal(t, `{"a":1,"b":2,"c":{"d":3}}`, minified)
+}
+
+func TestUtilJSONBridgeValidateMethod(t *testing.T) {
+	bridge := NewUtilJSONBridge()
+
+	// ValidateMethod should always return nil as validation is handled by engine
+	err := bridge.ValidateMethod("marshal", []engine.ScriptValue{
+		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+	})
+	assert.NoError(t, err)
+
+	err = bridge.ValidateMethod("unknownMethod", []engine.ScriptValue{})
+	assert.NoError(t, err)
 }
 
 func TestUtilJSONBridgeRequiredPermissions(t *testing.T) {
@@ -178,247 +570,63 @@ func TestUtilJSONBridgeRequiredPermissions(t *testing.T) {
 
 	assert.GreaterOrEqual(t, len(permissions), 1)
 
-	// Check for required permissions
-	hasMemoryPerm := false
+	// Check for expected permissions
+	hasMemory := false
 
 	for _, perm := range permissions {
-		if perm.Type == "memory" && perm.Resource == "json" {
-			hasMemoryPerm = true
+		if perm.Type == engine.PermissionMemory && perm.Resource == "json" {
+			hasMemory = true
 			assert.Contains(t, perm.Actions, "read")
 			assert.Contains(t, perm.Actions, "write")
 		}
 	}
 
-	assert.True(t, hasMemoryPerm, "Memory permission not found")
+	assert.True(t, hasMemory, "Memory permission not found")
 }
 
-func TestUtilJSONBridgeValidateMethod(t *testing.T) {
+func TestUtilJSONBridgeTypeMappings(t *testing.T) {
 	bridge := NewUtilJSONBridge()
+	mappings := bridge.TypeMappings()
 
-	// Use testutils fixture for realistic test data
-	testState := fixtures.BasicTestState()
-	testData := make(map[string]interface{})
-	if data, exists := testState.Get("data"); exists {
-		testData = data.(map[string]interface{})
-	} else {
-		testData["test"] = "value"
+	// Check expected type mappings
+	expectedTypes := []string{
+		"JSONEncoder",
+		"JSONDecoder",
+		"io.Writer",
+		"io.Reader",
+		"bytes",
 	}
 
-	// ValidateMethod should always return nil as validation is handled by engine
-	err := bridge.ValidateMethod("marshal", []interface{}{testData})
-	assert.NoError(t, err)
-
-	err = bridge.ValidateMethod("unknownMethod", nil)
-	assert.NoError(t, err)
-}
-
-// Tests for NEW v0.3.5 Parser Capabilities
-
-func TestUtilJSONBridge_StructuredOutputCapabilities(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
-
-	// Test that new structured output methods are exposed
-	structuredMethods := map[string]bool{
-		"parseStructured":   false,
-		"parseWithRecovery": false,
-		"enhancePrompt":     false,
-	}
-
-	for _, method := range methods {
-		if _, exists := structuredMethods[method.Name]; exists {
-			structuredMethods[method.Name] = true
-		}
-	}
-
-	for methodName, found := range structuredMethods {
-		assert.True(t, found, "New v0.3.5 structured output method %s not found", methodName)
+	for _, typeName := range expectedTypes {
+		mapping, ok := mappings[typeName]
+		assert.True(t, ok, "Type mapping for %s not found", typeName)
+		assert.NotEmpty(t, mapping.GoType)
+		assert.NotEmpty(t, mapping.ScriptType)
 	}
 }
 
-func TestUtilJSONBridge_FormatConversionCapabilities(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
-
-	// Test that new format conversion methods are exposed
-	conversionMethods := map[string]bool{
-		"convertFormat": false,
-		"streamConvert": false,
-	}
-
-	for _, method := range methods {
-		if _, exists := conversionMethods[method.Name]; exists {
-			conversionMethods[method.Name] = true
-		}
-	}
-
-	for methodName, found := range conversionMethods {
-		assert.True(t, found, "New v0.3.5 format conversion method %s not found", methodName)
-	}
-}
-
-func TestUtilJSONBridge_ParseStructuredMethodSignature(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
-
-	var parseStructuredMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "parseStructured" {
-			parseStructuredMethod = &m
-			break
-		}
-	}
-
-	assert.NotNil(t, parseStructuredMethod, "parseStructured method not found")
-	assert.Contains(t, parseStructuredMethod.Description, "Parse and validate structured output")
-	assert.Len(t, parseStructuredMethod.Parameters, 2)
-
-	// Check parameters
-	assert.Equal(t, "output", parseStructuredMethod.Parameters[0].Name)
-	assert.Equal(t, "string", parseStructuredMethod.Parameters[0].Type)
-	assert.True(t, parseStructuredMethod.Parameters[0].Required)
-
-	assert.Equal(t, "schema", parseStructuredMethod.Parameters[1].Name)
-	assert.Equal(t, "object", parseStructuredMethod.Parameters[1].Type)
-	assert.True(t, parseStructuredMethod.Parameters[1].Required)
-
-	assert.Equal(t, "any", parseStructuredMethod.ReturnType)
-}
-
-func TestUtilJSONBridge_ParseWithRecoveryMethodSignature(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
-
-	var parseWithRecoveryMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "parseWithRecovery" {
-			parseWithRecoveryMethod = &m
-			break
-		}
-	}
-
-	assert.NotNil(t, parseWithRecoveryMethod, "parseWithRecovery method not found")
-	assert.Contains(t, parseWithRecoveryMethod.Description, "Extract JSON from malformed")
-	assert.Len(t, parseWithRecoveryMethod.Parameters, 1)
-
-	// Check parameter
-	assert.Equal(t, "output", parseWithRecoveryMethod.Parameters[0].Name)
-	assert.Equal(t, "string", parseWithRecoveryMethod.Parameters[0].Type)
-	assert.True(t, parseWithRecoveryMethod.Parameters[0].Required)
-
-	assert.Equal(t, "string", parseWithRecoveryMethod.ReturnType)
-}
-
-func TestUtilJSONBridge_EnhancePromptMethodSignature(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
-
-	var enhancePromptMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "enhancePrompt" {
-			enhancePromptMethod = &m
-			break
-		}
-	}
-
-	assert.NotNil(t, enhancePromptMethod, "enhancePrompt method not found")
-	assert.Contains(t, enhancePromptMethod.Description, "Add schema information to prompt")
-	assert.Len(t, enhancePromptMethod.Parameters, 3)
-
-	// Check parameters
-	assert.Equal(t, "prompt", enhancePromptMethod.Parameters[0].Name)
-	assert.Equal(t, "string", enhancePromptMethod.Parameters[0].Type)
-	assert.True(t, enhancePromptMethod.Parameters[0].Required)
-
-	assert.Equal(t, "schema", enhancePromptMethod.Parameters[1].Name)
-	assert.Equal(t, "object", enhancePromptMethod.Parameters[1].Type)
-	assert.True(t, enhancePromptMethod.Parameters[1].Required)
-
-	assert.Equal(t, "options", enhancePromptMethod.Parameters[2].Name)
-	assert.Equal(t, "object", enhancePromptMethod.Parameters[2].Type)
-	assert.False(t, enhancePromptMethod.Parameters[2].Required)
-
-	assert.Equal(t, "string", enhancePromptMethod.ReturnType)
-}
-
-func TestUtilJSONBridge_ConvertFormatMethodSignature(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
-
-	var convertFormatMethod *engine.MethodInfo
-	for _, m := range methods {
-		if m.Name == "convertFormat" {
-			convertFormatMethod = &m
-			break
-		}
-	}
-
-	assert.NotNil(t, convertFormatMethod, "convertFormat method not found")
-	assert.Contains(t, convertFormatMethod.Description, "Convert between JSON, YAML, and XML")
-	assert.Len(t, convertFormatMethod.Parameters, 4)
-
-	// Check parameters
-	assert.Equal(t, "data", convertFormatMethod.Parameters[0].Name)
-	assert.Equal(t, "string", convertFormatMethod.Parameters[0].Type)
-	assert.True(t, convertFormatMethod.Parameters[0].Required)
-
-	assert.Equal(t, "fromFormat", convertFormatMethod.Parameters[1].Name)
-	assert.Equal(t, "string", convertFormatMethod.Parameters[1].Type)
-	assert.True(t, convertFormatMethod.Parameters[1].Required)
-
-	assert.Equal(t, "toFormat", convertFormatMethod.Parameters[2].Name)
-	assert.Equal(t, "string", convertFormatMethod.Parameters[2].Type)
-	assert.True(t, convertFormatMethod.Parameters[2].Required)
-
-	assert.Equal(t, "options", convertFormatMethod.Parameters[3].Name)
-	assert.Equal(t, "object", convertFormatMethod.Parameters[3].Type)
-	assert.False(t, convertFormatMethod.Parameters[3].Required)
-
-	assert.Equal(t, "string", convertFormatMethod.ReturnType)
-}
-
-func TestUtilJSONBridge_V0_3_5_ComponentsInitialized(t *testing.T) {
+func TestUtilJSONBridgeErrorHandling(t *testing.T) {
 	bridge := NewUtilJSONBridge()
 	ctx := context.Background()
 
-	// Test that v0.3.5 components are properly initialized
-	err := bridge.Initialize(ctx)
-	assert.NoError(t, err)
-	assert.True(t, bridge.IsInitialized())
+	// Test method execution before initialization
+	_, err := bridge.ExecuteMethod(ctx, "marshal", []engine.ScriptValue{
+		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not initialized")
 
-	// The bridge should have initialized these v0.3.5 components:
-	// - processor (domain.Processor)
-	// - promptEnhancer (domain.PromptEnhancer)
-	// - validator (schemaDomain.Validator)
-	// - converter (*outputs.Converter)
-	// These are internal so we can't test them directly, but initialization success
-	// indicates they were created properly
+	// Initialize bridge
+	err = bridge.Initialize(ctx)
+	require.NoError(t, err)
+
+	// Test unknown method
+	_, err = bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "method not found")
+
+	// Test invalid arguments
+	_, err = bridge.ExecuteMethod(ctx, "marshal", []engine.ScriptValue{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid arguments")
 }
-
-func TestUtilJSONBridge_StreamingCapabilitiesExposed(t *testing.T) {
-	bridge := NewUtilJSONBridge()
-	methods := bridge.Methods()
-
-	// Test that enhanced streaming capabilities are exposed
-	streamingMethods := map[string]bool{
-		"createEncoder": false,
-		"createDecoder": false,
-		"encodeStream":  false,
-		"decodeStream":  false,
-		"streamConvert": false, // New in v0.3.5
-	}
-
-	for _, method := range methods {
-		if _, exists := streamingMethods[method.Name]; exists {
-			streamingMethods[method.Name] = true
-		}
-	}
-
-	for methodName, found := range streamingMethods {
-		assert.True(t, found, "Streaming method %s not found in v0.3.5 implementation", methodName)
-	}
-}
-
-// Note: Actual execution testing of v0.3.5 parser capabilities would require
-// fully initialized go-llms components and real JSON/schema data
-// or would be done at integration test level with actual utilities

@@ -365,17 +365,59 @@ func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []engi
 		return nil, fmt.Errorf("validation function must be a callable function")
 	}
 	funcValue := args[2].(engine.FunctionValue)
-	validationFunc := func(data interface{}) bool {
-		// Convert data to ScriptValue and call the function
-		dataValue := engine.NewObjectValue(data.(map[string]engine.ScriptValue))
-		result, err := funcValue.Call([]engine.ScriptValue{dataValue})
-		if err != nil {
+	
+	// For testing, extract the actual Go function if available
+	var validationFunc func(interface{}) bool
+	
+	if fn, ok := funcValue.Function().(func([]engine.ScriptValue) (engine.ScriptValue, error)); ok {
+		// This is a test function - wrap it to work with our validation interface
+		validationFunc = func(data interface{}) bool {
+			// Convert data to ScriptValue and call the function
+			dataMap, ok := data.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			
+			// Convert to map[string]engine.ScriptValue
+			scriptMap := make(map[string]engine.ScriptValue)
+			for k, v := range dataMap {
+				scriptMap[k] = gb.interfaceToScriptValue(v)
+			}
+			
+			dataValue := engine.NewObjectValue(scriptMap)
+			result, err := fn([]engine.ScriptValue{dataValue})
+			if err != nil {
+				return false
+			}
+			if result != nil && result.Type() == engine.TypeBool {
+				return result.(engine.BoolValue).Value()
+			}
 			return false
 		}
-		if result != nil && result.Type() == engine.TypeBool {
-			return result.(engine.BoolValue).Value()
+	} else {
+		// For production use with script engines, the Call method would be implemented
+		validationFunc = func(data interface{}) bool {
+			dataMap, ok := data.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			
+			// Convert to map[string]engine.ScriptValue
+			scriptMap := make(map[string]engine.ScriptValue)
+			for k, v := range dataMap {
+				scriptMap[k] = gb.interfaceToScriptValue(v)
+			}
+			
+			dataValue := engine.NewObjectValue(scriptMap)
+			result, err := funcValue.Call([]engine.ScriptValue{dataValue})
+			if err != nil {
+				return false
+			}
+			if result != nil && result.Type() == engine.TypeBool {
+				return result.(engine.BoolValue).Value()
+			}
+			return false
 		}
-		return false
 	}
 
 	// Create the guardrail function wrapper
@@ -883,4 +925,39 @@ func (gb *GuardrailsBridge) mapToState(data map[string]interface{}) (*domain.Sta
 	}
 
 	return state, nil
+}
+
+// interfaceToScriptValue converts an interface{} to engine.ScriptValue
+func (gb *GuardrailsBridge) interfaceToScriptValue(v interface{}) engine.ScriptValue {
+	if v == nil {
+		return engine.NewNilValue()
+	}
+	
+	switch val := v.(type) {
+	case bool:
+		return engine.NewBoolValue(val)
+	case int:
+		return engine.NewNumberValue(float64(val))
+	case int64:
+		return engine.NewNumberValue(float64(val))
+	case float64:
+		return engine.NewNumberValue(val)
+	case string:
+		return engine.NewStringValue(val)
+	case []interface{}:
+		scriptValues := make([]engine.ScriptValue, len(val))
+		for i, item := range val {
+			scriptValues[i] = gb.interfaceToScriptValue(item)
+		}
+		return engine.NewArrayValue(scriptValues)
+	case map[string]interface{}:
+		scriptMap := make(map[string]engine.ScriptValue)
+		for k, v := range val {
+			scriptMap[k] = gb.interfaceToScriptValue(v)
+		}
+		return engine.NewObjectValue(scriptMap)
+	default:
+		// For unknown types, convert to string representation
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
 }

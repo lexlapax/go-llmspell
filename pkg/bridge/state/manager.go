@@ -125,7 +125,7 @@ func (b *StateManagerBridge) RegisterWithEngine(scriptEngine engine.ScriptEngine
 }
 
 // ValidateMethod validates a method call
-func (b *StateManagerBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *StateManagerBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Basic validation - method exists
 	for _, method := range b.Methods() {
 		if method.Name == name {
@@ -812,71 +812,206 @@ func (b *StateManagerBridge) scriptToMessage(scriptObj map[string]interface{}) (
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	switch name {
 	case "createState":
-		return b.createState(ctx, nil)
+		result, err := b.createState(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		// Convert result to ScriptValue
+		if result == nil {
+			return engine.NewNilValue(), nil
+		}
+		if resultMap, ok := result.(map[string]interface{}); ok {
+			scriptMap := make(map[string]engine.ScriptValue)
+			for k, v := range resultMap {
+				// Simple conversion - expand as needed
+				switch val := v.(type) {
+				case string:
+					scriptMap[k] = engine.NewStringValue(val)
+				case float64:
+					scriptMap[k] = engine.NewNumberValue(val)
+				case bool:
+					scriptMap[k] = engine.NewBoolValue(val)
+				default:
+					scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+				}
+			}
+			return engine.NewObjectValue(scriptMap), nil
+		}
+		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	case "saveState":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("saveState requires state parameter")
 		}
-		stateObj, ok := args[0].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("state must be an object")
+		if args[0] == nil || args[0].Type() != engine.TypeObject {
+			return nil, fmt.Errorf("state must be object")
 		}
-		return b.saveState(ctx, map[string]interface{}{"state": stateObj})
+		stateObj := make(map[string]interface{})
+		for k, v := range args[0].(engine.ObjectValue).Fields() {
+			stateObj[k] = v.ToGo()
+		}
+		_, err := b.saveState(ctx, map[string]interface{}{"state": stateObj})
+		if err != nil {
+			return nil, err
+		}
+		// For now, saveState typically returns nil on success
+		return engine.NewNilValue(), nil
 
 	case "loadState":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("loadState requires id parameter")
 		}
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
-		return b.loadState(ctx, map[string]interface{}{"id": id})
+		id := args[0].(engine.StringValue).Value()
+		result, err := b.loadState(ctx, map[string]interface{}{"id": id})
+		if err != nil {
+			return nil, err
+		}
+		// Convert state to ScriptValue - similar to createState
+		if result == nil {
+			return engine.NewNilValue(), nil
+		}
+		if resultMap, ok := result.(map[string]interface{}); ok {
+			scriptMap := make(map[string]engine.ScriptValue)
+			for k, v := range resultMap {
+				switch val := v.(type) {
+				case string:
+					scriptMap[k] = engine.NewStringValue(val)
+				case float64:
+					scriptMap[k] = engine.NewNumberValue(val)
+				case bool:
+					scriptMap[k] = engine.NewBoolValue(val)
+				default:
+					scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+				}
+			}
+			return engine.NewObjectValue(scriptMap), nil
+		}
+		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	case "deleteState":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("deleteState requires id parameter")
 		}
-		id, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
-		return b.deleteState(ctx, map[string]interface{}{"id": id})
+		id := args[0].(engine.StringValue).Value()
+		_, err := b.deleteState(ctx, map[string]interface{}{"id": id})
+		if err != nil {
+			return nil, err
+		}
+		return engine.NewNilValue(), nil
 
 	case "listStates":
-		return b.listStates(ctx, nil)
+		result, err := b.listStates(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		// Convert result array to ScriptValue
+		if result == nil {
+			return engine.NewArrayValue([]engine.ScriptValue{}), nil
+		}
+		if resultArray, ok := result.([]interface{}); ok {
+			scriptArray := make([]engine.ScriptValue, len(resultArray))
+			for i, v := range resultArray {
+				switch val := v.(type) {
+				case string:
+					scriptArray[i] = engine.NewStringValue(val)
+				default:
+					scriptArray[i] = engine.NewStringValue(fmt.Sprintf("%v", v))
+				}
+			}
+			return engine.NewArrayValue(scriptArray), nil
+		}
+		return engine.NewArrayValue([]engine.ScriptValue{}), nil
 
 	case "applyTransform":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("applyTransform requires name and state parameters")
 		}
-		name, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		stateObj, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("state must be an object")
+		name := args[0].(engine.StringValue).Value()
+		if args[1] == nil || args[1].Type() != engine.TypeObject {
+			return nil, fmt.Errorf("state must be object")
 		}
-		return b.applyTransform(ctx, map[string]interface{}{"name": name, "state": stateObj})
+		stateObj := make(map[string]interface{})
+		for k, v := range args[1].(engine.ObjectValue).Fields() {
+			stateObj[k] = v.ToGo()
+		}
+		result, err := b.applyTransform(ctx, map[string]interface{}{"name": name, "state": stateObj})
+		if err != nil {
+			return nil, err
+		}
+		// Convert transformed state to ScriptValue
+		if result == nil {
+			return engine.NewNilValue(), nil
+		}
+		if resultMap, ok := result.(map[string]interface{}); ok {
+			scriptMap := make(map[string]engine.ScriptValue)
+			for k, v := range resultMap {
+				switch val := v.(type) {
+				case string:
+					scriptMap[k] = engine.NewStringValue(val)
+				case float64:
+					scriptMap[k] = engine.NewNumberValue(val)
+				case bool:
+					scriptMap[k] = engine.NewBoolValue(val)
+				default:
+					scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+				}
+			}
+			return engine.NewObjectValue(scriptMap), nil
+		}
+		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	case "mergeStates":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("mergeStates requires states and strategy parameters")
 		}
-		states, ok := args[0].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("states must be an array")
+		if args[0] == nil || args[0].Type() != engine.TypeArray {
+			return nil, fmt.Errorf("states must be array")
 		}
-		strategy, ok := args[1].(string)
-		if !ok {
+		states := make([]interface{}, 0)
+		for _, v := range args[0].(engine.ArrayValue).Elements() {
+			states = append(states, v.ToGo())
+		}
+		if args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("strategy must be string")
 		}
-		return b.mergeStates(ctx, map[string]interface{}{"states": states, "strategy": strategy})
+		strategy := args[1].(engine.StringValue).Value()
+		result, err := b.mergeStates(ctx, map[string]interface{}{"states": states, "strategy": strategy})
+		if err != nil {
+			return nil, err
+		}
+		// Convert merged state to ScriptValue
+		if result == nil {
+			return engine.NewNilValue(), nil
+		}
+		if resultMap, ok := result.(map[string]interface{}); ok {
+			scriptMap := make(map[string]engine.ScriptValue)
+			for k, v := range resultMap {
+				switch val := v.(type) {
+				case string:
+					scriptMap[k] = engine.NewStringValue(val)
+				case float64:
+					scriptMap[k] = engine.NewNumberValue(val)
+				case bool:
+					scriptMap[k] = engine.NewBoolValue(val)
+				default:
+					scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+				}
+			}
+			return engine.NewObjectValue(scriptMap), nil
+		}
+		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)

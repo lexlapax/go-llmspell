@@ -371,7 +371,8 @@ func (mb *MetricsBridge) ExecuteMethod(ctx context.Context, name string, args []
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNumberValue(result.(float64)), nil
+		// Counter values are int64, convert to float64 for ScriptValue
+		return engine.NewNumberValue(float64(result.(int64))), nil
 	case "createGauge":
 		result, err := mb.createGauge(ctx, args)
 		if err != nil {

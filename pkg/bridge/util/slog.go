@@ -221,27 +221,9 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method calls
-func (sb *SlogBridge) ValidateMethod(name string, args []interface{}) error {
-	if !sb.IsInitialized() {
-		return fmt.Errorf("slog bridge not initialized")
-	}
-
-	methods := sb.Methods()
-	for _, method := range methods {
-		if method.Name == name {
-			requiredCount := 0
-			for _, param := range method.Parameters {
-				if param.Required {
-					requiredCount++
-				}
-			}
-			if len(args) < requiredCount {
-				return fmt.Errorf("method %s requires at least %d arguments, got %d", name, requiredCount, len(args))
-			}
-			return nil
-		}
-	}
-	return fmt.Errorf("unknown method: %s", name)
+func (sb *SlogBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+	// Method validation handled by engine based on Methods() metadata
+	return nil
 }
 
 // TypeMappings returns type conversion mappings
@@ -298,232 +280,277 @@ func (sb *SlogBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
+// ExecuteMethod executes a bridge method
+func (sb *SlogBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	sb.mu.RLock()
+	defer sb.mu.RUnlock()
+
+	if !sb.initialized {
+		return nil, fmt.Errorf("slog bridge not initialized")
+	}
+
+	switch name {
+	case "info":
+		return sb.info(ctx, args)
+	case "warn":
+		return sb.warn(ctx, args)
+	case "error":
+		return sb.error(ctx, args)
+	case "debug":
+		return sb.debug(ctx, args)
+	case "logBeforeGenerate":
+		return sb.logBeforeGenerate(ctx, args)
+	case "logAfterGenerate":
+		return sb.logAfterGenerate(ctx, args)
+	case "logBeforeToolCall":
+		return sb.logBeforeToolCall(ctx, args)
+	case "logAfterToolCall":
+		return sb.logAfterToolCall(ctx, args)
+	case "setLogLevel":
+		return sb.setLogLevel(ctx, args)
+	case "getLogLevel":
+		return sb.getLogLevel(ctx, args)
+	case "configureLogger":
+		return sb.configureLogger(ctx, args)
+	case "withAttributes":
+		return sb.withAttributes(ctx, args)
+	default:
+		return nil, fmt.Errorf("unknown method: %s", name)
+	}
+}
+
 // Bridge method implementations
 
 // info logs an info message with optional emoji and attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) info(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("info", args); err != nil {
-		return err
+func (sb *SlogBridge) info(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("info requires at least a message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelInfo, message, args[1:])
 }
 
 // warn logs a warning message with optional emoji and attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) warn(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("warn", args); err != nil {
-		return err
+func (sb *SlogBridge) warn(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("warn requires at least a message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelWarn, message, args[1:])
 }
 
 // error logs an error message with optional emoji and attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) error(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("error", args); err != nil {
-		return err
+func (sb *SlogBridge) error(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("error requires at least a message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelError, message, args[1:])
 }
 
 // debug logs a debug message with optional emoji and attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) debug(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("debug", args); err != nil {
-		return err
+func (sb *SlogBridge) debug(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("debug requires at least a message")
 	}
 
-	message, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("message must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("message must be a string")
 	}
+	message := args[0].(engine.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelDebug, message, args[1:])
 }
 
-// logBeforeGenerate calls the logging hook's BeforeGenerate method
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) logBeforeGenerate(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("logBeforeGenerate", args); err != nil {
-		return err
+// logWithLevel handles the actual logging with emoji and attributes
+func (sb *SlogBridge) logWithLevel(ctx context.Context, level slog.Level, message string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	var emoji string
+	var attrs []slog.Attr
+
+	// Check for optional emoji (second argument)
+	if len(args) > 0 && args[0] != nil && args[0].Type() == engine.TypeString {
+		emoji = args[0].(engine.StringValue).Value()
+		if emoji != "" {
+			message = emoji + " " + message
+		}
 	}
 
-	messagesArg, ok := args[0].([]interface{})
-	if !ok {
-		return fmt.Errorf("messages must be an array")
+	// Check for optional attributes (third argument)
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		objFields := args[1].(engine.ObjectValue).Fields()
+		for k, v := range objFields {
+			attrs = append(attrs, slog.Any(k, v.ToGo()))
+		}
 	}
+
+	// Log with structured attributes
+	sb.logger.LogAttrs(ctx, level, message, attrs...)
+	return engine.NewNilValue(), nil
+}
+
+// logBeforeGenerate calls the logging hook's BeforeGenerate method
+func (sb *SlogBridge) logBeforeGenerate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("logBeforeGenerate requires messages array")
+	}
+
+	if args[0] == nil || args[0].Type() != engine.TypeArray {
+		return nil, fmt.Errorf("messages must be an array")
+	}
+	messagesArray := args[0].(engine.ArrayValue).Elements()
 
 	// Convert script messages to go-llms Message format
-	messages := make([]ldomain.Message, len(messagesArg))
-	for i, msgInterface := range messagesArg {
-		msgMap, ok := msgInterface.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("message at index %d must be an object", i)
+	messages := make([]ldomain.Message, len(messagesArray))
+	for i, msgVal := range messagesArray {
+		if msgVal.Type() != engine.TypeObject {
+			return nil, fmt.Errorf("message at index %d must be an object", i)
 		}
+		msgMap := msgVal.(engine.ObjectValue).Fields()
 
-		role, ok := msgMap["role"].(string)
-		if !ok {
-			return fmt.Errorf("message role must be a string")
+		roleVal, ok := msgMap["role"]
+		if !ok || roleVal.Type() != engine.TypeString {
+			return nil, fmt.Errorf("message role must be a string")
 		}
+		role := roleVal.(engine.StringValue).Value()
 
-		content, ok := msgMap["content"].(string)
-		if !ok {
-			return fmt.Errorf("message content must be a string")
+		contentVal, ok := msgMap["content"]
+		if !ok || contentVal.Type() != engine.TypeString {
+			return nil, fmt.Errorf("message content must be a string")
 		}
+		content := contentVal.(engine.StringValue).Value()
 
 		messages[i] = ldomain.Message{
-			Role: ldomain.Role(role),
-			Content: []ldomain.ContentPart{
-				{
-					Type: ldomain.ContentTypeText,
-					Text: content,
-				},
-			},
+			Role:    ldomain.Role(role),
+			Content: []ldomain.ContentPart{{Type: "text", Text: content}},
 		}
 	}
 
-	sb.mu.RLock()
-	hook := sb.hook
-	sb.mu.RUnlock()
-
-	hook.BeforeGenerate(ctx, messages)
-	return nil
+	// Call the logging hook
+	sb.hook.BeforeGenerate(ctx, messages)
+	return engine.NewNilValue(), nil
 }
 
 // logAfterGenerate calls the logging hook's AfterGenerate method
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("logAfterGenerate", args); err != nil {
-		return err
+func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("logAfterGenerate requires response object")
 	}
 
-	responseArg, ok := args[0].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("response must be an object")
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("response must be an object")
+	}
+	responseMap := args[0].(engine.ObjectValue).Fields()
+
+	// Convert response object to go-llms Response
+	var response ldomain.Response
+	if contentVal, ok := responseMap["content"]; ok && contentVal.Type() == engine.TypeString {
+		response.Content = contentVal.(engine.StringValue).Value()
 	}
 
-	content, ok := responseArg["content"].(string)
-	if !ok {
-		return fmt.Errorf("response content must be a string")
-	}
-
-	response := ldomain.Response{
-		Content: content,
-	}
-
+	// Check for optional error
 	var err error
-	if len(args) > 1 && args[1] != nil {
-		if errStr, ok := args[1].(string); ok {
-			err = fmt.Errorf("%s", errStr)
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
+		errMsg := args[1].(engine.StringValue).Value()
+		if errMsg != "" {
+			err = fmt.Errorf(errMsg)
 		}
 	}
 
-	sb.mu.RLock()
-	hook := sb.hook
-	sb.mu.RUnlock()
-
-	hook.AfterGenerate(ctx, response, err)
-	return nil
+	// Call the logging hook
+	sb.hook.AfterGenerate(ctx, response, err)
+	return engine.NewNilValue(), nil
 }
 
 // logBeforeToolCall calls the logging hook's BeforeToolCall method
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) logBeforeToolCall(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("logBeforeToolCall", args); err != nil {
-		return err
+func (sb *SlogBridge) logBeforeToolCall(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("logBeforeToolCall requires tool name and params")
 	}
 
-	tool, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("tool must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("tool name must be a string")
+	}
+	toolName := args[0].(engine.StringValue).Value()
+
+	if args[1] == nil || args[1].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("params must be an object")
+	}
+	paramsMap := args[1].(engine.ObjectValue).Fields()
+
+	// Convert params to native map
+	params := make(map[string]interface{})
+	for k, v := range paramsMap {
+		params[k] = v.ToGo()
 	}
 
-	params, ok := args[1].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("params must be an object")
-	}
-
-	sb.mu.RLock()
-	hook := sb.hook
-	sb.mu.RUnlock()
-
-	hook.BeforeToolCall(ctx, tool, params)
-	return nil
+	// Call the logging hook with tool name and params
+	sb.hook.BeforeToolCall(ctx, toolName, params)
+	return engine.NewNilValue(), nil
 }
 
 // logAfterToolCall calls the logging hook's AfterToolCall method
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("logAfterToolCall", args); err != nil {
-		return err
+func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("logAfterToolCall requires at least tool name")
 	}
 
-	tool, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("tool must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("tool name must be a string")
 	}
+	toolName := args[0].(engine.StringValue).Value()
 
+	// Convert optional result
 	var result interface{}
-	var err error
-
-	if len(args) > 1 && args[1] != nil {
-		result = args[1]
+	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
+		resultMap := args[1].(engine.ObjectValue).Fields()
+		resultNative := make(map[string]interface{})
+		for k, v := range resultMap {
+			resultNative[k] = v.ToGo()
+		}
+		result = resultNative
 	}
 
-	if len(args) > 2 && args[2] != nil {
-		if errStr, ok := args[2].(string); ok {
-			err = fmt.Errorf("%s", errStr)
+	// Check for optional error
+	var err error
+	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
+		errMsg := args[2].(engine.StringValue).Value()
+		if errMsg != "" {
+			err = fmt.Errorf(errMsg)
 		}
 	}
 
-	sb.mu.RLock()
-	hook := sb.hook
-	sb.mu.RUnlock()
-
-	hook.AfterToolCall(ctx, tool, result, err)
-	return nil
+	// Call the logging hook with tool name, result and error
+	sb.hook.AfterToolCall(ctx, toolName, result, err)
+	return engine.NewNilValue(), nil
 }
 
 // setLogLevel sets the structured logging level
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) setLogLevel(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("setLogLevel", args); err != nil {
-		return err
+func (sb *SlogBridge) setLogLevel(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("setLogLevel requires level string")
 	}
 
-	levelStr, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("level must be a string")
+	if args[0] == nil || args[0].Type() != engine.TypeString {
+		return nil, fmt.Errorf("level must be a string")
 	}
+	levelStr := args[0].(engine.StringValue).Value()
 
+	// Map string to core.LogLevel
 	var level core.LogLevel
 	switch levelStr {
 	case "basic":
@@ -533,59 +560,64 @@ func (sb *SlogBridge) setLogLevel(ctx context.Context, args []interface{}) error
 	case "debug":
 		level = core.LogLevelDebug
 	default:
-		return fmt.Errorf("invalid log level: %s (must be 'basic', 'detailed', or 'debug')", levelStr)
+		return nil, fmt.Errorf("invalid log level: %s (must be 'basic', 'detailed', or 'debug')", levelStr)
 	}
 
 	sb.mu.Lock()
 	sb.level = level
-	// Recreate the hook with the new level
+	// Update the logging hook with new level
 	sb.hook = core.NewLoggingHook(sb.logger, level)
 	sb.mu.Unlock()
 
-	return nil
+	return engine.NewNilValue(), nil
 }
 
 // getLogLevel gets the current structured logging level
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) getLogLevel(ctx context.Context, args []interface{}) (interface{}, error) {
-	if err := sb.ValidateMethod("getLogLevel", args); err != nil {
-		return nil, err
-	}
-
+func (sb *SlogBridge) getLogLevel(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	sb.mu.RLock()
 	level := sb.level
 	sb.mu.RUnlock()
 
+	// Convert level to string
+	var levelStr string
 	switch level {
 	case core.LogLevelBasic:
-		return "basic", nil
+		levelStr = "basic"
 	case core.LogLevelDetailed:
-		return "detailed", nil
+		levelStr = "detailed"
 	case core.LogLevelDebug:
-		return "debug", nil
+		levelStr = "debug"
 	default:
-		return "unknown", nil
+		levelStr = "unknown"
 	}
+
+	return engine.NewStringValue(levelStr), nil
 }
 
 // configureLogger configures the structured logger
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) configureLogger(ctx context.Context, args []interface{}) error {
-	if err := sb.ValidateMethod("configureLogger", args); err != nil {
-		return err
+func (sb *SlogBridge) configureLogger(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("configureLogger requires config object")
 	}
 
-	config, ok := args[0].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("config must be an object")
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
+		return nil, fmt.Errorf("config must be an object")
 	}
+	configMap := args[0].(engine.ObjectValue).Fields()
 
+	// Extract configuration options
 	var handlerOptions slog.HandlerOptions
 
-	// Configure log level
-	if levelStr, ok := config["level"].(string); ok {
+	// Check for format
+	var handler slog.Handler
+	format := "text" // default
+	if formatVal, ok := configMap["format"]; ok && formatVal.Type() == engine.TypeString {
+		format = formatVal.(engine.StringValue).Value()
+	}
+
+	// Check for level
+	if levelVal, ok := configMap["level"]; ok && levelVal.Type() == engine.TypeString {
+		levelStr := levelVal.(engine.StringValue).Value()
 		switch levelStr {
 		case "debug":
 			handlerOptions.Level = slog.LevelDebug
@@ -598,77 +630,51 @@ func (sb *SlogBridge) configureLogger(ctx context.Context, args []interface{}) e
 		}
 	}
 
-	// Create new handler based on format
-	var handler slog.Handler
-	if format, ok := config["format"].(string); ok && format == "json" {
+	// Create handler based on format
+	switch format {
+	case "json":
 		handler = slog.NewJSONHandler(os.Stderr, &handlerOptions)
-	} else {
+	default:
 		handler = slog.NewTextHandler(os.Stderr, &handlerOptions)
 	}
 
+	// Update logger
 	sb.mu.Lock()
 	sb.logger = slog.New(handler)
-	// Recreate the hook with the new logger
+	// Recreate hook with new logger
 	sb.hook = core.NewLoggingHook(sb.logger, sb.level)
 	sb.mu.Unlock()
 
-	return nil
+	return engine.NewNilValue(), nil
 }
 
-// withAttributes creates a context with structured attributes
-//
-//nolint:unused // Bridge method called via reflection
-func (sb *SlogBridge) withAttributes(ctx context.Context, args []interface{}) (interface{}, error) {
-	if err := sb.ValidateMethod("withAttributes", args); err != nil {
-		return nil, err
+// withAttributes creates context with structured attributes
+func (sb *SlogBridge) withAttributes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("withAttributes requires attributes object")
 	}
 
-	attributes, ok := args[0].(map[string]interface{})
-	if !ok {
+	if args[0] == nil || args[0].Type() != engine.TypeObject {
 		return nil, fmt.Errorf("attributes must be an object")
 	}
+	attrsMap := args[0].(engine.ObjectValue).Fields()
 
-	// Convert attributes to slog attributes
-	slogAttrs := make([]slog.Attr, 0, len(attributes))
-	for key, value := range attributes {
-		slogAttrs = append(slogAttrs, slog.Any(key, value))
+	// Convert attributes to slog.Attr slice
+	var attrs []slog.Attr
+	for k, v := range attrsMap {
+		attrs = append(attrs, slog.Any(k, v.ToGo()))
 	}
 
-	// Return context representation that can be used in scripts
-	return map[string]interface{}{
-		"type":       "logging_context",
-		"attributes": attributes,
-		"slog_attrs": slogAttrs,
-	}, nil
-}
-
-// Helper methods
-
-// logWithLevel logs a message at the specified level with optional emoji and attributes
-func (sb *SlogBridge) logWithLevel(ctx context.Context, level slog.Level, message string, extraArgs []interface{}) error {
-	sb.mu.RLock()
-	logger := sb.logger
-	sb.mu.RUnlock()
-
-	// Start with the message
-	args := []interface{}{message}
-
-	// Add emoji if provided
-	if len(extraArgs) > 0 && extraArgs[0] != nil {
-		if emoji, ok := extraArgs[0].(string); ok {
-			args = append(args, "emoji", emoji)
-		}
+	// Create new logger with attributes - convert to any slice
+	anyAttrs := make([]any, len(attrs))
+	for i, attr := range attrs {
+		anyAttrs[i] = attr
 	}
+	contextLogger := sb.logger.With(anyAttrs...)
 
-	// Add attributes if provided
-	if len(extraArgs) > 1 && extraArgs[1] != nil {
-		if attributes, ok := extraArgs[1].(map[string]interface{}); ok {
-			for key, value := range attributes {
-				args = append(args, key, value)
-			}
-		}
-	}
-
-	logger.Log(ctx, level, args[0].(string), args[1:]...)
-	return nil
+	// Return a context object that scripts can use
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"logger":     engine.NewCustomValue("logger", contextLogger),
+		"attributes": args[0],
+	}), nil
 }

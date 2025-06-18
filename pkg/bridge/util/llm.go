@@ -16,7 +16,6 @@ import (
 	// go-llms imports for LLM utilities
 	agentDomain "github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llms/pkg/agent/events"
-	"github.com/lexlapax/go-llms/pkg/llm/domain"
 	"github.com/lexlapax/go-llms/pkg/llm/outputs"
 	"github.com/lexlapax/go-llms/pkg/llm/provider"
 	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
@@ -371,7 +370,7 @@ func (b *UtilLLMBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
-func (b *UtilLLMBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *UtilLLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -401,7 +400,7 @@ func (b *UtilLLMBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -416,15 +415,20 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 		}
 
 		// Get providers array
-		providersArg, ok := args[0].([]interface{})
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeArray {
 			return nil, fmt.Errorf("providers must be an array")
 		}
+		providersArg := args[0].(engine.ArrayValue).Elements()
 
 		// Convert to domain.Provider slice
 		providers := make([]bridge.Provider, 0, len(providersArg))
 		for i, p := range providersArg {
-			provider, ok := p.(bridge.Provider)
+			// For now, we'll need custom handling for Provider types
+			if p.Type() != engine.TypeCustom {
+				return nil, fmt.Errorf("provider at index %d must be a Provider", i)
+			}
+			customVal := p.(engine.CustomValue)
+			provider, ok := customVal.Value().(bridge.Provider)
 			if !ok {
 				return nil, fmt.Errorf("provider at index %d must be a Provider", i)
 			}
@@ -432,10 +436,10 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 		}
 
 		// Get strategy
-		strategyStr, ok := args[1].(string)
-		if !ok {
+		if args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("strategy must be string")
 		}
+		strategyStr := args[1].(engine.StringValue).Value()
 
 		// Convert strategy string to enum
 		var strategy llmutil.PoolStrategy
@@ -453,31 +457,34 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 		// Create the provider pool
 		pool := llmutil.NewProviderPool(providers, strategy)
 
-		return pool, nil
+		// Return as custom value since pool is a complex type
+		return engine.NewCustomValue("ProviderPool", pool), nil
 
 	case "createModelInventory":
 		// Create model info service to fetch model inventory
 		// Using the modelinfo package's service to aggregate models
 		// Note: The actual model inventory is returned by the service's AggregateModels method
 		// For now, return a placeholder as the service requires provider-specific fetchers
-		return map[string]interface{}{
-			"type": "ModelInventory",
-			"id":   "inventory_1",
-			"note": "Use fetchModelInfo to retrieve actual model data",
-		}, nil
+		result := map[string]engine.ScriptValue{
+			"type": engine.NewStringValue("ModelInventory"),
+			"id":   engine.NewStringValue("inventory_1"),
+			"note": engine.NewStringValue("Use fetchModelInfo to retrieve actual model data"),
+		}
+		return engine.NewObjectValue(result), nil
 
 	case "createModelConfig":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("createModelConfig requires provider and model parameters")
 		}
-		provider, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("provider must be string")
 		}
-		model, ok := args[1].(string)
-		if !ok {
+		provider := args[0].(engine.StringValue).Value()
+
+		if args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("model must be string")
 		}
+		model := args[1].(engine.StringValue).Value()
 
 		// Create model config
 		config := llmutil.ModelConfig{
@@ -486,65 +493,68 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 		}
 
 		// Add options if provided
-		if len(args) > 2 && args[2] != nil {
-			if options, ok := args[2].(map[string]interface{}); ok {
-				// Options will be applied when go-llms ModelConfig supports additional fields
-				_ = options
+		if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+			options := make(map[string]interface{})
+			for k, v := range args[2].(engine.ObjectValue).Fields() {
+				options[k] = v.ToGo()
 			}
+			// Options will be applied when go-llms ModelConfig supports additional fields
+			_ = options
 		}
 
-		return map[string]interface{}{
-			"provider": config.Provider,
-			"model":    config.Model,
-		}, nil
+		result := map[string]engine.ScriptValue{
+			"provider": engine.NewStringValue(config.Provider),
+			"model":    engine.NewStringValue(config.Model),
+		}
+		return engine.NewObjectValue(result), nil
 
 	// Enhanced v0.3.5 features
 	case "getProviderCapabilities":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("getProviderCapabilities requires providerName")
 		}
-		providerName, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("providerName must be string")
 		}
+		providerName := args[0].(engine.StringValue).Value()
 
 		// Check if we have cached metadata
 		if metadata, exists := b.metadataRegistry[providerName]; exists {
-			return convertProviderMetadataToMap(metadata), nil
+			return convertProviderMetadataToScriptValue(metadata), nil
 		}
 
 		// TODO: Load metadata from provider when available in go-llms
 		// For now, return basic capabilities based on provider type
-		capabilities := map[string]interface{}{
-			"provider": providerName,
-			"capabilities": map[string]bool{
-				"streaming":       true,
-				"functionCalling": providerName == "openai" || providerName == "anthropic",
-				"vision":          providerName == "openai" || providerName == "anthropic",
-				"embeddings":      providerName == "openai",
-			},
-			"constraints": map[string]interface{}{
-				"maxTokens":     4096,
-				"rateLimit":     60,
-				"contextWindow": 8192,
-			},
+		capabilities := map[string]engine.ScriptValue{
+			"provider": engine.NewStringValue(providerName),
+			"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
+				"streaming":       engine.NewBoolValue(true),
+				"functionCalling": engine.NewBoolValue(providerName == "openai" || providerName == "anthropic"),
+				"vision":          engine.NewBoolValue(providerName == "openai" || providerName == "anthropic"),
+				"embeddings":      engine.NewBoolValue(providerName == "openai"),
+			}),
+			"constraints": engine.NewObjectValue(map[string]engine.ScriptValue{
+				"maxTokens":     engine.NewNumberValue(4096),
+				"rateLimit":     engine.NewNumberValue(60),
+				"contextWindow": engine.NewNumberValue(8192),
+			}),
 		}
 
-		return capabilities, nil
+		return engine.NewObjectValue(capabilities), nil
 
 	case "discoverModels":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("discoverModels requires providerName")
 		}
-		providerName, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("providerName must be string")
 		}
+		providerName := args[0].(engine.StringValue).Value()
 
 		// Check refresh flag (not used in current implementation)
 		// refresh := false
-		// if len(args) > 1 {
-		// 	refresh, _ = args[1].(bool)
+		// if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeBool {
+		// 	refresh = args[1].(engine.BoolValue).Value()
 		// }
 
 		// Use model service to aggregate models from all providers
@@ -566,52 +576,55 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 		}
 
 		// Convert models to script-friendly format
-		result := make([]map[string]interface{}, 0, len(models))
+		result := make([]engine.ScriptValue, 0, len(models))
 		for _, model := range models {
-			result = append(result, map[string]interface{}{
-				"id":            model.Name, // Use Name as ID
-				"name":          model.DisplayName,
-				"description":   model.Description,
-				"inputCost":     model.Pricing.InputPer1kTokens,
-				"outputCost":    model.Pricing.OutputPer1kTokens,
-				"maxTokens":     model.MaxOutputTokens,
-				"contextWindow": model.ContextWindow,
-				"capabilities": map[string]interface{}{
-					"streaming":       model.Capabilities.Streaming,
-					"functionCalling": model.Capabilities.FunctionCalling,
-					"vision":          model.Capabilities.Image.Read,
-					"jsonMode":        model.Capabilities.JSONMode,
-				},
-			})
+			modelInfo := map[string]engine.ScriptValue{
+				"id":            engine.NewStringValue(model.Name), // Use Name as ID
+				"name":          engine.NewStringValue(model.DisplayName),
+				"description":   engine.NewStringValue(model.Description),
+				"inputCost":     engine.NewNumberValue(model.Pricing.InputPer1kTokens),
+				"outputCost":    engine.NewNumberValue(model.Pricing.OutputPer1kTokens),
+				"maxTokens":     engine.NewNumberValue(float64(model.MaxOutputTokens)),
+				"contextWindow": engine.NewNumberValue(float64(model.ContextWindow)),
+				"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
+					"streaming":       engine.NewBoolValue(model.Capabilities.Streaming),
+					"functionCalling": engine.NewBoolValue(model.Capabilities.FunctionCalling),
+					"vision":          engine.NewBoolValue(model.Capabilities.Image.Read),
+					"jsonMode":        engine.NewBoolValue(model.Capabilities.JSONMode),
+				}),
+			}
+			result = append(result, engine.NewObjectValue(modelInfo))
 		}
 
-		return result, nil
+		return engine.NewArrayValue(result), nil
 
 	case "parseResponseWithRecovery":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("parseResponseWithRecovery requires response")
 		}
-		response, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("response must be string")
 		}
+		response := args[0].(engine.StringValue).Value()
 
 		// Get optional format
 		format := ""
-		if len(args) > 1 && args[1] != nil {
-			format, _ = args[1].(string)
+		if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
+			format = args[1].(engine.StringValue).Value()
 		}
 
 		// Get optional schema
 		var schema *schemaDomain.Schema
-		if len(args) > 2 && args[2] != nil {
-			if schemaMap, ok := args[2].(map[string]interface{}); ok {
-				// Convert to schema
-				schemaJSON, _ := llmjson.Marshal(schemaMap)
-				schema = &schemaDomain.Schema{}
-				if err := llmjson.Unmarshal(schemaJSON, schema); err != nil {
-					return nil, fmt.Errorf("invalid schema: %w", err)
-				}
+		if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+			schemaMap := make(map[string]interface{})
+			for k, v := range args[2].(engine.ObjectValue).Fields() {
+				schemaMap[k] = v.ToGo()
+			}
+			// Convert to schema
+			schemaJSON, _ := llmjson.Marshal(schemaMap)
+			schema = &schemaDomain.Schema{}
+			if err := llmjson.Unmarshal(schemaJSON, schema); err != nil {
+				return nil, fmt.Errorf("invalid schema: %w", err)
 			}
 		}
 
@@ -652,102 +665,71 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 			return nil, fmt.Errorf("failed to parse response: %w", err)
 		}
 
-		return result, nil
+		// Convert result to ScriptValue
+		return engine.NewCustomValue("ParsedResponse", result), nil
 
 	case "streamWithEvents":
 		if len(args) < 3 {
 			return nil, fmt.Errorf("streamWithEvents requires provider, prompt, and eventHandler")
 		}
 
-		provider, ok := args[0].(bridge.Provider)
+		// Get provider from custom value
+		if args[0] == nil || args[0].Type() != engine.TypeCustom {
+			return nil, fmt.Errorf("provider must be Provider")
+		}
+		customVal := args[0].(engine.CustomValue)
+		_, ok := customVal.Value().(bridge.Provider)
 		if !ok {
 			return nil, fmt.Errorf("provider must be Provider")
 		}
-		prompt, ok := args[1].(string)
-		if !ok {
+
+		if args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("prompt must be string")
 		}
-		eventHandler, ok := args[2].(func(interface{}) error)
-		if !ok {
+		_ = args[1].(engine.StringValue).Value()
+
+		// Get event handler function from custom value
+		if args[2] == nil || args[2].Type() != engine.TypeFunction {
 			return nil, fmt.Errorf("eventHandler must be function")
 		}
+		// For now, we'll need custom handling for function types
+		// The engine will need to provide a way to call script functions
+		// This is a placeholder that would need engine-specific implementation
+		return nil, fmt.Errorf("function callbacks not yet implemented for ScriptValue")
 
-		// Create message for streaming
-		message := domain.NewTextMessage(domain.RoleUser, prompt)
-
-		// Call StreamMessage on provider
-		// Note: Provider interface has StreamMessage method, not GenerateStream
-		responseChan, err := provider.StreamMessage(ctx, []domain.Message{message})
-		if err != nil {
-			return nil, fmt.Errorf("failed to start streaming: %w", err)
-		}
-
-		// Collect full response while emitting events
-		var fullContent strings.Builder
-		tokenCount := 0
-
-		for token := range responseChan {
-			// domain.Token has Text and Finished fields
-			if token.Finished {
-				break
-			}
-
-			// Emit chunk event
-			if b.eventEmitter != nil {
-				b.eventEmitter.EmitCustom("stream.chunk", map[string]interface{}{
-					"content":   token.Text,
-					"index":     tokenCount,
-					"timestamp": time.Now(),
-				})
-			}
-
-			// Call script event handler
-			if err := eventHandler(map[string]interface{}{
-				"type":    "chunk",
-				"content": token.Text,
-				"index":   tokenCount,
-			}); err != nil {
-				return nil, fmt.Errorf("event handler error: %w", err)
-			}
-
-			fullContent.WriteString(token.Text)
-			tokenCount++
-		}
-
-		// Emit completion event
-		if b.eventEmitter != nil {
-			b.eventEmitter.EmitCustom("stream.complete", map[string]interface{}{
-				"totalTokens": tokenCount,
-				"content":     fullContent.String(),
-				"timestamp":   time.Now(),
-			})
-		}
-
-		return map[string]interface{}{
-			"content":    fullContent.String(),
-			"tokenCount": tokenCount,
-		}, nil
+		// TODO: The rest of this method would need engine-specific function callback support
+		// return map[string]engine.ScriptValue{
+		// 	"content":    engine.NewStringValue(fullContent.String()),
+		// 	"tokenCount": engine.NewNumberValue(float64(tokenCount)),
+		// }, nil
 
 	case "trackRequestCost":
 		if len(args) < 4 {
 			return nil, fmt.Errorf("trackRequestCost requires requestID, provider, model, and usage")
 		}
 
-		requestID, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("requestID must be string")
 		}
-		provider, ok := args[1].(string)
-		if !ok {
+		requestID := args[0].(engine.StringValue).Value()
+
+		if args[1] == nil || args[1].Type() != engine.TypeString {
 			return nil, fmt.Errorf("provider must be string")
 		}
-		model, ok := args[2].(string)
-		if !ok {
+		provider := args[1].(engine.StringValue).Value()
+
+		if args[2] == nil || args[2].Type() != engine.TypeString {
 			return nil, fmt.Errorf("model must be string")
 		}
-		usage, ok := args[3].(map[string]interface{})
-		if !ok {
+		model := args[2].(engine.StringValue).Value()
+
+		if args[3] == nil || args[3].Type() != engine.TypeObject {
 			return nil, fmt.Errorf("usage must be object")
+		}
+		usageObj := args[3].(engine.ObjectValue).Fields()
+		usage := make(map[string]interface{})
+		for k, v := range usageObj {
+			usage[k] = v.ToGo()
 		}
 
 		// Extract token counts
@@ -806,37 +788,38 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 			})
 		}
 
-		return map[string]interface{}{
-			"requestID": cost.RequestID,
-			"totalCost": cost.TotalCost,
-			"breakdown": map[string]interface{}{
-				"inputCost":    cost.InputCost,
-				"outputCost":   cost.OutputCost,
-				"inputTokens":  cost.InputTokens,
-				"outputTokens": cost.OutputTokens,
-			},
-		}, nil
+		return engine.NewObjectValue(map[string]engine.ScriptValue{
+			"requestID": engine.NewStringValue(cost.RequestID),
+			"totalCost": engine.NewNumberValue(cost.TotalCost),
+			"breakdown": engine.NewObjectValue(map[string]engine.ScriptValue{
+				"inputCost":    engine.NewNumberValue(cost.InputCost),
+				"outputCost":   engine.NewNumberValue(cost.OutputCost),
+				"inputTokens":  engine.NewNumberValue(float64(cost.InputTokens)),
+				"outputTokens": engine.NewNumberValue(float64(cost.OutputTokens)),
+			}),
+		}), nil
 
 	case "getCostReport":
 		filter := make(map[string]interface{})
-		if len(args) > 0 && args[0] != nil {
-			if f, ok := args[0].(map[string]interface{}); ok {
-				filter = f
+		if len(args) > 0 && args[0] != nil && args[0].Type() == engine.TypeObject {
+			filterObj := args[0].(engine.ObjectValue).Fields()
+			for k, v := range filterObj {
+				filter[k] = v.ToGo()
 			}
 		}
 
 		b.costTracker.mu.RLock()
 		defer b.costTracker.mu.RUnlock()
 
-		// Build report
-		report := map[string]interface{}{
-			"totalCosts": b.costTracker.totals,
-			"requests":   []map[string]interface{}{},
-			"summary": map[string]interface{}{
-				"totalRequests": len(b.costTracker.costs),
-				"providers":     make(map[string]int),
-			},
+		// Convert totals to ScriptValue
+		totalCosts := make(map[string]engine.ScriptValue)
+		for provider, cost := range b.costTracker.totals {
+			totalCosts[provider] = engine.NewNumberValue(cost)
 		}
+
+		// Build report
+		requests := make([]engine.ScriptValue, 0)
+		providers := make(map[string]int)
 
 		// Filter and aggregate
 		for _, cost := range b.costTracker.costs {
@@ -849,117 +832,135 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []i
 			}
 
 			// Add to report
-			requests := report["requests"].([]map[string]interface{})
-			requests = append(requests, map[string]interface{}{
-				"requestID": cost.RequestID,
-				"provider":  cost.Provider,
-				"model":     cost.Model,
-				"totalCost": cost.TotalCost,
-				"timestamp": cost.Timestamp,
-			})
-			report["requests"] = requests
+			requestInfo := map[string]engine.ScriptValue{
+				"requestID": engine.NewStringValue(cost.RequestID),
+				"provider":  engine.NewStringValue(cost.Provider),
+				"model":     engine.NewStringValue(cost.Model),
+				"totalCost": engine.NewNumberValue(cost.TotalCost),
+				"timestamp": engine.NewStringValue(cost.Timestamp.Format(time.RFC3339)),
+			}
+			requests = append(requests, engine.NewObjectValue(requestInfo))
 
 			// Update summary
-			providers := report["summary"].(map[string]interface{})["providers"].(map[string]int)
 			providers[cost.Provider]++
 		}
 
-		return report, nil
+		// Convert providers count to ScriptValue
+		providersCount := make(map[string]engine.ScriptValue)
+		for provider, count := range providers {
+			providersCount[provider] = engine.NewNumberValue(float64(count))
+		}
+
+		report := map[string]engine.ScriptValue{
+			"totalCosts": engine.NewObjectValue(totalCosts),
+			"requests":   engine.NewArrayValue(requests),
+			"summary": engine.NewObjectValue(map[string]engine.ScriptValue{
+				"totalRequests": engine.NewNumberValue(float64(len(b.costTracker.costs))),
+				"providers":     engine.NewObjectValue(providersCount),
+			}),
+		}
+
+		return engine.NewObjectValue(report), nil
 
 	case "createProviderOptions":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("createProviderOptions requires providerType and config")
 		}
 
-		providerType, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("providerType must be string")
 		}
-		config, ok := args[1].(map[string]interface{})
-		if !ok {
+		providerType := args[0].(engine.StringValue).Value()
+
+		if args[1] == nil || args[1].Type() != engine.TypeObject {
 			return nil, fmt.Errorf("config must be object")
+		}
+		configObj := args[1].(engine.ObjectValue).Fields()
+		config := make(map[string]interface{})
+		for k, v := range configObj {
+			config[k] = v.ToGo()
 		}
 
 		// Create provider-specific options based on type
-		options := map[string]interface{}{
-			"type": providerType,
+		options := map[string]engine.ScriptValue{
+			"type": engine.NewStringValue(providerType),
 		}
 
 		// Extract common options
 		if baseURL, ok := config["baseURL"].(string); ok {
-			options["baseURL"] = baseURL
+			options["baseURL"] = engine.NewStringValue(baseURL)
 		}
 		if apiKey, ok := config["apiKey"].(string); ok {
-			options["apiKey"] = apiKey
+			options["apiKey"] = engine.NewStringValue(apiKey)
 		}
 		if timeout, ok := config["timeout"].(float64); ok {
-			options["timeout"] = int(timeout)
+			options["timeout"] = engine.NewNumberValue(float64(int(timeout)))
 		}
 
 		// Add provider-specific options
 		switch providerType {
 		case "openai":
 			if org, ok := config["organization"].(string); ok {
-				options["organization"] = org
+				options["organization"] = engine.NewStringValue(org)
 			}
 			if apiVersion, ok := config["apiVersion"].(string); ok {
-				options["apiVersion"] = apiVersion
+				options["apiVersion"] = engine.NewStringValue(apiVersion)
 			}
 
 		case "anthropic":
 			if apiVersion, ok := config["anthropicVersion"].(string); ok {
-				options["anthropicVersion"] = apiVersion
+				options["anthropicVersion"] = engine.NewStringValue(apiVersion)
 			}
 
 		case "gemini":
 			if location, ok := config["location"].(string); ok {
-				options["location"] = location
+				options["location"] = engine.NewStringValue(location)
 			}
 			if projectID, ok := config["projectID"].(string); ok {
-				options["projectID"] = projectID
+				options["projectID"] = engine.NewStringValue(projectID)
 			}
 		}
 
-		return options, nil
+		return engine.NewObjectValue(options), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
 	}
 }
 
-// Helper function to convert ProviderMetadata to map
-func convertProviderMetadataToMap(metadata provider.ProviderMetadata) map[string]interface{} {
+// Helper function to convert ProviderMetadata to ScriptValue
+func convertProviderMetadataToScriptValue(metadata provider.ProviderMetadata) engine.ScriptValue {
 	// Get capabilities
 	capabilities := metadata.GetCapabilities()
-	capMap := make(map[string]bool)
+	capMap := make(map[string]engine.ScriptValue)
 	for _, cap := range capabilities {
 		switch cap {
 		case provider.CapabilityStreaming:
-			capMap["streaming"] = true
+			capMap["streaming"] = engine.NewBoolValue(true)
 		case provider.CapabilityFunctionCalling:
-			capMap["functionCalling"] = true
+			capMap["functionCalling"] = engine.NewBoolValue(true)
 		case provider.CapabilityVision:
-			capMap["vision"] = true
+			capMap["vision"] = engine.NewBoolValue(true)
 		case provider.CapabilityEmbeddings:
-			capMap["embeddings"] = true
+			capMap["embeddings"] = engine.NewBoolValue(true)
 		case provider.CapabilityStructuredOutput:
-			capMap["structured"] = true
+			capMap["structured"] = engine.NewBoolValue(true)
 		}
 	}
 
 	// Get constraints
 	constraints := metadata.GetConstraints()
 
-	return map[string]interface{}{
-		"name":         metadata.Name(),
-		"description":  metadata.Description(),
-		"capabilities": capMap,
-		"constraints": map[string]interface{}{
-			"maxBatchSize":    constraints.MaxBatchSize,
-			"maxConcurrency":  constraints.MaxConcurrency,
-			"rateLimit":       constraints.RateLimit,
-			"minRequestDelay": constraints.MinRequestDelay,
-			"maxRetries":      constraints.MaxRetries,
-		},
-	}
+	return engine.NewObjectValue(map[string]engine.ScriptValue{
+		"name":         engine.NewStringValue(metadata.Name()),
+		"description":  engine.NewStringValue(metadata.Description()),
+		"capabilities": engine.NewObjectValue(capMap),
+		"constraints": engine.NewObjectValue(map[string]engine.ScriptValue{
+			"maxBatchSize":    engine.NewNumberValue(float64(constraints.MaxBatchSize)),
+			"maxConcurrency":  engine.NewNumberValue(float64(constraints.MaxConcurrency)),
+			"rateLimit":       engine.NewNumberValue(0), // TODO: Extract rate limit value when available
+			"minRequestDelay": engine.NewNumberValue(constraints.MinRequestDelay.Seconds()),
+			"maxRetries":      engine.NewNumberValue(float64(constraints.MaxRetries)),
+		}),
+	})
 }

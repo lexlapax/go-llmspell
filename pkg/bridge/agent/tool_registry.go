@@ -207,7 +207,7 @@ func (tb *ToolsRegistryBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method calls
-func (tb *ToolsRegistryBridge) ValidateMethod(name string, args []interface{}) error {
+func (tb *ToolsRegistryBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !tb.IsInitialized() {
 		return fmt.Errorf("tools registry bridge not initialized")
 	}
@@ -228,6 +228,49 @@ func (tb *ToolsRegistryBridge) ValidateMethod(name string, args []interface{}) e
 		}
 	}
 	return fmt.Errorf("unknown method: %s", name)
+}
+
+// ExecuteMethod executes bridge methods with ScriptValue parameters
+func (tb *ToolsRegistryBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	tb.mu.RLock()
+	defer tb.mu.RUnlock()
+
+	if !tb.initialized {
+		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
+	}
+
+	switch name {
+	case "listTools":
+		return tb.listTools(ctx, args)
+	case "getTool":
+		return tb.getTool(ctx, args)
+	case "searchTools":
+		return tb.searchTools(ctx, args)
+	case "listToolsByCategory":
+		return tb.listToolsByCategory(ctx, args)
+	case "listToolsByTags":
+		return tb.listToolsByTags(ctx, args)
+	case "getToolCategories":
+		return tb.getToolCategories(ctx, args)
+	case "listToolsByPermission":
+		return tb.listToolsByPermission(ctx, args)
+	case "listToolsByResourceUsage":
+		return tb.listToolsByResourceUsage(ctx, args)
+	case "getToolDocumentation":
+		return tb.getToolDocumentation(ctx, args)
+	case "registerTool":
+		return tb.registerTool(ctx, args)
+	case "exportToolToMCP":
+		return tb.exportToolToMCP(ctx, args)
+	case "exportAllToolsToMCP":
+		return tb.exportAllToolsToMCP(ctx, args)
+	case "clearRegistry":
+		return tb.clearRegistry(ctx, args)
+	case "getRegistryStats":
+		return tb.getRegistryStats(ctx, args)
+	default:
+		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
+	}
 }
 
 // TypeMappings returns type conversion mappings
@@ -290,133 +333,126 @@ func (tb *ToolsRegistryBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// Bridge method implementations
+// Bridge method implementations with ScriptValue
 
 // Tool discovery and listing
 
 // listTools lists all registered tools
-func (tb *ToolsRegistryBridge) listTools(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) listTools(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listTools", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
 	entries := tb.registry.List()
-	result := make([]map[string]interface{}, 0, len(entries))
+	result := make([]engine.ScriptValue, 0, len(entries))
 
 	for _, entry := range entries {
-		result = append(result, map[string]interface{}{
-			"name":         entry.Metadata.Name,
-			"description":  entry.Metadata.Description,
-			"category":     entry.Metadata.Category,
-			"tags":         entry.Metadata.Tags,
-			"version":      entry.Metadata.Version,
-			"deprecated":   entry.Metadata.Deprecated,
-			"experimental": entry.Metadata.Experimental,
-		})
+		toolData := map[string]engine.ScriptValue{
+			"name":         engine.NewStringValue(entry.Metadata.Name),
+			"description":  engine.NewStringValue(entry.Metadata.Description),
+			"category":     engine.NewStringValue(entry.Metadata.Category),
+			"tags":         convertTagsToScriptValueRegistry(entry.Metadata.Tags),
+			"version":      engine.NewStringValue(entry.Metadata.Version),
+			"deprecated":   engine.NewBoolValue(entry.Metadata.Deprecated),
+			"experimental": engine.NewBoolValue(entry.Metadata.Experimental),
+		}
+		result = append(result, engine.NewObjectValue(toolData))
 	}
 
-	return result, nil
+	return engine.NewArrayValue(result), nil
 }
 
 // getTool gets a tool by name
-func (tb *ToolsRegistryBridge) getTool(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) getTool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getTool", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("tool name must be a string")
-	}
+	name := args[0].(engine.StringValue).Value()
 
 	tool, found := tb.registry.Get(name)
 	if !found {
-		return nil, fmt.Errorf("tool not found: %s", name)
+		return engine.NewErrorValue(fmt.Errorf("tool not found: %s", name)), nil
 	}
 
-	return map[string]interface{}{
-		"name":                  tool.Name(),
-		"description":           tool.Description(),
-		"category":              tool.Category(),
-		"tags":                  tool.Tags(),
-		"version":               tool.Version(),
-		"usage_instructions":    tool.UsageInstructions(),
-		"examples":              tool.Examples(),
-		"constraints":           tool.Constraints(),
-		"error_guidance":        tool.ErrorGuidance(),
-		"is_deterministic":      tool.IsDeterministic(),
-		"is_destructive":        tool.IsDestructive(),
-		"requires_confirmation": tool.RequiresConfirmation(),
-		"estimated_latency":     tool.EstimatedLatency(),
-		"parameter_schema":      tool.ParameterSchema(),
-		"output_schema":         tool.OutputSchema(),
-	}, nil
+	toolData := map[string]engine.ScriptValue{
+		"name":                  engine.NewStringValue(tool.Name()),
+		"description":           engine.NewStringValue(tool.Description()),
+		"category":              engine.NewStringValue(tool.Category()),
+		"tags":                  convertTagsToScriptValueRegistry(tool.Tags()),
+		"version":               engine.NewStringValue(tool.Version()),
+		"usage_instructions":    engine.NewStringValue(tool.UsageInstructions()),
+		"examples":              convertToolExamplesToScriptValue(tool.Examples()),
+		"constraints":           convertConstraintsToScriptValue(tool.Constraints()),
+		"error_guidance":        convertErrorGuidanceToScriptValue(tool.ErrorGuidance()),
+		"is_deterministic":      engine.NewBoolValue(tool.IsDeterministic()),
+		"is_destructive":        engine.NewBoolValue(tool.IsDestructive()),
+		"requires_confirmation": engine.NewBoolValue(tool.RequiresConfirmation()),
+		"estimated_latency":     engine.NewStringValue(tool.EstimatedLatency()),
+		"parameter_schema":      convertSchemaToScriptValue(tool.ParameterSchema()),
+		"output_schema":         convertSchemaToScriptValue(tool.OutputSchema()),
+	}
+
+	return engine.NewObjectValue(toolData), nil
 }
 
 // searchTools searches tools by query string
-func (tb *ToolsRegistryBridge) searchTools(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) searchTools(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("searchTools", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	query, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("search query must be a string")
-	}
+	query := args[0].(engine.StringValue).Value()
 
 	entries := tb.registry.Search(query)
-	result := make([]map[string]interface{}, 0, len(entries))
+	result := make([]engine.ScriptValue, 0, len(entries))
 
 	for _, entry := range entries {
-		result = append(result, map[string]interface{}{
-			"name":        entry.Metadata.Name,
-			"description": entry.Metadata.Description,
-			"category":    entry.Metadata.Category,
-			"tags":        entry.Metadata.Tags,
-			"version":     entry.Metadata.Version,
-		})
+		toolData := map[string]engine.ScriptValue{
+			"name":        engine.NewStringValue(entry.Metadata.Name),
+			"description": engine.NewStringValue(entry.Metadata.Description),
+			"category":    engine.NewStringValue(entry.Metadata.Category),
+			"tags":        convertTagsToScriptValueRegistry(entry.Metadata.Tags),
+			"version":     engine.NewStringValue(entry.Metadata.Version),
+		}
+		result = append(result, engine.NewObjectValue(toolData))
 	}
 
-	return result, nil
+	return engine.NewArrayValue(result), nil
 }
 
 // listToolsByCategory lists tools in specific category
-func (tb *ToolsRegistryBridge) listToolsByCategory(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) listToolsByCategory(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByCategory", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	category, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("category must be a string")
-	}
+	category := args[0].(engine.StringValue).Value()
 
 	entries := tb.registry.ListByCategory(category)
-	result := make([]map[string]interface{}, 0, len(entries))
+	result := make([]engine.ScriptValue, 0, len(entries))
 
 	for _, entry := range entries {
-		result = append(result, map[string]interface{}{
-			"name":        entry.Metadata.Name,
-			"description": entry.Metadata.Description,
-			"category":    entry.Metadata.Category,
-			"tags":        entry.Metadata.Tags,
-			"version":     entry.Metadata.Version,
-		})
+		toolData := map[string]engine.ScriptValue{
+			"name":        engine.NewStringValue(entry.Metadata.Name),
+			"description": engine.NewStringValue(entry.Metadata.Description),
+			"category":    engine.NewStringValue(entry.Metadata.Category),
+			"tags":        convertTagsToScriptValueRegistry(entry.Metadata.Tags),
+			"version":     engine.NewStringValue(entry.Metadata.Version),
+		}
+		result = append(result, engine.NewObjectValue(toolData))
 	}
 
-	return result, nil
+	return engine.NewArrayValue(result), nil
 }
 
 // listToolsByTags lists tools matching all provided tags
-func (tb *ToolsRegistryBridge) listToolsByTags(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) listToolsByTags(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByTags", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	tagsArray, ok := args[0].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("tags must be an array")
-	}
+	tagsArray := args[0].ToGo().([]interface{})
 
 	// Convert interface{} slice to string slice
 	tags := make([]string, 0, len(tagsArray))
@@ -427,74 +463,71 @@ func (tb *ToolsRegistryBridge) listToolsByTags(ctx context.Context, args []inter
 	}
 
 	entries := tb.registry.ListByTags(tags...)
-	result := make([]map[string]interface{}, 0, len(entries))
+	result := make([]engine.ScriptValue, 0, len(entries))
 
 	for _, entry := range entries {
-		result = append(result, map[string]interface{}{
-			"name":        entry.Metadata.Name,
-			"description": entry.Metadata.Description,
-			"category":    entry.Metadata.Category,
-			"tags":        entry.Metadata.Tags,
-			"version":     entry.Metadata.Version,
-		})
+		toolData := map[string]engine.ScriptValue{
+			"name":        engine.NewStringValue(entry.Metadata.Name),
+			"description": engine.NewStringValue(entry.Metadata.Description),
+			"category":    engine.NewStringValue(entry.Metadata.Category),
+			"tags":        convertTagsToScriptValueRegistry(entry.Metadata.Tags),
+			"version":     engine.NewStringValue(entry.Metadata.Version),
+		}
+		result = append(result, engine.NewObjectValue(toolData))
 	}
 
-	return result, nil
+	return engine.NewArrayValue(result), nil
 }
 
 // getToolCategories gets all available tool categories
-func (tb *ToolsRegistryBridge) getToolCategories(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) getToolCategories(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getToolCategories", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
 	categories := tb.registry.Categories()
-	return categories, nil
+	result := make([]engine.ScriptValue, len(categories))
+	for i, category := range categories {
+		result[i] = engine.NewStringValue(category)
+	}
+
+	return engine.NewArrayValue(result), nil
 }
 
 // Tool filtering by permissions and resources
 
 // listToolsByPermission lists tools requiring specific permission
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) listToolsByPermission(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) listToolsByPermission(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByPermission", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	permission, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("permission must be a string")
-	}
+	permission := args[0].(engine.StringValue).Value()
 
 	entries := tb.registry.ListByPermission(permission)
-	result := make([]map[string]interface{}, 0, len(entries))
+	result := make([]engine.ScriptValue, 0, len(entries))
 
 	for _, entry := range entries {
-		result = append(result, map[string]interface{}{
-			"name":        entry.Metadata.Name,
-			"description": entry.Metadata.Description,
-			"category":    entry.Metadata.Category,
-			"tags":        entry.Metadata.Tags,
-			"version":     entry.Metadata.Version,
-		})
+		toolData := map[string]engine.ScriptValue{
+			"name":        engine.NewStringValue(entry.Metadata.Name),
+			"description": engine.NewStringValue(entry.Metadata.Description),
+			"category":    engine.NewStringValue(entry.Metadata.Category),
+			"tags":        convertTagsToScriptValueRegistry(entry.Metadata.Tags),
+			"version":     engine.NewStringValue(entry.Metadata.Version),
+		}
+		result = append(result, engine.NewObjectValue(toolData))
 	}
 
-	return result, nil
+	return engine.NewArrayValue(result), nil
 }
 
 // listToolsByResourceUsage lists tools matching resource criteria
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) listToolsByResourceUsage(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) listToolsByResourceUsage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByResourceUsage", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	criteriaMap, ok := args[0].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("criteria must be an object")
-	}
+	criteriaMap := args[0].ToGo().(map[string]interface{})
 
 	// Convert criteria map to ResourceCriteria struct
 	criteria := tools.ResourceCriteria{}
@@ -516,177 +549,170 @@ func (tb *ToolsRegistryBridge) listToolsByResourceUsage(ctx context.Context, arg
 	}
 
 	entries := tb.registry.ListByResourceUsage(criteria)
-	result := make([]map[string]interface{}, 0, len(entries))
+	result := make([]engine.ScriptValue, 0, len(entries))
 
 	for _, entry := range entries {
-		result = append(result, map[string]interface{}{
-			"name":        entry.Metadata.Name,
-			"description": entry.Metadata.Description,
-			"category":    entry.Metadata.Category,
-			"tags":        entry.Metadata.Tags,
-			"version":     entry.Metadata.Version,
-		})
+		toolData := map[string]engine.ScriptValue{
+			"name":        engine.NewStringValue(entry.Metadata.Name),
+			"description": engine.NewStringValue(entry.Metadata.Description),
+			"category":    engine.NewStringValue(entry.Metadata.Category),
+			"tags":        convertTagsToScriptValueRegistry(entry.Metadata.Tags),
+			"version":     engine.NewStringValue(entry.Metadata.Version),
+		}
+		result = append(result, engine.NewObjectValue(toolData))
 	}
 
-	return result, nil
+	return engine.NewArrayValue(result), nil
 }
 
 // Tool documentation
 
 // getToolDocumentation gets comprehensive documentation for a tool
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) getToolDocumentation(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) getToolDocumentation(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getToolDocumentation", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("tool name must be a string")
-	}
+	name := args[0].(engine.StringValue).Value()
 
 	doc, err := tb.registry.GetToolDocumentation(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tool documentation: %w", err)
+		return engine.NewErrorValue(fmt.Errorf("failed to get tool documentation: %w", err)), nil
 	}
 
-	return map[string]interface{}{
-		"name":                  doc.Name,
-		"description":           doc.Description,
-		"category":              doc.Category,
-		"tags":                  doc.Tags,
-		"version":               doc.Version,
-		"usage_instructions":    doc.UsageInstructions,
-		"examples":              doc.Examples,
-		"constraints":           doc.Constraints,
-		"error_guidance":        doc.ErrorGuidance,
-		"required_permissions":  doc.RequiredPermissions,
-		"resource_usage":        doc.ResourceUsage,
-		"is_deterministic":      doc.IsDeterministic,
-		"is_destructive":        doc.IsDestructive,
-		"requires_confirmation": doc.RequiresConfirmation,
-		"estimated_latency":     doc.EstimatedLatency,
-		"parameter_schema":      doc.ParameterSchema,
-		"output_schema":         doc.OutputSchema,
-	}, nil
+	docData := map[string]engine.ScriptValue{
+		"name":                  engine.NewStringValue(doc.Name),
+		"description":           engine.NewStringValue(doc.Description),
+		"category":              engine.NewStringValue(doc.Category),
+		"tags":                  convertTagsToScriptValueRegistry(doc.Tags),
+		"version":               engine.NewStringValue(doc.Version),
+		"usage_instructions":    engine.NewStringValue(doc.UsageInstructions),
+		"examples":              convertToolExamplesToScriptValue(doc.Examples),
+		"constraints":           convertConstraintsToScriptValue(doc.Constraints),
+		"error_guidance":        convertErrorGuidanceToScriptValue(doc.ErrorGuidance),
+		"required_permissions":  convertPermissionsToScriptValue(doc.RequiredPermissions),
+		"resource_usage":        convertResourceUsageToScriptValue(doc.ResourceUsage),
+		"is_deterministic":      engine.NewBoolValue(doc.IsDeterministic),
+		"is_destructive":        engine.NewBoolValue(doc.IsDestructive),
+		"requires_confirmation": engine.NewBoolValue(doc.RequiresConfirmation),
+		"estimated_latency":     engine.NewStringValue(doc.EstimatedLatency),
+		"parameter_schema":      convertSchemaToScriptValue(doc.ParameterSchema),
+		"output_schema":         convertSchemaToScriptValue(doc.OutputSchema),
+	}
+
+	return engine.NewObjectValue(docData), nil
 }
 
 // Tool registration
 
 // registerTool registers a new tool in the registry (simplified interface)
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) registerTool(ctx context.Context, args []interface{}) error {
+func (tb *ToolsRegistryBridge) registerTool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("registerTool", args); err != nil {
-		return err
+		return engine.NewErrorValue(err), nil
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		return fmt.Errorf("tool name must be a string")
-	}
+	name := args[0].(engine.StringValue).Value()
 
 	// For now, we'll return an error indicating this requires a proper tool implementation
 	// In a real bridge, we'd need to convert the script tool object to a domain.Tool
 	_ = name
-	return fmt.Errorf("tool registration from scripts not yet implemented - tools must be registered in Go code")
+	return engine.NewErrorValue(fmt.Errorf("tool registration from scripts not yet implemented - tools must be registered in Go code")), nil
 }
 
 // MCP export functionality
 
 // exportToolToMCP exports single tool to MCP format
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) exportToolToMCP(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) exportToolToMCP(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("exportToolToMCP", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
-	name, ok := args[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("tool name must be a string")
-	}
+	name := args[0].(engine.StringValue).Value()
 
 	mcp, err := tb.registry.ExportToMCP(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to export tool to MCP: %w", err)
+		return engine.NewErrorValue(fmt.Errorf("failed to export tool to MCP: %w", err)), nil
 	}
 
-	return map[string]interface{}{
-		"name":         mcp.Name,
-		"description":  mcp.Description,
-		"inputSchema":  mcp.InputSchema,
-		"outputSchema": mcp.OutputSchema,
-		"annotations":  mcp.Annotations,
-	}, nil
+	mcpData := map[string]engine.ScriptValue{
+		"name":         engine.NewStringValue(mcp.Name),
+		"description":  engine.NewStringValue(mcp.Description),
+		"inputSchema":  convertSchemaToScriptValue(mcp.InputSchema),
+		"outputSchema": convertSchemaToScriptValue(mcp.OutputSchema),
+		"annotations":  convertAnnotationsToScriptValue(mcp.Annotations),
+	}
+
+	return engine.NewObjectValue(mcpData), nil
 }
 
 // exportAllToolsToMCP exports all tools to MCP catalog
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) exportAllToolsToMCP(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) exportAllToolsToMCP(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("exportAllToolsToMCP", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
 	catalog, err := tb.registry.ExportAllToMCP()
 	if err != nil {
-		return nil, fmt.Errorf("failed to export tools to MCP catalog: %w", err)
+		return engine.NewErrorValue(fmt.Errorf("failed to export tools to MCP catalog: %w", err)), nil
 	}
 
 	// Convert tools to script-friendly format
-	toolsArray := make([]map[string]interface{}, 0, len(catalog.Tools))
+	toolsArray := make([]engine.ScriptValue, 0, len(catalog.Tools))
 	for _, tool := range catalog.Tools {
-		toolsArray = append(toolsArray, map[string]interface{}{
-			"name":         tool.Name,
-			"description":  tool.Description,
-			"inputSchema":  tool.InputSchema,
-			"outputSchema": tool.OutputSchema,
-			"annotations":  tool.Annotations,
-		})
+		toolData := map[string]engine.ScriptValue{
+			"name":         engine.NewStringValue(tool.Name),
+			"description":  engine.NewStringValue(tool.Description),
+			"inputSchema":  convertSchemaToScriptValue(tool.InputSchema),
+			"outputSchema": convertSchemaToScriptValue(tool.OutputSchema),
+			"annotations":  convertAnnotationsToScriptValue(tool.Annotations),
+		}
+		toolsArray = append(toolsArray, engine.NewObjectValue(toolData))
 	}
 
-	return map[string]interface{}{
-		"version":     catalog.Version,
-		"description": catalog.Description,
-		"tools":       toolsArray,
-		"metadata":    catalog.Metadata,
-	}, nil
+	catalogData := map[string]engine.ScriptValue{
+		"version":     engine.NewStringValue(catalog.Version),
+		"description": engine.NewStringValue(catalog.Description),
+		"tools":       engine.NewArrayValue(toolsArray),
+		"metadata":    convertMetadataToScriptValue(catalog.Metadata),
+	}
+
+	return engine.NewObjectValue(catalogData), nil
 }
 
 // Registry management
 
 // clearRegistry clears all tools from registry (testing only)
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) clearRegistry(ctx context.Context, args []interface{}) error {
+func (tb *ToolsRegistryBridge) clearRegistry(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("clearRegistry", args); err != nil {
-		return err
+		return engine.NewErrorValue(err), nil
 	}
 
 	tb.registry.Clear()
-	return nil
+	return engine.NewNilValue(), nil
 }
 
 // getRegistryStats gets registry statistics and metrics
-//
-//nolint:unused // Bridge method called via reflection
-func (tb *ToolsRegistryBridge) getRegistryStats(ctx context.Context, args []interface{}) (interface{}, error) {
+func (tb *ToolsRegistryBridge) getRegistryStats(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getRegistryStats", args); err != nil {
-		return nil, err
+		return engine.NewErrorValue(err), nil
 	}
 
 	allTools := tb.registry.List()
 	categories := tb.registry.Categories()
 
 	// Count tools by category
-	categoryCount := make(map[string]int)
+	categoryCount := make(map[string]engine.ScriptValue)
 	var deprecatedCount, experimentalCount int
 
 	for _, entry := range allTools {
 		if entry.Metadata.Category != "" {
-			categoryCount[entry.Metadata.Category]++
+			if existing, ok := categoryCount[entry.Metadata.Category]; ok {
+				if existingNum, ok := existing.(engine.NumberValue); ok {
+					categoryCount[entry.Metadata.Category] = engine.NewNumberValue(existingNum.Value() + 1)
+				}
+			} else {
+				categoryCount[entry.Metadata.Category] = engine.NewNumberValue(1)
+			}
 		}
 		if entry.Metadata.Deprecated {
 			deprecatedCount++
@@ -696,12 +722,108 @@ func (tb *ToolsRegistryBridge) getRegistryStats(ctx context.Context, args []inte
 		}
 	}
 
-	return map[string]interface{}{
-		"total_tools":        len(allTools),
-		"total_categories":   len(categories),
-		"categories":         categories,
-		"tools_by_category":  categoryCount,
-		"deprecated_tools":   deprecatedCount,
-		"experimental_tools": experimentalCount,
-	}, nil
+	// Convert categories to ScriptValue array
+	categoriesSV := make([]engine.ScriptValue, len(categories))
+	for i, cat := range categories {
+		categoriesSV[i] = engine.NewStringValue(cat)
+	}
+
+	statsData := map[string]engine.ScriptValue{
+		"total_tools":        engine.NewNumberValue(float64(len(allTools))),
+		"total_categories":   engine.NewNumberValue(float64(len(categories))),
+		"categories":         engine.NewArrayValue(categoriesSV),
+		"tools_by_category":  engine.NewObjectValue(categoryCount),
+		"deprecated_tools":   engine.NewNumberValue(float64(deprecatedCount)),
+		"experimental_tools": engine.NewNumberValue(float64(experimentalCount)),
+	}
+
+	return engine.NewObjectValue(statsData), nil
+}
+
+// Helper functions for type conversions
+
+func convertTagsToScriptValueRegistry(tags []string) engine.ScriptValue {
+	result := make([]engine.ScriptValue, len(tags))
+	for i, tag := range tags {
+		result[i] = engine.NewStringValue(tag)
+	}
+	return engine.NewArrayValue(result)
+}
+
+func convertExamplesToScriptValue(examples []string) engine.ScriptValue {
+	result := make([]engine.ScriptValue, len(examples))
+	for i, example := range examples {
+		result[i] = engine.NewStringValue(example)
+	}
+	return engine.NewArrayValue(result)
+}
+
+func convertToolExamplesToScriptValue(examples interface{}) engine.ScriptValue {
+	if examples == nil {
+		return engine.NewArrayValue([]engine.ScriptValue{})
+	}
+	// Convert to string representation for now
+	return engine.NewStringValue(fmt.Sprintf("%v", examples))
+}
+
+func convertErrorGuidanceToScriptValue(guidance interface{}) engine.ScriptValue {
+	if guidance == nil {
+		return engine.NewStringValue("")
+	}
+	// Convert to string representation for now
+	return engine.NewStringValue(fmt.Sprintf("%v", guidance))
+}
+
+func convertConstraintsToScriptValue(constraints interface{}) engine.ScriptValue {
+	// Convert constraints to JSON-like map
+	if constraints == nil {
+		return engine.NewNilValue()
+	}
+	// For now, convert to string representation
+	return engine.NewStringValue(fmt.Sprintf("%v", constraints))
+}
+
+func convertSchemaToScriptValue(schema interface{}) engine.ScriptValue {
+	if schema == nil {
+		return engine.NewNilValue()
+	}
+	// For now, convert to string representation
+	return engine.NewStringValue(fmt.Sprintf("%v", schema))
+}
+
+func convertPermissionsToScriptValue(permissions []string) engine.ScriptValue {
+	result := make([]engine.ScriptValue, len(permissions))
+	for i, perm := range permissions {
+		result[i] = engine.NewStringValue(perm)
+	}
+	return engine.NewArrayValue(result)
+}
+
+func convertResourceUsageToScriptValue(usage interface{}) engine.ScriptValue {
+	if usage == nil {
+		return engine.NewNilValue()
+	}
+	return engine.NewStringValue(fmt.Sprintf("%v", usage))
+}
+
+func convertAnnotationsToScriptValue(annotations map[string]interface{}) engine.ScriptValue {
+	if annotations == nil {
+		return engine.NewNilValue()
+	}
+	result := make(map[string]engine.ScriptValue)
+	for k, v := range annotations {
+		result[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+	return engine.NewObjectValue(result)
+}
+
+func convertMetadataToScriptValue(metadata map[string]interface{}) engine.ScriptValue {
+	if metadata == nil {
+		return engine.NewNilValue()
+	}
+	result := make(map[string]engine.ScriptValue)
+	for k, v := range metadata {
+		result[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+	}
+	return engine.NewObjectValue(result)
 }

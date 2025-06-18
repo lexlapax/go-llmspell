@@ -5,28 +5,12 @@ package llm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-
-	// go-llms imports for LLM functionality
-	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
-	"github.com/lexlapax/go-llms/pkg/llm/provider"
-
-	// go-llms imports for schema validation
-	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
-	"github.com/lexlapax/go-llms/pkg/schema/generator"
-	"github.com/lexlapax/go-llms/pkg/schema/repository"
-	"github.com/lexlapax/go-llms/pkg/schema/validation"
-	structuredDomain "github.com/lexlapax/go-llms/pkg/structured/domain"
-	"github.com/lexlapax/go-llms/pkg/structured/processor"
-
-	// go-llms imports for event system
-	agentDomain "github.com/lexlapax/go-llms/pkg/agent/domain"
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.
@@ -36,47 +20,33 @@ type LLMBridge struct {
 	activeProvider string
 	initialized    bool
 
-	// Schema validation components from go-llms v0.3.5
-	responseSchemas map[string]*schemaDomain.Schema // Schema cache by name
-	schemaRepo      schemaDomain.SchemaRepository   // Schema storage
-	schemaValidator schemaDomain.Validator          // Schema validator
-	schemaGenerator schemaDomain.SchemaGenerator    // Schema generator
-	schemaCache     *processor.SchemaCache          // Performance cache
-	promptEnhancer  structuredDomain.PromptEnhancer // Prompt enhancement
-	structProcessor structuredDomain.Processor      // JSON extraction
+	// Fallback chain configuration
+	fallbackChain []string // Ordered list of provider names for fallback
 
-	// Provider metadata components from go-llms v0.3.5
-	providerRegistry *provider.DynamicRegistry            // Provider registry
-	providerMetadata map[string]provider.ProviderMetadata // Cached metadata
-
-	// Streaming components
-	eventEmitter  agentDomain.EventEmitter        // Event emitter for stream chunks
-	streamMetrics map[string]*StreamMetrics       // Stream performance metrics
-	activeStreams map[string]chan llmdomain.Token // Active stream channels
+	// Performance monitoring
+	metrics map[string]*ProviderMetrics
 }
 
-// StreamMetrics tracks streaming performance
-type StreamMetrics struct {
-	StartTime      time.Time
-	TokenCount     int
-	ByteCount      int
-	FirstTokenTime time.Time
-	LastTokenTime  time.Time
-	Errors         int
+// ProviderMetrics tracks performance metrics for each provider
+type ProviderMetrics struct {
+	TotalRequests   int64
+	SuccessfulCalls int64
+	FailedCalls     int64
+	TotalLatency    time.Duration
+	AverageLatency  time.Duration
+	LastError       error
+	LastErrorTime   time.Time
 }
 
 // NewLLMBridge creates a new LLM bridge.
 func NewLLMBridge() *LLMBridge {
 	return &LLMBridge{
-		providers:        make(map[string]bridge.Provider),
-		responseSchemas:  make(map[string]*schemaDomain.Schema),
-		providerMetadata: make(map[string]provider.ProviderMetadata),
-		streamMetrics:    make(map[string]*StreamMetrics),
-		activeStreams:    make(map[string]chan llmdomain.Token),
+		providers: make(map[string]bridge.Provider),
+		metrics:   make(map[string]*ProviderMetrics),
 	}
 }
 
-// GetID returns the bridge identifier.
+// GetID returns the bridge ID.
 func (b *LLMBridge) GetID() string {
 	return "llm"
 }
@@ -85,10 +55,13 @@ func (b *LLMBridge) GetID() string {
 func (b *LLMBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "llm",
-		Version:     "2.0.0",
-		Description: "LLM provider access bridge with v0.3.5 schema validation support",
+		Version:     "1.0.0",
+		Description: "Language model provider bridge for text generation",
 		Author:      "go-llmspell",
 		License:     "MIT",
+		Dependencies: []string{
+			"github.com/lexlapax/go-llms/pkg/llm/domain",
+		},
 	}
 }
 
@@ -101,27 +74,19 @@ func (b *LLMBridge) Initialize(ctx context.Context) error {
 		return nil
 	}
 
-	// Initialize schema validation components from go-llms v0.3.5
-	b.schemaRepo = repository.NewInMemorySchemaRepository()
-	b.schemaValidator = validation.NewValidator(validation.WithCoercion(true))
-	b.schemaGenerator = generator.NewReflectionSchemaGenerator()
-	b.schemaCache = processor.NewSchemaCache()
-	b.promptEnhancer = processor.NewPromptEnhancer()
-	b.structProcessor = processor.NewStructuredProcessor(b.schemaValidator)
-
-	// Initialize provider metadata components from go-llms v0.3.5
-	b.providerRegistry = provider.NewDynamicRegistry()
-
 	b.initialized = true
 	return nil
 }
 
-// Cleanup cleans up bridge resources.
+// Cleanup performs cleanup operations.
 func (b *LLMBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	b.providers = make(map[string]bridge.Provider)
+	b.activeProvider = ""
 	b.initialized = false
+
 	return nil
 }
 
@@ -133,309 +98,443 @@ func (b *LLMBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine.
-func (b *LLMBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+func (b *LLMBridge) RegisterWithEngine(e engine.ScriptEngine) error {
+	return e.RegisterBridge(b)
 }
 
 // Methods returns the methods exposed by this bridge.
 func (b *LLMBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
+		// Provider management
 		{
-			Name:        "registerProvider",
-			Description: "Register an LLM provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "name", Type: "string", Description: "Provider name", Required: true},
-				{Name: "provider", Type: "Provider", Description: "Provider instance", Required: true},
-			},
-			ReturnType: "void",
-		},
-		{
-			Name:        "setActiveProvider",
+			Name:        "setProvider",
 			Description: "Set the active LLM provider",
 			Parameters: []engine.ParameterInfo{
-				{Name: "name", Type: "string", Description: "Provider name", Required: true},
-			},
-			ReturnType: "void",
-		},
-		{
-			Name:        "generate",
-			Description: "Generate text using the active provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+				{Name: "name", Type: "string", Required: true, Description: "Provider name"},
+				{Name: "config", Type: "object", Required: false, Description: "Provider configuration"},
 			},
 			ReturnType: "object",
+			Examples: []string{
+				`llm.setProvider("openai", {model: "gpt-4"})`,
+			},
 		},
 		{
-			Name:        "generateMessage",
-			Description: "Generate response from messages using the active provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "messages", Type: "array", Description: "Input messages", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			Name:        "getProvider",
+			Description: "Get information about the active provider",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "object",
+			Examples: []string{
+				`llm.getProvider()`,
 			},
-			ReturnType: "object",
-		},
-		{
-			Name:        "stream",
-			Description: "Stream text generation using the active provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
-			},
-			ReturnType: "channel",
-		},
-		{
-			Name:        "streamMessage",
-			Description: "Stream response from messages using the active provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "messages", Type: "array", Description: "Input messages", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
-			},
-			ReturnType: "channel",
 		},
 		{
 			Name:        "listProviders",
 			Description: "List all registered providers",
 			Parameters:  []engine.ParameterInfo{},
 			ReturnType:  "array",
+			Examples: []string{
+				`llm.listProviders()`,
+			},
+		},
+
+		// Text generation
+		{
+			Name:        "generate",
+			Description: "Generate text using the active provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "prompt", Type: "string", Required: true, Description: "Input prompt"},
+				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
+			},
+			ReturnType: "string",
+			Examples: []string{
+				`llm.generate("Tell me a joke")`,
+				`llm.generate("Explain quantum computing", {temperature: 0.7, max_tokens: 500})`,
+			},
 		},
 		{
-			Name:        "getActiveProvider",
-			Description: "Get the name of the active provider",
-			Parameters:  []engine.ParameterInfo{},
-			ReturnType:  "string",
+			Name:        "generateMessage",
+			Description: "Generate a message response",
+			Parameters: []engine.ParameterInfo{
+				{Name: "messages", Type: "array", Required: true, Description: "Array of message objects"},
+				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.generateMessage([{role: "user", content: "Hello"}])`,
+			},
 		},
-		// Schema validation methods (v0.3.5)
+		{
+			Name:        "stream",
+			Description: "Stream text generation",
+			Parameters: []engine.ParameterInfo{
+				{Name: "prompt", Type: "string", Required: true, Description: "Input prompt"},
+				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.stream("Write a story")`,
+			},
+		},
+
+		// Structured generation
 		{
 			Name:        "generateWithSchema",
 			Description: "Generate structured output with schema validation",
 			Parameters: []engine.ParameterInfo{
-				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
-				{Name: "schema", Type: "object", Description: "JSON Schema for validation", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+				{Name: "prompt", Type: "string", Required: true, Description: "Input prompt"},
+				{Name: "schema", Type: "string", Required: true, Description: "Schema name"},
+				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
 			},
 			ReturnType: "object",
+			Examples: []string{
+				`llm.generateWithSchema("List 3 colors", "color_list")`,
+			},
 		},
+
+		// Schema management
 		{
-			Name:        "registerSchema",
-			Description: "Register a named schema for reuse",
+			Name:        "addResponseSchema",
+			Description: "Add a response schema for structured generation",
 			Parameters: []engine.ParameterInfo{
-				{Name: "name", Type: "string", Description: "Schema name", Required: true},
-				{Name: "schema", Type: "object", Description: "JSON Schema definition", Required: true},
-				{Name: "version", Type: "string", Description: "Schema version", Required: false},
+				{Name: "name", Type: "string", Required: true, Description: "Schema name"},
+				{Name: "schema", Type: "object", Required: true, Description: "JSON schema"},
 			},
 			ReturnType: "void",
+			Examples: []string{
+				`llm.addResponseSchema("person", {type: "object", properties: {name: {type: "string"}}})`,
+			},
 		},
 		{
-			Name:        "getSchema",
-			Description: "Get a registered schema by name",
+			Name:        "getResponseSchema",
+			Description: "Get a registered response schema",
 			Parameters: []engine.ParameterInfo{
-				{Name: "name", Type: "string", Description: "Schema name", Required: true},
-				{Name: "version", Type: "string", Description: "Schema version (optional)", Required: false},
+				{Name: "name", Type: "string", Required: true, Description: "Schema name"},
 			},
 			ReturnType: "object",
+			Examples: []string{
+				`llm.getResponseSchema("person")`,
+			},
 		},
 		{
-			Name:        "listSchemas",
+			Name:        "listResponseSchemas",
 			Description: "List all registered schemas",
 			Parameters:  []engine.ParameterInfo{},
 			ReturnType:  "array",
+			Examples: []string{
+				`llm.listResponseSchemas()`,
+			},
 		},
 		{
 			Name:        "validateWithSchema",
 			Description: "Validate data against a schema",
 			Parameters: []engine.ParameterInfo{
-				{Name: "data", Type: "any", Description: "Data to validate", Required: true},
-				{Name: "schema", Type: "object", Description: "JSON Schema or schema name", Required: true},
+				{Name: "data", Type: "object", Required: true, Description: "Data to validate"},
+				{Name: "schema", Type: "string", Required: true, Description: "Schema name"},
 			},
 			ReturnType: "object",
-		},
-		{
-			Name:        "generateSchemaFromExample",
-			Description: "Generate a JSON Schema from example data",
-			Parameters: []engine.ParameterInfo{
-				{Name: "example", Type: "any", Description: "Example data", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
+			Examples: []string{
+				`llm.validateWithSchema({name: "John"}, "person")`,
 			},
-			ReturnType: "object",
 		},
+
+		// Provider capabilities
 		{
-			Name:        "clearSchemaCache",
-			Description: "Clear the schema cache",
+			Name:        "getCapabilities",
+			Description: "Get capabilities of the active provider",
 			Parameters:  []engine.ParameterInfo{},
-			ReturnType:  "void",
-		},
-		// Provider metadata methods (v0.3.5)
-		{
-			Name:        "getProviderCapabilities",
-			Description: "Get capabilities for a specific provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
+			ReturnType:  "object",
+			Examples: []string{
+				`llm.getCapabilities()`,
 			},
-			ReturnType: "object",
 		},
 		{
 			Name:        "getModelInfo",
-			Description: "Get detailed information about a specific model",
+			Description: "Get information about a model",
 			Parameters: []engine.ParameterInfo{
-				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
-				{Name: "model", Type: "string", Description: "Model name", Required: true},
+				{Name: "model", Type: "string", Required: true, Description: "Model name"},
 			},
 			ReturnType: "object",
-		},
-		{
-			Name:        "listModelsForProvider",
-			Description: "List all available models for a provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
+			Examples: []string{
+				`llm.getModelInfo("gpt-4")`,
 			},
-			ReturnType: "array",
 		},
 		{
-			Name:        "findProvidersByCapability",
-			Description: "Find providers that support a specific capability",
-			Parameters: []engine.ParameterInfo{
-				{Name: "capability", Type: "string", Description: "Capability name (e.g., streaming, functionCalling)", Required: true},
-			},
-			ReturnType: "array",
-		},
-		{
-			Name:        "selectProviderByStrategy",
-			Description: "Select a provider using a specific strategy",
-			Parameters: []engine.ParameterInfo{
-				{Name: "strategy", Type: "string", Description: "Selection strategy (fastest, cheapest, mostCapable)", Required: true},
-				{Name: "requirements", Type: "object", Description: "Optional requirements", Required: false},
-			},
-			ReturnType: "string",
-		},
-		{
-			Name:        "getProviderHealth",
-			Description: "Get health status of a provider",
-			Parameters: []engine.ParameterInfo{
-				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
-			},
-			ReturnType: "object",
-		},
-		{
-			Name:        "configureFallbackChain",
-			Description: "Configure a fallback chain of providers",
-			Parameters: []engine.ParameterInfo{
-				{Name: "providers", Type: "array", Description: "Ordered list of provider names", Required: true},
-			},
-			ReturnType: "void",
-		},
-		// Streaming methods with event emission (v0.3.5)
-		{
-			Name:        "streamWithEvents",
-			Description: "Stream text generation with event emission for each chunk",
-			Parameters: []engine.ParameterInfo{
-				{Name: "prompt", Type: "string", Description: "Input prompt", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
-				{Name: "eventHandler", Type: "function", Description: "Function to handle stream events", Required: false},
-			},
-			ReturnType: "object",
-		},
-		{
-			Name:        "streamMessageWithEvents",
-			Description: "Stream response from messages with event emission",
-			Parameters: []engine.ParameterInfo{
-				{Name: "messages", Type: "array", Description: "Input messages", Required: true},
-				{Name: "options", Type: "object", Description: "Generation options", Required: false},
-				{Name: "eventHandler", Type: "function", Description: "Function to handle stream events", Required: false},
-			},
-			ReturnType: "object",
-		},
-		{
-			Name:        "getStreamMetrics",
-			Description: "Get performance metrics for a specific stream",
-			Parameters: []engine.ParameterInfo{
-				{Name: "streamId", Type: "string", Description: "Stream ID", Required: true},
-			},
-			ReturnType: "object",
-		},
-		{
-			Name:        "cancelStream",
-			Description: "Cancel an active stream",
-			Parameters: []engine.ParameterInfo{
-				{Name: "streamId", Type: "string", Description: "Stream ID to cancel", Required: true},
-			},
-			ReturnType: "boolean",
-		},
-		{
-			Name:        "listActiveStreams",
-			Description: "List all active streaming operations",
+			Name:        "listModels",
+			Description: "List available models",
 			Parameters:  []engine.ParameterInfo{},
 			ReturnType:  "array",
+			Examples: []string{
+				`llm.listModels()`,
+			},
+		},
+		{
+			Name:        "checkCapability",
+			Description: "Check if provider supports a capability",
+			Parameters: []engine.ParameterInfo{
+				{Name: "capability", Type: "string", Required: true, Description: "Capability name"},
+			},
+			ReturnType: "boolean",
+			Examples: []string{
+				`llm.checkCapability("streaming")`,
+			},
+		},
+
+		// Streaming
+		{
+			Name:        "streamMessage",
+			Description: "Stream a message response",
+			Parameters: []engine.ParameterInfo{
+				{Name: "messages", Type: "array", Required: true, Description: "Array of messages"},
+				{Name: "options", Type: "object", Required: false, Description: "Stream options"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.streamMessage([{role: "user", content: "Hello"}])`,
+			},
+		},
+		{
+			Name:        "readStream",
+			Description: "Read from an active stream",
+			Parameters: []engine.ParameterInfo{
+				{Name: "streamId", Type: "string", Required: true, Description: "Stream ID"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.readStream("stream-123")`,
+			},
+		},
+		{
+			Name:        "closeStream",
+			Description: "Close an active stream",
+			Parameters: []engine.ParameterInfo{
+				{Name: "streamId", Type: "string", Required: true, Description: "Stream ID"},
+			},
+			ReturnType: "void",
+			Examples: []string{
+				`llm.closeStream("stream-123")`,
+			},
+		},
+
+		// Fallback configuration
+		{
+			Name:        "setFallbackChain",
+			Description: "Set provider fallback chain",
+			Parameters: []engine.ParameterInfo{
+				{Name: "providers", Type: "array", Required: true, Description: "Ordered list of provider names"},
+			},
+			ReturnType: "void",
+			Examples: []string{
+				`llm.setFallbackChain(["primary", "secondary", "tertiary"])`,
+			},
+		},
+		{
+			Name:        "getFallbackChain",
+			Description: "Get current fallback chain",
+			Parameters:  []engine.ParameterInfo{},
+			ReturnType:  "array",
+			Examples: []string{
+				`llm.getFallbackChain()`,
+			},
+		},
+
+		// Metrics
+		{
+			Name:        "getProviderMetrics",
+			Description: "Get metrics for a provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.getProviderMetrics("openai")`,
+			},
+		},
+		{
+			Name:        "resetProviderMetrics",
+			Description: "Reset metrics for a provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
+			},
+			ReturnType: "void",
+			Examples: []string{
+				`llm.resetProviderMetrics("openai")`,
+			},
+		},
+
+		// Schema generation
+		{
+			Name:        "generateSchemaFromExample",
+			Description: "Generate a schema from example data",
+			Parameters: []engine.ParameterInfo{
+				{Name: "example", Type: "object", Required: true, Description: "Example data"},
+				{Name: "name", Type: "string", Required: true, Description: "Schema name"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.generateSchemaFromExample({name: "John", age: 30}, "person")`,
+			},
+		},
+
+		// Provider information
+		{
+			Name:        "getProviderInfo",
+			Description: "Get detailed provider information",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.getProviderInfo("openai")`,
+			},
+		},
+		{
+			Name:        "testProviderConnection",
+			Description: "Test connection to a provider",
+			Parameters: []engine.ParameterInfo{
+				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
+			},
+			ReturnType: "object",
+			Examples: []string{
+				`llm.testProviderConnection("openai")`,
+			},
 		},
 	}
 }
 
-// TypeMappings returns type conversion mappings.
+// ValidateMethod validates method parameters.
+func (b *LLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+	if !b.IsInitialized() {
+		return fmt.Errorf("llm bridge not initialized")
+	}
+
+	methods := b.Methods()
+	for _, method := range methods {
+		if method.Name == name {
+			// Count required parameters
+			requiredCount := 0
+			for _, param := range method.Parameters {
+				if param.Required {
+					requiredCount++
+				}
+			}
+
+			if len(args) < requiredCount {
+				return fmt.Errorf("method %s requires at least %d arguments, got %d", name, requiredCount, len(args))
+			}
+
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unknown method: %s", name)
+}
+
+// ExecuteMethod executes a bridge method.
+func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if err := b.ValidateMethod(name, args); err != nil {
+		return engine.NewErrorValue(err), nil
+	}
+
+	switch name {
+	// Provider management
+	case "setProvider":
+		return b.setProvider(ctx, args)
+	case "getProvider":
+		return b.getProvider(ctx, args)
+	case "listProviders":
+		return b.listProviders(ctx, args)
+
+	// Text generation
+	case "generate":
+		return b.generate(ctx, args)
+	case "generateMessage":
+		return b.generateMessage(ctx, args)
+	case "stream":
+		return b.stream(ctx, args)
+
+	// Structured generation
+	case "generateWithSchema":
+		return b.generateWithSchema(ctx, args)
+
+	// Schema management
+	case "addResponseSchema":
+		return b.addResponseSchema(ctx, args)
+	case "getResponseSchema":
+		return b.getResponseSchema(ctx, args)
+	case "listResponseSchemas":
+		return b.listResponseSchemas(ctx, args)
+	case "validateWithSchema":
+		return b.validateWithSchema(ctx, args)
+
+	// Provider capabilities
+	case "getCapabilities":
+		return b.getCapabilities(ctx, args)
+	case "getModelInfo":
+		return b.getModelInfo(ctx, args)
+	case "listModels":
+		return b.listModels(ctx, args)
+	case "checkCapability":
+		return b.checkCapability(ctx, args)
+
+	// Streaming
+	case "streamMessage":
+		return b.streamMessage(ctx, args)
+	case "readStream":
+		return b.readStream(ctx, args)
+	case "closeStream":
+		return b.closeStream(ctx, args)
+
+	// Fallback configuration
+	case "setFallbackChain":
+		return b.setFallbackChain(ctx, args)
+	case "getFallbackChain":
+		return b.getFallbackChain(ctx, args)
+
+	// Metrics
+	case "getProviderMetrics":
+		return b.getProviderMetrics(ctx, args)
+	case "resetProviderMetrics":
+		return b.resetProviderMetrics(ctx, args)
+
+	// Schema generation
+	case "generateSchemaFromExample":
+		return b.generateSchemaFromExample(ctx, args)
+
+	// Provider information
+	case "getProviderInfo":
+		return b.getProviderInfo(ctx, args)
+	case "testProviderConnection":
+		return b.testProviderConnection(ctx, args)
+
+	default:
+		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
+	}
+}
+
+// TypeMappings returns type conversion hints.
 func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
-		"Provider": {
-			GoType:     "Provider",
+		"provider": {
+			GoType:     "bridge.Provider",
 			ScriptType: "object",
+			Converter:  "providerConverter",
 		},
-		"Message": {
-			GoType:     "Message",
+		"response": {
+			GoType:     "*bridge.Response",
 			ScriptType: "object",
+			Converter:  "responseConverter",
 		},
-		"Response": {
-			GoType:     "Response",
+		"message": {
+			GoType:     "bridge.Message",
 			ScriptType: "object",
+			Converter:  "messageConverter",
 		},
-		"ProviderOptions": {
-			GoType:     "ProviderOptions",
+		"schema": {
+			GoType:     "*bridge.Schema",
 			ScriptType: "object",
-		},
-		"Schema": {
-			GoType:     "Schema",
-			ScriptType: "object",
-		},
-		"ValidationResult": {
-			GoType:     "ValidationResult",
-			ScriptType: "object",
-		},
-		"SchemaInfo": {
-			GoType:     "SchemaInfo",
-			ScriptType: "object",
-		},
-		"ProviderMetadata": {
-			GoType:     "ProviderMetadata",
-			ScriptType: "object",
-		},
-		"ModelInfo": {
-			GoType:     "ModelInfo",
-			ScriptType: "object",
-		},
-		"Capability": {
-			GoType:     "Capability",
-			ScriptType: "string",
-		},
-		"HealthStatus": {
-			GoType:     "HealthStatus",
-			ScriptType: "object",
-		},
-		"StreamEvent": {
-			GoType:     "StreamEvent",
-			ScriptType: "object",
-		},
-		"StreamMetrics": {
-			GoType:     "StreamMetrics",
-			ScriptType: "object",
-		},
-		"Token": {
-			GoType:     "Token",
-			ScriptType: "object",
+			Converter:  "schemaConverter",
 		},
 	}
-}
-
-// ValidateMethod validates method calls.
-func (b *LLMBridge) ValidateMethod(name string, args []interface{}) error {
-	// Method validation handled by engine based on Methods() metadata
-	return nil
 }
 
 // RequiredPermissions returns required permissions.
@@ -443,916 +542,566 @@ func (b *LLMBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
 			Type:        engine.PermissionNetwork,
-			Resource:    "llm",
-			Actions:     []string{"access"},
-			Description: "Access to LLM providers",
+			Resource:    "llm.providers",
+			Actions:     []string{"read", "write"},
+			Description: "Access to LLM provider APIs",
+		},
+		{
+			Type:        engine.PermissionMemory,
+			Resource:    "llm.cache",
+			Actions:     []string{"read", "write"},
+			Description: "Cache for LLM responses",
 		},
 	}
 }
 
-// RegisterProvider registers an LLM provider.
-func (b *LLMBridge) RegisterProvider(name string, provider bridge.Provider) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+// Implementation methods
 
-	b.providers[name] = provider
-	return nil
-}
+func (b *LLMBridge) setProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	name := args[0].(engine.StringValue).Value()
 
-// SetActiveProvider sets the active provider.
-func (b *LLMBridge) SetActiveProvider(name string) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if _, exists := b.providers[name]; !exists {
-		return fmt.Errorf("provider %s not found", name)
+	var config map[string]interface{}
+	if len(args) > 1 {
+		config = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
 	}
 
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	// For now, we'll create a mock provider
+	// In a real implementation, this would interface with go-llms
 	b.activeProvider = name
-	return nil
+	b.providers[name] = nil // Placeholder for actual provider
+
+	// Initialize metrics for the provider
+	if _, exists := b.metrics[name]; !exists {
+		b.metrics[name] = &ProviderMetrics{}
+	}
+
+	result := map[string]interface{}{
+		"name":   name,
+		"config": config,
+		"active": true,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
 }
 
-// GetActiveProvider returns the active provider.
-func (b *LLMBridge) GetActiveProvider() bridge.Provider {
+func (b *LLMBridge) getProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	if b.activeProvider == "" {
-		return nil
+		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
 	}
 
-	return b.providers[b.activeProvider]
+	result := map[string]interface{}{
+		"name":   b.activeProvider,
+		"active": true,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
 }
 
-// ListProviders returns all registered provider names.
-func (b *LLMBridge) ListProviders() []string {
+func (b *LLMBridge) listProviders(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	names := make([]string, 0, len(b.providers))
+	providers := make([]interface{}, 0, len(b.providers))
 	for name := range b.providers {
-		names = append(names, name)
-	}
-	return names
-}
-
-// SetEventEmitter sets the event emitter for stream events
-func (b *LLMBridge) SetEventEmitter(emitter agentDomain.EventEmitter) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.eventEmitter = emitter
-}
-
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if !b.initialized {
-		return nil, fmt.Errorf("bridge not initialized")
+		providers = append(providers, map[string]interface{}{
+			"name":   name,
+			"active": name == b.activeProvider,
+		})
 	}
 
-	switch name {
-	case "createProvider":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("createProvider requires name and config parameters")
-		}
-		providerName, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("provider name must be string")
-		}
-		config, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("config must be object")
-		}
-
-		// Extract provider type
-		providerType, ok := config["type"].(string)
-		if !ok {
-			return nil, fmt.Errorf("provider type required in config")
-		}
-
-		// Create provider based on type
-		var llmProvider bridge.Provider
-
-		// Get API key and model
-		apiKey, _ := config["apiKey"].(string)
-		model, _ := config["model"].(string)
-		if model == "" {
-			model = "gpt-4" // default
-		}
-
-		switch providerType {
-		case "openai":
-			// Create OpenAI provider
-			llmProvider = provider.NewOpenAIProvider(apiKey, model)
-		case "anthropic":
-			// Create Anthropic provider
-			llmProvider = provider.NewAnthropicProvider(apiKey, model)
-		default:
-			return nil, fmt.Errorf("unsupported provider type: %s", providerType)
-		}
-
-		// Store provider
-		b.providers[providerName] = llmProvider
-		if b.activeProvider == "" {
-			b.activeProvider = providerName
-		}
-
-		return map[string]interface{}{
-			"name": providerName,
-			"type": providerType,
-		}, nil
-
-	case "generate":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("generate requires prompt parameter")
-		}
-
-		// Get active provider
-		if b.activeProvider == "" {
-			return nil, fmt.Errorf("no active provider set")
-		}
-		provider, exists := b.providers[b.activeProvider]
-		if !exists {
-			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
-		}
-
-		// Get prompt
-		prompt, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("prompt must be string")
-		}
-
-		// Generate response
-		response, err := provider.Generate(ctx, prompt, nil)
-		if err != nil {
-			return nil, fmt.Errorf("generation failed: %w", err)
-		}
-
-		// Return response
-		return map[string]interface{}{
-			"content": response,
-		}, nil
-
-	case "generateMessage":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("generateMessage requires messages parameter")
-		}
-
-		// Get active provider
-		if b.activeProvider == "" {
-			return nil, fmt.Errorf("no active provider set")
-		}
-		provider, exists := b.providers[b.activeProvider]
-		if !exists {
-			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
-		}
-
-		// Convert messages
-		var messages []llmdomain.Message
-		if msgList, ok := args[0].([]interface{}); ok {
-			for _, msg := range msgList {
-				if msgMap, ok := msg.(map[string]interface{}); ok {
-					role, _ := msgMap["role"].(string)
-					content, _ := msgMap["content"].(string)
-					messages = append(messages, llmdomain.NewTextMessage(llmdomain.Role(role), content))
-				}
-			}
-		}
-
-		// Generate response
-		response, err := provider.GenerateMessage(ctx, messages, nil)
-		if err != nil {
-			return nil, fmt.Errorf("generation failed: %w", err)
-		}
-
-		// Return response
-		return map[string]interface{}{
-			"content": response.Content,
-		}, nil
-
-	case "setActiveProvider":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("setActiveProvider requires name parameter")
-		}
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
-
-		if _, exists := b.providers[name]; !exists {
-			return nil, fmt.Errorf("provider %s not found", name)
-		}
-
-		b.activeProvider = name
-		return nil, nil
-
-	case "getActiveProvider":
-		return b.activeProvider, nil
-
-	case "listProviders":
-		providers := make([]map[string]interface{}, 0, len(b.providers))
-		for name := range b.providers {
-			providers = append(providers, map[string]interface{}{
-				"name":   name,
-				"active": name == b.activeProvider,
-			})
-		}
-		return providers, nil
-
-	case "generateWithSchema":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("generateWithSchema requires prompt and schema parameters")
-		}
-
-		// Get active provider
-		if b.activeProvider == "" {
-			return nil, fmt.Errorf("no active provider set")
-		}
-		provider, exists := b.providers[b.activeProvider]
-		if !exists {
-			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
-		}
-
-		// Get prompt
-		prompt, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("prompt must be string")
-		}
-
-		// Get schema
-		schemaMap, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("schema must be object")
-		}
-
-		// Convert schema map to Schema struct
-		schemaJSON, err := json.Marshal(schemaMap)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal schema: %w", err)
-		}
-		var schema schemaDomain.Schema
-		if err := json.Unmarshal(schemaJSON, &schema); err != nil {
-			return nil, fmt.Errorf("invalid schema: %w", err)
-		}
-
-		// Enhance prompt with schema
-		enhancedPrompt, err := b.promptEnhancer.Enhance(prompt, &schema)
-		if err != nil {
-			return nil, fmt.Errorf("prompt enhancement failed: %w", err)
-		}
-
-		// Generate response
-		response, err := provider.Generate(ctx, enhancedPrompt, nil)
-		if err != nil {
-			return nil, fmt.Errorf("generation failed: %w", err)
-		}
-
-		// Extract and validate structured output
-		structuredData, err := b.structProcessor.Process(&schema, response)
-		if err != nil {
-			return nil, fmt.Errorf("structured output processing failed: %w", err)
-		}
-
-		return map[string]interface{}{
-			"data":      structuredData,
-			"rawOutput": response,
-			"validated": true,
-		}, nil
-
-	case "registerSchema":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("registerSchema requires name and schema parameters")
-		}
-
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
-
-		schemaMap, ok := args[1].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("schema must be object")
-		}
-
-		// Convert schema map to Schema struct
-		schemaJSON, err := json.Marshal(schemaMap)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal schema: %w", err)
-		}
-		var schema schemaDomain.Schema
-		if err := json.Unmarshal(schemaJSON, &schema); err != nil {
-			return nil, fmt.Errorf("invalid schema: %w", err)
-		}
-
-		// Get optional version (removed since repo doesn't support versions)
-		// Version tracking could be added as metadata in the schema description
-
-		// Store in repository
-		if err := b.schemaRepo.Save(name, &schema); err != nil {
-			return nil, fmt.Errorf("failed to save schema: %w", err)
-		}
-
-		// Store in local cache
-		b.responseSchemas[name] = &schema
-
-		// Cache for performance (cache stores JSON bytes)
-		b.schemaCache.Set(uint64(len(name)), schemaJSON)
-
-		return nil, nil
-
-	case "getSchema":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getSchema requires name parameter")
-		}
-
-		name, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("name must be string")
-		}
-
-		// Check local map first
-		if schema, found := b.responseSchemas[name]; found {
-			return schema, nil
-		}
-
-		// Get from repository
-		schema, err := b.schemaRepo.Get(name)
-		if err != nil {
-			return nil, fmt.Errorf("schema not found: %w", err)
-		}
-
-		// Store in local cache
-		b.responseSchemas[name] = schema
-
-		return schema, nil
-
-	case "listSchemas":
-		// List from local cache
-		result := make([]map[string]interface{}, 0, len(b.responseSchemas))
-		for name, schema := range b.responseSchemas {
-			result = append(result, map[string]interface{}{
-				"name":        name,
-				"description": schema.Description,
-				"title":       schema.Title,
-			})
-		}
-		return result, nil
-
-	case "validateWithSchema":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("validateWithSchema requires data and schema parameters")
-		}
-
-		data := args[0]
-
-		// Get schema (could be object or name)
-		var schema *schemaDomain.Schema
-		switch v := args[1].(type) {
-		case string:
-			// Schema name
-			var err error
-			schema, err = b.schemaRepo.Get(v)
-			if err != nil {
-				return nil, fmt.Errorf("schema not found: %w", err)
-			}
-		case map[string]interface{}:
-			// Schema object
-			schemaJSON, err := json.Marshal(v)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal schema: %w", err)
-			}
-			schema = &schemaDomain.Schema{}
-			if err := json.Unmarshal(schemaJSON, schema); err != nil {
-				return nil, fmt.Errorf("invalid schema: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("schema must be string (name) or object")
-		}
-
-		// Convert data to JSON string for validation
-		dataJSON, err := json.Marshal(data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal data: %w", err)
-		}
-
-		// Validate
-		result, err := b.schemaValidator.Validate(schema, string(dataJSON))
-		if err != nil {
-			return nil, fmt.Errorf("validation error: %w", err)
-		}
-
-		return map[string]interface{}{
-			"valid":  result.Valid,
-			"errors": result.Errors,
-		}, nil
-
-	case "generateSchemaFromExample":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("generateSchemaFromExample requires example parameter")
-		}
-
-		example := args[0]
-
-		// Generate schema from example using reflection generator
-		schema, err := b.schemaGenerator.GenerateSchema(example)
-		if err != nil {
-			return nil, fmt.Errorf("schema generation failed: %w", err)
-		}
-
-		return schema, nil
-
-	case "clearSchemaCache":
-		b.schemaCache.Clear()
-		return nil, nil
-
-	case "getProviderCapabilities":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getProviderCapabilities requires provider parameter")
-		}
-
-		providerName, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("provider must be string")
-		}
-
-		// Get provider metadata
-		metadata, exists := b.providerMetadata[providerName]
-		if !exists {
-			// Try to get from registry
-			prov, err := b.providerRegistry.GetProvider(providerName)
-			if err != nil {
-				return nil, fmt.Errorf("provider not found: %s", providerName)
-			}
-			// Check if provider implements MetadataProvider
-			if mp, ok := prov.(provider.MetadataProvider); ok {
-				metadata = mp.GetMetadata()
-				b.providerMetadata[providerName] = metadata
-			} else {
-				return nil, fmt.Errorf("provider does not support metadata: %s", providerName)
-			}
-		}
-
-		// Return capabilities
-		return map[string]interface{}{
-			"name":         metadata.Name(),
-			"description":  metadata.Description(),
-			"capabilities": metadata.GetCapabilities(),
-			"constraints":  metadata.GetConstraints(),
-		}, nil
-
-	case "getModelInfo":
-		if len(args) < 2 {
-			return nil, fmt.Errorf("getModelInfo requires provider and model parameters")
-		}
-
-		providerName, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("provider must be string")
-		}
-
-		modelName, ok := args[1].(string)
-		if !ok {
-			return nil, fmt.Errorf("model must be string")
-		}
-
-		// Get provider metadata
-		metadata, exists := b.providerMetadata[providerName]
-		if !exists {
-			return nil, fmt.Errorf("provider not found: %s", providerName)
-		}
-
-		// Get model info
-		models, err := metadata.GetModels(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get models: %w", err)
-		}
-		for _, model := range models {
-			if model.Name == modelName {
-				return map[string]interface{}{
-					"name":          model.Name,
-					"description":   model.Description,
-					"capabilities":  model.Capabilities,
-					"contextWindow": model.ContextWindow,
-					"maxTokens":     model.MaxTokens,
-					"inputPricing":  model.InputPricing,
-					"outputPricing": model.OutputPricing,
-				}, nil
-			}
-		}
-
-		return nil, fmt.Errorf("model not found: %s", modelName)
-
-	case "listModelsForProvider":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("listModelsForProvider requires provider parameter")
-		}
-
-		providerName, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("provider must be string")
-		}
-
-		// Get provider metadata
-		metadata, exists := b.providerMetadata[providerName]
-		if !exists {
-			return nil, fmt.Errorf("provider not found: %s", providerName)
-		}
-
-		// Return models
-		models, err := metadata.GetModels(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get models: %w", err)
-		}
-		result := make([]map[string]interface{}, 0, len(models))
-		for _, model := range models {
-			result = append(result, map[string]interface{}{
-				"name":          model.Name,
-				"description":   model.Description,
-				"capabilities":  model.Capabilities,
-				"contextWindow": model.ContextWindow,
-			})
-		}
-
-		return result, nil
-
-	case "findProvidersByCapability":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("findProvidersByCapability requires capability parameter")
-		}
-
-		capability, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("capability must be string")
-		}
-
-		// Find providers with the capability
-		cap := provider.Capability(capability)
-		result := make([]string, 0)
-
-		// Check all registered providers
-		for name, metadata := range b.providerMetadata {
-			caps := metadata.GetCapabilities()
-			for _, c := range caps {
-				if c == cap {
-					result = append(result, name)
-					break
-				}
-			}
-		}
-
-		return result, nil
-
-	case "selectProviderByStrategy":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("selectProviderByStrategy requires strategy parameter")
-		}
-
-		strategy, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("strategy must be string")
-		}
-
-		// Simple strategy implementation
-		switch strategy {
-		case "fastest":
-			// Return the first available provider (simplified)
-			for name := range b.providers {
-				return name, nil
-			}
-			return "", nil // No providers available
-		case "cheapest":
-			// Would need to compare pricing info
-			for name := range b.providers {
-				return name, nil
-			}
-			return "", nil // No providers available
-		case "mostCapable":
-			// Return provider with most capabilities
-			var bestProvider string
-			maxCaps := 0
-			for name, metadata := range b.providerMetadata {
-				caps := len(metadata.GetCapabilities())
-				if caps > maxCaps {
-					maxCaps = caps
-					bestProvider = name
-				}
-			}
-			return bestProvider, nil
-		default:
-			return nil, fmt.Errorf("unknown strategy: %s", strategy)
-		}
-
-	case "getProviderHealth":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getProviderHealth requires provider parameter")
-		}
-
-		providerName, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("provider must be string")
-		}
-
-		// Check if provider exists and is active
-		_, exists := b.providers[providerName]
-		if !exists {
-			return map[string]interface{}{
-				"status":  "inactive",
-				"healthy": false,
-				"message": "Provider not registered",
-			}, nil
-		}
-
-		// Simple health check
-		return map[string]interface{}{
-			"status":  "active",
-			"healthy": true,
-			"message": "Provider is operational",
-		}, nil
-
-	case "configureFallbackChain":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("configureFallbackChain requires providers parameter")
-		}
-
-		providerList, ok := args[0].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("providers must be array")
-		}
-
-		// Store fallback chain (simplified - would need multi-provider support)
-		if len(providerList) > 0 {
-			if primaryName, ok := providerList[0].(string); ok {
-				b.activeProvider = primaryName
-			}
-		}
-
-		return nil, nil
-
-	case "streamWithEvents":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("streamWithEvents requires prompt parameter")
-		}
-
-		// Get active provider
-		if b.activeProvider == "" {
-			return nil, fmt.Errorf("no active provider set")
-		}
-		provider, exists := b.providers[b.activeProvider]
-		if !exists {
-			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
-		}
-
-		// Get prompt
-		prompt, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("prompt must be string")
-		}
-
-		// Generate stream ID
-		streamID := fmt.Sprintf("stream_%d", time.Now().UnixNano())
-
-		// Initialize metrics
-		metrics := &StreamMetrics{
-			StartTime: time.Now(),
-		}
-		b.streamMetrics[streamID] = metrics
-
-		// Start streaming
-		stream, err := provider.Stream(ctx, prompt, nil)
-		if err != nil {
-			return nil, fmt.Errorf("streaming failed: %w", err)
-		}
-
-		// Store active stream (convert ResponseStream to chan Token)
-		tokenChan := make(chan llmdomain.Token)
-		b.activeStreams[streamID] = tokenChan
-
-		// Forward tokens from ResponseStream to our channel
-		go func() {
-			for token := range stream {
-				tokenChan <- token
-			}
-			close(tokenChan)
-		}()
-
-		// Process stream in goroutine
-		go func() {
-			defer delete(b.activeStreams, streamID)
-
-			aggregate := ""
-			for token := range tokenChan {
-				// Update metrics
-				metrics.TokenCount++
-				metrics.ByteCount += len(token.Text)
-				if metrics.TokenCount == 1 {
-					metrics.FirstTokenTime = time.Now()
-				}
-				metrics.LastTokenTime = time.Now()
-
-				// Aggregate text
-				aggregate += token.Text
-
-				// Emit event if we have an event emitter
-				if b.eventEmitter != nil {
-					event := agentDomain.NewEvent(
-						agentDomain.EventMessage,
-						"llm_bridge",
-						"LLM Bridge",
-						map[string]interface{}{
-							"type":      "stream_chunk",
-							"streamId":  streamID,
-							"text":      token.Text,
-							"finished":  token.Finished,
-							"tokenNum":  metrics.TokenCount,
-							"aggregate": aggregate,
-						},
-					)
-					b.eventEmitter.Emit(event.Type, event)
-				}
-
-				if token.Finished {
-					break
-				}
-			}
-		}()
-
-		// Return stream info
-		return map[string]interface{}{
-			"streamId":  streamID,
-			"startTime": metrics.StartTime,
-			"status":    "streaming",
-		}, nil
-
-	case "streamMessageWithEvents":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("streamMessageWithEvents requires messages parameter")
-		}
-
-		// Get active provider
-		if b.activeProvider == "" {
-			return nil, fmt.Errorf("no active provider set")
-		}
-		provider, exists := b.providers[b.activeProvider]
-		if !exists {
-			return nil, fmt.Errorf("active provider not found: %s", b.activeProvider)
-		}
-
-		// Convert messages
-		var messages []llmdomain.Message
-		if msgList, ok := args[0].([]interface{}); ok {
-			for _, msg := range msgList {
-				if msgMap, ok := msg.(map[string]interface{}); ok {
-					role, _ := msgMap["role"].(string)
-					content, _ := msgMap["content"].(string)
-					messages = append(messages, llmdomain.NewTextMessage(llmdomain.Role(role), content))
-				}
-			}
-		}
-
-		// Generate stream ID
-		streamID := fmt.Sprintf("stream_%d", time.Now().UnixNano())
-
-		// Initialize metrics
-		metrics := &StreamMetrics{
-			StartTime: time.Now(),
-		}
-		b.streamMetrics[streamID] = metrics
-
-		// Start streaming
-		stream, err := provider.StreamMessage(ctx, messages, nil)
-		if err != nil {
-			return nil, fmt.Errorf("streaming failed: %w", err)
-		}
-
-		// Store active stream (convert ResponseStream to chan Token)
-		tokenChan := make(chan llmdomain.Token)
-		b.activeStreams[streamID] = tokenChan
-
-		// Forward tokens from ResponseStream to our channel
-		go func() {
-			for token := range stream {
-				tokenChan <- token
-			}
-			close(tokenChan)
-		}()
-
-		// Process stream in goroutine
-		go func() {
-			defer delete(b.activeStreams, streamID)
-
-			aggregate := ""
-			for token := range tokenChan {
-				// Update metrics
-				metrics.TokenCount++
-				metrics.ByteCount += len(token.Text)
-				if metrics.TokenCount == 1 {
-					metrics.FirstTokenTime = time.Now()
-				}
-				metrics.LastTokenTime = time.Now()
-
-				// Aggregate text
-				aggregate += token.Text
-
-				// Emit event if we have an event emitter
-				if b.eventEmitter != nil {
-					event := agentDomain.NewEvent(
-						agentDomain.EventMessage,
-						"llm_bridge",
-						"LLM Bridge",
-						map[string]interface{}{
-							"type":      "stream_chunk",
-							"streamId":  streamID,
-							"text":      token.Text,
-							"finished":  token.Finished,
-							"tokenNum":  metrics.TokenCount,
-							"aggregate": aggregate,
-						},
-					)
-					b.eventEmitter.Emit(event.Type, event)
-				}
-
-				if token.Finished {
-					break
-				}
-			}
-		}()
-
-		// Return stream info
-		return map[string]interface{}{
-			"streamId":  streamID,
-			"startTime": metrics.StartTime,
-			"status":    "streaming",
-		}, nil
-
-	case "getStreamMetrics":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("getStreamMetrics requires streamId parameter")
-		}
-
-		streamID, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("streamId must be string")
-		}
-
-		metrics, exists := b.streamMetrics[streamID]
-		if !exists {
-			return nil, fmt.Errorf("stream not found: %s", streamID)
-		}
-
-		// Calculate durations
-		totalDuration := time.Since(metrics.StartTime)
-		var firstTokenLatency time.Duration
-		if !metrics.FirstTokenTime.IsZero() {
-			firstTokenLatency = metrics.FirstTokenTime.Sub(metrics.StartTime)
-		}
-
-		return map[string]interface{}{
-			"streamId":          streamID,
-			"tokenCount":        metrics.TokenCount,
-			"byteCount":         metrics.ByteCount,
-			"totalDuration":     totalDuration.Milliseconds(),
-			"firstTokenLatency": firstTokenLatency.Milliseconds(),
-			"tokensPerSecond":   float64(metrics.TokenCount) / totalDuration.Seconds(),
-			"errors":            metrics.Errors,
-		}, nil
-
-	case "cancelStream":
-		if len(args) < 1 {
-			return nil, fmt.Errorf("cancelStream requires streamId parameter")
-		}
-
-		streamID, ok := args[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("streamId must be string")
-		}
-
-		// Check if stream exists
-		_, exists := b.activeStreams[streamID]
-		if !exists {
-			return false, nil
-		}
-
-		// Remove from active streams (this will close the goroutine)
-		delete(b.activeStreams, streamID)
-		return true, nil
-
-	case "listActiveStreams":
-		streams := make([]map[string]interface{}, 0, len(b.activeStreams))
-		for streamID := range b.activeStreams {
-			if metrics, exists := b.streamMetrics[streamID]; exists {
-				streams = append(streams, map[string]interface{}{
-					"streamId":   streamID,
-					"startTime":  metrics.StartTime,
-					"tokenCount": metrics.TokenCount,
-					"status":     "active",
-				})
-			}
-		}
-		return streams, nil
-
+	return engine.NewArrayValue(convertSliceToScriptValue(providers)), nil
+}
+
+func (b *LLMBridge) generate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if args[0].Type() != engine.TypeString {
+		return engine.NewErrorValue(fmt.Errorf("expected string for prompt, got %s", args[0].Type())), nil
+	}
+	prompt := args[0].(engine.StringValue).Value()
+
+	var options map[string]interface{}
+	if len(args) > 1 {
+		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+	}
+
+	b.mu.RLock()
+	providerName := b.activeProvider
+	b.mu.RUnlock()
+
+	if providerName == "" {
+		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+	}
+
+	// Update metrics
+	b.updateMetrics(providerName, true, 0)
+
+	// Mock response for now
+	response := fmt.Sprintf("Generated response for: %s (options: %v)", prompt, options)
+
+	return engine.NewStringValue(response), nil
+}
+
+func (b *LLMBridge) generateMessage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	messages := args[0].(engine.ArrayValue).ToGo().([]interface{})
+
+	var options map[string]interface{}
+	if len(args) > 1 {
+		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+	}
+
+	b.mu.RLock()
+	providerName := b.activeProvider
+	b.mu.RUnlock()
+
+	if providerName == "" {
+		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+	}
+
+	// Update metrics
+	b.updateMetrics(providerName, true, 0)
+
+	// Mock response
+	result := map[string]interface{}{
+		"message": map[string]interface{}{
+			"role":    "assistant",
+			"content": fmt.Sprintf("Response to %d messages (options: %v)", len(messages), options),
+		},
+		"usage": map[string]interface{}{
+			"prompt_tokens":     10,
+			"completion_tokens": 20,
+			"total_tokens":      30,
+		},
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+func (b *LLMBridge) stream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	prompt := args[0].(engine.StringValue).Value()
+
+	var options map[string]interface{}
+	if len(args) > 1 {
+		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+	}
+
+	b.mu.RLock()
+	providerName := b.activeProvider
+	b.mu.RUnlock()
+
+	if providerName == "" {
+		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+	}
+
+	// Create a mock stream ID
+	streamID := fmt.Sprintf("stream-%d", time.Now().UnixNano())
+
+	result := map[string]interface{}{
+		"stream_id": streamID,
+		"prompt":    prompt,
+		"options":   options,
+		"active":    true,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+func (b *LLMBridge) generateWithSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	prompt := args[0].(engine.StringValue).Value()
+	schemaName := args[1].(engine.StringValue).Value()
+
+	var options map[string]interface{}
+	if len(args) > 2 {
+		options = args[2].(engine.ObjectValue).ToGo().(map[string]interface{})
+	}
+
+	// Mock structured response
+	result := map[string]interface{}{
+		"raw":     fmt.Sprintf("Generated for: %s with schema: %s", prompt, schemaName),
+		"parsed":  map[string]interface{}{"example": "data"},
+		"valid":   true,
+		"options": options,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+func (b *LLMBridge) addResponseSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	name := args[0].(engine.StringValue).Value()
+	schema := args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+
+	// In a real implementation, this would store the schema
+	_ = name
+	_ = schema
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *LLMBridge) getResponseSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	name := args[0].(engine.StringValue).Value()
+
+	// Mock schema
+	result := map[string]interface{}{
+		"name": name,
+		"schema": map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"example": map[string]interface{}{
+					"type": "string",
+				},
+			},
+		},
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+func (b *LLMBridge) listResponseSchemas(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Mock schema list
+	schemas := []interface{}{
+		map[string]interface{}{"name": "person", "type": "object"},
+		map[string]interface{}{"name": "color_list", "type": "array"},
+	}
+
+	return engine.NewArrayValue(convertSliceToScriptValue(schemas)), nil
+}
+
+func (b *LLMBridge) validateWithSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	data := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
+	schemaName := args[1].(engine.StringValue).Value()
+
+	// Mock validation
+	result := map[string]interface{}{
+		"valid":  true,
+		"errors": []interface{}{},
+		"data":   data,
+		"schema": schemaName,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+func (b *LLMBridge) getCapabilities(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	b.mu.RLock()
+	providerName := b.activeProvider
+	b.mu.RUnlock()
+
+	if providerName == "" {
+		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+	}
+
+	// Mock capabilities
+	capabilities := map[string]interface{}{
+		"streaming":          true,
+		"structured_output":  true,
+		"function_calling":   true,
+		"embeddings":         false,
+		"max_context_length": 4096,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(capabilities)), nil
+}
+
+func (b *LLMBridge) getModelInfo(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	model := args[0].(engine.StringValue).Value()
+
+	// Mock model info
+	info := map[string]interface{}{
+		"name":         model,
+		"description":  "Language model",
+		"context_size": 4096,
+		"capabilities": []interface{}{"text-generation", "chat"},
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(info)), nil
+}
+
+func (b *LLMBridge) listModels(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	// Mock model list
+	models := []interface{}{
+		map[string]interface{}{
+			"name": "gpt-3.5-turbo",
+			"type": "chat",
+		},
+		map[string]interface{}{
+			"name": "gpt-4",
+			"type": "chat",
+		},
+	}
+
+	return engine.NewArrayValue(convertSliceToScriptValue(models)), nil
+}
+
+func (b *LLMBridge) checkCapability(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	capability := args[0].(engine.StringValue).Value()
+
+	// Mock capability check
+	supported := map[string]bool{
+		"streaming":         true,
+		"structured_output": true,
+		"function_calling":  true,
+		"embeddings":        false,
+	}
+
+	hasCapability, exists := supported[capability]
+	if !exists {
+		hasCapability = false
+	}
+
+	return engine.NewBoolValue(hasCapability), nil
+}
+
+func (b *LLMBridge) streamMessage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	messages := args[0].(engine.ArrayValue).ToGo().([]interface{})
+
+	var options map[string]interface{}
+	if len(args) > 1 {
+		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+	}
+
+	// Create a mock stream
+	streamID := fmt.Sprintf("stream-%d", time.Now().UnixNano())
+
+	result := map[string]interface{}{
+		"stream_id": streamID,
+		"messages":  messages,
+		"options":   options,
+		"active":    true,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+func (b *LLMBridge) readStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	streamID := args[0].(engine.StringValue).Value()
+
+	// Mock stream chunk
+	chunk := map[string]interface{}{
+		"stream_id": streamID,
+		"chunk":     "Next chunk of text",
+		"done":      false,
+		"index":     1,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(chunk)), nil
+}
+
+func (b *LLMBridge) closeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	streamID := args[0].(engine.StringValue).Value()
+
+	// Mock close stream
+	_ = streamID
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *LLMBridge) setFallbackChain(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	providers := args[0].(engine.ArrayValue).ToGo().([]interface{})
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	b.fallbackChain = make([]string, 0, len(providers))
+	for _, p := range providers {
+		if name, ok := p.(string); ok {
+			b.fallbackChain = append(b.fallbackChain, name)
+		}
+	}
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *LLMBridge) getFallbackChain(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	chain := make([]interface{}, len(b.fallbackChain))
+	for i, name := range b.fallbackChain {
+		chain[i] = name
+	}
+
+	return engine.NewArrayValue(convertSliceToScriptValue(chain)), nil
+}
+
+func (b *LLMBridge) getProviderMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	provider := args[0].(engine.StringValue).Value()
+
+	b.mu.RLock()
+	metrics, exists := b.metrics[provider]
+	b.mu.RUnlock()
+
+	if !exists {
+		return engine.NewErrorValue(fmt.Errorf("no metrics for provider: %s", provider)), nil
+	}
+
+	result := map[string]interface{}{
+		"total_requests":   metrics.TotalRequests,
+		"successful_calls": metrics.SuccessfulCalls,
+		"failed_calls":     metrics.FailedCalls,
+		"average_latency":  metrics.AverageLatency.Milliseconds(),
+		"success_rate":     float64(metrics.SuccessfulCalls) / float64(metrics.TotalRequests) * 100,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+func (b *LLMBridge) resetProviderMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	provider := args[0].(engine.StringValue).Value()
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	b.metrics[provider] = &ProviderMetrics{}
+
+	return engine.NewNilValue(), nil
+}
+
+func (b *LLMBridge) generateSchemaFromExample(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	example := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
+	name := args[1].(engine.StringValue).Value()
+
+	// Mock schema generation
+	schema := map[string]interface{}{
+		"name": name,
+		"type": "object",
+		"properties": map[string]interface{}{
+			// Simplified schema generation
+			"example": map[string]interface{}{
+				"type": "object",
+			},
+		},
+		"generated_from": example,
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(schema)), nil
+}
+
+func (b *LLMBridge) getProviderInfo(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	provider := args[0].(engine.StringValue).Value()
+
+	// Mock provider info
+	info := map[string]interface{}{
+		"name":         provider,
+		"type":         "llm",
+		"version":      "1.0.0",
+		"capabilities": []interface{}{"text-generation", "chat", "streaming"},
+		"models":       []interface{}{"model1", "model2"},
+		"status":       "active",
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(info)), nil
+}
+
+func (b *LLMBridge) testProviderConnection(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	provider := args[0].(engine.StringValue).Value()
+
+	// Mock connection test
+	result := map[string]interface{}{
+		"provider":   provider,
+		"connected":  true,
+		"latency_ms": 42,
+		"status":     "healthy",
+		"tested_at":  time.Now().Format(time.RFC3339),
+	}
+
+	return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+}
+
+// Helper methods
+
+func (b *LLMBridge) updateMetrics(provider string, success bool, latency time.Duration) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	metrics, exists := b.metrics[provider]
+	if !exists {
+		metrics = &ProviderMetrics{}
+		b.metrics[provider] = metrics
+	}
+
+	metrics.TotalRequests++
+	if success {
+		metrics.SuccessfulCalls++
+	} else {
+		metrics.FailedCalls++
+	}
+
+	metrics.TotalLatency += latency
+	if metrics.TotalRequests > 0 {
+		metrics.AverageLatency = metrics.TotalLatency / time.Duration(metrics.TotalRequests)
+	}
+}
+
+// getProvider returns the active provider
+func (b *LLMBridge) getActiveProvider() (bridge.Provider, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if b.activeProvider == "" {
+		return nil, fmt.Errorf("no active provider set")
+	}
+
+	provider, exists := b.providers[b.activeProvider]
+	if !exists {
+		return nil, fmt.Errorf("provider not found: %s", b.activeProvider)
+	}
+
+	return provider, nil
+}
+
+// Helper functions for type conversions
+
+// convertMapToScriptValue converts map[string]interface{} to map[string]ScriptValue
+func convertMapToScriptValue(m map[string]interface{}) map[string]engine.ScriptValue {
+	result := make(map[string]engine.ScriptValue)
+	for k, v := range m {
+		result[k] = convertToScriptValue(v)
+	}
+	return result
+}
+
+// convertSliceToScriptValue converts []interface{} to []ScriptValue
+func convertSliceToScriptValue(s []interface{}) []engine.ScriptValue {
+	result := make([]engine.ScriptValue, len(s))
+	for i, v := range s {
+		result[i] = convertToScriptValue(v)
+	}
+	return result
+}
+
+// convertToScriptValue converts interface{} to ScriptValue
+func convertToScriptValue(v interface{}) engine.ScriptValue {
+	if v == nil {
+		return engine.NewNilValue()
+	}
+
+	switch val := v.(type) {
+	case bool:
+		return engine.NewBoolValue(val)
+	case int:
+		return engine.NewNumberValue(float64(val))
+	case int32:
+		return engine.NewNumberValue(float64(val))
+	case int64:
+		return engine.NewNumberValue(float64(val))
+	case float32:
+		return engine.NewNumberValue(float64(val))
+	case float64:
+		return engine.NewNumberValue(val)
+	case string:
+		return engine.NewStringValue(val)
+	case []interface{}:
+		return engine.NewArrayValue(convertSliceToScriptValue(val))
+	case map[string]interface{}:
+		return engine.NewObjectValue(convertMapToScriptValue(val))
+	case error:
+		return engine.NewErrorValue(val)
 	default:
-		return nil, fmt.Errorf("method not found: %s", name)
+		// For unknown types, convert to string representation
+		return engine.NewStringValue(fmt.Sprintf("%v", v))
 	}
 }

@@ -240,7 +240,7 @@ func (b *UtilBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
-func (b *UtilBridge) ValidateMethod(name string, args []interface{}) error {
+func (b *UtilBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -264,7 +264,7 @@ func (b *UtilBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function
-func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []interface{}) (interface{}, error) {
+func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -274,52 +274,49 @@ func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []inte
 
 	switch name {
 	case "generateUUID":
-		return uuid.New().String(), nil
+		return engine.NewStringValue(uuid.New().String()), nil
 
 	case "truncateString":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("truncateString requires text and maxLength parameters")
 		}
-		text, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("text must be string")
 		}
-		maxLength, ok := args[1].(float64) // JSON numbers come as float64
-		if !ok {
+		text := args[0].(engine.StringValue).Value()
+
+		if args[1] == nil || args[1].Type() != engine.TypeNumber {
 			return nil, fmt.Errorf("maxLength must be number")
 		}
+		maxLength := int(args[1].(engine.NumberValue).Value())
 
 		suffix := "..."
-		if len(args) > 2 && args[2] != nil {
-			if s, ok := args[2].(string); ok {
-				suffix = s
-			}
+		if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
+			suffix = args[2].(engine.StringValue).Value()
 		}
 
-		if len(text) <= int(maxLength) {
-			return text, nil
+		if len(text) <= maxLength {
+			return engine.NewStringValue(text), nil
 		}
 
-		if int(maxLength) <= len(suffix) {
-			return suffix, nil
+		if maxLength <= len(suffix) {
+			return engine.NewStringValue(suffix), nil
 		}
 
-		return text[:int(maxLength)-len(suffix)] + suffix, nil
+		return engine.NewStringValue(text[:maxLength-len(suffix)] + suffix), nil
 
 	case "hashString":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("hashString requires text parameter")
 		}
-		text, ok := args[0].(string)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeString {
 			return nil, fmt.Errorf("text must be string")
 		}
+		text := args[0].(engine.StringValue).Value()
 
 		algorithm := "sha256"
-		if len(args) > 1 && args[1] != nil {
-			if alg, ok := args[1].(string); ok {
-				algorithm = alg
-			}
+		if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
+			algorithm = args[1].(engine.StringValue).Value()
 		}
 
 		var h hash.Hash
@@ -335,31 +332,31 @@ func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []inte
 		}
 
 		h.Write([]byte(text))
-		return hex.EncodeToString(h.Sum(nil)), nil
+		return engine.NewStringValue(hex.EncodeToString(h.Sum(nil))), nil
 
 	case "sleep":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("sleep requires milliseconds parameter")
 		}
-		ms, ok := args[0].(float64)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeNumber {
 			return nil, fmt.Errorf("milliseconds must be number")
 		}
+		ms := args[0].(engine.NumberValue).Value()
 
 		time.Sleep(time.Duration(ms) * time.Millisecond)
-		return nil, nil
+		return engine.NewNilValue(), nil
 
 	case "formatDuration":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("formatDuration requires milliseconds parameter")
 		}
-		ms, ok := args[0].(float64)
-		if !ok {
+		if args[0] == nil || args[0].Type() != engine.TypeNumber {
 			return nil, fmt.Errorf("milliseconds must be number")
 		}
+		ms := args[0].(engine.NumberValue).Value()
 
 		d := time.Duration(ms) * time.Millisecond
-		return d.String(), nil
+		return engine.NewStringValue(d.String()), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)

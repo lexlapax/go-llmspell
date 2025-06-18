@@ -28,6 +28,31 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
     - ⏳ TracingBridge - Needs updating
     - ⏳ Agent package bridges (6 bridges) - Need updates
     - ⏳ LLM package bridges (3 bridges) - Need updates
+    - ✅ util/llm.go - Converted in-place to use ScriptValue [2025-06-19]
+    - ✅ util/util.go - Converted in-place with minimal changes [2025-06-19]
+    - ✅ util/debug.go - Converted in-place, added ExecuteMethod dispatcher [2025-06-19]
+    - ✅ util/auth.go - Backed up original, created new implementation from scratch [2025-06-19]
+    - ✅ util/auth_test.go - Created new test file from scratch [2025-06-19]
+    - ✅ util/slog.go - Backed up original, created new implementation with ScriptValue [2025-06-19]
+    - ✅ util/slog_test.go - Created new test file from scratch [2025-06-19]
+    - ✅ util/script_logger.go - Backed up original, created new unified logger implementation [2025-06-19]
+    - ✅ util/script_logger_test.go - Created new test file from scratch [2025-06-19]
+    - ✅ util/errors.go - Backed up original, created new implementation with ScriptValue [2025-06-19]
+    - ✅ util/errors_test.go - Created new test file from scratch [2025-06-19]
+    - ✅ util/json.go - Backed up original, created new implementation with ScriptValue [2025-06-19]
+    - ✅ util/json_test.go - Created new test file from scratch [2025-06-19]
+    - ✅ state/manager.go - Converted in-place to use ScriptValue [2025-06-19]
+    - ✅ state/context.go - Backed up original, created new implementation from scratch [2025-06-19]
+      - Fixed compilation errors: Delete method, array indexing, GetMetadata signatures
+      - Fixed parent-child context relationships and tracking
+    - ✅ state/context_test.go - Created new test file from scratch [2025-06-19]
+    - ✅ agent/tools.go - ScriptValue conversion complete [2025-06-19]
+      - Fixed all 15+ method cases in ExecuteMethod switch statement
+      - Updated type assertions from args[x].(string) to args[x].(engine.StringValue).Value()
+      - Fixed return values to use engine.NewXXXValue() constructors
+      - Added helper function convertScriptValueToInterface for go-llms compatibility
+      - Fixed error returns to proper error propagation (not engine.NewErrorValue())
+      - Verified compilation success and proper ScriptValue usage throughout
     - ⏳ State package bridges (2 bridges) - Need updates  
     - ⏳ Util package bridges (8 bridges) - Need updates
   - ⏳ Phase 5: Update GopherLua Engine - Not started

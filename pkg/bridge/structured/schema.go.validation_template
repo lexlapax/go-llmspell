@@ -1,0 +1,39 @@
+// Common validation patterns to replace manual type assertions:
+
+// String validation:
+if args[0] == nil || args[0].Type() != engine.TypeString {
+    return nil, fmt.Errorf("argument must be string")
+}
+value := args[0].(engine.StringValue).Value()
+
+// Number validation:
+if args[0] == nil || args[0].Type() != engine.TypeNumber {
+    return nil, fmt.Errorf("argument must be number")
+}
+value := args[0].(engine.NumberValue).Value()
+
+// Object validation:
+if args[0] == nil || args[0].Type() != engine.TypeObject {
+    return nil, fmt.Errorf("argument must be object")
+}
+objData := make(map[string]interface{})
+for k, v := range args[0].(engine.ObjectValue).Fields() {
+    objData[k] = v.ToGo()
+}
+
+// Array validation:
+if args[0] == nil || args[0].Type() != engine.TypeArray {
+    return nil, fmt.Errorf("argument must be array")
+}
+arrayData := make([]interface{}, 0)
+for _, v := range args[0].(engine.ArrayValue).Values() {
+    arrayData = append(arrayData, v.ToGo())
+}
+
+// Return value conversions:
+// String: return engine.NewStringValue(result), nil
+// Number: return engine.NewNumberValue(float64(result)), nil  
+// Boolean: return engine.NewBoolValue(result), nil
+// Object: return engine.NewObjectValue(convertMapToScriptValue(result)), nil
+// Array: return engine.NewArrayValue(convertSliceToScriptValue(result)), nil
+// Nil: return engine.NewNilValue(), nil
