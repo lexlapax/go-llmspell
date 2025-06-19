@@ -4,12 +4,11 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-✅ **Phase 2.3.2.5 COMPLETE** [2025-06-19]: Test Utilities Extraction - ALL SUCCESS METRICS ACHIEVED  
-🚧 **Phase 2.3.3 ACTIVE**: Bridge Adapters (2 of 14 completed)
+🚧 **Phase 2.3.4 ACTIVE**: Lua Standard Library - Starting development
 
-- ScriptValue system complete: All 21 bridges converted with type safety
-- Test infrastructure complete: Centralized testutils, 40%+ code reduction achieved
-- Foundation established: Ready for bridge adapter development phase
+**Completed Phases**:
+- ✅ Phase 2.3.2.5: Test Utilities (40%+ code reduction, centralized testutils)
+- ✅ Phase 2.3.3: Bridge Adapters (14/14 adapters with full test coverage)
 
 ## Architecture
 
@@ -18,7 +17,7 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 ```
 /pkg/engine/     # Script engine interfaces (our code)
 /pkg/bridge/     # Thin wrappers around go-llms (no business logic)
-/pkg/testutils/  # Centralized test utilities (NEW)
+/pkg/testutils/  # Centralized test utilities
 ```
 
 ## Implementation Workflow
@@ -29,18 +28,6 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 4. **Reuse code** - Use pkg/testutils, reduce duplication
 5. **Run `make all`** - Complete dev cycle
 6. **Update TODO.md** - Mark tasks with timestamps
-
-## Phase 2.3.2.5: Test Utilities Extraction - COMPLETE [2025-06-19]
-
-**All 6 phases completed with all success metrics achieved**:
-- ✅ **Phases 1-4**: Core infrastructure, helpers, package migrations 
-- ✅ **Phase 5**: Advanced helpers (table/context/numeric) + GopherLua migration
-- ✅ **Phase 6**: Final cleanup, comprehensive documentation, metrics verification
-
-**Success Metrics Achieved**:
-- Code reduction: 40%+ (956+ ScriptValue + 363+ duplicate lines removed)
-- Test quality: 98.5% pass rate, zero race conditions
-- Foundation: Complete testutils package with migration patterns established
 
 ## Commands
 

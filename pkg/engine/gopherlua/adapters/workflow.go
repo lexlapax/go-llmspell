@@ -1335,3 +1335,28 @@ func (wa *WorkflowAdapter) validateWorkflow(L *lua.LState) int {
 	L.Push(luaResult)
 	return 1
 }
+
+// RegisterAsModule registers the adapter as a module in the module system
+func (wa *WorkflowAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+	// Get bridge metadata
+	var bridgeMetadata engine.BridgeMetadata
+	if wa.GetBridge() != nil {
+		bridgeMetadata = wa.GetBridge().GetMetadata()
+	} else {
+		bridgeMetadata = engine.BridgeMetadata{
+			Name:        "Workflow Adapter",
+			Description: "Workflow management and orchestration functionality",
+		}
+	}
+
+	// Create module definition using our overridden CreateLuaModule
+	module := gopherlua.ModuleDefinition{
+		Name:         name,
+		Description:  bridgeMetadata.Description,
+		Dependencies: []string{},           // Workflow module has no dependencies by default
+		LoadFunc:     wa.CreateLuaModule(), // Use our enhanced module creator
+	}
+
+	// Register the module
+	return ms.Register(module)
+}

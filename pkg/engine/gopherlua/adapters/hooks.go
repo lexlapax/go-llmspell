@@ -288,9 +288,27 @@ func (ha *HooksAdapter) tableToScriptValue(L *lua.LState, table *lua.LTable) eng
 
 // RegisterAsModule registers the adapter as a module in the module system
 func (ha *HooksAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
-	// Module registration is handled by the ModuleSystem
-	// The adapter just needs to be available for loading
-	return nil
+	// Get bridge metadata
+	var bridgeMetadata engine.BridgeMetadata
+	if ha.GetBridge() != nil {
+		bridgeMetadata = ha.GetBridge().GetMetadata()
+	} else {
+		bridgeMetadata = engine.BridgeMetadata{
+			Name:        "Hooks Adapter",
+			Description: "Hook management and lifecycle functionality",
+		}
+	}
+
+	// Create module definition using our overridden CreateLuaModule
+	module := gopherlua.ModuleDefinition{
+		Name:         name,
+		Description:  bridgeMetadata.Description,
+		Dependencies: []string{},           // Hooks module has no dependencies by default
+		LoadFunc:     ha.CreateLuaModule(), // Use our enhanced module creator
+	}
+
+	// Register the module
+	return ms.Register(module)
 }
 
 // GetMethods returns the available methods

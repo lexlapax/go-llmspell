@@ -1551,3 +1551,231 @@ All bridges successfully converted from []interface{} to []engine.ScriptValue fo
   - ✅ Created comprehensive test extraction plan in TESTUTILS_EXTRACTION_PLAN.md
   - ✅ Planned 6-week phased approach for test utility extraction
   - ✅ Expected 30-40% code reduction through shared utilities
+
+## Phase 2.3.3: Bridge Adapters
+
+### All 14 adapters completed [2025-06-19]
+
+- ✅ **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) [COMPLETED - 2025-06-18]
+  - ✅ Create state and context management module
+  - ✅ Implement get/set operations
+  - ✅ Add transform functions (register, apply built-ins)
+  - ✅ Implement persistence methods (save, load, delete, list)
+  - ✅ Add state merging capabilities
+  - ✅ Enhanced state objects with convenience methods
+  - ✅ make sure tests pass
+
+- ✅ **Task 2.3.3.4: Events Bridge Adapter** (`/pkg/engine/gopherlua/adapters/events.go`) [COMPLETED - 2025-06-18]
+  - ✅ Create event module with namespaces (bus, filters, recording, replay, aggregation)
+  - ✅ Implement event subscription and publication
+  - ✅ Add event emission with pattern matching
+  - ✅ Implement filtering (pattern, type, time range, composite)
+  - ✅ Add event correlation and aggregation
+  - ✅ Add recording and replay functionality
+  - ✅ Add serialization/deserialization support
+  - ✅ Implement subscription management
+  - ✅ make sure tests pass
+
+- ✅ **Task 2.3.3.5: Structure Bridge Adapter** (`/pkg/engine/gopherlua/adapters/structured.go`) [COMPLETED - 2025-06-19]
+  - ✅ Create structured output module with namespaces (validation, generation, repository, importExport, custom)
+  - ✅ Implement JSON schema validation and struct validation
+  - ✅ Add structured generation methods (fromType, fromTags, fromJSONSchema)
+  - ✅ Implement schema repository operations (save, get, delete, initializeFile)
+  - ✅ Add import/export functionality (toJSONSchema, toOpenAPI, fromFile, merge)
+  - ✅ Implement custom validation system (registerValidator, validate, listValidators, validateAsync)
+  - ✅ Add utility methods (generateDiff) and convenience methods
+  - ✅ Add schema constants (TYPES, FORMATS, OPERATORS)
+  - ✅ make sure tests pass
+
+- ✅ **Task 2.3.3.6: Agent Bridge Adapter** (`/pkg/engine/gopherlua/adapters/agent.go`) [COMPLETED - 2025-06-19]
+  - ✅ Create agent module with lifecycle, communication, state, events, profiling, workflow, and hooks namespaces
+  - ✅ Implement agent lifecycle methods (create, createLLM, list, get, remove)
+  - ✅ Add agent communication methods (run, runAsync, registerTool, unregisterTool, listTools)
+  - ✅ Implement agent state management (get, set, export, import, saveSnapshot, loadSnapshot, listSnapshots)
+  - ✅ Add agent event methods (emit, subscribe, startRecording, stopRecording, replay)
+  - ✅ Implement agent profiling methods (start, stop, getMetrics)
+  - ✅ Add agent workflow methods (create, execute)
+  - ✅ Implement agent hook methods (register, unregister)
+  - ✅ Add utility methods (validateConfig)
+  - ✅ Add convenience methods and constants (TYPES, STATES, EVENT_TYPES, HOOKS)
+  - ✅ Comprehensive test coverage with TDD approach
+  - ✅ Array handling patterns following bridge adapter conventions
+
+- ✅ **Task 2.3.3.7: Hooks Bridge Adapter** (`/pkg/engine/gopherlua/adapters/hooks.go`) [COMPLETED - 2025-06-19]
+  - ✅ Create hooks module for lifecycle events
+    - ✅ Implement `registerHook(id, definition)` method
+    - ✅ Add `unregisterHook(id)` method
+    - ✅ Add `listHooks()` method
+    - ✅ Implement hook priority system
+  - ✅ Add lifecycle hooks
+    - ✅ Implement `beforeGenerate` hook
+    - ✅ Implement `afterGenerate` hook
+    - ✅ Implement `beforeToolCall` hook
+    - ✅ Implement `afterToolCall` hook
+  - ✅ Add hook management
+    - ✅ Implement `enableHook(id)` method
+    - ✅ Implement `disableHook(id)` method
+    - ✅ Implement `getHookInfo(id)` method
+    - ✅ Implement `clearHooks()` method
+  - ✅ Add convenience features
+    - ✅ Hook builder pattern for easy creation
+    - ✅ Batch enable/disable operations
+    - ✅ Hook type and priority constants
+  - ✅ make sure tests pass
+
+- ✅ **Task 2.3.3.8: Workflow Bridge Adapter** (`/pkg/engine/gopherlua/adapters/workflow.go`) [COMPLETED - 2025-06-19]
+  - ✅ Create workflow module with type constants (SEQUENTIAL, PARALLEL, CONDITIONAL, etc)
+  - ✅ Implement workflow lifecycle methods (create, execute, pause, resume, stop)
+  - ✅ Add step management methods (add, remove, update, list, reorder)
+  - ✅ Implement template functionality (list, get, createFromTemplate, saveAsTemplate)
+  - ✅ Add import/export methods with JSON/YAML format support
+  - ✅ Implement variable management (set, get, list)
+  - ✅ Add error handling methods (getErrors, clearErrors)
+  - ✅ Implement convenience methods (builder pattern, validate)
+  - ✅ Add comprehensive test coverage following TDD approach
+  - ✅ Fix all missing methods in workflow bridge and adapter
+  - ✅ All tests passing
+
+- ✅ **Task 2.3.3.9: Tools Bridge Adapter** (`/pkg/engine/gopherlua/adapters/tools.go`) [COMPLETED - 2025-06-19]
+  - ✅ Create tools module
+  - ✅ Implement tool registration
+  - ✅ Add tool execution
+  - ✅ Implement parameter validation
+  - ✅ Add custom tool support
+  - ✅ make sure tests pass
+
+- ✅ **Task 2.3.3.10: Observability Bridge Adapters** (`/pkg/engine/gopherlua/adapters/observability.go`) [COMPLETED - 2025-06-19]
+  - ✅ Implement Guardrails Bridge Adapter
+    - ✅ Add `enableGuardrails(config)` method for safety system configuration
+    - ✅ Add `validateContent(content, type)` method for content filtering
+    - ✅ Add `addBehavioralConstraint(constraint)` method for behavioral limits
+    - ✅ Add `checkCompliance(request)` method for compliance validation
+  - ✅ Implement Metrics Bridge Adapter
+    - ✅ Add `createCounter(name, labels)` method for counter metrics
+    - ✅ Add `createGauge(name, labels)` method for gauge metrics
+    - ✅ Add `createTimer(name, labels)` method for timing metrics
+    - ✅ Add `recordMetric(name, value, labels)` method for metric recording
+    - ✅ Add `getMetrics()` method for metric aggregation
+  - ✅ Implement Tracing Bridge Adapter
+    - ✅ Add `startSpan(name, options)` method for trace span creation
+    - ✅ Add `addSpanEvent(span, name, attributes)` method for span events
+    - ✅ Add `setSpanAttribute(span, key, value)` method for span attributes
+    - ✅ Add `endSpan(span)` method for span completion
+    - ✅ Add OpenTelemetry-compatible interface
+  - ✅ make sure tests pass
+
+- ✅ **Task 2.3.3.11: Schema Bridge Adapter** (`/pkg/engine/gopherlua/adapters/schema.go`) [COMPLETED - 2025-06-19]
+    **Note: Implemented as `StructuredAdapter` in `/pkg/engine/gopherlua/adapters/structured.go`**
+    **Features implemented exceed TODO requirements:**
+  - ✅ All required schema functionality (validation, generation, registration, retrieval)
+  - ✅ Import/Export (JSON Schema, OpenAPI)
+  - ✅ Custom validators with async support
+  - ✅ Repository management with file-based storage
+  - ✅ Tag-based schema generation
+  - ✅ Schema diffing and merging utilities
+  - ✅ Validation metrics and caching
+  - ✅ Create schema validation module
+    - ✅ Add `validateJSON(data, schema)` method for JSON schema validation
+    - ✅ Add `generateSchema(data, options)` method for schema generation
+    - ✅ Add `registerSchema(name, schema)` method for schema registration (implemented as `saveSchema`)
+    - ✅ Add `getSchema(name)` method for schema retrieval
+  - ✅ Implement structured tools support
+    - ✅ Add `validateStructuredOutput(output, schema)` method (implemented as `validateStruct`)
+    - ✅ Add `parseStructuredResponse(response, schema)` method
+    - ✅ Add schema-based tool parameter validation
+  - ✅ Add schema versioning and migration
+    - ✅ Add `migrateSchema(oldSchema, newSchema)` method
+    - ✅ Add `versionSchema(schema, version)` method (implemented as `saveSchemaVersion`)
+    - ✅ Add backward compatibility checking
+  - ✅ make sure tests pass
+  **Additional features implemented beyond requirements:**
+  - ✅ Import/Export functionality (JSON Schema, OpenAPI)
+  - ✅ Custom validators with async support
+  - ✅ Repository management with file-based storage
+  - ✅ Tag-based schema generation
+  - ✅ Schema diffing and merging utilities
+  - ✅ Validation metrics and caching
+
+- ✅ **Task 2.3.3.12: ModelInfo Bridge Adapter** (`/pkg/engine/gopherlua/adapters/modelinfo.go`) [COMPLETED - 2025-06-19]
+  - ✅ Create model discovery module
+    - ✅ Add `registerModelRegistry(name, registry)` method for registry management
+    - ✅ Add `listModels()` method for listing all available models (via discovery namespace)
+    - ✅ Add `listModelsByRegistry(registryName)` method for registry-specific models
+    - ✅ Add `getModel(modelId)` method for specific model retrieval  
+    - ✅ Add `listRegistries()` method for registry enumeration
+    - ✅ Add `fetchInventory()` method for complete model inventory retrieval
+  - ✅ Implement model capability queries
+    - ✅ Add `getModelCapabilities(modelId)` method for capability discovery
+    - ✅ Add `findModelsByCapability(capability)` method for capability-based search
+    - ✅ Add model metadata access methods via inventory data
+    - ✅ Add capability constants (TEXT_READ, TEXT_WRITE, FUNCTION_CALLING, etc.)
+  - ✅ Add model selection helpers
+    - ✅ Add `suggestModel(requirements)` method for recommendation with priority-based scoring
+    - ✅ Add `compareModels(modelIds)` method for model comparison with detailed analysis
+    - ✅ Add `estimateCost(modelName, usage)` method for cost estimation
+    - ✅ Add `getBestModelForTask(task)` method for task-specific recommendations
+    - ✅ Add comprehensive summary generation for model comparisons
+  - ✅ make sure tests pass
+  **Additional features implemented beyond requirements:**
+  - ✅ Script-friendly utility functions for model discovery and selection
+  - ✅ Intelligent scoring system for model recommendation based on capabilities, cost, and context window
+  - ✅ Detailed comparison analysis with strengths identification
+  - ✅ Task-specific model recommendations (function calling, text generation, etc.)
+  - ✅ Enhanced error handling and validation
+
+- ✅ **Task 2.3.3.13: Utility Bridge Adapters** (`/pkg/engine/gopherlua/adapters/utils.go`) [COMPLETED - 2025-06-19]
+  - ✅ Implement Auth Bridge Adapter
+    - ✅ Add `authenticate(credentials, scheme)` method for authentication
+    - ✅ Add `validateToken(token, options)` method for token validation
+    - ✅ Add `refreshToken(refreshToken)` method for token refresh
+    - ✅ Add OAuth2 flow support methods
+  - ✅ Implement Debug Bridge Adapter
+    - ✅ Add `setDebugLevel(component, level)` method for debug control
+    - ✅ Add `debugLog(component, message, data)` method for debug logging
+    - ✅ Add `getDebugConfig()` method for configuration retrieval
+    - ✅ Add environment-based debug configuration
+  - ✅ Implement Errors Bridge Adapter
+    - ✅ Add `createError(message, code, category)` method for error creation
+    - ✅ Add `wrapError(error, context)` method for error wrapping
+    - ✅ Add `aggregateErrors(errors)` method for error aggregation
+    - ✅ Add `categorizeError(error)` method for error categorization
+    - ✅ Add error recovery strategy support
+  - ✅ Implement JSON Bridge Adapter
+    - ✅ Add `parseJSON(text, options)` method for JSON parsing
+    - ✅ Add `toJSON(data, options)` method for JSON serialization
+    - ✅ Add `validateJSONSchema(data, schema)` method for validation
+    - ✅ Add `extractStructuredData(text, schema)` method for LLM output parsing
+    - ✅ Add format conversion support (JSON/YAML/XML)
+  - ✅ Implement LLM Utils Bridge Adapter
+    - ✅ Add `createProvider(type, config)` method for provider creation
+    - ✅ Add `generateTyped(prompt, schema, options)` method for typed generation
+    - ✅ Add `getModelCapabilities(model)` method for capability queries
+    - ✅ Add `trackCost(operation, tokens, model)` method for cost tracking
+    - ✅ Add streaming with event support
+  - ✅ Implement Script Logger Bridge Adapter
+    - ✅ Add `createLogger(component, config)` method for logger creation
+    - ✅ Add `log(level, message, context)` method for unified logging
+    - ✅ Add `setLogLevel(component, level)` method for level control
+    - ✅ Add context propagation support
+  - ✅ Implement Slog Bridge Adapter
+    - ✅ Add `info(message, fields)` method for info logging
+    - ✅ Add `warn(message, fields)` method for warning logging
+    - ✅ Add `error(message, fields)` method for error logging
+    - ✅ Add `debug(message, fields)` method for debug logging
+    - ✅ Add emoji enhancement and structured logging hooks
+  - ✅ Implement General Util Bridge Adapter
+    - ✅ Add `generateUUID()` method for UUID generation
+    - ✅ Add `hash(data, algorithm)` method for hashing
+    - ✅ Add `retry(operation, options)` method for retry logic
+    - ✅ Add `sleep(duration)` method for delays
+    - ✅ Add string and time utilities
+  - ✅ make sure tests pass
+
+- ✅ **Task 2.3.3.14: Adapter Testing** (`/pkg/engine/gopherlua/adapters/adapters_test.go`) [COMPLETED - 2025-06-19]
+  - ✅ Test each adapter functionality
+  - ✅ Test cross-adapter interaction
+  - ✅ Test error propagation
+  - ✅ Test type conversions
+  - ✅ Fixed hooks adapter missing RegisterAsModule implementation
+  - ✅ Fixed workflow adapter missing RegisterAsModule implementation
+  - ✅ All adapter tests passing successfully
