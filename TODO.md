@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 2 of 14 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 8 of 14 completed]
     - 🔲 2.3.4: Lua Standard Library [NOT STARTED]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -82,7 +82,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 7 of 14 adapters completed
+🚧 **IN PROGRESS** - 8 of 14 adapters completed
 
 - [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-18]
   - [x] Create state and context management module
@@ -152,14 +152,18 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] Hook type and priority constants
   - [x] make sure tests pass
 
-- [ ] **Task 2.3.3.8: Workflow Bridge Adapter** (`/pkg/engine/gopherlua/adapters/workflow.go`)
-  **look in `/pkg/bridge/agent/workflow.go` for research**
-  - [ ] Create workflow module
-  - [ ] Implement workflow builders
-  - [ ] Add step definitions
-  - [ ] Implement execution methods
-  - [ ] Add state passing between steps
-  - [ ] make sure tests pass
+- [x] **Task 2.3.3.8: Workflow Bridge Adapter** (`/pkg/engine/gopherlua/adapters/workflow.go`) ✅ COMPLETED [2025-06-19]
+  - [x] Create workflow module with type constants (SEQUENTIAL, PARALLEL, CONDITIONAL, etc)
+  - [x] Implement workflow lifecycle methods (create, execute, pause, resume, stop)
+  - [x] Add step management methods (add, remove, update, list, reorder)
+  - [x] Implement template functionality (list, get, createFromTemplate, saveAsTemplate)
+  - [x] Add import/export methods with JSON/YAML format support
+  - [x] Implement variable management (set, get, list)
+  - [x] Add error handling methods (getErrors, clearErrors)
+  - [x] Implement convenience methods (builder pattern, validate)
+  - [x] Add comprehensive test coverage following TDD approach
+  - [x] Fix all missing methods in workflow bridge and adapter
+  - [x] All tests passing
 
 - [ ] **Task 2.3.3.9: Tools Bridge Adapter** (`/pkg/engine/gopherlua/adapters/tools.go`)
   **look in `/pkg/bridge/agent/tool*.go` for research**
