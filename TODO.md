@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 16 of 24 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 18 of 24 completed]
     - 🚧 2.3.4: Lua Standard Library [IN PROGRESS]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -82,7 +82,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 15 of 24 adapters implemented
+🚧 **IN PROGRESS** - 18 of 24 adapters implemented
 **See TODO-DONE.md for completed task details**
 
 **Design Decision**: Tasks 15-24 implement complete method flattening for consistency:
@@ -242,53 +242,53 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] agent.utils.validateConfig → agent.utilsValidateConfig
   - [x] Update tests in agent_test.go
 
-- [ ] **Task 2.3.3.22: Structured Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/structured.go`)
-  - [ ] Flatten validation namespace methods:
-    - [ ] structured.validation.validate → structured.validationValidate
-    - [ ] structured.validation.validatePartial → structured.validationValidatePartial
-    - [ ] structured.validation.getErrors → structured.validationGetErrors
-    - [ ] structured.validation.addCustom → structured.validationAddCustom
-  - [ ] Flatten generation namespace methods:
-    - [ ] structured.generation.fromType → structured.generationFromType
-    - [ ] structured.generation.fromTags → structured.generationFromTags
-    - [ ] structured.generation.fromJSONSchema → structured.generationFromJSONSchema
-  - [ ] Flatten repository namespace methods:
-    - [ ] structured.repository.save → structured.repositorySave
-    - [ ] structured.repository.load → structured.repositoryLoad
-    - [ ] structured.repository.list → structured.repositoryList
-    - [ ] structured.repository.delete → structured.repositoryDelete
-  - [ ] Flatten importExport namespace methods:
-    - [ ] structured.importExport.toJSON → structured.importExportToJSON
-    - [ ] structured.importExport.fromJSON → structured.importExportFromJSON
-    - [ ] structured.importExport.toYAML → structured.importExportToYAML
-    - [ ] structured.importExport.fromYAML → structured.importExportFromYAML
-  - [ ] Flatten custom namespace methods:
-    - [ ] structured.custom.register → structured.customRegister
-    - [ ] structured.custom.execute → structured.customExecute
-    - [ ] structured.custom.list → structured.customList
-  - [ ] Flatten utils namespace methods:
-    - [ ] structured.utils.merge → structured.utilsMerge
-    - [ ] structured.utils.diff → structured.utilsDiff
-    - [ ] structured.utils.transform → structured.utilsTransform
-  - [ ] Update tests in structured_test.go
+- [x] **Task 2.3.3.22: Structured Adapter Namespace Flattening** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/structured.go`)
+  - [x] Flatten validation namespace methods:
+    - [x] structured.validation.validate → structured.validationValidate
+    - [x] structured.validation.validatePartial → structured.validationValidatePartial
+    - [x] structured.validation.getErrors → structured.validationGetErrors
+    - [x] structured.validation.addCustom → structured.validationAddCustom
+  - [x] Flatten generation namespace methods:
+    - [x] structured.generation.fromType → structured.generationFromType
+    - [x] structured.generation.fromTags → structured.generationFromTags
+    - [x] structured.generation.fromJSONSchema → structured.generationFromJSONSchema
+  - [x] Flatten repository namespace methods:
+    - [x] structured.repository.save → structured.repositorySave
+    - [x] structured.repository.load → structured.repositoryLoad
+    - [x] structured.repository.list → structured.repositoryList
+    - [x] structured.repository.delete → structured.repositoryDelete
+  - [x] Flatten importExport namespace methods:
+    - [x] structured.importExport.toJSON → structured.importExportToJSON
+    - [x] structured.importExport.fromJSON → structured.importExportFromJSON
+    - [x] structured.importExport.toYAML → structured.importExportToYAML
+    - [x] structured.importExport.fromYAML → structured.importExportFromYAML
+  - [x] Flatten custom namespace methods:
+    - [x] structured.custom.register → structured.customRegister
+    - [x] structured.custom.execute → structured.customExecute
+    - [x] structured.custom.list → structured.customList
+  - [x] Flatten utils namespace methods:
+    - [x] structured.utils.merge → structured.utilsMerge
+    - [x] structured.utils.diff → structured.utilsDiff
+    - [x] structured.utils.transform → structured.utilsTransform
+  - [x] Update tests in structured_test.go
 
-- [ ] **Task 2.3.3.23: ModelInfo Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/modelinfo.go`)
-  - [ ] Flatten discovery namespace methods:
-    - [ ] modelinfo.discovery.scan → modelinfo.discoveryScan
-    - [ ] modelinfo.discovery.refresh → modelinfo.discoveryRefresh
-    - [ ] modelinfo.discovery.getProviders → modelinfo.discoveryGetProviders
-    - [ ] modelinfo.discovery.getModels → modelinfo.discoveryGetModels
-  - [ ] Flatten capabilities namespace methods:
-    - [ ] modelinfo.capabilities.check → modelinfo.capabilitiesCheck
-    - [ ] modelinfo.capabilities.list → modelinfo.capabilitiesList
-    - [ ] modelinfo.capabilities.compare → modelinfo.capabilitiesCompare
-    - [ ] modelinfo.capabilities.getDetails → modelinfo.capabilitiesGetDetails
-  - [ ] Flatten selection namespace methods:
-    - [ ] modelinfo.selection.find → modelinfo.selectionFind
-    - [ ] modelinfo.selection.rank → modelinfo.selectionRank
-    - [ ] modelinfo.selection.filter → modelinfo.selectionFilter
-    - [ ] modelinfo.selection.recommend → modelinfo.selectionRecommend
-  - [ ] Update tests in modelinfo_test.go
+- [x] **Task 2.3.3.23: ModelInfo Adapter Namespace Flattening** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/modelinfo.go`)
+  - [x] Flatten discovery namespace methods:
+    - [x] modelinfo.discovery.scan → modelinfo.discoveryScan
+    - [x] modelinfo.discovery.refresh → modelinfo.discoveryRefresh
+    - [x] modelinfo.discovery.getProviders → modelinfo.discoveryGetProviders
+    - [x] modelinfo.discovery.getModels → modelinfo.discoveryGetModels
+  - [x] Flatten capabilities namespace methods:
+    - [x] modelinfo.capabilities.check → modelinfo.capabilitiesCheck
+    - [x] modelinfo.capabilities.list → modelinfo.capabilitiesList
+    - [x] modelinfo.capabilities.compare → modelinfo.capabilitiesCompare
+    - [x] modelinfo.capabilities.getDetails → modelinfo.capabilitiesGetDetails
+  - [x] Flatten selection namespace methods:
+    - [x] modelinfo.selection.find → modelinfo.selectionFind
+    - [x] modelinfo.selection.rank → modelinfo.selectionRank
+    - [x] modelinfo.selection.filter → modelinfo.selectionFilter
+    - [x] modelinfo.selection.recommend → modelinfo.selectionRecommend
+  - [x] Update tests in modelinfo_test.go
 
 - [ ] **Task 2.3.3.24: Observability Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/observability.go`)
   - [ ] Flatten guardrails namespace methods:

@@ -72,13 +72,18 @@ func (mia *ModelInfoAdapter) CreateLuaModule() lua.LGFunction {
 		L.SetField(module, "_adapter", lua.LString("modelinfo"))
 		L.SetField(module, "_version", lua.LString("1.0.0"))
 
-		// Add discovery namespace
+		// Add flattened discovery methods
+		mia.addFlattenedDiscoveryMethods(L, module)
+
+		// Add flattened capabilities methods
+		mia.addFlattenedCapabilityMethods(L, module)
+
+		// Add flattened selection methods
+		mia.addFlattenedSelectionMethods(L, module)
+
+		// Keep legacy namespaced methods for backward compatibility
 		mia.addDiscoveryMethods(L, module)
-
-		// Add capabilities namespace
 		mia.addCapabilityMethods(L, module)
-
-		// Add selection namespace
 		mia.addSelectionMethods(L, module)
 
 		// Add constants
@@ -469,6 +474,442 @@ func (mia *ModelInfoAdapter) addSelectionMethods(L *lua.LState, module *lua.LTab
 	L.SetField(module, "selection", selection)
 }
 
+// addFlattenedDiscoveryMethods adds flattened discovery methods directly to the module
+func (mia *ModelInfoAdapter) addFlattenedDiscoveryMethods(L *lua.LState, module *lua.LTable) {
+	// discoveryScan method (mapped from discovery.listModels)
+	L.SetField(module, "discoveryScan", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "listModels", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// discoveryRefresh method (mapped from discovery.fetchInventory)
+	L.SetField(module, "discoveryRefresh", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// discoveryGetProviders method (extract providers from inventory)
+	L.SetField(module, "discoveryGetProviders", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+
+		// Fetch inventory first
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Extract unique providers
+		providers, err := mia.extractProviders(result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, providers)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// discoveryGetModels method (alias for discoveryScan)
+	L.SetField(module, "discoveryGetModels", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "listModels", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+}
+
+// addFlattenedCapabilityMethods adds flattened capability methods directly to the module
+func (mia *ModelInfoAdapter) addFlattenedCapabilityMethods(L *lua.LState, module *lua.LTable) {
+	// capabilitiesCheck method (mapped from capabilities.getModelCapabilities)
+	L.SetField(module, "capabilitiesCheck", L.NewFunction(func(L *lua.LState) int {
+		modelName := L.CheckString(1)
+
+		// Fetch inventory to get model data
+		ctx := context.Background()
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Find the model in the inventory
+		inventoryObj, ok := result.(engine.ObjectValue)
+		if !ok {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("invalid inventory format"))
+			return 2
+		}
+
+		modelsArray, exists := inventoryObj.Fields()["models"]
+		if !exists || modelsArray.Type() != engine.TypeArray {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("no models in inventory"))
+			return 2
+		}
+
+		models := modelsArray.(engine.ArrayValue).Elements()
+		for _, modelVal := range models {
+			if modelVal.Type() != engine.TypeObject {
+				continue
+			}
+			modelObj := modelVal.(engine.ObjectValue)
+			nameVal, exists := modelObj.Fields()["name"]
+			if !exists || nameVal.Type() != engine.TypeString {
+				continue
+			}
+			if nameVal.(engine.StringValue).Value() == modelName {
+				// Found the model, return its capabilities
+				capabilitiesVal, exists := modelObj.Fields()["capabilities"]
+				if !exists {
+					L.Push(lua.LNil)
+					L.Push(lua.LString("model has no capabilities"))
+					return 2
+				}
+
+				luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, capabilitiesVal)
+				if err != nil {
+					L.Push(lua.LNil)
+					L.Push(lua.LString(err.Error()))
+					return 2
+				}
+
+				L.Push(luaResult)
+				L.Push(lua.LNil)
+				return 2
+			}
+		}
+
+		L.Push(lua.LNil)
+		L.Push(lua.LString("model not found: " + modelName))
+		return 2
+	}))
+
+	// capabilitiesList method (list all available capabilities)
+	L.SetField(module, "capabilitiesList", L.NewFunction(func(L *lua.LState) int {
+		// Return static list of known capabilities
+		capabilities := []string{
+			"text.read", "text.write", "image.read", "image.write",
+			"audio.read", "audio.write", "video.read", "video.write",
+			"file.read", "file.write", "functionCalling", "streaming",
+		}
+
+		luaTable := L.NewTable()
+		for i, cap := range capabilities {
+			luaTable.RawSetInt(i+1, lua.LString(cap))
+		}
+
+		L.Push(luaTable)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// capabilitiesCompare method (mapped from capabilities.findModelsByCapability)
+	L.SetField(module, "capabilitiesCompare", L.NewFunction(func(L *lua.LState) int {
+		capability := L.CheckString(1)
+
+		// Fetch inventory to get all models
+		ctx := context.Background()
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Filter models by capability
+		inventoryObj, ok := result.(engine.ObjectValue)
+		if !ok {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("invalid inventory format"))
+			return 2
+		}
+
+		modelsArray, exists := inventoryObj.Fields()["models"]
+		if !exists || modelsArray.Type() != engine.TypeArray {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("no models in inventory"))
+			return 2
+		}
+
+		var matchingModels []engine.ScriptValue
+		models := modelsArray.(engine.ArrayValue).Elements()
+		for _, modelVal := range models {
+			if modelVal.Type() != engine.TypeObject {
+				continue
+			}
+			modelObj := modelVal.(engine.ObjectValue)
+			capabilitiesVal, exists := modelObj.Fields()["capabilities"]
+			if !exists || capabilitiesVal.Type() != engine.TypeObject {
+				continue
+			}
+
+			// Check if model has the requested capability
+			capabilities := capabilitiesVal.(engine.ObjectValue).Fields()
+			if mia.hasCapability(capabilities, capability) {
+				matchingModels = append(matchingModels, modelVal)
+			}
+		}
+
+		// Convert to Lua table
+		luaModels := L.NewTable()
+		for i, model := range matchingModels {
+			luaModel, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, model)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+			luaModels.RawSetInt(i+1, luaModel)
+		}
+
+		L.Push(luaModels)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// capabilitiesGetDetails method (get detailed capability info for a model)
+	L.SetField(module, "capabilitiesGetDetails", L.NewFunction(func(L *lua.LState) int {
+		modelName := L.CheckString(1)
+
+		// Fetch inventory to get model data
+		ctx := context.Background()
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Find model and return detailed capabilities
+		details, err := mia.getCapabilityDetails(result, modelName)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, details)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+}
+
+// addFlattenedSelectionMethods adds flattened selection methods directly to the module
+func (mia *ModelInfoAdapter) addFlattenedSelectionMethods(L *lua.LState, module *lua.LTable) {
+	// selectionFind method (mapped from selection.suggestModel)
+	L.SetField(module, "selectionFind", L.NewFunction(func(L *lua.LState) int {
+		requirements := L.CheckTable(1)
+
+		// Fetch inventory to get all models
+		ctx := context.Background()
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Parse requirements
+		reqMap := mia.tableToMap(L, requirements)
+		suggestion, reason, err := mia.suggestModelFromInventory(result, reqMap)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Create suggestion result
+		resultMap := map[string]engine.ScriptValue{
+			"model":  suggestion,
+			"reason": engine.NewStringValue(reason),
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, engine.NewObjectValue(resultMap))
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// selectionRank method (rank models by criteria)
+	L.SetField(module, "selectionRank", L.NewFunction(func(L *lua.LState) int {
+		criteria := L.CheckString(1)
+
+		// Fetch inventory
+		ctx := context.Background()
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Rank models by criteria
+		ranked, err := mia.rankModels(result, criteria)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, ranked)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// selectionFilter method (filter models by criteria)
+	L.SetField(module, "selectionFilter", L.NewFunction(func(L *lua.LState) int {
+		filterTable := L.CheckTable(1)
+
+		// Fetch inventory
+		ctx := context.Background()
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Parse filter criteria
+		filters := mia.tableToMap(L, filterTable)
+		filtered, err := mia.filterModels(result, filters)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, filtered)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// selectionRecommend method (mapped from selection.getBestModelForTask)
+	L.SetField(module, "selectionRecommend", L.NewFunction(func(L *lua.LState) int {
+		task := L.CheckString(1)
+
+		// Fetch inventory
+		ctx := context.Background()
+		result, err := mia.GetBridge().ExecuteMethod(ctx, "fetchModelInventory", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		best, reason, err := mia.getBestModelForTask(result, task)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		// Create result
+		resultMap := map[string]engine.ScriptValue{
+			"name":   engine.NewStringValue(best),
+			"reason": engine.NewStringValue(reason),
+		}
+
+		luaResult, err := mia.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, engine.NewObjectValue(resultMap))
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+}
+
 // addModelInfoConstants adds model info related constants
 func (mia *ModelInfoAdapter) addModelInfoConstants(L *lua.LState, module *lua.LTable) {
 	// Add priority types
@@ -486,6 +927,239 @@ func (mia *ModelInfoAdapter) addModelInfoConstants(L *lua.LState, module *lua.LT
 	L.SetField(tasks, "CODE_GENERATION", lua.LString("code_generation"))
 	L.SetField(tasks, "ANALYSIS", lua.LString("analysis"))
 	L.SetField(module, "TASKS", tasks)
+}
+
+// Helper methods for flattened functionality
+
+// extractProviders extracts unique provider names from inventory
+func (mia *ModelInfoAdapter) extractProviders(inventory engine.ScriptValue) (engine.ScriptValue, error) {
+	inventoryObj, ok := inventory.(engine.ObjectValue)
+	if !ok {
+		return nil, fmt.Errorf("invalid inventory format")
+	}
+
+	modelsArray, exists := inventoryObj.Fields()["models"]
+	if !exists || modelsArray.Type() != engine.TypeArray {
+		return nil, fmt.Errorf("no models in inventory")
+	}
+
+	// Extract unique providers
+	providerSet := make(map[string]bool)
+	models := modelsArray.(engine.ArrayValue).Elements()
+	for _, modelVal := range models {
+		if modelVal.Type() != engine.TypeObject {
+			continue
+		}
+		modelObj := modelVal.(engine.ObjectValue)
+		if providerVal, exists := modelObj.Fields()["provider"]; exists && providerVal.Type() == engine.TypeString {
+			providerSet[providerVal.(engine.StringValue).Value()] = true
+		}
+	}
+
+	// Convert to array
+	var providers []engine.ScriptValue
+	for provider := range providerSet {
+		providers = append(providers, engine.NewStringValue(provider))
+	}
+
+	return engine.NewArrayValue(providers), nil
+}
+
+// getCapabilityDetails returns detailed capability information for a model
+func (mia *ModelInfoAdapter) getCapabilityDetails(inventory engine.ScriptValue, modelName string) (engine.ScriptValue, error) {
+	inventoryObj, ok := inventory.(engine.ObjectValue)
+	if !ok {
+		return nil, fmt.Errorf("invalid inventory format")
+	}
+
+	modelsArray, exists := inventoryObj.Fields()["models"]
+	if !exists || modelsArray.Type() != engine.TypeArray {
+		return nil, fmt.Errorf("no models in inventory")
+	}
+
+	// Find the model
+	models := modelsArray.(engine.ArrayValue).Elements()
+	for _, modelVal := range models {
+		if modelVal.Type() != engine.TypeObject {
+			continue
+		}
+		modelObj := modelVal.(engine.ObjectValue)
+		nameVal, exists := modelObj.Fields()["name"]
+		if !exists || nameVal.Type() != engine.TypeString || nameVal.(engine.StringValue).Value() != modelName {
+			continue
+		}
+
+		// Found model, extract detailed capabilities
+		capabilitiesVal, exists := modelObj.Fields()["capabilities"]
+		if !exists || capabilitiesVal.Type() != engine.TypeObject {
+			return engine.NewObjectValue(map[string]engine.ScriptValue{}), nil
+		}
+
+		// Add metadata to capabilities
+		capabilities := capabilitiesVal.(engine.ObjectValue).Fields()
+		details := make(map[string]engine.ScriptValue)
+		for key, val := range capabilities {
+			details[key] = val
+		}
+
+		// Add model metadata
+		if contextVal, exists := modelObj.Fields()["contextWindow"]; exists {
+			details["contextWindow"] = contextVal
+		}
+		if pricingVal, exists := modelObj.Fields()["pricing"]; exists {
+			details["pricing"] = pricingVal
+		}
+
+		return engine.NewObjectValue(details), nil
+	}
+
+	return nil, fmt.Errorf("model not found: %s", modelName)
+}
+
+// rankModels ranks models by the specified criteria
+func (mia *ModelInfoAdapter) rankModels(inventory engine.ScriptValue, criteria string) (engine.ScriptValue, error) {
+	inventoryObj, ok := inventory.(engine.ObjectValue)
+	if !ok {
+		return nil, fmt.Errorf("invalid inventory format")
+	}
+
+	modelsArray, exists := inventoryObj.Fields()["models"]
+	if !exists || modelsArray.Type() != engine.TypeArray {
+		return nil, fmt.Errorf("no models in inventory")
+	}
+
+	models := modelsArray.(engine.ArrayValue).Elements()
+
+	// Score each model
+	type rankedModel struct {
+		model engine.ScriptValue
+		score float64
+	}
+
+	var ranked []rankedModel
+	for _, modelVal := range models {
+		if modelVal.Type() != engine.TypeObject {
+			continue
+		}
+		modelObj := modelVal.(engine.ObjectValue)
+		fields := modelObj.Fields()
+		score := mia.calculateModelScore(fields, criteria)
+		ranked = append(ranked, rankedModel{model: modelVal, score: score})
+	}
+
+	// Sort by score
+	if criteria == "cost" {
+		sort.Slice(ranked, func(i, j int) bool {
+			return ranked[i].score < ranked[j].score // Lower cost is better
+		})
+	} else {
+		sort.Slice(ranked, func(i, j int) bool {
+			return ranked[i].score > ranked[j].score // Higher score is better
+		})
+	}
+
+	// Extract sorted models
+	var sortedModels []engine.ScriptValue
+	for _, r := range ranked {
+		sortedModels = append(sortedModels, r.model)
+	}
+
+	return engine.NewArrayValue(sortedModels), nil
+}
+
+// filterModels filters models based on criteria
+func (mia *ModelInfoAdapter) filterModels(inventory engine.ScriptValue, filters map[string]engine.ScriptValue) (engine.ScriptValue, error) {
+	inventoryObj, ok := inventory.(engine.ObjectValue)
+	if !ok {
+		return nil, fmt.Errorf("invalid inventory format")
+	}
+
+	modelsArray, exists := inventoryObj.Fields()["models"]
+	if !exists || modelsArray.Type() != engine.TypeArray {
+		return nil, fmt.Errorf("no models in inventory")
+	}
+
+	models := modelsArray.(engine.ArrayValue).Elements()
+	var filteredModels []engine.ScriptValue
+
+	for _, modelVal := range models {
+		if modelVal.Type() != engine.TypeObject {
+			continue
+		}
+		modelObj := modelVal.(engine.ObjectValue)
+		fields := modelObj.Fields()
+
+		// Check all filters
+		matchesAll := true
+		for filterKey, filterVal := range filters {
+			switch filterKey {
+			case "minContextWindow":
+				if filterVal.Type() == engine.TypeNumber {
+					minContext := filterVal.(engine.NumberValue).Value()
+					if contextVal, exists := fields["contextWindow"]; exists && contextVal.Type() == engine.TypeNumber {
+						if contextVal.(engine.NumberValue).Value() < minContext {
+							matchesAll = false
+							break
+						}
+					} else {
+						matchesAll = false
+						break
+					}
+				}
+			case "maxCost":
+				if filterVal.Type() == engine.TypeNumber {
+					maxCost := filterVal.(engine.NumberValue).Value()
+					if pricingVal, exists := fields["pricing"]; exists && pricingVal.Type() == engine.TypeObject {
+						pricing := pricingVal.(engine.ObjectValue).Fields()
+						if inputPriceVal, exists := pricing["inputPer1kTokens"]; exists && inputPriceVal.Type() == engine.TypeNumber {
+							if inputPriceVal.(engine.NumberValue).Value() > maxCost {
+								matchesAll = false
+								break
+							}
+						}
+					}
+				}
+			case "provider":
+				if filterVal.Type() == engine.TypeString {
+					requiredProvider := filterVal.(engine.StringValue).Value()
+					if providerVal, exists := fields["provider"]; exists && providerVal.Type() == engine.TypeString {
+						if providerVal.(engine.StringValue).Value() != requiredProvider {
+							matchesAll = false
+							break
+						}
+					} else {
+						matchesAll = false
+						break
+					}
+				}
+			case "capabilities":
+				if filterVal.Type() == engine.TypeArray {
+					requiredCaps := filterVal.(engine.ArrayValue).Elements()
+					if capabilitiesVal, exists := fields["capabilities"]; exists && capabilitiesVal.Type() == engine.TypeObject {
+						capabilities := capabilitiesVal.(engine.ObjectValue).Fields()
+						for _, reqCapVal := range requiredCaps {
+							if reqCapVal.Type() == engine.TypeString {
+								reqCap := reqCapVal.(engine.StringValue).Value()
+								if !mia.hasCapability(capabilities, reqCap) {
+									matchesAll = false
+									break
+								}
+							}
+						}
+					} else {
+						matchesAll = false
+						break
+					}
+				}
+			}
+		}
+
+		if matchesAll {
+			filteredModels = append(filteredModels, modelVal)
+		}
+	}
+
+	return engine.NewArrayValue(filteredModels), nil
 }
 
 // Helper methods for model selection logic
@@ -1046,9 +1720,17 @@ func (mia *ModelInfoAdapter) GetMethods() []string {
 
 	// Add modelinfo-specific methods if not already present
 	modelinfoMethods := []string{
+		// Base methods
 		"listModels", "fetchModelInventory", "getModel", "listRegistries",
+		// Legacy namespaced methods
 		"getModelCapabilities", "findModelsByCapability",
 		"suggestModel", "compareModels", "estimateCost", "getBestModelForTask",
+		// Flattened discovery methods
+		"discoveryScan", "discoveryRefresh", "discoveryGetProviders", "discoveryGetModels",
+		// Flattened capabilities methods
+		"capabilitiesCheck", "capabilitiesList", "capabilitiesCompare", "capabilitiesGetDetails",
+		// Flattened selection methods
+		"selectionFind", "selectionRank", "selectionFilter", "selectionRecommend",
 	}
 
 	methodMap := make(map[string]bool)

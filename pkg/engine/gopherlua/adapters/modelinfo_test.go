@@ -81,10 +81,26 @@ func TestModelInfoAdapter_Creation(t *testing.T) {
 		methods := adapter.GetMethods()
 		assert.Contains(t, methods, "listModels")
 		assert.Contains(t, methods, "fetchModelInventory")
+		// Legacy namespaced methods
 		assert.Contains(t, methods, "getModelCapabilities")
 		assert.Contains(t, methods, "findModelsByCapability")
 		assert.Contains(t, methods, "suggestModel")
 		assert.Contains(t, methods, "compareModels")
+		// Flattened discovery methods
+		assert.Contains(t, methods, "discoveryScan")
+		assert.Contains(t, methods, "discoveryRefresh")
+		assert.Contains(t, methods, "discoveryGetProviders")
+		assert.Contains(t, methods, "discoveryGetModels")
+		// Flattened capabilities methods
+		assert.Contains(t, methods, "capabilitiesCheck")
+		assert.Contains(t, methods, "capabilitiesList")
+		assert.Contains(t, methods, "capabilitiesCompare")
+		assert.Contains(t, methods, "capabilitiesGetDetails")
+		// Flattened selection methods
+		assert.Contains(t, methods, "selectionFind")
+		assert.Contains(t, methods, "selectionRank")
+		assert.Contains(t, methods, "selectionFilter")
+		assert.Contains(t, methods, "selectionRecommend")
 	})
 
 	t.Run("modelinfo_module_structure", func(t *testing.T) {
@@ -125,10 +141,24 @@ func TestModelInfoAdapter_Creation(t *testing.T) {
 			assert(modelinfo._adapter == "modelinfo", "should have correct adapter name")
 			assert(modelinfo._version == "1.0.0", "should have correct version")
 			
-			-- Check namespaces exist
+			-- Check namespaces exist (backward compatibility)
 			assert(type(modelinfo.discovery) == "table", "discovery namespace should exist")
 			assert(type(modelinfo.capabilities) == "table", "capabilities namespace should exist")
 			assert(type(modelinfo.selection) == "table", "selection namespace should exist")
+			
+			-- Check flattened methods exist
+			assert(type(modelinfo.discoveryScan) == "function", "discoveryScan should exist")
+			assert(type(modelinfo.discoveryRefresh) == "function", "discoveryRefresh should exist")
+			assert(type(modelinfo.discoveryGetProviders) == "function", "discoveryGetProviders should exist")
+			assert(type(modelinfo.discoveryGetModels) == "function", "discoveryGetModels should exist")
+			assert(type(modelinfo.capabilitiesCheck) == "function", "capabilitiesCheck should exist")
+			assert(type(modelinfo.capabilitiesList) == "function", "capabilitiesList should exist")
+			assert(type(modelinfo.capabilitiesCompare) == "function", "capabilitiesCompare should exist")
+			assert(type(modelinfo.capabilitiesGetDetails) == "function", "capabilitiesGetDetails should exist")
+			assert(type(modelinfo.selectionFind) == "function", "selectionFind should exist")
+			assert(type(modelinfo.selectionRank) == "function", "selectionRank should exist")
+			assert(type(modelinfo.selectionFilter) == "function", "selectionFilter should exist")
+			assert(type(modelinfo.selectionRecommend) == "function", "selectionRecommend should exist")
 			
 			-- Check capability types
 			assert(modelinfo.capabilities.TEXT_READ == "text.read", "should have text read capability")
@@ -625,6 +655,215 @@ func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 			assert(err == nil, "should not error")
 			assert(best.name == "gpt-4", "should return gpt-4 for function calling")
 			assert(best.reason:find("function calling"), "should explain why gpt-4 was chosen")
+		`)
+		assert.NoError(t, err)
+	})
+}
+
+// Test flattened methods specifically
+func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
+	t.Run("flattened_discovery_methods", func(t *testing.T) {
+		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+			WithInitialized(true).
+			WithMethod("listModels", engine.MethodInfo{
+				Name: "listModels",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewStringValue("gpt-4"),
+					engine.NewStringValue("claude-3-opus"),
+				}), nil
+			}).
+			WithMethod("fetchModelInventory", engine.MethodInfo{
+				Name: "fetchModelInventory",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"models": engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name":     engine.NewStringValue("gpt-4"),
+							"provider": engine.NewStringValue("openai"),
+						}),
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name":     engine.NewStringValue("claude-3-opus"),
+							"provider": engine.NewStringValue("anthropic"),
+						}),
+					}),
+				}), nil
+			})
+
+		adapter := NewModelInfoAdapter(modelinfoBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "modelinfo")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "modelinfo")
+		require.NoError(t, err)
+
+		err = L.DoString(`
+			local modelinfo = require("modelinfo")
+			
+			-- Test flattened discovery methods
+			local models, err = modelinfo.discoveryScan()
+			assert(err == nil, "discoveryScan should not error")
+			assert(#models == 2, "should have 2 models")
+			assert(models[1] == "gpt-4", "should have gpt-4")
+			
+			local inventory, err2 = modelinfo.discoveryRefresh()
+			assert(err2 == nil, "discoveryRefresh should not error")
+			assert(#inventory.models == 2, "should have 2 models in inventory")
+			
+			local providers, err3 = modelinfo.discoveryGetProviders()
+			assert(err3 == nil, "discoveryGetProviders should not error")
+			assert(#providers == 2, "should have 2 providers")
+			
+			local modelsAgain, err4 = modelinfo.discoveryGetModels()
+			assert(err4 == nil, "discoveryGetModels should not error")
+			assert(#modelsAgain == 2, "should have 2 models")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("flattened_capabilities_methods", func(t *testing.T) {
+		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+			WithInitialized(true).
+			WithMethod("fetchModelInventory", engine.MethodInfo{
+				Name: "fetchModelInventory",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"models": engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name": engine.NewStringValue("gpt-4"),
+							"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
+								"functionCalling": engine.NewBoolValue(true),
+								"streaming":       engine.NewBoolValue(true),
+							}),
+							"contextWindow": engine.NewNumberValue(8192),
+							"pricing": engine.NewObjectValue(map[string]engine.ScriptValue{
+								"inputPer1kTokens": engine.NewNumberValue(0.03),
+							}),
+						}),
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name": engine.NewStringValue("claude-3-opus"),
+							"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
+								"functionCalling": engine.NewBoolValue(false),
+								"streaming":       engine.NewBoolValue(true),
+							}),
+						}),
+					}),
+				}), nil
+			})
+
+		adapter := NewModelInfoAdapter(modelinfoBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "modelinfo")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "modelinfo")
+		require.NoError(t, err)
+
+		err = L.DoString(`
+			local modelinfo = require("modelinfo")
+			
+			-- Test flattened capabilities methods
+			local capabilities, err = modelinfo.capabilitiesCheck("gpt-4")
+			assert(err == nil, "capabilitiesCheck should not error")
+			assert(capabilities.functionCalling == true, "should have function calling")
+			
+			local allCaps, err2 = modelinfo.capabilitiesList()
+			assert(err2 == nil, "capabilitiesList should not error")
+			assert(#allCaps > 0, "should have capabilities list")
+			
+			local funcModels, err3 = modelinfo.capabilitiesCompare("functionCalling")
+			assert(err3 == nil, "capabilitiesCompare should not error")
+			assert(#funcModels == 1, "should find 1 model with function calling")
+			
+			local details, err4 = modelinfo.capabilitiesGetDetails("gpt-4")
+			assert(err4 == nil, "capabilitiesGetDetails should not error")
+			assert(details.functionCalling == true, "details should have function calling")
+			assert(details.contextWindow == 8192, "details should have context window")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("flattened_selection_methods", func(t *testing.T) {
+		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+			WithInitialized(true).
+			WithMethod("fetchModelInventory", engine.MethodInfo{
+				Name: "fetchModelInventory",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"models": engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name":          engine.NewStringValue("gpt-4"),
+							"provider":      engine.NewStringValue("openai"),
+							"contextWindow": engine.NewNumberValue(8192),
+							"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
+								"functionCalling": engine.NewBoolValue(true),
+							}),
+							"pricing": engine.NewObjectValue(map[string]engine.ScriptValue{
+								"inputPer1kTokens": engine.NewNumberValue(0.03),
+							}),
+						}),
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name":          engine.NewStringValue("llama-3-70b"),
+							"provider":      engine.NewStringValue("meta"),
+							"contextWindow": engine.NewNumberValue(4096),
+							"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
+								"functionCalling": engine.NewBoolValue(false),
+							}),
+							"pricing": engine.NewObjectValue(map[string]engine.ScriptValue{
+								"inputPer1kTokens": engine.NewNumberValue(0.001),
+							}),
+						}),
+					}),
+				}), nil
+			})
+
+		adapter := NewModelInfoAdapter(modelinfoBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "modelinfo")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "modelinfo")
+		require.NoError(t, err)
+
+		err = L.DoString(`
+			local modelinfo = require("modelinfo")
+			
+			-- Test flattened selection methods
+			local suggestion, err = modelinfo.selectionFind({
+				capabilities = {"functionCalling"},
+				minContextWindow = 8000
+			})
+			assert(err == nil, "selectionFind should not error")
+			assert(suggestion.model.name == "gpt-4", "should suggest gpt-4")
+			
+			local ranked, err2 = modelinfo.selectionRank("cost")
+			assert(err2 == nil, "selectionRank should not error")
+			assert(#ranked == 2, "should rank both models")
+			assert(ranked[1].name == "llama-3-70b", "cheapest should be first")
+			
+			local filtered, err3 = modelinfo.selectionFilter({
+				minContextWindow = 5000
+			})
+			assert(err3 == nil, "selectionFilter should not error")
+			assert(#filtered == 1, "should filter to 1 model")
+			assert(filtered[1].name == "gpt-4", "should filter to gpt-4")
+			
+			local recommendation, err4 = modelinfo.selectionRecommend("function_calling")
+			assert(err4 == nil, "selectionRecommend should not error")
+			assert(recommendation.name == "gpt-4", "should recommend gpt-4 for function calling")
 		`)
 		assert.NoError(t, err)
 	})
