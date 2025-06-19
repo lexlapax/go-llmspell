@@ -92,7 +92,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 #### 2.3.5: Lua Standard Library
 Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing.
 
-- [x] **Task 2.3.5.1: Promise & Async Library** ✅ COMPLETED [2025-06-19]
+- [x] **Task 2.3.5.1: Lua stdlib - Promise & Async Library** ✅ COMPLETED [2025-06-19]
   - [x] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
     - [x] Implement Promise class with full async support
       - [x] Add `Promise.new(executor)` constructor
@@ -120,7 +120,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test coroutine integration
     - [x] Benchmark promise creation/resolution
 
-- [x] **Task 2.3.5.2: LLM Operations Library** ✅ COMPLETED [2025-06-19]
+- [x] **Task 2.3.5.2: Lua stdlib - LLM Operations Library** ✅ COMPLETED [2025-06-19]
   - [x] Implementation (`/pkg/engine/gopherlua/stdlib/llm.lua`)
     - [x] High-level LLM operation helpers
       - [x] Add `llm.quick_prompt(prompt, options)` for simple prompting
@@ -145,7 +145,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test error handling and retries
     - [x] Test concurrent batch operations
 
-- [ ] **Task 2.3.5.3: Agent Management Library**
+- [ ] **Task 2.3.5.3: Lua stdlib - Agent Management Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/agent.lua`)
     - [ ] where is `agent.run(..)` or `agent.runAsync(..)`?
     - [ ] Agent lifecycle management
@@ -179,7 +179,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test workflow cancellation
     - [ ] Test error handling in agent workflows
 
-- [ ] **Task 2.3.5.4: State Management Library**
+- [ ] **Task 2.3.5.4: Lua stdlib - State Management Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/state.lua`)
     - [ ] Context and state utilities
       - [ ] Add `state.create(initial_data)` for state creation
@@ -204,7 +204,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test state transformation chains
     - [ ] Benchmark state operations
 
-- [ ] **Task 2.3.5.5: Event & Hooks Library**
+- [ ] **Task 2.3.5.5: Lua stdlib - Event & Hooks Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/events.lua`)
     - [ ] Event system utilities
       - [ ] Add `events.emit(event, data)` for event emission
@@ -222,7 +222,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test event handler errors
     - [ ] Test memory leaks in event handlers
 
-- [ ] **Task 2.3.5.6: Structured Data Library**
+- [ ] **Task 2.3.5.6: Lua stdlib - Structured Data Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/data.lua`)
     - [ ] JSON and data processing utilities
       - [ ] Add `data.parse_json(text, schema)` for validated JSON parsing
@@ -247,7 +247,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test concurrent data operations
     - [ ] Test memory usage with large datasets
 
-- [ ] **Task 2.3.5.7: Tools & Registry Library**
+- [ ] **Task 2.3.5.7: Lua stdlib - Tools & Registry Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/tools.lua`)
     - [ ] Tool registration and management
       - [ ] Add `tools.define(name, description, schema, func)` for tool creation
@@ -271,7 +271,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test tool benchmarking accuracy
     - [ ] Test memory leaks in tool chains
 
-- [ ] **Task 2.3.5.8: Observability & Monitoring Library**
+- [ ] **Task 2.3.5.8: Lua stdlib - Observability & Monitoring Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/observability.lua`)
     - [ ] Metrics and monitoring utilities
       - [ ] Add `metrics.counter(name, tags)` for counter metrics
@@ -296,7 +296,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test performance overhead
     - [ ] Test concurrent metric updates
 
-- [ ] **Task 2.3.5.9: Authentication & Security Library**
+- [ ] **Task 2.3.5.9: Lua stdlib - Authentication & Security Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/auth.lua`)
     - [ ] Authentication utilities
       - [ ] Add `auth.login(credentials, scheme)` for authentication
@@ -320,7 +320,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test secure storage encryption
     - [ ] Test audit logging completeness
 
-- [ ] **Task 2.3.5.10: Error Handling & Recovery Library**
+- [ ] **Task 2.3.5.10: Lua stdlib - Error Handling & Recovery Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/errors.lua`)
     - [ ] Enhanced error handling
       - [ ] Add `errors.try(func, catch_func, finally_func)` for try-catch-finally
@@ -344,7 +344,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test error aggregation patterns
     - [ ] Test memory leaks in error chains
 
-- [ ] **Task 2.3.5.11: Logging & Debug Library**
+- [ ] **Task 2.3.5.11: Lua stdlib - Logging & Debug Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/logging.lua`)
     - [ ] Unified logging interface
       - [ ] Add `log.info(message, context)` for info logging
@@ -369,7 +369,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test concurrent logging
     - [ ] Test log rotation behavior
 
-- [ ] **Task 2.3.5.12: Testing & Validation Library**
+- [ ] **Task 2.3.5.12: Lua stdlib - Testing & Validation Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/testing.lua`)
     - [ ] Test framework and assertions
       - [ ] Add `test.describe(name, tests)` for test grouping
@@ -394,7 +394,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test nested test groups
     - [ ] Test async test support
 
-- [ ] **Task 2.3.5.13: Core Utilities Library**
+- [ ] **Task 2.3.5.13: Lua stdlib - Core Utilities Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/core.lua`)
     - [ ] String and text utilities
       - [ ] Add `string.template(template, variables)` for string templating
@@ -422,7 +422,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test random string entropy
     - [ ] Test concurrent utility usage
 
-- [ ] **Task 2.3.5.14: Spell Framework Library**
+- [ ] **Task 2.3.5.14: Lua stdlib - Spell Framework Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/spell.lua`)
     - [ ] Spell lifecycle and framework
       - [ ] Add `spell.init(config)` for spell initialization
@@ -446,13 +446,13 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test library loading
     - [ ] Test spell error handling
 
-- [ ] **Task 2.3.5.15: Documentation & Examples** (`/pkg/engine/gopherlua/stdlib/`)
+- [ ] **Task 2.3.5.15: Lua stdlib - Documentation & Examples** (`/pkg/engine/gopherlua/stdlib/`)
   - [ ] Comprehensive documentation
     - [ ] Create `README.md` with library overview and philosophy
     - [ ] Create `API_REFERENCE.md` with complete function documentation
     - [ ] Create `EXAMPLES.md` with practical usage examples
 
-- [ ] **Task 2.3.5.16: Test Infrastructure**
+- [ ] **Task 2.3.5.16: Lua stdlib - Test Infrastructure**
   - [ ] Create test helpers (`/pkg/engine/gopherlua/stdlib/stdlib_test_helpers.go`)
     - [ ] Lua module loading helpers
     - [ ] Lua table comparison utilities
@@ -467,7 +467,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Concurrent operation validators
     - [ ] Memory leak detectors
 
-- [ ] **Task 2.3.5.17: Integration Testing**
+- [ ] **Task 2.3.5.17: Lua stdlib - Integration Testing**
   - [ ] Cross-module tests (`/pkg/engine/gopherlua/stdlib/integration_test.go`)
     - [ ] Test Promise + LLM async operations
     - [ ] Test Agent + State + Events coordination
