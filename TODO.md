@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 10 of 14 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 12 of 14 completed]
     - 🔲 2.3.4: Lua Standard Library [NOT STARTED]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -195,41 +195,66 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] Add OpenTelemetry-compatible interface
   - [x] make sure tests pass
 
-- [ ] **Task 2.3.3.11: Schema Bridge Adapter** (`/pkg/engine/gopherlua/adapters/schema.go`)
-    **look in `/pkg/bridge/structured/*.go` for research might already be covered in adapters/structured.go**
-  - [ ] Create schema validation module
-    - [ ] Add `validateJSON(data, schema)` method for JSON schema validation
-    - [ ] Add `generateSchema(data, options)` method for schema generation
-    - [ ] Add `registerSchema(name, schema)` method for schema registration
-    - [ ] Add `getSchema(name)` method for schema retrieval
-  - [ ] Implement structured tools support
-    - [ ] Add `validateStructuredOutput(output, schema)` method
-    - [ ] Add `parseStructuredResponse(response, schema)` method
-    - [ ] Add schema-based tool parameter validation
-  - [ ] Add schema versioning and migration
-    - [ ] Add `migrateSchema(oldSchema, newSchema)` method
-    - [ ] Add `versionSchema(schema, version)` method
-    - [ ] Add backward compatibility checking
-  - [ ] make sure tests pass
+- [x] **Task 2.3.3.11: Schema Bridge Adapter** (`/pkg/engine/gopherlua/adapters/schema.go`) ✅ COMPLETE [2025-06-19] [Already implemented]
+    **Note: Implemented as `StructuredAdapter` in `/pkg/engine/gopherlua/adapters/structured.go`**
+    **Features implemented exceed TODO requirements:**
+    - All required schema functionality (validation, generation, registration, retrieval)
+    - Import/Export (JSON Schema, OpenAPI)
+    - Custom validators with async support
+    - Repository management with file-based storage
+    - Tag-based schema generation
+    - Schema diffing and merging utilities
+    - Validation metrics and caching
+  - [x] Create schema validation module
+    - [x] Add `validateJSON(data, schema)` method for JSON schema validation
+    - [x] Add `generateSchema(data, options)` method for schema generation
+    - [x] Add `registerSchema(name, schema)` method for schema registration (implemented as `saveSchema`)
+    - [x] Add `getSchema(name)` method for schema retrieval
+  - [x] Implement structured tools support
+    - [x] Add `validateStructuredOutput(output, schema)` method (implemented as `validateStruct`)
+    - [x] Add `parseStructuredResponse(response, schema)` method
+    - [x] Add schema-based tool parameter validation
+  - [x] Add schema versioning and migration
+    - [x] Add `migrateSchema(oldSchema, newSchema)` method
+    - [x] Add `versionSchema(schema, version)` method (implemented as `saveSchemaVersion`)
+    - [x] Add backward compatibility checking
+  - [x] make sure tests pass
+  **Additional features implemented beyond requirements:**
+  - Import/Export functionality (JSON Schema, OpenAPI)
+  - Custom validators with async support
+  - Repository management with file-based storage
+  - Tag-based schema generation
+  - Schema diffing and merging utilities
+  - Validation metrics and caching
 
-- [ ] **Task 2.3.3.12: ModelInfo Bridge Adapter** (`/pkg/engine/gopherlua/adapters/modelinfo.go`)
+- [x] **Task 2.3.3.12: ModelInfo Bridge Adapter** (`/pkg/engine/gopherlua/adapters/modelinfo.go`) ✅ COMPLETE [2025-06-19]
     **look in `/pkg/bridge/modelinfo.go` for research**
 
-  - [ ] Create model discovery module
-    - [ ] Add `registerModelRegistry(name, registry)` method for registry management
-    - [ ] Add `listModels()` method for listing all available models
-    - [ ] Add `listModelsByRegistry(registryName)` method for registry-specific models
-    - [ ] Add `getModel(modelId)` method for specific model retrieval
-    - [ ] Add `listRegistries()` method for registry enumeration
-  - [ ] Implement model capability queries
-    - [ ] Add `getModelCapabilities(modelId)` method for capability discovery
-    - [ ] Add `findModelsByCapability(capability)` method for capability-based search
-    - [ ] Add model metadata access methods
-  - [ ] Add model selection helpers
-    - [ ] Add `suggestModel(requirements)` method for recommendation
-    - [ ] Add `compareModels(modelIds)` method for model comparison
-    - [ ] Add cost and performance estimation
-  - [ ] make sure tests pass
+  - [x] Create model discovery module
+    - [x] Add `registerModelRegistry(name, registry)` method for registry management
+    - [x] Add `listModels()` method for listing all available models (via discovery namespace)
+    - [x] Add `listModelsByRegistry(registryName)` method for registry-specific models
+    - [x] Add `getModel(modelId)` method for specific model retrieval  
+    - [x] Add `listRegistries()` method for registry enumeration
+    - [x] Add `fetchInventory()` method for complete model inventory retrieval
+  - [x] Implement model capability queries
+    - [x] Add `getModelCapabilities(modelId)` method for capability discovery
+    - [x] Add `findModelsByCapability(capability)` method for capability-based search
+    - [x] Add model metadata access methods via inventory data
+    - [x] Add capability constants (TEXT_READ, TEXT_WRITE, FUNCTION_CALLING, etc.)
+  - [x] Add model selection helpers
+    - [x] Add `suggestModel(requirements)` method for recommendation with priority-based scoring
+    - [x] Add `compareModels(modelIds)` method for model comparison with detailed analysis
+    - [x] Add `estimateCost(modelName, usage)` method for cost estimation
+    - [x] Add `getBestModelForTask(task)` method for task-specific recommendations
+    - [x] Add comprehensive summary generation for model comparisons
+  - [x] make sure tests pass
+  **Additional features implemented beyond requirements:**
+  - Script-friendly utility functions for model discovery and selection
+  - Intelligent scoring system for model recommendation based on capabilities, cost, and context window
+  - Detailed comparison analysis with strengths identification
+  - Task-specific model recommendations (function calling, text generation, etc.)
+  - Enhanced error handling and validation
 
 - [ ] **Task 2.3.3.13: Utility Bridge Adapters** (`/pkg/engine/gopherlua/adapters/utils.go`)
     **look in `/pkg/bridge/util/*.go` for research**
