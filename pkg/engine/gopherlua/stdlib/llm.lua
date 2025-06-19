@@ -43,8 +43,6 @@ local function get_llm_bridge()
     return _G.llm_bridge
 end
 
-
-
 -- High-level LLM operation helpers
 
 -- Quick prompt for simple prompting

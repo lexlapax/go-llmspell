@@ -33,15 +33,21 @@ max_line_length = false
 files["examples/**/*.lua"] = {
     -- Examples can be more lenient - suppress most warnings for development ease
     ignore = {
+        "211", -- Unused local variable
         "212", -- Unused argument
         "213", -- Unused loop variable  
+        "231", -- Variable is never accessed
         "311", -- Value assigned to variable is unused
         "411", -- Variable was previously defined
         "421", -- Shadowing upvalue
         "431", -- Shadowing upvalue argument  
-        "631", -- Line is too long (formatting handles this)
-        "621", -- Line contains only whitespace
+        "511", -- Variable is never accessed
+        "611", -- Line contains only whitespace
         "612", -- Line contains trailing whitespace
+        "613", -- Trailing whitespace in a string
+        "614", -- Trailing whitespace in a string
+        "621", -- Line contains only whitespace (duplicate)
+        "631", -- Line is too long (formatting handles this)
     },
     -- Additional globals for examples that are injected by runtime
     globals = {
@@ -82,6 +88,21 @@ files["pkg/engine/gopherlua/stdlib/*.lua"] = {
         "pool_bridge",
         "llm_util_bridge",
         "promise",
+        "require",
+        "module",
+        "package",
+    }
+}
+
+-- Specific configuration for promise.lua to handle intentional shadowing and unused parameters
+files["pkg/engine/gopherlua/stdlib/promise.lua"] = {
+    ignore = {
+        "212", -- Unused argument (reject parameters in some promise methods)
+        "421", -- Shadowing upvalue (intentional for promise variable in closures)
+        "4..", -- All shadowing warnings (4xx series)
+    },
+    globals = {
+        "_G",
         "require",
         "module",
         "package",

@@ -145,39 +145,38 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test error handling and retries
     - [x] Test concurrent batch operations
 
-- [ ] **Task 2.3.5.3: Lua stdlib - Agent Management Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/agent.lua`)
-    - [ ] where is `agent.run(..)` or `agent.runAsync(..)`?
-    - [ ] Agent lifecycle management
-      - [ ] Add `agent.create(name, config)` for agent creation
-      - [ ] Add `agent.configure(agent, settings)` for configuration
-      - [ ] Add `agent.clone(agent, modifications)` for agent templating
-    - [ ] Agent communication helpers
-      - [ ] Add `agent.conversation(agent, messages)` for multi-turn chat
-      - [ ] Add `agent.delegate(from_agent, to_agent, task)` for task delegation
-      - [ ] Add `agent.collaborate(agents, task)` for multi-agent workflows
-    - [ ] Agent tool integration
-      - [ ] Add `agent.add_tools(agent, tools)` for tool assignment
-      - [ ] Add `agent.create_tool(name, func, schema)` for custom tools
-      - [ ] Add `agent.tool_chain(tools, data)` for tool pipelines
-    - [ ] Workflow orchestration helpers -  **think hard.. I think the workflow should not be in events.lua but agent.lua or separate**
-      - [ ] where is `workflow.serial`.. or other tyupes of workflows?
-      - [ ] Add `workflow.create(steps)` for workflow definition
-      - [ ] Add `workflow.run(workflow, input)` for execution
-      - [ ] Add `workflow.parallel(steps)` for concurrent execution
-      - [ ] Add `workflow.conditional(condition, then_step, else_step)` for branching
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/agent_test.go`)
-    - [ ] Test agent lifecycle state transitions
-    - [ ] Test multi-agent communication patterns
-    - [ ] Test tool assignment and execution
-    - [ ] Test conversation state management
-    - [ ] Test agent cloning with modifications
-    - [ ] Test delegation and collaboration
-    - [ ] Test concurrent agent operations
-    - [ ] Test workflow execution with branching
-    - [ ] Test parallel step coordination
-    - [ ] Test workflow cancellation
-    - [ ] Test error handling in agent workflows
+- [x] **Task 2.3.5.3: Lua stdlib - Agent Management Library** ✅ COMPLETED [2025-06-19]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/agent.lua`)
+    - [x] Added `agent.run(agent_id, input, options)` and `agent.run_async()` methods
+    - [x] Agent lifecycle management
+      - [x] Add `agent.create(name, config)` for agent creation
+      - [x] Add `agent.configure(agent, settings)` for configuration
+      - [x] Add `agent.clone(agent, modifications)` for agent templating
+    - [x] Agent communication helpers
+      - [x] Add `agent.conversation(agent, messages)` for multi-turn chat
+      - [x] Add `agent.delegate(from_agent, to_agent, task)` for task delegation
+      - [x] Add `agent.collaborate(agents, task)` for multi-agent workflows
+    - [x] Agent tool integration
+      - [x] Add `agent.add_tools(agent, tools)` for tool assignment
+      - [x] Add `agent.create_tool(name, func, schema)` for custom tools
+      - [x] Add `agent.tool_chain(tools, data)` for tool pipelines
+    - [x] Workflow orchestration helpers (separate workflow bridge integration)
+      - [x] Add `agent.workflow_create(name, steps)` for workflow definition
+      - [x] Add `agent.workflow_run(workflow_id, input)` for execution
+      - [x] Add `agent.workflow_parallel(steps, input)` for concurrent execution
+      - [x] Add `agent.workflow_conditional(condition, then_step, else_step, input)` for branching
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/agent_test.go`)
+    - [x] Test agent lifecycle state transitions
+    - [x] Test multi-agent communication patterns
+    - [x] Test tool assignment and execution
+    - [x] Test conversation state management
+    - [x] Test agent cloning with modifications
+    - [x] Test delegation and collaboration
+    - [x] Test concurrent agent operations
+    - [x] Test workflow execution with branching
+    - [x] Test parallel step coordination
+    - [x] Test workflow cancellation
+    - [x] Test error handling in agent workflows
 
 - [ ] **Task 2.3.5.4: Lua stdlib - State Management Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/state.lua`)
