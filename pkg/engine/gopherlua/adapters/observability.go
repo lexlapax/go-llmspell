@@ -95,7 +95,16 @@ func (oa *ObservabilityAdapter) CreateLuaModule() lua.LGFunction {
 
 		L.SetField(module, "tracing", tracing)
 
-		// Direct methods at module level
+		// Add flattened guardrails methods
+		oa.addFlattenedGuardrailsMethods(L, module)
+
+		// Add flattened metrics methods
+		oa.addFlattenedMetricsMethods(L, module)
+
+		// Add flattened tracing methods
+		oa.addFlattenedTracingMethods(L, module)
+
+		// Keep legacy direct methods at module level for backward compatibility
 		L.SetField(module, "enableGuardrails", L.NewFunction(oa.enableGuardrails))
 		L.SetField(module, "validateContent", L.NewFunction(oa.validateContent))
 		L.SetField(module, "addBehavioralConstraint", L.NewFunction(oa.addBehavioralConstraint))
@@ -115,15 +124,361 @@ func (oa *ObservabilityAdapter) CreateLuaModule() lua.LGFunction {
 	}
 }
 
+// addFlattenedGuardrailsMethods adds flattened guardrails methods directly to the module
+func (oa *ObservabilityAdapter) addFlattenedGuardrailsMethods(L *lua.LState, module *lua.LTable) {
+	// guardrailsRegisterRule method
+	L.SetField(module, "guardrailsRegisterRule", L.NewFunction(func(L *lua.LState) int {
+		if oa.guardrailsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("guardrails bridge not initialized"))
+			return 2
+		}
+
+		rule := L.CheckTable(1)
+
+		args := []engine.ScriptValue{
+			luaToScriptValue(rule),
+		}
+
+		result, err := oa.guardrailsBridge.ExecuteMethod(context.Background(), "registerRule", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// guardrailsCheck method (maps to validateContent)
+	L.SetField(module, "guardrailsCheck", L.NewFunction(func(L *lua.LState) int {
+		if oa.guardrailsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("guardrails bridge not initialized"))
+			return 2
+		}
+
+		content := L.CheckString(1)
+		contentType := L.OptString(2, "text")
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(content),
+			engine.NewStringValue(contentType),
+		}
+
+		result, err := oa.guardrailsBridge.ExecuteMethod(context.Background(), "validateContent", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// guardrailsEnableRule method
+	L.SetField(module, "guardrailsEnableRule", L.NewFunction(func(L *lua.LState) int {
+		if oa.guardrailsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("guardrails bridge not initialized"))
+			return 2
+		}
+
+		ruleId := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(ruleId),
+			engine.NewBoolValue(true),
+		}
+
+		result, err := oa.guardrailsBridge.ExecuteMethod(context.Background(), "setRuleEnabled", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// guardrailsDisableRule method
+	L.SetField(module, "guardrailsDisableRule", L.NewFunction(func(L *lua.LState) int {
+		if oa.guardrailsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("guardrails bridge not initialized"))
+			return 2
+		}
+
+		ruleId := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(ruleId),
+			engine.NewBoolValue(false),
+		}
+
+		result, err := oa.guardrailsBridge.ExecuteMethod(context.Background(), "setRuleEnabled", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+}
+
+// addFlattenedMetricsMethods adds flattened metrics methods directly to the module
+func (oa *ObservabilityAdapter) addFlattenedMetricsMethods(L *lua.LState, module *lua.LTable) {
+	// metricsIncrement method
+	L.SetField(module, "metricsIncrement", L.NewFunction(func(L *lua.LState) int {
+		if oa.metricsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("metrics bridge not initialized"))
+			return 2
+		}
+
+		name := L.CheckString(1)
+		value := L.OptNumber(2, 1.0)
+		labels := L.OptTable(3, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(name),
+			engine.NewStringValue("counter"),
+			engine.NewNumberValue(float64(value)),
+			luaToScriptValue(labels),
+		}
+
+		result, err := oa.metricsBridge.ExecuteMethod(context.Background(), "incrementMetric", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// metricsGauge method
+	L.SetField(module, "metricsGauge", L.NewFunction(func(L *lua.LState) int {
+		if oa.metricsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("metrics bridge not initialized"))
+			return 2
+		}
+
+		name := L.CheckString(1)
+		value := L.CheckNumber(2)
+		labels := L.OptTable(3, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(name),
+			engine.NewStringValue("gauge"),
+			engine.NewNumberValue(float64(value)),
+			luaToScriptValue(labels),
+		}
+
+		result, err := oa.metricsBridge.ExecuteMethod(context.Background(), "setGaugeValue", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// metricsHistogram method
+	L.SetField(module, "metricsHistogram", L.NewFunction(func(L *lua.LState) int {
+		if oa.metricsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("metrics bridge not initialized"))
+			return 2
+		}
+
+		name := L.CheckString(1)
+		value := L.CheckNumber(2)
+		labels := L.OptTable(3, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(name),
+			engine.NewStringValue("histogram"),
+			engine.NewNumberValue(float64(value)),
+			luaToScriptValue(labels),
+		}
+
+		result, err := oa.metricsBridge.ExecuteMethod(context.Background(), "recordHistogram", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// metricsGetAll method (maps to getMetrics)
+	L.SetField(module, "metricsGetAll", L.NewFunction(func(L *lua.LState) int {
+		if oa.metricsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("metrics bridge not initialized"))
+			return 2
+		}
+
+		result, err := oa.metricsBridge.ExecuteMethod(context.Background(), "getMetrics", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+}
+
+// addFlattenedTracingMethods adds flattened tracing methods directly to the module
+func (oa *ObservabilityAdapter) addFlattenedTracingMethods(L *lua.LState, module *lua.LTable) {
+	// tracingStartSpan method (maps to startSpan)
+	L.SetField(module, "tracingStartSpan", L.NewFunction(func(L *lua.LState) int {
+		if oa.tracingBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("tracing bridge not initialized"))
+			return 2
+		}
+
+		name := L.CheckString(1)
+		options := L.OptTable(2, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(name),
+			luaToScriptValue(options),
+		}
+
+		result, err := oa.tracingBridge.ExecuteMethod(context.Background(), "startSpan", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// tracingEndSpan method (maps to endSpan)
+	L.SetField(module, "tracingEndSpan", L.NewFunction(func(L *lua.LState) int {
+		if oa.tracingBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("tracing bridge not initialized"))
+			return 2
+		}
+
+		spanId := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(spanId),
+		}
+
+		result, err := oa.tracingBridge.ExecuteMethod(context.Background(), "endSpan", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// tracingAddAttribute method (maps to setSpanAttribute)
+	L.SetField(module, "tracingAddAttribute", L.NewFunction(func(L *lua.LState) int {
+		if oa.tracingBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("tracing bridge not initialized"))
+			return 2
+		}
+
+		spanId := L.CheckString(1)
+		key := L.CheckString(2)
+		value := L.Get(3)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(spanId),
+			engine.NewStringValue(key),
+			luaToScriptValue(value),
+		}
+
+		result, err := oa.tracingBridge.ExecuteMethod(context.Background(), "setSpanAttribute", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// tracingGetTrace method
+	L.SetField(module, "tracingGetTrace", L.NewFunction(func(L *lua.LState) int {
+		if oa.tracingBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("tracing bridge not initialized"))
+			return 2
+		}
+
+		traceId := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(traceId),
+		}
+
+		result, err := oa.tracingBridge.ExecuteMethod(context.Background(), "getTrace", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(scriptValueToLua(L, result))
+		L.Push(lua.LNil)
+		return 2
+	}))
+}
+
 // GetMethods returns available adapter methods
 func (oa *ObservabilityAdapter) GetMethods() []string {
 	return []string{
-		// Guardrails methods
+		// Legacy guardrails methods
 		"enableGuardrails", "validateContent", "addBehavioralConstraint", "checkCompliance",
-		// Metrics methods
+		// Legacy metrics methods
 		"createCounter", "createGauge", "createTimer", "recordMetric", "getMetrics",
-		// Tracing methods
+		// Legacy tracing methods
 		"startSpan", "addSpanEvent", "setSpanAttribute", "endSpan",
+		// Flattened guardrails methods
+		"guardrailsRegisterRule", "guardrailsCheck", "guardrailsEnableRule", "guardrailsDisableRule",
+		// Flattened metrics methods
+		"metricsIncrement", "metricsGauge", "metricsHistogram", "metricsGetAll",
+		// Flattened tracing methods
+		"tracingStartSpan", "tracingEndSpan", "tracingAddAttribute", "tracingGetTrace",
 	}
 }
 

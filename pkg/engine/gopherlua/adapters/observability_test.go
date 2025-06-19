@@ -51,24 +51,42 @@ func TestObservabilityAdapter_Creation(t *testing.T) {
 		// Should have observability-specific methods
 		methods := adapter.GetMethods()
 
-		// Guardrails methods
+		// Legacy guardrails methods
 		assert.Contains(t, methods, "enableGuardrails")
 		assert.Contains(t, methods, "validateContent")
 		assert.Contains(t, methods, "addBehavioralConstraint")
 		assert.Contains(t, methods, "checkCompliance")
 
-		// Metrics methods
+		// Legacy metrics methods
 		assert.Contains(t, methods, "createCounter")
 		assert.Contains(t, methods, "createGauge")
 		assert.Contains(t, methods, "createTimer")
 		assert.Contains(t, methods, "recordMetric")
 		assert.Contains(t, methods, "getMetrics")
 
-		// Tracing methods
+		// Legacy tracing methods
 		assert.Contains(t, methods, "startSpan")
 		assert.Contains(t, methods, "addSpanEvent")
 		assert.Contains(t, methods, "setSpanAttribute")
 		assert.Contains(t, methods, "endSpan")
+
+		// Flattened guardrails methods
+		assert.Contains(t, methods, "guardrailsRegisterRule")
+		assert.Contains(t, methods, "guardrailsCheck")
+		assert.Contains(t, methods, "guardrailsEnableRule")
+		assert.Contains(t, methods, "guardrailsDisableRule")
+
+		// Flattened metrics methods
+		assert.Contains(t, methods, "metricsIncrement")
+		assert.Contains(t, methods, "metricsGauge")
+		assert.Contains(t, methods, "metricsHistogram")
+		assert.Contains(t, methods, "metricsGetAll")
+
+		// Flattened tracing methods
+		assert.Contains(t, methods, "tracingStartSpan")
+		assert.Contains(t, methods, "tracingEndSpan")
+		assert.Contains(t, methods, "tracingAddAttribute")
+		assert.Contains(t, methods, "tracingGetTrace")
 	})
 
 	t.Run("observability_module_structure", func(t *testing.T) {
@@ -103,10 +121,24 @@ func TestObservabilityAdapter_Creation(t *testing.T) {
 			assert(observability._adapter == "observability", "should have correct adapter name")
 			assert(observability._version == "1.0.0", "should have correct version")
 			
-			-- Check namespaces exist
+			-- Check namespaces exist (backward compatibility)
 			assert(type(observability.guardrails) == "table", "guardrails namespace should exist")
 			assert(type(observability.metrics) == "table", "metrics namespace should exist")
 			assert(type(observability.tracing) == "table", "tracing namespace should exist")
+			
+			-- Check flattened methods exist
+			assert(type(observability.guardrailsRegisterRule) == "function", "guardrailsRegisterRule should exist")
+			assert(type(observability.guardrailsCheck) == "function", "guardrailsCheck should exist")
+			assert(type(observability.guardrailsEnableRule) == "function", "guardrailsEnableRule should exist")
+			assert(type(observability.guardrailsDisableRule) == "function", "guardrailsDisableRule should exist")
+			assert(type(observability.metricsIncrement) == "function", "metricsIncrement should exist")
+			assert(type(observability.metricsGauge) == "function", "metricsGauge should exist")
+			assert(type(observability.metricsHistogram) == "function", "metricsHistogram should exist")
+			assert(type(observability.metricsGetAll) == "function", "metricsGetAll should exist")
+			assert(type(observability.tracingStartSpan) == "function", "tracingStartSpan should exist")
+			assert(type(observability.tracingEndSpan) == "function", "tracingEndSpan should exist")
+			assert(type(observability.tracingAddAttribute) == "function", "tracingAddAttribute should exist")
+			assert(type(observability.tracingGetTrace) == "function", "tracingGetTrace should exist")
 			
 			-- Check metric types
 			assert(observability.metrics.COUNTER == "counter", "should have counter type")
@@ -851,6 +883,226 @@ func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 			assert(err == nil, "should not error")
 			assert(span.id == "current-span", "should have current span")
 			assert(span.traceId == "current-trace", "should have trace ID")
+		`)
+		assert.NoError(t, err)
+	})
+}
+
+// Test flattened methods specifically
+func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
+	t.Run("flattened_guardrails_methods", func(t *testing.T) {
+		guardrailsBridge := testutils.NewMockBridge("guardrails").
+			WithInitialized(true).
+			WithMethod("registerRule", engine.MethodInfo{
+				Name: "registerRule",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"ruleId": engine.NewStringValue("rule-123"),
+					"status": engine.NewStringValue("registered"),
+				}), nil
+			}).
+			WithMethod("validateContent", engine.MethodInfo{
+				Name: "validateContent",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"valid": engine.NewBoolValue(true),
+					"score": engine.NewNumberValue(0.95),
+				}), nil
+			}).
+			WithMethod("setRuleEnabled", engine.MethodInfo{
+				Name: "setRuleEnabled",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				ruleId := args[0].(engine.StringValue).Value()
+				enabled := args[1].(engine.BoolValue).Value()
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"ruleId":  engine.NewStringValue(ruleId),
+					"enabled": engine.NewBoolValue(enabled),
+				}), nil
+			})
+
+		adapter := NewObservabilityAdapter(guardrailsBridge, nil, nil)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "observability")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "observability")
+		require.NoError(t, err)
+
+		err = L.DoString(`
+			local obs = require("observability")
+			
+			-- Test flattened guardrails methods
+			local rule, err = obs.guardrailsRegisterRule({
+				name = "content_filter",
+				type = "text_safety"
+			})
+			assert(err == nil, "guardrailsRegisterRule should not error")
+			assert(rule.ruleId == "rule-123", "should register rule")
+			
+			local check, err2 = obs.guardrailsCheck("safe content")
+			assert(err2 == nil, "guardrailsCheck should not error")
+			assert(check.valid == true, "should validate content")
+			
+			local enable, err3 = obs.guardrailsEnableRule("rule-123")
+			assert(err3 == nil, "guardrailsEnableRule should not error")
+			assert(enable.enabled == true, "should enable rule")
+			
+			local disable, err4 = obs.guardrailsDisableRule("rule-123")
+			assert(err4 == nil, "guardrailsDisableRule should not error")
+			assert(disable.enabled == false, "should disable rule")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("flattened_metrics_methods", func(t *testing.T) {
+		metricsBridge := testutils.NewMockBridge("metrics").
+			WithInitialized(true).
+			WithMethod("incrementMetric", engine.MethodInfo{
+				Name: "incrementMetric",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"incremented": engine.NewBoolValue(true),
+					"value":       engine.NewNumberValue(1),
+				}), nil
+			}).
+			WithMethod("setGaugeValue", engine.MethodInfo{
+				Name: "setGaugeValue",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"set":   engine.NewBoolValue(true),
+					"value": args[2], // value from args
+				}), nil
+			}).
+			WithMethod("recordHistogram", engine.MethodInfo{
+				Name: "recordHistogram",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"recorded": engine.NewBoolValue(true),
+					"value":    args[2], // value from args
+				}), nil
+			}).
+			WithMethod("getMetrics", engine.MethodInfo{
+				Name: "getMetrics",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"counters": engine.NewObjectValue(map[string]engine.ScriptValue{
+						"requests": engine.NewNumberValue(100),
+					}),
+				}), nil
+			})
+
+		adapter := NewObservabilityAdapter(nil, metricsBridge, nil)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "observability")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "observability")
+		require.NoError(t, err)
+
+		err = L.DoString(`
+			local obs = require("observability")
+			
+			-- Test flattened metrics methods
+			local inc, err = obs.metricsIncrement("requests", 1)
+			assert(err == nil, "metricsIncrement should not error")
+			assert(inc.incremented == true, "should increment metric")
+			
+			local gauge, err2 = obs.metricsGauge("memory", 1024)
+			assert(err2 == nil, "metricsGauge should not error")
+			assert(gauge.set == true, "should set gauge")
+			assert(gauge.value == 1024, "should have correct value")
+			
+			local hist, err3 = obs.metricsHistogram("latency", 50.5)
+			assert(err3 == nil, "metricsHistogram should not error")
+			assert(hist.recorded == true, "should record histogram")
+			assert(hist.value == 50.5, "should have correct value")
+			
+			local all, err4 = obs.metricsGetAll()
+			assert(err4 == nil, "metricsGetAll should not error")
+			assert(all.counters.requests == 100, "should get all metrics")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("flattened_tracing_methods", func(t *testing.T) {
+		tracingBridge := testutils.NewMockBridge("tracing").
+			WithInitialized(true).
+			WithMethod("startSpan", engine.MethodInfo{
+				Name: "startSpan",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"spanId": engine.NewStringValue("span-123"),
+					"name":   args[0], // name from args
+				}), nil
+			}).
+			WithMethod("endSpan", engine.MethodInfo{
+				Name: "endSpan",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"ended":  engine.NewBoolValue(true),
+					"spanId": args[0], // spanId from args
+				}), nil
+			}).
+			WithMethod("setSpanAttribute", engine.MethodInfo{
+				Name: "setSpanAttribute",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"set":   engine.NewBoolValue(true),
+					"key":   args[1], // key from args
+					"value": args[2], // value from args
+				}), nil
+			}).
+			WithMethod("getTrace", engine.MethodInfo{
+				Name: "getTrace",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"traceId": args[0], // traceId from args
+					"spans":   engine.NewArrayValue([]engine.ScriptValue{}),
+				}), nil
+			})
+
+		adapter := NewObservabilityAdapter(nil, nil, tracingBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "observability")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "observability")
+		require.NoError(t, err)
+
+		err = L.DoString(`
+			local obs = require("observability")
+			
+			-- Test flattened tracing methods
+			local span, err = obs.tracingStartSpan("test_operation")
+			assert(err == nil, "tracingStartSpan should not error")
+			assert(span.spanId == "span-123", "should start span")
+			assert(span.name == "test_operation", "should have correct name")
+			
+			local attr, err2 = obs.tracingAddAttribute("span-123", "user.id", "user-456")
+			assert(err2 == nil, "tracingAddAttribute should not error")
+			assert(attr.set == true, "should set attribute")
+			assert(attr.key == "user.id", "should have correct key")
+			assert(attr.value == "user-456", "should have correct value")
+			
+			local ended, err3 = obs.tracingEndSpan("span-123")
+			assert(err3 == nil, "tracingEndSpan should not error")
+			assert(ended.ended == true, "should end span")
+			
+			local trace, err4 = obs.tracingGetTrace("trace-456")
+			assert(err4 == nil, "tracingGetTrace should not error")
+			assert(trace.traceId == "trace-456", "should get trace")
 		`)
 		assert.NoError(t, err)
 	})
