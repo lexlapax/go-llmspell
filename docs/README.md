@@ -132,9 +132,23 @@ Welcome to the comprehensive go-llmspell documentation. This directory contains 
   - 14 comprehensive research documents created
   - Architecture design synthesized and documented
   - Research documents archived to `/docs/archives/research/`
+- **Phase 2.2** - Core Engine Components [2025-06-18]
+  - LState Pool with adaptive scaling and health monitoring
+  - Type Converter with full Go ↔ Lua conversion support
+  - Security Sandbox with multi-level library restrictions
+  - Complete ScriptEngine interface implementation
+- **Phase 2.3.3** - Bridge Adapters [2025-06-19]
+  - All 24 bridge adapter tasks completed
+  - Comprehensive namespace flattening across 10 adapters
+  - 51 namespaces with 200+ methods made consistent
+- **Phase 2.3.4** - Async/Coroutine Support [2025-06-19]
+  - Complete AsyncRuntime with coroutine management
+  - Go↔Lua channel bridge with select operations
+  - Async bridge method wrappers with streaming support
+  - Comprehensive testing with race condition coverage
 
 ### 🚧 **In Progress**
-- **Phase 2.2** - Lua Engine Core implementation
+- **Phase 2.3.5** - Lua Standard Library implementation
 - **User Guides** - Spell writing tutorials and examples
 - **API Documentation** - Complete scripting interface reference
 

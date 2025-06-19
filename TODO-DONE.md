@@ -2165,3 +2165,105 @@ Enhanced `/pkg/engine/gopherlua/adapters/observability.go` with flattened namesp
 
 **Total refactoring scope**: 51 namespaces with 200+ methods across all 10 adapters
 **No deferrals** - Complete consistency across entire codebase!
+
+## Phase 2.3.4: Async/Coroutine Support - COMPLETED [2025-06-19]
+
+Foundation for async operations that Lua Standard Library will build upon. This resolves deferred Task 1.3.20 for async/promise-based tool execution.
+
+### ✅ **Task 2.3.4.1: Async Runtime** [COMPLETED - 2025-06-19]
+
+Enhanced `/pkg/engine/gopherlua/async.go` with comprehensive async runtime:
+- ✅ **AsyncRuntime Implementation**: Complete coroutine management with UUID tracking, lifecycle management, and configurable resource limits (max coroutines)
+- ✅ **Promise-Coroutine Integration**: Full promise-coroutine bridge with manual resolution support and coroutine-backed promises
+- ✅ **Async Execution Context**: Context management for async operations with proper cancellation propagation
+- ✅ **Cancellation Support**: Context-based cancellation with cascading and selective cancellation patterns
+- ✅ **Timeout Handling**: Context deadline management and timeout detection for async operations
+
+**Key Features Implemented**:
+- Coroutine lifecycle tracking (spawn, wait, cancel, cleanup)
+- Promise creation from coroutines and empty promises for manual resolution
+- Execution context creation with proper context inheritance
+- Thread-safe operations with read-write mutex protection
+- Resource management with configurable limits and automatic cleanup
+
+### ✅ **Task 2.3.4.2: Channel Integration** [COMPLETED - 2025-06-19]
+
+Enhanced `/pkg/engine/gopherlua/channels.go` with complete channel system:
+- ✅ **Go Channel ↔ LChannel Bridge**: Bidirectional synchronization between Go channels and Lua LChannels
+- ✅ **Select Operation Support**: Full Go-style select operations using reflection for channel multiplexing
+- ✅ **Buffered Channel Support**: Configurable buffer sizes for performance optimization
+- ✅ **Channel Closing**: Proper channel lifecycle management with close detection
+- ✅ **Deadlock Detection**: Context-based timeout mechanisms to prevent deadlocks
+
+**Key Features Implemented**:
+- ChannelManager with configurable limits and resource tracking
+- Send/Receive operations with context cancellation support
+- Multi-channel select operations with timeout handling
+- Channel state tracking (active, closed, buffer info)
+- Concurrent-safe channel operations with proper locking
+
+### ✅ **Task 2.3.4.3: Async Bridge Methods** [COMPLETED - 2025-06-19]
+
+Enhanced `/pkg/engine/gopherlua/async_bridges.go` with async bridge wrappers:
+- ✅ **Bridge Method Async Execution**: Wrapper for converting synchronous bridge methods to async operations
+- ✅ **Automatic Promisification**: Bridge methods automatically return promises for async execution
+- ✅ **Streaming Support**: Channel-based streaming for bridge methods that return continuous data
+- ✅ **Progress Callbacks**: Time-based progress estimation for long-running bridge operations
+- ✅ **Cancellation Tokens**: Token-based cancellation system for fine-grained async control
+
+**Key Features Implemented**:
+- AsyncBridgeWrapper with full Bridge interface delegation
+- Promise-based async method execution with goroutine management
+- Stream interface for continuous data flow from bridge methods
+- CancellationToken system with context integration
+- Promise combinators: AwaitAll (Promise.all) and AwaitRace (Promise.race)
+- ScriptValue ↔ LValue conversion utilities for seamless type bridging
+
+### ✅ **Task 2.3.4.4: Async Testing** [COMPLETED - 2025-06-19]
+
+Enhanced `/pkg/engine/gopherlua/async_test.go` and `/pkg/engine/gopherlua/channels_test.go` with comprehensive testing:
+- ✅ **Coroutine Lifecycle Testing**: Complete coroutine state tracking, spawn/wait/cancel operations
+- ✅ **Promise Integration Testing**: Promise creation, resolution, cancellation, and error handling
+- ✅ **Channel Operations Testing**: Send/receive, select operations, buffering, and closing
+- ✅ **Cancellation and Timeouts Testing**: Context cancellation, deadline handling, and cascading cancellation
+- ✅ **Concurrent Async Operations Testing**: Race condition testing, stress testing, and concurrent operations
+
+**Test Coverage Highlights**:
+- **AsyncRuntime Tests**: 18 comprehensive test functions covering all runtime functionality
+- **Channel Tests**: 9 test functions covering channel operations, select, and deadlock detection
+- **Bridge Integration Tests**: Async bridge method execution, streaming, and progress reporting
+- **Race Condition Tests**: Concurrent state modifications and stress testing up to resource limits
+- **Error Handling Tests**: Proper error propagation, timeout handling, and cleanup verification
+
+**Test Statistics**:
+- All 27 async-related test functions pass
+- Comprehensive coverage of edge cases, error conditions, and concurrent scenarios
+- Performance testing with stress loads (50+ concurrent operations)
+- Integration testing between AsyncRuntime, ChannelManager, and AsyncBridgeWrapper
+
+#### Summary of Async/Coroutine Support Implementation
+
+**Architecture Delivered**:
+- **AsyncRuntime**: Complete coroutine management system with resource limits and lifecycle tracking
+- **ChannelManager**: Go↔Lua channel bridge with select operations and deadlock protection
+- **AsyncBridgeWrapper**: Bridge method async execution with streaming and progress support
+- **Promise System**: Full promise implementation with manual resolution and cancellation
+- **Testing Suite**: Comprehensive test coverage with race condition and stress testing
+
+**Key Capabilities**:
+- **Coroutine Management**: Spawn, track, cancel, and wait for coroutines with resource limits
+- **Promise Integration**: Create promises from coroutines or manual resolution with full lifecycle
+- **Channel Operations**: Bidirectional Go↔Lua channels with select and buffering
+- **Async Bridge Methods**: Convert any bridge method to async with automatic promisification
+- **Cancellation & Timeouts**: Context-based cancellation with proper cleanup and error handling
+- **Streaming Support**: Channel-based streaming for continuous data operations
+- **Progress Reporting**: Time-based progress estimation for long-running operations
+
+**Performance & Reliability**:
+- Thread-safe operations with proper mutex protection
+- Resource management with configurable limits
+- Deadlock detection and prevention
+- Comprehensive error handling and recovery
+- Race condition testing and concurrent operation support
+
+This implementation provides the complete async foundation needed for the Lua Standard Library (Phase 2.3.5).

@@ -4,16 +4,18 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-🚧 **Phase 2.3.3 ACTIVE**: Bridge Adapters Enhancement & Namespace Flattening (14/24 tasks complete)
-- Tasks 15-17: Add missing bridge functionality (tool_registry, llm_pool, llm_providers)
-- Tasks 18-24: Flatten 51 namespaces across 10 adapters for consistency
-- Dependency order: 15 → 16-17 → 18-24
+🚧 **Phase 2.3.5 ACTIVE**: Lua Standard Library Implementation (0/18 tasks complete)
+- Ready to implement promise-based async library and feature-oriented modules
+- Built on comprehensive async foundation and bridge adapters
+- Next: Task 2.3.5.1: Promise & Async Library
 
-**Next Phase**: Phase 2.3.4: Async/Coroutine Support → 2.3.5: Lua Standard Library
+**Next Phase**: Phase 2.4: Advanced Features & Optimization
 
 **Completed**:
 - ✅ Phase 1: Engine & Bridge Foundation (38+ bridges)
 - ✅ Phase 2.1-2.3.2: Lua Core, Module System, ScriptValue, Test Utilities
+- ✅ Phase 2.3.3: Bridge Adapters & Namespace Flattening (all 24 tasks complete)
+- ✅ Phase 2.3.4: Async/Coroutine Support (all 4 tasks complete)
 
 ## Architecture
 

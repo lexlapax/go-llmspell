@@ -25,7 +25,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
     - ✅ 2.3.3: Bridge Adapters [COMPLETED - 2025-06-19]
-    - 🚧 2.3.4: Async/Coroutine Support [NOT STARTED]
+    - ✅ 2.3.4: Async/Coroutine Support [COMPLETED - 2025-06-19]
     - 🚧 2.3.5: Lua Standard Library [NOT STARTED]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -86,38 +86,8 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-19]** - All 24 tasks completed (Tasks 1-14 already in TODO-DONE.md)
 **See TODO-DONE.md for complete task details and implementation history**
 
-
-
 #### 2.3.4: Async/Coroutine Support
-Foundation for async operations that Lua Standard Library will build upon. This resolves deferred Task 1.3.20 for async/promise-based tool execution.
-
-- [ ] **Task 2.3.4.1: Async Runtime** (`/pkg/engine/gopherlua/async.go`)
-  - [ ] Implement `AsyncRuntime` for coroutine management
-  - [ ] Add promise-coroutine integration
-  - [ ] Create async execution context
-  - [ ] Implement cancellation support
-  - [ ] Add timeout handling
-
-- [ ] **Task 2.3.4.2: Channel Integration** (`/pkg/engine/gopherlua/channels.go`)
-  - [ ] Implement Go channel ↔ LChannel bridge
-  - [ ] Add select operation support
-  - [ ] Create buffered channel support
-  - [ ] Implement channel closing
-  - [ ] Add deadlock detection
-
-- [ ] **Task 2.3.4.3: Async Bridge Methods** (`/pkg/engine/gopherlua/async_bridges.go`)
-  - [ ] Wrap bridge methods for async execution
-  - [ ] Add automatic promisification
-  - [ ] Implement streaming support
-  - [ ] Add progress callbacks
-  - [ ] Create cancellation tokens
-
-- [ ] **Task 2.3.4.4: Async Testing** (`/pkg/engine/gopherlua/async_test.go`)
-  - [ ] Test coroutine lifecycle
-  - [ ] Test promise integration
-  - [ ] Test channel operations
-  - [ ] Test cancellation and timeouts
-  - [ ] Test concurrent async operations
+✅ **COMPLETED [2025-06-19]** - All 4 tasks completed. See TODO-DONE.md for implementation details.
 
 #### 2.3.5: Lua Standard Library
 Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing.
