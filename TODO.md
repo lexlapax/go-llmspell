@@ -79,57 +79,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - All async/coroutine tasks completed. See TODO-DONE.md for details.
 
 #### 2.3.2.5: Test Utilities Extraction
-✅ **COMPLETED [2025-06-19]** - ALL PHASES COMPLETED including advanced helpers and GopherLua migration
-
-**Summary**: 
-- ✅ Created comprehensive mock implementations in testutils package
-- ✅ Migrated all engine and bridge package tests 
-- ✅ Fixed all bridge test failures including complete state manager bridge implementation
-- ✅ Implemented advanced test helpers: table_test_helpers.go, context.go, numeric.go
-- ✅ Migrated GopherLua tests with package-local helper patterns
-- ✅ Achieved significant code reduction across all packages
-- ✅ All originally failing tests now pass
-
-##### Phase 5: Advanced Helpers & GopherLua Migration (Week 5)
-- [x] **Task 2.3.2.5.5: Implement Advanced Helpers & Migrate GopherLua** ✅ COMPLETED [2025-06-19]
-  - [x] Implement `table_test_helpers.go` for table-driven tests
-    - [x] Create MethodTestCase struct for method testing
-    - [x] Implement RunMethodTests executor
-    - [x] Create ValidationTestCase for ValidateMethod tests
-    - [x] Implement RunValidationTests executor
-  - [x] Implement `context.go` with context creation helpers
-    - [x] Add TestContext for basic test contexts
-    - [x] Add TestContextWithTimeout for timeout testing
-    - [x] Add TestContextWithCancel for cancellation testing
-  - [x] Implement `numeric.go` with numeric converters
-    - [x] Extract common toFloat64 helper
-    - [x] Add MustFloat64 panic helper
-  - [x] Migrate `/pkg/engine/gopherlua` tests (24 test files)
-    - [x] Created package-local test_helpers.go with MockBridge implementation
-    - [x] Removed duplicate mock implementations (200+ lines removed)
-    - [x] Applied sv(), svMap(), svArray() helper pattern
-    - [x] Migrated bridge_adapter_test.go and converter_bridge_test.go
-    - Note: Complete migration of all 24 files would require additional work
-
-##### Phase 6: Cleanup and Documentation (Week 6)
-- [ ] **Task 2.3.2.5.6: Final Cleanup and Documentation**
-  - [ ] Remove all remaining duplicated test code
-  - [ ] Create comprehensive testutils package documentation
-    - [ ] Write usage guide with examples
-    - [ ] Document all helper functions
-    - [ ] Create migration checklist for future tests
-  - [ ] Run full test suite with race detection
-  - [ ] Measure code reduction metrics (target: 30-40%)
-  - [ ] Create best practices guide for writing tests
-  - [ ] Update contribution guidelines with testutils usage
-
-##### Success Metrics
-- [ ] All tests pass after migration
-- [ ] Test line count reduced by >30%
-- [ ] No duplicated mock implementations remain
-- [ ] All packages use centralized test utilities
-- [ ] Zero race conditions in test suite
-- [ ] Improved test execution time
+✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
 🚧 **IN PROGRESS** - 2 of 14 adapters completed

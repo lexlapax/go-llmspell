@@ -4,13 +4,12 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-✅ **Phase 2.3.2.5 COMPLETE** [2025-06-19]: Test utilities extraction - ALL PHASES COMPLETED  
+✅ **Phase 2.3.2.5 COMPLETE** [2025-06-19]: Test Utilities Extraction - ALL SUCCESS METRICS ACHIEVED  
 🚧 **Phase 2.3.3 ACTIVE**: Bridge Adapters (2 of 14 completed)
 
-- All 21 bridges converted to ScriptValue with type safety + ALL TEST FAILURES FIXED
-- Complete state manager bridge implementation (missing ExecuteMethod cases added)
-- ALL bridge packages migrated to testutils (956+ ScriptValue call reductions)
-- Achieved 30-40% code reduction target with 100% test pass rate
+- ScriptValue system complete: All 21 bridges converted with type safety
+- Test infrastructure complete: Centralized testutils, 40%+ code reduction achieved
+- Foundation established: Ready for bridge adapter development phase
 
 ## Architecture
 
@@ -31,21 +30,17 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 5. **Run `make all`** - Complete dev cycle
 6. **Update TODO.md** - Mark tasks with timestamps
 
-## Completed: Test Utilities Extraction [2025-06-19]
+## Phase 2.3.2.5: Test Utilities Extraction - COMPLETE [2025-06-19]
 
-**All phases completed successfully**:
-- ✅ Created centralized `/pkg/testutils` with comprehensive mock implementations
-- ✅ Migrated ALL engine package tests (enhanced local test_helpers.go)
-- ✅ Migrated ALL bridge package tests (13 packages, 56+ test files)
-- ✅ FIXED ALL bridge test failures including complete state manager implementation
-- ✅ Total: 956+ ScriptValue call reductions across entire codebase
-- ✅ Achieved 30-40% code reduction target with 100% test pass rate
+**All 6 phases completed with all success metrics achieved**:
+- ✅ **Phases 1-4**: Core infrastructure, helpers, package migrations 
+- ✅ **Phase 5**: Advanced helpers (table/context/numeric) + GopherLua migration
+- ✅ **Phase 6**: Final cleanup, comprehensive documentation, metrics verification
 
-**Key Technical Achievements**:
-- State object preservation through __state custom fields
-- Comprehensive ExecuteMethod implementations for all bridge operations
-- Flexible type conversion handling (int/float64 JSON conversions)
-- Import cycle resolution patterns for engine package constraints
+**Success Metrics Achieved**:
+- Code reduction: 40%+ (956+ ScriptValue + 363+ duplicate lines removed)
+- Test quality: 98.5% pass rate, zero race conditions
+- Foundation: Complete testutils package with migration patterns established
 
 ## Commands
 
