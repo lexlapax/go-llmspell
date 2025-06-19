@@ -82,14 +82,16 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 2 of 14 adapters completed
+🚧 **IN PROGRESS** - 3 of 14 adapters completed
 
-- [ ] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`)
-  - [ ] Create state and context management module
-  - [ ] Implement get/set operations
-  - [ ] Add transform functions
-  - [ ] Implement persistence methods
-  - [ ] Add state merging capabilities
+- [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-19]
+  - [x] Create state and context management module
+  - [x] Implement get/set operations
+  - [x] Add transform functions (register, apply built-ins)
+  - [x] Implement persistence methods (save, load, delete, list)
+  - [x] Add state merging capabilities
+  - [x] Enhanced state objects with convenience methods
+  - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.4: Events Bridge Adapter** (`/pkg/engine/gopherlua/adapters/events.go`)
   - [ ] Create event module
@@ -97,6 +99,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Add event emission
   - [ ] Implement filtering
   - [ ] Add event correlation
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.5: Structure Bridge Adapter** (`/pkg/engine/gopherlua/adapters/structured.go`)
   - [ ] Create structured output module
@@ -112,6 +115,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Implement structured stream parsing
     - [ ] Add partial object assembly
     - [ ] Handle incomplete structured data
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.6: Agent Bridge Adapter** (`/pkg/engine/gopherlua/adapters/agent.go`)
   - [ ] Create agent module with agent lifecycle
@@ -132,6 +136,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Add `agent:getState()` method
     - [ ] Add `agent:setState(state)` method
     - [ ] Implement state persistence for agents
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.7: Hooks Bridge Adapter** (`/pkg/engine/gopherlua/adapters/hooks.go`)
   - [ ] Create hooks module for lifecycle events
@@ -154,6 +159,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Implement `beforeRetry` hook
     - [ ] Add error recovery strategies
     - [ ] Implement custom retry logic
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.8: Workflow Bridge Adapter** (`/pkg/engine/gopherlua/adapters/workflow.go`)
   - [ ] Create workflow module
@@ -161,6 +167,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Add step definitions
   - [ ] Implement execution methods
   - [ ] Add state passing between steps
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.9: Tools Bridge Adapter** (`/pkg/engine/gopherlua/adapters/tools.go`)
   - [ ] Create tools module
@@ -168,6 +175,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Add tool execution
   - [ ] Implement parameter validation
   - [ ] Add custom tool support
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.10: Observability Bridge Adapters** (`/pkg/engine/gopherlua/adapters/observability.go`)
   - [ ] Implement Guardrails Bridge Adapter
@@ -187,6 +195,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Add `setSpanAttribute(span, key, value)` method for span attributes
     - [ ] Add `endSpan(span)` method for span completion
     - [ ] Add OpenTelemetry-compatible interface
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.11: Schema Bridge Adapter** (`/pkg/engine/gopherlua/adapters/schema.go`)
   - [ ] Create schema validation module
@@ -202,6 +211,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Add `migrateSchema(oldSchema, newSchema)` method
     - [ ] Add `versionSchema(schema, version)` method
     - [ ] Add backward compatibility checking
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.12: ModelInfo Bridge Adapter** (`/pkg/engine/gopherlua/adapters/modelinfo.go`)
   - [ ] Create model discovery module
@@ -218,6 +228,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Add `suggestModel(requirements)` method for recommendation
     - [ ] Add `compareModels(modelIds)` method for model comparison
     - [ ] Add cost and performance estimation
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.13: Utility Bridge Adapters** (`/pkg/engine/gopherlua/adapters/utils.go`)
   - [ ] Implement Auth Bridge Adapter
@@ -265,6 +276,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Add `retry(operation, options)` method for retry logic
     - [ ] Add `sleep(duration)` method for delays
     - [ ] Add string and time utilities
+  - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.14: Adapter Testing** (`/pkg/engine/gopherlua/adapters/adapters_test.go`)
   - [ ] Test each adapter functionality
