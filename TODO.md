@@ -165,14 +165,14 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Fix all missing methods in workflow bridge and adapter
   - [x] All tests passing
 
-- [ ] **Task 2.3.3.9: Tools Bridge Adapter** (`/pkg/engine/gopherlua/adapters/tools.go`)
+- [x] **Task 2.3.3.9: Tools Bridge Adapter** (`/pkg/engine/gopherlua/adapters/tools.go`) ✅ COMPLETED [2025-06-19]
   **look in `/pkg/bridge/agent/tool*.go` for research**
-  - [ ] Create tools module
-  - [ ] Implement tool registration
-  - [ ] Add tool execution
-  - [ ] Implement parameter validation
-  - [ ] Add custom tool support
-  - [ ] make sure tests pass
+  - [x] Create tools module
+  - [x] Implement tool registration
+  - [x] Add tool execution
+  - [x] Implement parameter validation
+  - [x] Add custom tool support
+  - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.10: Observability Bridge Adapters** (`/pkg/engine/gopherlua/adapters/observability.go`)
   **look in `/pkg/bridge/observability/*.go` for research**
