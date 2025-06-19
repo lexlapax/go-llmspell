@@ -82,7 +82,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 4 of 14 adapters completed
+🚧 **IN PROGRESS** - 5 of 14 adapters completed
 
 - [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-18]
   - [x] Create state and context management module
@@ -104,23 +104,19 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Implement subscription management
   - [x] make sure tests pass
 
-- [ ] **Task 2.3.3.5: Structure Bridge Adapter** (`/pkg/engine/gopherlua/adapters/structured.go`)
-  - [ ] Create structured output module
-    - [ ] Implement JSON schema validation
-    - [ ] Add structured generation methods
-    - [ ] Implement response parsing
-    - [ ] Add schema registry support
-  - [ ] Implement structured tools
-    - [ ] Add tool schema definitions
-    - [ ] Implement tool parameter validation
-    - [ ] Add tool result parsing
-  - [ ] Add structured streaming support
-    - [ ] Implement structured stream parsing
-    - [ ] Add partial object assembly
-    - [ ] Handle incomplete structured data
-  - [ ] make sure tests pass
+- [x] **Task 2.3.3.5: Structure Bridge Adapter** (`/pkg/engine/gopherlua/adapters/structured.go`) ✅ COMPLETE [2025-06-19]
+  - [x] Create structured output module with namespaces (validation, generation, repository, importExport, custom)
+  - [x] Implement JSON schema validation and struct validation
+  - [x] Add structured generation methods (fromType, fromTags, fromJSONSchema)
+  - [x] Implement schema repository operations (save, get, delete, initializeFile)
+  - [x] Add import/export functionality (toJSONSchema, toOpenAPI, fromFile, merge)
+  - [x] Implement custom validation system (registerValidator, validate, listValidators, validateAsync)
+  - [x] Add utility methods (generateDiff) and convenience methods
+  - [x] Add schema constants (TYPES, FORMATS, OPERATORS)
+  - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.6: Agent Bridge Adapter** (`/pkg/engine/gopherlua/adapters/agent.go`)
+  **look in `/pkg/bridge/agent/*.go` for research**
   - [ ] Create agent module with agent lifecycle
     - [ ] Implement `createAgent(name, provider, options)` method
     - [ ] Add `getAgent(name)` method
@@ -142,6 +138,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.7: Hooks Bridge Adapter** (`/pkg/engine/gopherlua/adapters/hooks.go`)
+  **look in `/pkg/bridge/agent/*.go` for research**
   - [ ] Create hooks module for lifecycle events
     - [ ] Implement `registerHook(event, callback)` method
     - [ ] Add `unregisterHook(event, hookId)` method
@@ -165,6 +162,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.8: Workflow Bridge Adapter** (`/pkg/engine/gopherlua/adapters/workflow.go`)
+  **look in `/pkg/bridge/agent/*.go` for research**
   - [ ] Create workflow module
   - [ ] Implement workflow builders
   - [ ] Add step definitions
@@ -173,6 +171,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.9: Tools Bridge Adapter** (`/pkg/engine/gopherlua/adapters/tools.go`)
+  **look in `/pkg/bridge/agent/*.go` for research**
   - [ ] Create tools module
   - [ ] Implement tool registration
   - [ ] Add tool execution
@@ -181,6 +180,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.10: Observability Bridge Adapters** (`/pkg/engine/gopherlua/adapters/observability.go`)
+  **look in `/pkg/bridge/observability/*.go` for research**
   - [ ] Implement Guardrails Bridge Adapter
     - [ ] Add `enableGuardrails(config)` method for safety system configuration
     - [ ] Add `validateContent(content, type)` method for content filtering
@@ -201,6 +201,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.11: Schema Bridge Adapter** (`/pkg/engine/gopherlua/adapters/schema.go`)
+    **look in `/pkg/bridge/structured/*.go` for research might already be covered in adapters/structured.go**
   - [ ] Create schema validation module
     - [ ] Add `validateJSON(data, schema)` method for JSON schema validation
     - [ ] Add `generateSchema(data, options)` method for schema generation
@@ -217,6 +218,8 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.12: ModelInfo Bridge Adapter** (`/pkg/engine/gopherlua/adapters/modelinfo.go`)
+    **look in `/pkg/bridge/modelinfo.go` for research**
+
   - [ ] Create model discovery module
     - [ ] Add `registerModelRegistry(name, registry)` method for registry management
     - [ ] Add `listModels()` method for listing all available models
@@ -234,6 +237,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.13: Utility Bridge Adapters** (`/pkg/engine/gopherlua/adapters/utils.go`)
+    **look in `/pkg/bridge/util/*.go` for research**
   - [ ] Implement Auth Bridge Adapter
     - [ ] Add `authenticate(credentials, scheme)` method for authentication
     - [ ] Add `validateToken(token, options)` method for token validation
