@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - ✅ 2.3.3: Bridge Adapters [COMPLETED - 14 of 14 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 14 of 24 completed]
     - 🚧 2.3.4: Lua Standard Library [IN PROGRESS]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -82,240 +82,369 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-✅ **COMPLETED** - All 14 adapters implemented [2025-06-19]
+🚧 **IN PROGRESS** - 14 of 24 adapters implemented
 **See TODO-DONE.md for completed task details**
 
+**Design Decision**: Tasks 15-24 implement complete method flattening for consistency:
+- ALL adapter methods use flat naming at Lua level (e.g., `poolCreate` instead of `pool.create`)
+- Backend bridges maintain their namespace organization unchanged
+- This provides consistent developer experience across ALL adapters
+- Easier method discovery and simpler API surface
+- Flattening 51 namespaces containing 200+ methods across 10 adapters
+
+**Task Dependencies Analysis**:
+- Tasks 16-17 MUST be completed before LLM namespace flattening (part of Task 18)
+- Task 15 is independent and can be done anytime
+- Tasks 18-24 depend on 16-17 for LLM adapter but are independent for other adapters
+- Recommended order: 15 → 16-17 → 18-24
+
+- [ ] **Task 2.3.3.15: Tool Registry Bridge Enhancement** (enhance `/pkg/engine/gopherlua/adapters/tools.go`)
+  - [ ] Extend existing ToolsAdapter with registry bridge functionality
+  - [ ] Note: Integrates both ToolsBridge and ToolsRegistryBridge from go-llms
+  - [ ] Implement tool discovery methods:
+    - [ ] getTool (complete tool info, not just metadata)
+    - [ ] listToolsByPermission (filter by required permissions)
+    - [ ] listToolsByResourceUsage (filter by resource criteria)
+  - [ ] Implement tool documentation:
+    - [ ] getToolDocumentation (comprehensive docs with examples, constraints, schemas)
+  - [ ] Implement MCP export functionality:
+    - [ ] exportToolToMCP (export single tool to MCP format)
+    - [ ] exportAllToolsToMCP (export entire catalog)
+  - [ ] Implement registry management:
+    - [ ] clearRegistry (for testing)
+    - [ ] getRegistryStats (tool counts, categories, etc.)
+  - [ ] Add flat methods to existing tools adapter (consistent with current tools.go pattern):
+    - [ ] tools.listToolsByPermission(permission)
+    - [ ] tools.listToolsByResourceUsage(criteria)
+    - [ ] tools.getToolDocumentation(name)
+    - [ ] tools.exportToolToMCP(name)
+    - [ ] tools.exportAllToolsToMCP()
+    - [ ] tools.clearRegistry()
+    - [ ] tools.getRegistryStats()
+  - [ ] Initialize tool registry bridge in ToolsAdapter constructor
+  - [ ] Write comprehensive tests (enhance `tools_test.go`):
+    - [ ] Test all discovery methods
+    - [ ] Test filtering by permissions and resources
+    - [ ] Test MCP export functionality
+    - [ ] Test registry management operations
+    - [ ] Test error handling and edge cases
+  - [ ] Ensure both bridges (tools and tool_registry) work together
+
+- [ ] **Task 2.3.3.16: LLM Pool Bridge Enhancement** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
+  - [ ] Extend existing LLMAdapter with pool bridge functionality
+  - [ ] Flatten namespace methods to module-level for consistency (e.g., pool.create → poolCreate)
+  - [ ] Keep backend PoolBridge methods unchanged, only flatten at Lua interface
+  - [ ] Implement pool management methods:
+    - [ ] createPool (round_robin, failover, fastest, weighted, least_used strategies)
+    - [ ] getPool, listPools, removePool
+  - [ ] Implement pool metrics:
+    - [ ] getPoolMetrics (requests, successes, failures, latency)
+    - [ ] getProviderHealth (health status of providers in pool)
+    - [ ] resetPoolMetrics
+  - [ ] Implement pool generation methods:
+    - [ ] generateWithPool (text generation using pool)
+    - [ ] generateMessageWithPool (message-based generation)
+    - [ ] streamWithPool (streaming with automatic failover)
+  - [ ] Implement object pooling (performance optimization):
+    - [ ] getResponseFromPool, returnResponseToPool
+    - [ ] getTokenFromPool, returnTokenToPool
+    - [ ] getChannelFromPool, returnChannelToPool
+  - [ ] Convert namespace methods to flat methods in LLMAdapter:
+    - [ ] Pool management methods:
+      - [ ] llm.poolCreate(name, providers, strategy)
+      - [ ] llm.poolGet(name)
+      - [ ] llm.poolList()
+      - [ ] llm.poolRemove(name)
+    - [ ] Pool metrics methods:
+      - [ ] llm.poolGetMetrics(poolName)
+      - [ ] llm.poolGetProviderHealth(poolName)
+      - [ ] llm.poolResetMetrics(poolName)
+    - [ ] Pool generation methods:
+      - [ ] llm.poolGenerate(poolName, prompt, options)
+      - [ ] llm.poolGenerateMessage(poolName, messages, options)
+      - [ ] llm.poolStream(poolName, prompt, options)
+    - [ ] Pool object pooling methods (for performance):
+      - [ ] llm.poolGetResponse()
+      - [ ] llm.poolReturnResponse(response)
+      - [ ] llm.poolGetToken()
+      - [ ] llm.poolReturnToken(token)
+      - [ ] llm.poolGetChannel()
+      - [ ] llm.poolReturnChannel(channel)
+  - [ ] Refactor existing namespace methods to flat methods:
+    - [ ] Convert llm.pool.create to llm.poolCreate
+    - [ ] Convert llm.pool.generate to llm.poolGenerate
+    - [ ] Convert llm.pool.getMetrics to llm.poolGetMetrics
+    - [ ] Convert llm.pool.getHealth to llm.poolGetHealth
+    - [ ] Also refactor existing models namespace:
+      - [ ] Convert llm.models.list to llm.modelsList
+      - [ ] Convert llm.models.info to llm.modelsInfo
+    - [ ] Keep backward compatibility or provide migration guide
+    - [ ] Update existing tests that use namespace pattern
+  - [ ] Write comprehensive tests (enhance `llm_test.go` or create `llm_pool_test.go`)
+  - [ ] Ensure pool and providers bridges are properly initialized in LLMAdapter
+
+- [ ] **Task 2.3.3.17: LLM Providers Bridge Enhancement** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
+  - [ ] Extend existing LLMAdapter with providers bridge functionality
+  - [ ] Flatten namespace methods to module-level (e.g., providers.templates.get → providersTemplatesGet)
+  - [ ] Keep backend ProvidersBridge methods unchanged, only flatten at Lua interface
+  - [ ] Implement provider creation methods:
+    - [ ] createProvider (dynamic provider creation)
+    - [ ] createProviderFromEnvironment (env-based setup)
+    - [ ] getProvider, listProviders, removeProvider
+  - [ ] Implement template management:
+    - [ ] getProviderTemplate (openai, anthropic, gemini, etc.)
+    - [ ] listProviderTemplates
+    - [ ] validateProviderConfig
+  - [ ] Implement multi-provider functionality:
+    - [ ] createMultiProvider (consensus, fastest, primary strategies)
+    - [ ] configureMultiProvider
+    - [ ] getMultiProvider
+  - [ ] Implement mock provider support:
+    - [ ] createMockProvider (for testing)
+  - [ ] Convert namespace methods to flat methods in LLMAdapter:
+    - [ ] Provider management methods:
+      - [ ] llm.providersCreate(type, name, config)
+      - [ ] llm.providersCreateFromEnvironment(type, name)
+      - [ ] llm.providersGet(name)
+      - [ ] llm.providersList()
+      - [ ] llm.providersRemove(name)
+    - [ ] Template methods:
+      - [ ] llm.providersTemplatesGet(type)
+      - [ ] llm.providersTemplatesList()
+      - [ ] llm.providersTemplatesValidate(type, config)
+    - [ ] Multi-provider methods:
+      - [ ] llm.providersCreateMulti(name, providers, strategy)
+      - [ ] llm.providersConfigureMulti(name, config)
+      - [ ] llm.providersGetMulti(name)
+    - [ ] Mock provider support:
+      - [ ] llm.providersCreateMock(name, config)
+  - [ ] Refactor existing provider namespace methods:
+    - [ ] Convert llm.providers.create to llm.providersCreate
+    - [ ] Convert llm.providers.get to llm.providersGet
+    - [ ] Convert llm.providers.list to llm.providersList
+    - [ ] Update any existing tests using the old pattern
+  - [ ] Write comprehensive tests (enhance `llm_test.go` or create `llm_providers_test.go`)
+  - [ ] Ensure providers bridge methods are properly exposed
+
+- [ ] **Task 2.3.3.18: Events Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/events.go`)
+  - [ ] Flatten bus namespace methods:
+    - [ ] events.bus.publish → events.busPublish
+    - [ ] events.bus.subscribe → events.busSubscribe  
+    - [ ] events.bus.unsubscribe → events.busUnsubscribe
+  - [ ] Flatten filters namespace methods:
+    - [ ] events.filters.create → events.filtersCreate
+    - [ ] events.filters.createComposite → events.filtersCreateComposite
+  - [ ] Flatten recording namespace methods:
+    - [ ] events.recording.start → events.recordingStart
+    - [ ] events.recording.stop → events.recordingStop
+    - [ ] events.recording.isRecording → events.recordingIsRecording
+  - [ ] Flatten replay namespace methods:
+    - [ ] events.replay.start → events.replayStart
+    - [ ] events.replay.pause → events.replayPause
+    - [ ] events.replay.resume → events.replayResume
+    - [ ] events.replay.stop → events.replayStop
+  - [ ] Flatten aggregation namespace methods:
+    - [ ] events.aggregation.create → events.aggregationCreate
+    - [ ] events.aggregation.getData → events.aggregationGetData
+  - [ ] Update tests in events_test.go
+
+- [ ] **Task 2.3.3.19: State Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/state.go`)
+  - [ ] Flatten transforms namespace methods:
+    - [ ] state.transforms.register → state.transformsRegister
+    - [ ] state.transforms.apply → state.transformsApply
+    - [ ] state.transforms.chain → state.transformsChain
+    - [ ] state.transforms.validate → state.transformsValidate
+    - [ ] state.transforms.getAvailable → state.transformsGetAvailable
+  - [ ] Flatten context namespace methods:
+    - [ ] state.context.get → state.contextGet
+    - [ ] state.context.set → state.contextSet
+    - [ ] state.context.merge → state.contextMerge
+    - [ ] state.context.clear → state.contextClear
+  - [ ] Flatten persistence namespace methods:
+    - [ ] state.persistence.save → state.persistenceSave
+    - [ ] state.persistence.load → state.persistenceLoad
+    - [ ] state.persistence.exists → state.persistenceExists
+    - [ ] state.persistence.delete → state.persistenceDelete
+    - [ ] state.persistence.listVersions → state.persistenceListVersions
+  - [ ] Update tests in state_test.go
+
+- [ ] **Task 2.3.3.20: Utils Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/utils.go`)
+  - [ ] Flatten auth namespace methods:
+    - [ ] utils.auth.generateToken → utils.authGenerateToken
+    - [ ] utils.auth.validateToken → utils.authValidateToken
+    - [ ] utils.auth.hashPassword → utils.authHashPassword
+    - [ ] utils.auth.verifyPassword → utils.authVerifyPassword
+  - [ ] Flatten debug namespace methods:
+    - [ ] utils.debug.trace → utils.debugTrace
+    - [ ] utils.debug.profile → utils.debugProfile
+    - [ ] utils.debug.dump → utils.debugDump
+    - [ ] utils.debug.assert → utils.debugAssert
+  - [ ] Flatten errors namespace methods:
+    - [ ] utils.errors.wrap → utils.errorsWrap
+    - [ ] utils.errors.unwrap → utils.errorsUnwrap
+    - [ ] utils.errors.isType → utils.errorsIsType
+    - [ ] utils.errors.getStack → utils.errorsGetStack
+  - [ ] Flatten json namespace methods:
+    - [ ] utils.json.encode → utils.jsonEncode
+    - [ ] utils.json.decode → utils.jsonDecode
+    - [ ] utils.json.validate → utils.jsonValidate
+    - [ ] utils.json.prettify → utils.jsonPrettify
+  - [ ] Flatten llm namespace methods:
+    - [ ] utils.llm.parseResponse → utils.llmParseResponse
+    - [ ] utils.llm.formatPrompt → utils.llmFormatPrompt
+    - [ ] utils.llm.countTokens → utils.llmCountTokens
+    - [ ] utils.llm.splitMessage → utils.llmSplitMessage
+  - [ ] Flatten logger namespace methods:
+    - [ ] utils.logger.log → utils.loggerLog
+    - [ ] utils.logger.error → utils.loggerError
+    - [ ] utils.logger.warn → utils.loggerWarn
+    - [ ] utils.logger.info → utils.loggerInfo
+    - [ ] utils.logger.debug → utils.loggerDebug
+  - [ ] Flatten slog namespace methods:
+    - [ ] utils.slog.info → utils.slogInfo
+    - [ ] utils.slog.error → utils.slogError
+    - [ ] utils.slog.warn → utils.slogWarn
+    - [ ] utils.slog.debug → utils.slogDebug
+    - [ ] utils.slog.withFields → utils.slogWithFields
+  - [ ] Flatten general namespace methods:
+    - [ ] utils.general.uuid → utils.generalUuid
+    - [ ] utils.general.hash → utils.generalHash
+    - [ ] utils.general.encode → utils.generalEncode
+    - [ ] utils.general.decode → utils.generalDecode
+  - [ ] Update tests in utils_test.go
+
+  - [ ] Update tests in utils_test.go
+
+- [ ] **Task 2.3.3.21: Agent Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/agent.go`)
+  - [ ] Flatten lifecycle namespace methods:
+    - [ ] agent.lifecycle.create → agent.lifecycleCreate
+    - [ ] agent.lifecycle.start → agent.lifecycleStart
+    - [ ] agent.lifecycle.stop → agent.lifecycleStop
+    - [ ] agent.lifecycle.restart → agent.lifecycleRestart
+    - [ ] agent.lifecycle.getStatus → agent.lifecycleGetStatus
+  - [ ] Flatten communication namespace methods:
+    - [ ] agent.communication.sendMessage → agent.communicationSendMessage
+    - [ ] agent.communication.broadcastMessage → agent.communicationBroadcastMessage
+    - [ ] agent.communication.registerHandler → agent.communicationRegisterHandler
+    - [ ] agent.communication.unregisterHandler → agent.communicationUnregisterHandler
+  - [ ] Flatten state namespace methods:
+    - [ ] agent.state.get → agent.stateGet
+    - [ ] agent.state.set → agent.stateSet
+    - [ ] agent.state.update → agent.stateUpdate
+    - [ ] agent.state.subscribe → agent.stateSubscribe
+  - [ ] Flatten events namespace methods:
+    - [ ] agent.events.emit → agent.eventsEmit
+    - [ ] agent.events.on → agent.eventsOn
+    - [ ] agent.events.off → agent.eventsOff
+    - [ ] agent.events.getHistory → agent.eventsGetHistory
+  - [ ] Flatten profiling namespace methods:
+    - [ ] agent.profiling.start → agent.profilingStart
+    - [ ] agent.profiling.stop → agent.profilingStop
+    - [ ] agent.profiling.getReport → agent.profilingGetReport
+    - [ ] agent.profiling.reset → agent.profilingReset
+  - [ ] Flatten workflow namespace methods:
+    - [ ] agent.workflow.add → agent.workflowAdd
+    - [ ] agent.workflow.remove → agent.workflowRemove
+    - [ ] agent.workflow.execute → agent.workflowExecute
+    - [ ] agent.workflow.getStatus → agent.workflowGetStatus
+  - [ ] Flatten hooks namespace methods:
+    - [ ] agent.hooks.register → agent.hooksRegister
+    - [ ] agent.hooks.unregister → agent.hooksUnregister
+    - [ ] agent.hooks.trigger → agent.hooksTrigger
+    - [ ] agent.hooks.list → agent.hooksList
+  - [ ] Flatten utils namespace methods:
+    - [ ] agent.utils.validate → agent.utilsValidate
+    - [ ] agent.utils.sanitize → agent.utilsSanitize
+    - [ ] agent.utils.transform → agent.utilsTransform
+  - [ ] Update tests in agent_test.go
+
+- [ ] **Task 2.3.3.22: Structured Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/structured.go`)
+  - [ ] Flatten validation namespace methods:
+    - [ ] structured.validation.validate → structured.validationValidate
+    - [ ] structured.validation.validatePartial → structured.validationValidatePartial
+    - [ ] structured.validation.getErrors → structured.validationGetErrors
+    - [ ] structured.validation.addCustom → structured.validationAddCustom
+  - [ ] Flatten generation namespace methods:
+    - [ ] structured.generation.fromType → structured.generationFromType
+    - [ ] structured.generation.fromTags → structured.generationFromTags
+    - [ ] structured.generation.fromJSONSchema → structured.generationFromJSONSchema
+  - [ ] Flatten repository namespace methods:
+    - [ ] structured.repository.save → structured.repositorySave
+    - [ ] structured.repository.load → structured.repositoryLoad
+    - [ ] structured.repository.list → structured.repositoryList
+    - [ ] structured.repository.delete → structured.repositoryDelete
+  - [ ] Flatten importExport namespace methods:
+    - [ ] structured.importExport.toJSON → structured.importExportToJSON
+    - [ ] structured.importExport.fromJSON → structured.importExportFromJSON
+    - [ ] structured.importExport.toYAML → structured.importExportToYAML
+    - [ ] structured.importExport.fromYAML → structured.importExportFromYAML
+  - [ ] Flatten custom namespace methods:
+    - [ ] structured.custom.register → structured.customRegister
+    - [ ] structured.custom.execute → structured.customExecute
+    - [ ] structured.custom.list → structured.customList
+  - [ ] Flatten utils namespace methods:
+    - [ ] structured.utils.merge → structured.utilsMerge
+    - [ ] structured.utils.diff → structured.utilsDiff
+    - [ ] structured.utils.transform → structured.utilsTransform
+  - [ ] Update tests in structured_test.go
+
+- [ ] **Task 2.3.3.23: ModelInfo Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/modelinfo.go`)
+  - [ ] Flatten discovery namespace methods:
+    - [ ] modelinfo.discovery.scan → modelinfo.discoveryScan
+    - [ ] modelinfo.discovery.refresh → modelinfo.discoveryRefresh
+    - [ ] modelinfo.discovery.getProviders → modelinfo.discoveryGetProviders
+    - [ ] modelinfo.discovery.getModels → modelinfo.discoveryGetModels
+  - [ ] Flatten capabilities namespace methods:
+    - [ ] modelinfo.capabilities.check → modelinfo.capabilitiesCheck
+    - [ ] modelinfo.capabilities.list → modelinfo.capabilitiesList
+    - [ ] modelinfo.capabilities.compare → modelinfo.capabilitiesCompare
+    - [ ] modelinfo.capabilities.getDetails → modelinfo.capabilitiesGetDetails
+  - [ ] Flatten selection namespace methods:
+    - [ ] modelinfo.selection.find → modelinfo.selectionFind
+    - [ ] modelinfo.selection.rank → modelinfo.selectionRank
+    - [ ] modelinfo.selection.filter → modelinfo.selectionFilter
+    - [ ] modelinfo.selection.recommend → modelinfo.selectionRecommend
+  - [ ] Update tests in modelinfo_test.go
+
+- [ ] **Task 2.3.3.24: Observability Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/observability.go`)
+  - [ ] Flatten guardrails namespace methods:
+    - [ ] observability.guardrails.registerRule → observability.guardrailsRegisterRule
+    - [ ] observability.guardrails.check → observability.guardrailsCheck
+    - [ ] observability.guardrails.enableRule → observability.guardrailsEnableRule
+    - [ ] observability.guardrails.disableRule → observability.guardrailsDisableRule
+  - [ ] Flatten metrics namespace methods:
+    - [ ] observability.metrics.increment → observability.metricsIncrement
+    - [ ] observability.metrics.gauge → observability.metricsGauge
+    - [ ] observability.metrics.histogram → observability.metricsHistogram
+    - [ ] observability.metrics.getAll → observability.metricsGetAll
+  - [ ] Flatten tracing namespace methods:
+    - [ ] observability.tracing.startSpan → observability.tracingStartSpan
+    - [ ] observability.tracing.endSpan → observability.tracingEndSpan
+    - [ ] observability.tracing.addAttribute → observability.tracingAddAttribute
+    - [ ] observability.tracing.getTrace → observability.tracingGetTrace
+  - [ ] Update tests in observability_test.go
+
+#### Summary of Complete Namespace Flattening Scope
+
+**All adapters being flattened in Phase 2.3.3 (Tasks 15-24)**:
+- Tools (Task 15): Registry methods added as flat methods
+- LLM (Tasks 16-17): Pool and Provider namespaces flattened (~15 methods)
+- Events (Task 18): 5 namespaces with 15 methods flattened
+- State (Task 19): 3 namespaces with 14 methods flattened  
+- Utils (Task 20): 8 namespaces with 36 methods flattened
+- Agent (Task 21): 8 namespaces with 31 methods flattened
+- Structured (Task 22): 6 namespaces with 20 methods flattened
+- ModelInfo (Task 23): 3 namespaces with 12 methods flattened
+- Observability (Task 24): 3 namespaces with 12 methods flattened
+
+**Total refactoring scope**: 51 namespaces with 200+ methods across all 10 adapters
+**No deferrals** - Complete consistency across entire codebase!
 
 
-#### 2.3.4: Lua Standard Library
-Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations.
-
-- [ ] **Task 2.3.4.1: Promise & Async Library** (`/pkg/engine/gopherlua/stdlib/promise.lua`)
-  - [ ] Implement Promise class with full async support
-    - [ ] Add `Promise.new(executor)` constructor
-    - [ ] Add `then/catch/finally` chain methods
-    - [ ] Add `Promise.all(promises)` for concurrent execution
-    - [ ] Add `Promise.race(promises)` for first-wins scenarios
-    - [ ] Add `Promise.resolve(value)` and `Promise.reject(error)` helpers
-  - [ ] Add async/await syntax sugar
-    - [ ] Add `async(func)` wrapper for promise-returning functions
-    - [ ] Add `await(promise, timeout)` method with timeout support
-    - [ ] Add `sleep(duration)` utility for delays
-  - [ ] Add coroutine integration
-    - [ ] Add `spawn(func, args)` for concurrent execution
-    - [ ] Add `yield()` for cooperative multitasking
-    - [ ] Add channel-based communication helpers
-
-- [ ] **Task 2.3.4.2: LLM Operations Library** (`/pkg/engine/gopherlua/stdlib/llm.lua`)
-  - [ ] High-level LLM operation helpers
-    - [ ] Add `llm.quick_prompt(prompt, options)` for simple prompting
-    - [ ] Add `llm.chat_session(system_prompt)` for conversation management
-    - [ ] Add `llm.streaming_response(prompt, callback)` for streaming
-    - [ ] Add `llm.batch_process(prompts, options)` for bulk operations
-  - [ ] Provider management utilities
-    - [ ] Add `llm.use_provider(name, config)` for easy provider switching
-    - [ ] Add `llm.compare_providers(prompt, providers)` for A/B testing
-    - [ ] Add `llm.fallback_chain(providers, prompt)` for reliability
-  - [ ] Model discovery helpers
-    - [ ] Add `llm.find_model(requirements)` for capability-based selection
-    - [ ] Add `llm.model_info(model_id)` for metadata access
-    - [ ] Add `llm.cost_estimate(operation, model)` for cost tracking
-
-- [ ] **Task 2.3.4.3: Agent Management Library** (`/pkg/engine/gopherlua/stdlib/agent.lua`)
-  - [ ] Agent lifecycle management
-    - [ ] Add `agent.create(name, config)` for agent creation
-    - [ ] Add `agent.configure(agent, settings)` for configuration
-    - [ ] Add `agent.clone(agent, modifications)` for agent templating
-  - [ ] Agent communication helpers
-    - [ ] Add `agent.conversation(agent, messages)` for multi-turn chat
-    - [ ] Add `agent.delegate(from_agent, to_agent, task)` for task delegation
-    - [ ] Add `agent.collaborate(agents, task)` for multi-agent workflows
-  - [ ] Agent tool integration
-    - [ ] Add `agent.add_tools(agent, tools)` for tool assignment
-    - [ ] Add `agent.create_tool(name, func, schema)` for custom tools
-    - [ ] Add `agent.tool_chain(tools, data)` for tool pipelines
-
-- [ ] **Task 2.3.4.4: State Management Library** (`/pkg/engine/gopherlua/stdlib/state.lua`)
-  - [ ] Context and state utilities
-    - [ ] Add `state.create(initial_data)` for state creation
-    - [ ] Add `state.merge(state1, state2)` for state composition
-    - [ ] Add `state.snapshot(state)` for state capture
-    - [ ] Add `state.restore(snapshot)` for state restoration
-  - [ ] State persistence helpers
-    - [ ] Add `state.save(state, key)` for persistent storage
-    - [ ] Add `state.load(key, default)` for state retrieval
-    - [ ] Add `state.expire(key, duration)` for TTL support
-  - [ ] State transformation utilities
-    - [ ] Add `state.transform(state, transformer)` for state modification
-    - [ ] Add `state.filter(state, predicate)` for state filtering
-    - [ ] Add `state.validate(state, schema)` for state validation
-
-- [ ] **Task 2.3.4.5: Event & Workflow Library** (`/pkg/engine/gopherlua/stdlib/events.lua`)
-  - [ ] Event system utilities
-    - [ ] Add `events.emit(event, data)` for event emission
-    - [ ] Add `events.on(event, handler)` for event subscription
-    - [ ] Add `events.once(event, handler)` for one-time handlers
-    - [ ] Add `events.off(event, handler)` for unsubscription
-  - [ ] Workflow orchestration helpers
-    - [ ] Add `workflow.create(steps)` for workflow definition
-    - [ ] Add `workflow.run(workflow, input)` for execution
-    - [ ] Add `workflow.parallel(steps)` for concurrent execution
-    - [ ] Add `workflow.conditional(condition, then_step, else_step)` for branching
-  - [ ] Hook and lifecycle utilities
-    - [ ] Add `hooks.before(event, handler)` for pre-hooks
-    - [ ] Add `hooks.after(event, handler)` for post-hooks
-    - [ ] Add `hooks.around(event, wrapper)` for around-hooks
-
-- [ ] **Task 2.3.4.6: Structured Data Library** (`/pkg/engine/gopherlua/stdlib/data.lua`)
-  - [ ] JSON and data processing utilities
-    - [ ] Add `data.parse_json(text, schema)` for validated JSON parsing
-    - [ ] Add `data.to_json(object, format)` for pretty JSON serialization
-    - [ ] Add `data.extract_structured(text, schema)` for LLM output parsing
-    - [ ] Add `data.convert_format(data, from_format, to_format)` for format conversion
-  - [ ] Schema validation helpers
-    - [ ] Add `data.validate(data, schema)` for schema validation
-    - [ ] Add `data.infer_schema(data)` for schema generation
-    - [ ] Add `data.migrate_schema(data, old_schema, new_schema)` for migration
-  - [ ] Data transformation utilities
-    - [ ] Add `data.map(collection, mapper)` for data mapping
-    - [ ] Add `data.filter(collection, predicate)` for filtering
-    - [ ] Add `data.reduce(collection, reducer, initial)` for aggregation
-
-- [ ] **Task 2.3.4.7: Tools & Registry Library** (`/pkg/engine/gopherlua/stdlib/tools.lua`)
-  - [ ] Tool registration and management
-    - [ ] Add `tools.define(name, description, schema, func)` for tool creation
-    - [ ] Add `tools.register_library(library)` for tool library loading
-    - [ ] Add `tools.compose(tools)` for tool composition
-  - [ ] Tool execution utilities
-    - [ ] Add `tools.execute_safe(tool, params)` for safe execution
-    - [ ] Add `tools.pipeline(tools, data)` for tool pipelines
-    - [ ] Add `tools.parallel_execute(tools, params)` for concurrent execution
-  - [ ] Tool validation and testing
-    - [ ] Add `tools.validate_params(tool, params)` for parameter validation
-    - [ ] Add `tools.test_tool(tool, test_cases)` for tool testing
-    - [ ] Add `tools.benchmark_tool(tool, params)` for performance testing
-
-- [ ] **Task 2.3.4.8: Observability & Monitoring Library** (`/pkg/engine/gopherlua/stdlib/observability.lua`)
-  - [ ] Metrics and monitoring utilities
-    - [ ] Add `metrics.counter(name, tags)` for counter metrics
-    - [ ] Add `metrics.gauge(name, value, tags)` for gauge metrics
-    - [ ] Add `metrics.timer(name, duration, tags)` for timing metrics
-    - [ ] Add `metrics.track(func, name)` for automatic function tracking
-  - [ ] Tracing and debugging helpers
-    - [ ] Add `trace.span(name, func)` for traced execution
-    - [ ] Add `trace.add_event(name, attributes)` for span events
-    - [ ] Add `trace.set_attribute(key, value)` for span attributes
-  - [ ] Guardrails and safety utilities
-    - [ ] Add `safety.check_content(content, rules)` for content validation
-    - [ ] Add `safety.rate_limit(key, limit, window)` for rate limiting
-    - [ ] Add `safety.circuit_breaker(name, config)` for fault tolerance
-
-- [ ] **Task 2.3.4.9: Authentication & Security Library** (`/pkg/engine/gopherlua/stdlib/auth.lua`)
-  - [ ] Authentication utilities
-    - [ ] Add `auth.login(credentials, scheme)` for authentication
-    - [ ] Add `auth.refresh_token(refresh_token)` for token refresh
-    - [ ] Add `auth.validate_session(session)` for session validation
-  - [ ] OAuth and token management
-    - [ ] Add `auth.oauth_flow(provider, config)` for OAuth flows
-    - [ ] Add `auth.jwt_decode(token, verify)` for JWT handling
-    - [ ] Add `auth.secure_store(key, value)` for secure storage
-  - [ ] Permission and access control
-    - [ ] Add `auth.check_permission(user, resource, action)` for access control
-    - [ ] Add `auth.create_policy(rules)` for policy creation
-    - [ ] Add `auth.audit_log(action, context)` for audit logging
-
-- [ ] **Task 2.3.4.10: Error Handling & Recovery Library** (`/pkg/engine/gopherlua/stdlib/errors.lua`)
-  - [ ] Enhanced error handling
-    - [ ] Add `errors.try(func, catch_func, finally_func)` for try-catch-finally
-    - [ ] Add `errors.wrap(error, context)` for error wrapping
-    - [ ] Add `errors.chain(errors)` for error chaining
-  - [ ] Retry and recovery mechanisms
-    - [ ] Add `errors.retry(func, options)` for retry logic
-    - [ ] Add `errors.circuit_breaker(func, config)` for fault tolerance
-    - [ ] Add `errors.fallback(primary, fallback)` for fallback strategies
-  - [ ] Error categorization and reporting
-    - [ ] Add `errors.categorize(error)` for error classification
-    - [ ] Add `errors.report(error, context)` for error reporting
-    - [ ] Add `errors.aggregate(errors)` for error aggregation
-
-- [ ] **Task 2.3.4.11: Logging & Debug Library** (`/pkg/engine/gopherlua/stdlib/logging.lua`)
-  - [ ] Unified logging interface
-    - [ ] Add `log.info(message, context)` for info logging
-    - [ ] Add `log.warn(message, context)` for warning logging
-    - [ ] Add `log.error(message, context)` for error logging
-    - [ ] Add `log.debug(message, context)` for debug logging
-  - [ ] Structured logging utilities
-    - [ ] Add `log.with_context(context)` for context propagation
-    - [ ] Add `log.create_logger(component, level)` for component loggers
-    - [ ] Add `log.set_formatter(formatter)` for custom formatting
-  - [ ] Debug and diagnostics helpers
-    - [ ] Add `debug.trace_calls(func)` for call tracing
-    - [ ] Add `debug.memory_usage()` for memory monitoring
-    - [ ] Add `debug.performance_profile(func)` for performance profiling
-
-- [ ] **Task 2.3.4.12: Testing & Validation Library** (`/pkg/engine/gopherlua/stdlib/testing.lua`)
-  - [ ] Test framework and assertions
-    - [ ] Add `test.describe(name, tests)` for test grouping
-    - [ ] Add `test.it(name, test_func)` for individual tests
-    - [ ] Add `test.assert_equals(actual, expected)` for assertions
-    - [ ] Add `test.assert_error(func, expected_error)` for error testing
-  - [ ] Mocking and stubbing utilities
-    - [ ] Add `test.mock(object, method, replacement)` for mocking
-    - [ ] Add `test.stub(func, return_value)` for stubbing
-    - [ ] Add `test.spy(func)` for function spying
-  - [ ] Performance and load testing
-    - [ ] Add `test.benchmark(func, iterations)` for benchmarking
-    - [ ] Add `test.load_test(func, config)` for load testing
-    - [ ] Add `test.memory_test(func)` for memory testing
-
-- [ ] **Task 2.3.4.13: Core Utilities Library** (`/pkg/engine/gopherlua/stdlib/core.lua`)
-  - [ ] String and text utilities
-    - [ ] Add `string.template(template, variables)` for string templating
-    - [ ] Add `string.slugify(text)` for URL-safe strings
-    - [ ] Add `string.truncate(text, length)` for text truncation
-  - [ ] Collection and data utilities
-    - [ ] Add `table.merge(t1, t2)` for table merging
-    - [ ] Add `table.deep_copy(table)` for deep copying
-    - [ ] Add `table.keys(table)` and `table.values(table)` for extraction
-  - [ ] UUID, hashing, and crypto utilities
-    - [ ] Add `crypto.uuid()` for UUID generation
-    - [ ] Add `crypto.hash(data, algorithm)` for hashing
-    - [ ] Add `crypto.random_string(length)` for random strings
-  - [ ] Time and date utilities
-    - [ ] Add `time.now()` for current timestamp
-    - [ ] Add `time.format(timestamp, format)` for time formatting
-    - [ ] Add `time.duration(start, end)` for duration calculation
-
-- [ ] **Task 2.3.4.14: Spell Framework Library** (`/pkg/engine/gopherlua/stdlib/spell.lua`)
-  - [ ] Spell lifecycle and framework
-    - [ ] Add `spell.init(config)` for spell initialization
-    - [ ] Add `spell.params(name, default, type)` for parameter handling
-    - [ ] Add `spell.output(data, format)` for result output
-  - [ ] Spell composition and reuse
-    - [ ] Add `spell.include(spell_path)` for spell inclusion
-    - [ ] Add `spell.compose(spells)` for spell composition
-    - [ ] Add `spell.library(name, functions)` for library creation
-  - [ ] Spell execution context
-    - [ ] Add `spell.context()` for execution context access
-    - [ ] Add `spell.config(key, default)` for configuration access
-    - [ ] Add `spell.cache(key, value, ttl)` for caching
-
-- [ ] **Task 2.3.4.15: Documentation & Examples** (`/pkg/engine/gopherlua/stdlib/`)
-  - [ ] Comprehensive documentation
-    - [ ] Create `README.md` with library overview and philosophy
-    - [ ] Create `API_REFERENCE.md` with complete function documentation
-    - [ ] Create `EXAMPLES.md` with practical usage examples
-    - [ ] Create `BEST_PRACTICES.md` with performance and security guidelines
-  - [ ] Interactive examples and tutorials
-    - [ ] Create `examples/` directory with working examples for each library
-    - [ ] Create `tutorials/` directory with step-by-step guides
-    - [ ] Create `templates/` directory with spell templates
-  - [ ] Integration guides
-    - [ ] Create bridge integration examples showing stdlib + bridge usage
-    - [ ] Create performance optimization guides
-    - [ ] Create security configuration examples
 
 #### 2.3.4: Async/Coroutine Support
+Foundation for async operations that Lua Standard Library will build upon. This resolves deferred Task 1.3.20 for async/promise-based tool execution.
+
 - [ ] **Task 2.3.4.1: Async Runtime** (`/pkg/engine/gopherlua/async.go`)
   - [ ] Implement `AsyncRuntime` for coroutine management
   - [ ] Add promise-coroutine integration
@@ -343,6 +472,425 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
   - [ ] Test channel operations
   - [ ] Test cancellation and timeouts
   - [ ] Test concurrent async operations
+
+#### 2.3.5: Lua Standard Library
+Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing.
+
+- [ ] **Task 2.3.5.1: Promise & Async Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
+    - [ ] Implement Promise class with full async support
+      - [ ] Add `Promise.new(executor)` constructor
+      - [ ] Add `then/catch/finally` chain methods
+      - [ ] Add `Promise.all(promises)` for concurrent execution
+      - [ ] Add `Promise.race(promises)` for first-wins scenarios
+      - [ ] Add `Promise.resolve(value)` and `Promise.reject(error)` helpers
+    - [ ] Add async/await syntax sugar
+      - [ ] Add `async(func)` wrapper for promise-returning functions
+      - [ ] Add `await(promise, timeout)` method with timeout support
+      - [ ] Add `sleep(duration)` utility for delays
+    - [ ] Add coroutine integration
+      - [ ] Add `spawn(func, args)` for concurrent execution
+      - [ ] Add `yield()` for cooperative multitasking
+      - [ ] Add channel-based communication helpers
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/promise_test.go`)
+    - [ ] Test promise constructor and executor behavior
+    - [ ] Test promise resolution/rejection with various types
+    - [ ] Test promise chaining (then/catch/finally)
+    - [ ] Test Promise.all concurrent execution
+    - [ ] Test Promise.race timing behavior
+    - [ ] Test timeout and cancellation
+    - [ ] Test error propagation through chains
+    - [ ] Test memory leaks in long chains
+    - [ ] Test coroutine integration
+    - [ ] Benchmark promise creation/resolution
+
+- [ ] **Task 2.3.5.2: LLM Operations Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/llm.lua`)
+    - [ ] High-level LLM operation helpers
+      - [ ] Add `llm.quick_prompt(prompt, options)` for simple prompting
+      - [ ] Add `llm.chat_session(system_prompt)` for conversation management
+      - [ ] Add `llm.streaming_response(prompt, callback)` for streaming
+      - [ ] Add `llm.batch_process(prompts, options)` for bulk operations
+    - [ ] Provider management utilities
+      - [ ] Add `llm.use_provider(name, config)` for easy provider switching
+      - [ ] Add `llm.compare_providers(prompt, providers)` for A/B testing
+      - [ ] Add `llm.fallback_chain(providers, prompt)` for reliability
+    - [ ] Model discovery helpers
+      - [ ] Add `llm.find_model(requirements)` for capability-based selection
+      - [ ] Add `llm.model_info(model_id)` for metadata access
+      - [ ] Add `llm.cost_estimate(operation, model)` for cost tracking
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/llm_test.go`)
+    - [ ] Test with mock LLM bridge
+    - [ ] Test streaming callbacks
+    - [ ] Test batch processing limits
+    - [ ] Test provider fallback chain
+    - [ ] Test cost estimation accuracy
+    - [ ] Test async operations with promises
+    - [ ] Test error handling and retries
+    - [ ] Test concurrent batch operations
+
+- [ ] **Task 2.3.5.3: Agent Management Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/agent.lua`)
+    - [ ] Agent lifecycle management
+      - [ ] Add `agent.create(name, config)` for agent creation
+      - [ ] Add `agent.configure(agent, settings)` for configuration
+      - [ ] Add `agent.clone(agent, modifications)` for agent templating
+    - [ ] Agent communication helpers
+      - [ ] Add `agent.conversation(agent, messages)` for multi-turn chat
+      - [ ] Add `agent.delegate(from_agent, to_agent, task)` for task delegation
+      - [ ] Add `agent.collaborate(agents, task)` for multi-agent workflows
+    - [ ] Agent tool integration
+      - [ ] Add `agent.add_tools(agent, tools)` for tool assignment
+      - [ ] Add `agent.create_tool(name, func, schema)` for custom tools
+      - [ ] Add `agent.tool_chain(tools, data)` for tool pipelines
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/agent_test.go`)
+    - [ ] Test agent lifecycle state transitions
+    - [ ] Test multi-agent communication patterns
+    - [ ] Test tool assignment and execution
+    - [ ] Test conversation state management
+    - [ ] Test agent cloning with modifications
+    - [ ] Test delegation and collaboration
+    - [ ] Test concurrent agent operations
+    - [ ] Test error handling in agent workflows
+
+- [ ] **Task 2.3.5.4: State Management Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/state.lua`)
+    - [ ] Context and state utilities
+      - [ ] Add `state.create(initial_data)` for state creation
+      - [ ] Add `state.merge(state1, state2)` for state composition
+      - [ ] Add `state.snapshot(state)` for state capture
+      - [ ] Add `state.restore(snapshot)` for state restoration
+    - [ ] State persistence helpers
+      - [ ] Add `state.save(state, key)` for persistent storage
+      - [ ] Add `state.load(key, default)` for state retrieval
+      - [ ] Add `state.expire(key, duration)` for TTL support
+    - [ ] State transformation utilities
+      - [ ] Add `state.transform(state, transformer)` for state modification
+      - [ ] Add `state.filter(state, predicate)` for state filtering
+      - [ ] Add `state.validate(state, schema)` for state validation
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/state_test.go`)
+    - [ ] Test state persistence and retrieval
+    - [ ] Test TTL expiration behavior
+    - [ ] Test state merging conflict resolution
+    - [ ] Test schema validation errors
+    - [ ] Test concurrent state modifications
+    - [ ] Test snapshot/restore consistency
+    - [ ] Test state transformation chains
+    - [ ] Benchmark state operations
+
+- [ ] **Task 2.3.5.5: Event & Workflow Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/events.lua`)
+    - [ ] Event system utilities
+      - [ ] Add `events.emit(event, data)` for event emission
+      - [ ] Add `events.on(event, handler)` for event subscription
+      - [ ] Add `events.once(event, handler)` for one-time handlers
+      - [ ] Add `events.off(event, handler)` for unsubscription
+    - [ ] Workflow orchestration helpers
+      - [ ] Add `workflow.create(steps)` for workflow definition
+      - [ ] Add `workflow.run(workflow, input)` for execution
+      - [ ] Add `workflow.parallel(steps)` for concurrent execution
+      - [ ] Add `workflow.conditional(condition, then_step, else_step)` for branching
+    - [ ] Hook and lifecycle utilities
+      - [ ] Add `hooks.before(event, handler)` for pre-hooks
+      - [ ] Add `hooks.after(event, handler)` for post-hooks
+      - [ ] Add `hooks.around(event, wrapper)` for around-hooks
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/events_test.go`)
+    - [ ] Test event emission and subscription ordering
+    - [ ] Test one-time handler cleanup
+    - [ ] Test workflow execution with branching
+    - [ ] Test parallel step coordination
+    - [ ] Test hook execution order (before/after/around)
+    - [ ] Test event handler errors
+    - [ ] Test workflow cancellation
+    - [ ] Test memory leaks in event handlers
+
+- [ ] **Task 2.3.5.6: Structured Data Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/data.lua`)
+    - [ ] JSON and data processing utilities
+      - [ ] Add `data.parse_json(text, schema)` for validated JSON parsing
+      - [ ] Add `data.to_json(object, format)` for pretty JSON serialization
+      - [ ] Add `data.extract_structured(text, schema)` for LLM output parsing
+      - [ ] Add `data.convert_format(data, from_format, to_format)` for format conversion
+    - [ ] Schema validation helpers
+      - [ ] Add `data.validate(data, schema)` for schema validation
+      - [ ] Add `data.infer_schema(data)` for schema generation
+      - [ ] Add `data.migrate_schema(data, old_schema, new_schema)` for migration
+    - [ ] Data transformation utilities
+      - [ ] Add `data.map(collection, mapper)` for data mapping
+      - [ ] Add `data.filter(collection, predicate)` for filtering
+      - [ ] Add `data.reduce(collection, reducer, initial)` for aggregation
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/data_test.go`)
+    - [ ] Test JSON parsing with invalid schemas
+    - [ ] Test LLM output extraction accuracy
+    - [ ] Test format conversion edge cases
+    - [ ] Test schema inference from complex data
+    - [ ] Test schema migration compatibility
+    - [ ] Test transformation performance
+    - [ ] Test concurrent data operations
+    - [ ] Test memory usage with large datasets
+
+- [ ] **Task 2.3.5.7: Tools & Registry Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/tools.lua`)
+    - [ ] Tool registration and management
+      - [ ] Add `tools.define(name, description, schema, func)` for tool creation
+      - [ ] Add `tools.register_library(library)` for tool library loading
+      - [ ] Add `tools.compose(tools)` for tool composition
+    - [ ] Tool execution utilities
+      - [ ] Add `tools.execute_safe(tool, params)` for safe execution
+      - [ ] Add `tools.pipeline(tools, data)` for tool pipelines
+      - [ ] Add `tools.parallel_execute(tools, params)` for concurrent execution
+    - [ ] Tool validation and testing
+      - [ ] Add `tools.validate_params(tool, params)` for parameter validation
+      - [ ] Add `tools.test_tool(tool, test_cases)` for tool testing
+      - [ ] Add `tools.benchmark_tool(tool, params)` for performance testing
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/tools_test.go`)
+    - [ ] Test tool registration and discovery
+    - [ ] Test parameter validation errors
+    - [ ] Test tool composition behavior
+    - [ ] Test pipeline execution order
+    - [ ] Test parallel execution limits
+    - [ ] Test tool error handling
+    - [ ] Test tool benchmarking accuracy
+    - [ ] Test memory leaks in tool chains
+
+- [ ] **Task 2.3.5.8: Observability & Monitoring Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/observability.lua`)
+    - [ ] Metrics and monitoring utilities
+      - [ ] Add `metrics.counter(name, tags)` for counter metrics
+      - [ ] Add `metrics.gauge(name, value, tags)` for gauge metrics
+      - [ ] Add `metrics.timer(name, duration, tags)` for timing metrics
+      - [ ] Add `metrics.track(func, name)` for automatic function tracking
+    - [ ] Tracing and debugging helpers
+      - [ ] Add `trace.span(name, func)` for traced execution
+      - [ ] Add `trace.add_event(name, attributes)` for span events
+      - [ ] Add `trace.set_attribute(key, value)` for span attributes
+    - [ ] Guardrails and safety utilities
+      - [ ] Add `safety.check_content(content, rules)` for content validation
+      - [ ] Add `safety.rate_limit(key, limit, window)` for rate limiting
+      - [ ] Add `safety.circuit_breaker(name, config)` for fault tolerance
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/observability_test.go`)
+    - [ ] Test metric collection accuracy
+    - [ ] Test trace span propagation
+    - [ ] Test rate limiting behavior
+    - [ ] Test circuit breaker state transitions
+    - [ ] Test content validation rules
+    - [ ] Test metric aggregation
+    - [ ] Test performance overhead
+    - [ ] Test concurrent metric updates
+
+- [ ] **Task 2.3.5.9: Authentication & Security Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/auth.lua`)
+    - [ ] Authentication utilities
+      - [ ] Add `auth.login(credentials, scheme)` for authentication
+      - [ ] Add `auth.refresh_token(refresh_token)` for token refresh
+      - [ ] Add `auth.validate_session(session)` for session validation
+    - [ ] OAuth and token management
+      - [ ] Add `auth.oauth_flow(provider, config)` for OAuth flows
+      - [ ] Add `auth.jwt_decode(token, verify)` for JWT handling
+      - [ ] Add `auth.secure_store(key, value)` for secure storage
+    - [ ] Permission and access control
+      - [ ] Add `auth.check_permission(user, resource, action)` for access control
+      - [ ] Add `auth.create_policy(rules)` for policy creation
+      - [ ] Add `auth.audit_log(action, context)` for audit logging
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/auth_test.go`)
+    - [ ] Test authentication schemes
+    - [ ] Test token refresh logic
+    - [ ] Test session validation
+    - [ ] Test OAuth flow states
+    - [ ] Test JWT verification
+    - [ ] Test permission checks
+    - [ ] Test secure storage encryption
+    - [ ] Test audit logging completeness
+
+- [ ] **Task 2.3.5.10: Error Handling & Recovery Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/errors.lua`)
+    - [ ] Enhanced error handling
+      - [ ] Add `errors.try(func, catch_func, finally_func)` for try-catch-finally
+      - [ ] Add `errors.wrap(error, context)` for error wrapping
+      - [ ] Add `errors.chain(errors)` for error chaining
+    - [ ] Retry and recovery mechanisms
+      - [ ] Add `errors.retry(func, options)` for retry logic
+      - [ ] Add `errors.circuit_breaker(func, config)` for fault tolerance
+      - [ ] Add `errors.fallback(primary, fallback)` for fallback strategies
+    - [ ] Error categorization and reporting
+      - [ ] Add `errors.categorize(error)` for error classification
+      - [ ] Add `errors.report(error, context)` for error reporting
+      - [ ] Add `errors.aggregate(errors)` for error aggregation
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/errors_test.go`)
+    - [ ] Test try-catch-finally execution order
+    - [ ] Test error wrapping context preservation
+    - [ ] Test retry with backoff strategies
+    - [ ] Test circuit breaker state machine
+    - [ ] Test fallback chain behavior
+    - [ ] Test error categorization accuracy
+    - [ ] Test error aggregation patterns
+    - [ ] Test memory leaks in error chains
+
+- [ ] **Task 2.3.5.11: Logging & Debug Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/logging.lua`)
+    - [ ] Unified logging interface
+      - [ ] Add `log.info(message, context)` for info logging
+      - [ ] Add `log.warn(message, context)` for warning logging
+      - [ ] Add `log.error(message, context)` for error logging
+      - [ ] Add `log.debug(message, context)` for debug logging
+    - [ ] Structured logging utilities
+      - [ ] Add `log.with_context(context)` for context propagation
+      - [ ] Add `log.create_logger(component, level)` for component loggers
+      - [ ] Add `log.set_formatter(formatter)` for custom formatting
+    - [ ] Debug and diagnostics helpers
+      - [ ] Add `debug.trace_calls(func)` for call tracing
+      - [ ] Add `debug.memory_usage()` for memory monitoring
+      - [ ] Add `debug.performance_profile(func)` for performance profiling
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/logging_test.go`)
+    - [ ] Test log level filtering
+    - [ ] Test context propagation
+    - [ ] Test custom formatters
+    - [ ] Test call tracing accuracy
+    - [ ] Test memory usage reporting
+    - [ ] Test performance profiling
+    - [ ] Test concurrent logging
+    - [ ] Test log rotation behavior
+
+- [ ] **Task 2.3.5.12: Testing & Validation Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/testing.lua`)
+    - [ ] Test framework and assertions
+      - [ ] Add `test.describe(name, tests)` for test grouping
+      - [ ] Add `test.it(name, test_func)` for individual tests
+      - [ ] Add `test.assert_equals(actual, expected)` for assertions
+      - [ ] Add `test.assert_error(func, expected_error)` for error testing
+    - [ ] Mocking and stubbing utilities
+      - [ ] Add `test.mock(object, method, replacement)` for mocking
+      - [ ] Add `test.stub(func, return_value)` for stubbing
+      - [ ] Add `test.spy(func)` for function spying
+    - [ ] Performance and load testing
+      - [ ] Add `test.benchmark(func, iterations)` for benchmarking
+      - [ ] Add `test.load_test(func, config)` for load testing
+      - [ ] Add `test.memory_test(func)` for memory testing
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/testing_test.go`)
+    - [ ] Test assertion functionality
+    - [ ] Test mock behavior
+    - [ ] Test spy call tracking
+    - [ ] Test benchmark accuracy
+    - [ ] Test load test execution
+    - [ ] Test memory leak detection
+    - [ ] Test nested test groups
+    - [ ] Test async test support
+
+- [ ] **Task 2.3.5.13: Core Utilities Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/core.lua`)
+    - [ ] String and text utilities
+      - [ ] Add `string.template(template, variables)` for string templating
+      - [ ] Add `string.slugify(text)` for URL-safe strings
+      - [ ] Add `string.truncate(text, length)` for text truncation
+    - [ ] Collection and data utilities
+      - [ ] Add `table.merge(t1, t2)` for table merging
+      - [ ] Add `table.deep_copy(table)` for deep copying
+      - [ ] Add `table.keys(table)` and `table.values(table)` for extraction
+    - [ ] UUID, hashing, and crypto utilities
+      - [ ] Add `crypto.uuid()` for UUID generation
+      - [ ] Add `crypto.hash(data, algorithm)` for hashing
+      - [ ] Add `crypto.random_string(length)` for random strings
+    - [ ] Time and date utilities
+      - [ ] Add `time.now()` for current timestamp
+      - [ ] Add `time.format(timestamp, format)` for time formatting
+      - [ ] Add `time.duration(start, end)` for duration calculation
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/core_test.go`)
+    - [ ] Test string templating edge cases
+    - [ ] Test table deep copy with cycles
+    - [ ] Test UUID uniqueness
+    - [ ] Test hash algorithm support
+    - [ ] Test time formatting locales
+    - [ ] Test duration calculations
+    - [ ] Test random string entropy
+    - [ ] Test concurrent utility usage
+
+- [ ] **Task 2.3.5.14: Spell Framework Library**
+  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/spell.lua`)
+    - [ ] Spell lifecycle and framework
+      - [ ] Add `spell.init(config)` for spell initialization
+      - [ ] Add `spell.params(name, default, type)` for parameter handling
+      - [ ] Add `spell.output(data, format)` for result output
+    - [ ] Spell composition and reuse
+      - [ ] Add `spell.include(spell_path)` for spell inclusion
+      - [ ] Add `spell.compose(spells)` for spell composition
+      - [ ] Add `spell.library(name, functions)` for library creation
+    - [ ] Spell execution context
+      - [ ] Add `spell.context()` for execution context access
+      - [ ] Add `spell.config(key, default)` for configuration access
+      - [ ] Add `spell.cache(key, value, ttl)` for caching
+  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/spell_test.go`)
+    - [ ] Test spell initialization
+    - [ ] Test parameter validation
+    - [ ] Test spell composition
+    - [ ] Test context isolation
+    - [ ] Test cache TTL behavior
+    - [ ] Test output formatting
+    - [ ] Test library loading
+    - [ ] Test spell error handling
+
+- [ ] **Task 2.3.5.15: Documentation & Examples** (`/pkg/engine/gopherlua/stdlib/`)
+  - [ ] Comprehensive documentation
+    - [ ] Create `README.md` with library overview and philosophy
+    - [ ] Create `API_REFERENCE.md` with complete function documentation
+    - [ ] Create `EXAMPLES.md` with practical usage examples
+
+- [ ] **Task 2.3.5.16: Test Infrastructure**
+  - [ ] Create test helpers (`/pkg/engine/gopherlua/stdlib/stdlib_test_helpers.go`)
+    - [ ] Lua module loading helpers
+    - [ ] Lua table comparison utilities
+    - [ ] Async test utilities
+    - [ ] Error assertion helpers
+    - [ ] Mock bridge creation utilities
+    - [ ] Test fixture management
+  - [ ] Create async test helpers (`/pkg/engine/gopherlua/stdlib/async_test_helpers.go`)
+    - [ ] Promise assertion utilities
+    - [ ] Coroutine lifecycle helpers
+    - [ ] Timeout testing utilities
+    - [ ] Concurrent operation validators
+    - [ ] Memory leak detectors
+
+- [ ] **Task 2.3.5.17: Integration Testing**
+  - [ ] Cross-module tests (`/pkg/engine/gopherlua/stdlib/integration_test.go`)
+    - [ ] Test Promise + LLM async operations
+    - [ ] Test Agent + State + Events coordination
+    - [ ] Test Workflow + Tools integration
+    - [ ] Test Error handling across modules
+    - [ ] Test module loading dependencies
+    - [ ] Test sandbox security with all modules
+    - [ ] Test resource cleanup across modules
+    - [ ] Test performance with all modules loaded
+
+- [ ] **Task 2.3.5.18: Performance Testing**
+  - [ ] Benchmark suite (`/pkg/engine/gopherlua/stdlib/benchmark_test.go`)
+    - [ ] Promise creation/resolution benchmarks
+    - [ ] Module loading time benchmarks
+    - [ ] Memory usage profiling
+    - [ ] Concurrent operation stress tests
+    - [ ] Event system throughput tests
+    - [ ] State management scalability tests
+    - [ ] Tool execution performance tests
+    - [ ] Generate performance report
+
+#### Testing Requirements for All Lua Standard Library Modules:
+1. **Minimum 90% test coverage** for all modules
+2. **Table-driven tests** using testutils patterns
+3. **Both success and failure paths** must be tested
+4. **Timeout tests** for all async operations
+5. **Memory leak tests** for resource management
+6. **Sandbox restriction verification** for security
+7. **Concurrent execution tests** for thread safety
+8. **Performance benchmarks** for critical paths
+9. **Integration tests** between dependent modules
+10. **Documentation examples** must be executable tests
+    - [ ] Create `BEST_PRACTICES.md` with performance and security guidelines
+  - [ ] Interactive examples and tutorials
+    - [ ] Create `examples/` directory with working examples for each library
+    - [ ] Create `tutorials/` directory with step-by-step guides
+    - [ ] Create `templates/` directory with spell templates
+  - [ ] Integration guides
+    - [ ] Create bridge integration examples showing stdlib + bridge usage
+    - [ ] Create performance optimization guides
+    - [ ] Create security configuration examples
 
 ### Phase 2.4: Advanced Features & Optimization
 

@@ -4,11 +4,16 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-🚧 **Phase 2.3.4 ACTIVE**: Lua Standard Library - Starting development
+🚧 **Phase 2.3.3 ACTIVE**: Bridge Adapters Enhancement & Namespace Flattening (14/24 tasks complete)
+- Tasks 15-17: Add missing bridge functionality (tool_registry, llm_pool, llm_providers)
+- Tasks 18-24: Flatten 51 namespaces across 10 adapters for consistency
+- Dependency order: 15 → 16-17 → 18-24
 
-**Completed Phases**:
-- ✅ Phase 2.3.2.5: Test Utilities (40%+ code reduction, centralized testutils)
-- ✅ Phase 2.3.3: Bridge Adapters (14/14 adapters with full test coverage)
+**Next Phase**: Phase 2.3.4: Async/Coroutine Support → 2.3.5: Lua Standard Library
+
+**Completed**:
+- ✅ Phase 1: Engine & Bridge Foundation (38+ bridges)
+- ✅ Phase 2.1-2.3.2: Lua Core, Module System, ScriptValue, Test Utilities
 
 ## Architecture
 
@@ -22,10 +27,10 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Implementation Workflow
 
-1. **TDD mandatory** - Write tests first, use testutils for new tests
-2. **Bridge-first** - Wrap go-llms, never reimplement  
-3. **Research go-llms** - Check implementation in git submodule first
-4. **Reuse code** - Use pkg/testutils, reduce duplication
+1. **Be thorough** - No shortcuts or deferrals. Ask questions when needed
+2. **TDD mandatory** - Write tests first, use testutils
+3. **Bridge-first** - Wrap go-llms, never reimplement  
+4. **Research go-llms** - Check git submodule first
 5. **Run `make all`** - Complete dev cycle
 6. **Update TODO.md** - Mark tasks with timestamps
 
@@ -37,8 +42,10 @@ make test  # Test with race detection
 make lint  # Check code quality
 ```
 
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+## Key Reminders
+
+- **Complete tasks fully** - No lazy implementations or deferrals
+- Do what's asked; nothing more, nothing less
+- Prefer editing existing files over creating new ones
+- Never create docs unless explicitly requested
+- If it's in go-llms, bridge it - don't reimplement
