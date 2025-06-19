@@ -66,12 +66,7 @@ func TestScriptValueTypes(t *testing.T) {
 	})
 
 	t.Run("ArrayValue", func(t *testing.T) {
-		elements := []ScriptValue{
-			NewNumberValue(1),
-			NewStringValue("two"),
-			NewBoolValue(true),
-		}
-		v := NewArrayValue(elements)
+		v := createMixedTypeArray()
 		assert.Equal(t, TypeArray, v.Type())
 		assert.False(t, v.IsNil())
 		assert.Equal(t, "[1, two, true]", v.String())
@@ -86,11 +81,7 @@ func TestScriptValueTypes(t *testing.T) {
 		assert.Equal(t, true, arr[2])
 
 		// Test equality
-		v2 := NewArrayValue([]ScriptValue{
-			NewNumberValue(1),
-			NewStringValue("two"),
-			NewBoolValue(true),
-		})
+		v2 := createMixedTypeArray()
 		assert.True(t, v.Equals(v2))
 
 		// Test inequality
@@ -106,12 +97,7 @@ func TestScriptValueTypes(t *testing.T) {
 	})
 
 	t.Run("ObjectValue", func(t *testing.T) {
-		fields := map[string]ScriptValue{
-			"name":   NewStringValue("test"),
-			"age":    NewNumberValue(25),
-			"active": NewBoolValue(true),
-		}
-		v := NewObjectValue(fields)
+		v := createTestObject()
 		assert.Equal(t, TypeObject, v.Type())
 		assert.False(t, v.IsNil())
 
@@ -125,11 +111,7 @@ func TestScriptValueTypes(t *testing.T) {
 		assert.Equal(t, true, obj["active"])
 
 		// Test equality
-		v2 := NewObjectValue(map[string]ScriptValue{
-			"name":   NewStringValue("test"),
-			"age":    NewNumberValue(25),
-			"active": NewBoolValue(true),
-		})
+		v2 := createTestObject()
 		assert.True(t, v.Equals(v2))
 
 		// Test inequality - different values

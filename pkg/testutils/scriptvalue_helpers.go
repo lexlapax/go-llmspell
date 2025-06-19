@@ -13,7 +13,7 @@ import (
 
 // ExtractScriptValue extracts the underlying Go value from a ScriptValue result
 // This helper is used to fix tests after ScriptValue refactoring
-func ExtractScriptValue(t *testing.T, result interface{}) interface{} {
+func ExtractScriptValue(t *testing.T, result any) any {
 	t.Helper()
 
 	if result == nil {
@@ -34,8 +34,8 @@ func ExtractScriptValue(t *testing.T, result interface{}) interface{} {
 	return sv.ToGo()
 }
 
-// AssertScriptValueEquals asserts that a ScriptValue result equals expected value
-func AssertScriptValueEquals(t *testing.T, expected interface{}, result interface{}) {
+// AssertScriptValueInterface asserts that a ScriptValue result equals expected value
+func AssertScriptValueInterface(t *testing.T, expected any, result any) {
 	t.Helper()
 
 	actual := ExtractScriptValue(t, result)
@@ -43,7 +43,7 @@ func AssertScriptValueEquals(t *testing.T, expected interface{}, result interfac
 }
 
 // AssertScriptValueNil asserts that a ScriptValue result is nil
-func AssertScriptValueNil(t *testing.T, result interface{}) {
+func AssertScriptValueNil(t *testing.T, result any) {
 	t.Helper()
 
 	if result == nil {
@@ -62,20 +62,20 @@ func AssertScriptValueNil(t *testing.T, result interface{}) {
 }
 
 // ExtractScriptValueMap extracts a map from a ScriptValue result
-func ExtractScriptValueMap(t *testing.T, result interface{}) map[string]interface{} {
+func ExtractScriptValueMap(t *testing.T, result any) map[string]any {
 	t.Helper()
 
 	sv, ok := result.(engine.ScriptValue)
 	require.True(t, ok, "expected ScriptValue, got %T", result)
 
-	m, ok := sv.ToGo().(map[string]interface{})
+	m, ok := sv.ToGo().(map[string]any)
 	require.True(t, ok, "expected map, got %T", sv.ToGo())
 
 	return m
 }
 
 // ExtractScriptValueSlice extracts a slice from a ScriptValue result
-func ExtractScriptValueSlice(t *testing.T, result interface{}) []interface{} {
+func ExtractScriptValueSlice(t *testing.T, result any) []any {
 	t.Helper()
 
 	sv, ok := result.(engine.ScriptValue)
@@ -85,15 +85,15 @@ func ExtractScriptValueSlice(t *testing.T, result interface{}) []interface{} {
 	goVal := sv.ToGo()
 
 	// Try as slice first
-	if s, ok := goVal.([]interface{}); ok {
+	if s, ok := goVal.([]any); ok {
 		return s
 	}
 
 	// Try as map with numeric keys (Lua table)
-	if m, ok := goVal.(map[string]interface{}); ok {
+	if m, ok := goVal.(map[string]any); ok {
 		// Convert Lua 1-based table to slice
 		size := len(m)
-		slice := make([]interface{}, size)
+		slice := make([]any, size)
 		for i := 1; i <= size; i++ {
 			key := fmt.Sprintf("%d", i)
 			if val, exists := m[key]; exists {

@@ -356,21 +356,21 @@ func TestExecutionPipeline_ResultExtraction(t *testing.T) {
 			name:   "boolean_result",
 			script: `return true`,
 			validate: func(t *testing.T, result interface{}) {
-				testutils.AssertScriptValueEquals(t, true, result)
+				testutils.AssertScriptValueInterface(t, true, result)
 			},
 		},
 		{
 			name:   "number_result",
 			script: `return 3.14159`,
 			validate: func(t *testing.T, result interface{}) {
-				testutils.AssertScriptValueEquals(t, 3.14159, result)
+				testutils.AssertScriptValueInterface(t, 3.14159, result)
 			},
 		},
 		{
 			name:   "string_result",
 			script: `return "Hello, Lua!"`,
 			validate: func(t *testing.T, result interface{}) {
-				testutils.AssertScriptValueEquals(t, "Hello, Lua!", result)
+				testutils.AssertScriptValueInterface(t, "Hello, Lua!", result)
 			},
 		},
 		{
@@ -558,7 +558,7 @@ func TestExecutionPipeline_ChunkCacheIntegration(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		result, err := eng.Execute(ctx, script, nil)
 		require.NoError(t, err)
-		testutils.AssertScriptValueEquals(t, 55.0, result) // fibonacci(10) = 55
+		testutils.AssertScriptValueInterface(t, 55.0, result) // fibonacci(10) = 55
 	}
 
 	// Check that metrics show cache hits
@@ -593,7 +593,7 @@ func TestExecutionPipeline_MemoryManagement(t *testing.T) {
 	ctx := context.Background()
 	result, err := eng.Execute(ctx, script, nil)
 	require.NoError(t, err)
-	testutils.AssertScriptValueEquals(t, 1000.0, result)
+	testutils.AssertScriptValueInterface(t, 1000.0, result)
 
 	// Check that memory metrics are updated
 	metrics := eng.GetMetrics()

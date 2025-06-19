@@ -300,11 +300,7 @@ func TestConvertFromScriptValue(t *testing.T) {
 }
 
 func TestValidateStringArg(t *testing.T) {
-	args := []ScriptValue{
-		NewStringValue("hello"),
-		NewNumberValue(42),
-		NewNilValue(),
-	}
+	args := createTestArgs() // Use helper function
 
 	t.Run("valid string arg", func(t *testing.T) {
 		result, err := ValidateStringArg(args, 0, "first")
@@ -384,10 +380,7 @@ func TestValidateBoolArg(t *testing.T) {
 }
 
 func TestValidateObjectArg(t *testing.T) {
-	objectValue := NewObjectValue(map[string]ScriptValue{
-		"name": NewStringValue("test"),
-		"age":  NewNumberValue(25),
-	})
+	objectValue := createTestObject()
 
 	args := []ScriptValue{
 		objectValue,
@@ -399,8 +392,9 @@ func TestValidateObjectArg(t *testing.T) {
 		result, err := ValidateObjectArg(args, 0, "first")
 		assert.NoError(t, err)
 		assert.Equal(t, map[string]interface{}{
-			"name": "test",
-			"age":  float64(25),
+			"name":   "test",
+			"age":    float64(25),
+			"active": true,
 		}, result)
 	})
 
@@ -418,10 +412,7 @@ func TestValidateObjectArg(t *testing.T) {
 }
 
 func TestValidateArrayArg(t *testing.T) {
-	arrayValue := NewArrayValue([]ScriptValue{
-		NewStringValue("hello"),
-		NewNumberValue(42),
-	})
+	arrayValue := createTestArray()
 
 	args := []ScriptValue{
 		arrayValue,
@@ -432,7 +423,7 @@ func TestValidateArrayArg(t *testing.T) {
 	t.Run("valid array arg", func(t *testing.T) {
 		result, err := ValidateArrayArg(args, 0, "first")
 		assert.NoError(t, err)
-		assert.Equal(t, []interface{}{"hello", float64(42)}, result)
+		assert.Equal(t, []interface{}{"hello", float64(42), true}, result)
 	})
 
 	t.Run("non-array arg", func(t *testing.T) {

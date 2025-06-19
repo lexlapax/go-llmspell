@@ -39,6 +39,11 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 - Move existing `scriptvalue_helpers.go`
 - Add comprehensive tests for mocks
 
+**Progress**:
+- ✅ Created centralized MockScriptEngine in testutils
+- ✅ Migrated registry_test.go to use test utilities
+- ⚠️  Note: Import cycle issue - engine tests use local test_helpers.go
+
 **Key Patterns to Extract**:
 - Mock engines (12+ files)
 - Bridge setup/teardown (20+ files)

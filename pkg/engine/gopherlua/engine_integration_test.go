@@ -339,7 +339,7 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 		// Verify engine can still execute scripts after errors
 		result, err := eng.Execute(ctx, `return "recovery successful"`, nil)
 		require.NoError(t, err)
-		testutils.AssertScriptValueEquals(t, "recovery successful", result)
+		testutils.AssertScriptValueInterface(t, "recovery successful", result)
 	})
 
 	t.Run("resource_management", func(t *testing.T) {
@@ -369,7 +369,7 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 			return #data
 		`, nil)
 		require.NoError(t, err)
-		testutils.AssertScriptValueEquals(t, 1000.0, result)
+		testutils.AssertScriptValueInterface(t, 1000.0, result)
 	})
 
 	// Final metrics check
