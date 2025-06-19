@@ -102,94 +102,97 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - [x] **Task 2.3.3.16: LLM Pool Bridge Enhancement** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
 - [x] **Task 2.3.3.17: LLM Providers Bridge Enhancement** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
 
-- [ ] **Task 2.3.3.18: Events Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/events.go`)
-  - [ ] Flatten bus namespace methods:
-    - [ ] events.bus.publish → events.busPublish
-    - [ ] events.bus.subscribe → events.busSubscribe  
-    - [ ] events.bus.unsubscribe → events.busUnsubscribe
-  - [ ] Flatten filters namespace methods:
-    - [ ] events.filters.create → events.filtersCreate
-    - [ ] events.filters.createComposite → events.filtersCreateComposite
-  - [ ] Flatten recording namespace methods:
-    - [ ] events.recording.start → events.recordingStart
-    - [ ] events.recording.stop → events.recordingStop
-    - [ ] events.recording.isRecording → events.recordingIsRecording
-  - [ ] Flatten replay namespace methods:
-    - [ ] events.replay.start → events.replayStart
-    - [ ] events.replay.pause → events.replayPause
-    - [ ] events.replay.resume → events.replayResume
-    - [ ] events.replay.stop → events.replayStop
-  - [ ] Flatten aggregation namespace methods:
-    - [ ] events.aggregation.create → events.aggregationCreate
-    - [ ] events.aggregation.getData → events.aggregationGetData
-  - [ ] Update tests in events_test.go
+- [x] **Task 2.3.3.18: Events Adapter Namespace Flattening** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/events.go`)
+  - [x] Flatten bus namespace methods:
+    - [x] events.bus.publish → events.busPublish
+    - [x] events.bus.subscribe → events.busSubscribe  
+    - [x] events.bus.unsubscribe → events.busUnsubscribe
+  - [x] Flatten filters namespace methods:
+    - [x] events.filters.create → events.filtersCreate
+    - [x] events.filters.createComposite → events.filtersCreateComposite
+  - [x] Flatten recording namespace methods:
+    - [x] events.recording.start → events.recordingStart
+    - [x] events.recording.stop → events.recordingStop
+    - [x] events.recording.isRecording → events.recordingIsRecording
+  - [x] Flatten replay namespace methods:
+    - [x] events.replay.start → events.replayStart
+    - [x] events.replay.pause → events.replayPause
+    - [x] events.replay.resume → events.replayResume
+    - [x] events.replay.stop → events.replayStop
+  - [x] Flatten aggregation namespace methods:
+    - [x] events.aggregation.create → events.aggregationCreate
+    - [x] events.aggregation.getData → events.aggregationGetData
+  - [x] Update tests in events_test.go
 
-- [ ] **Task 2.3.3.19: State Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/state.go`)
-  - [ ] Flatten transforms namespace methods:
-    - [ ] state.transforms.register → state.transformsRegister
-    - [ ] state.transforms.apply → state.transformsApply
-    - [ ] state.transforms.chain → state.transformsChain
-    - [ ] state.transforms.validate → state.transformsValidate
-    - [ ] state.transforms.getAvailable → state.transformsGetAvailable
-  - [ ] Flatten context namespace methods:
-    - [ ] state.context.get → state.contextGet
-    - [ ] state.context.set → state.contextSet
-    - [ ] state.context.merge → state.contextMerge
-    - [ ] state.context.clear → state.contextClear
-  - [ ] Flatten persistence namespace methods:
-    - [ ] state.persistence.save → state.persistenceSave
-    - [ ] state.persistence.load → state.persistenceLoad
-    - [ ] state.persistence.exists → state.persistenceExists
-    - [ ] state.persistence.delete → state.persistenceDelete
-    - [ ] state.persistence.listVersions → state.persistenceListVersions
-  - [ ] Update tests in state_test.go
+- [x] **Task 2.3.3.19: State Adapter Namespace Flattening** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/state.go`)
+  - [x] Flatten transforms namespace methods:
+    - [x] state.transforms.register → state.transformsRegister
+    - [x] state.transforms.apply → state.transformsApply
+    - [x] state.transforms.chain → state.transformsChain
+    - [x] state.transforms.validate → state.transformsValidate
+    - [x] state.transforms.getAvailable → state.transformsGetAvailable
+  - [x] Flatten context namespace methods:
+    - [x] state.context.get → state.contextGet
+    - [x] state.context.set → state.contextSet
+    - [x] state.context.merge → state.contextMerge
+    - [x] state.context.clear → state.contextClear
+    - [x] state.context.createShared → state.contextCreateShared
+    - [x] state.context.withInheritance → state.contextWithInheritance
+  - [x] Flatten persistence namespace methods:
+    - [x] state.persistence.save → state.persistenceSave
+    - [x] state.persistence.load → state.persistenceLoad
+    - [x] state.persistence.exists → state.persistenceExists
+    - [x] state.persistence.delete → state.persistenceDelete
+    - [x] state.persistence.listVersions → state.persistenceListVersions
+  - [x] Update tests in state_test.go
 
-- [ ] **Task 2.3.3.20: Utils Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/utils.go`)
-  - [ ] Flatten auth namespace methods:
-    - [ ] utils.auth.generateToken → utils.authGenerateToken
-    - [ ] utils.auth.validateToken → utils.authValidateToken
-    - [ ] utils.auth.hashPassword → utils.authHashPassword
-    - [ ] utils.auth.verifyPassword → utils.authVerifyPassword
-  - [ ] Flatten debug namespace methods:
-    - [ ] utils.debug.trace → utils.debugTrace
-    - [ ] utils.debug.profile → utils.debugProfile
-    - [ ] utils.debug.dump → utils.debugDump
-    - [ ] utils.debug.assert → utils.debugAssert
-  - [ ] Flatten errors namespace methods:
-    - [ ] utils.errors.wrap → utils.errorsWrap
-    - [ ] utils.errors.unwrap → utils.errorsUnwrap
-    - [ ] utils.errors.isType → utils.errorsIsType
-    - [ ] utils.errors.getStack → utils.errorsGetStack
-  - [ ] Flatten json namespace methods:
-    - [ ] utils.json.encode → utils.jsonEncode
-    - [ ] utils.json.decode → utils.jsonDecode
-    - [ ] utils.json.validate → utils.jsonValidate
-    - [ ] utils.json.prettify → utils.jsonPrettify
-  - [ ] Flatten llm namespace methods:
-    - [ ] utils.llm.parseResponse → utils.llmParseResponse
-    - [ ] utils.llm.formatPrompt → utils.llmFormatPrompt
-    - [ ] utils.llm.countTokens → utils.llmCountTokens
-    - [ ] utils.llm.splitMessage → utils.llmSplitMessage
-  - [ ] Flatten logger namespace methods:
-    - [ ] utils.logger.log → utils.loggerLog
-    - [ ] utils.logger.error → utils.loggerError
-    - [ ] utils.logger.warn → utils.loggerWarn
-    - [ ] utils.logger.info → utils.loggerInfo
-    - [ ] utils.logger.debug → utils.loggerDebug
-  - [ ] Flatten slog namespace methods:
-    - [ ] utils.slog.info → utils.slogInfo
-    - [ ] utils.slog.error → utils.slogError
-    - [ ] utils.slog.warn → utils.slogWarn
-    - [ ] utils.slog.debug → utils.slogDebug
-    - [ ] utils.slog.withFields → utils.slogWithFields
-  - [ ] Flatten general namespace methods:
-    - [ ] utils.general.uuid → utils.generalUuid
-    - [ ] utils.general.hash → utils.generalHash
-    - [ ] utils.general.encode → utils.generalEncode
-    - [ ] utils.general.decode → utils.generalDecode
-  - [ ] Update tests in utils_test.go
+- [x] **Task 2.3.3.20: Utils Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/utils.go`) ✅ [2025-06-19]
+  - [x] Flatten auth namespace methods:
+    - [x] utils.auth.generateToken → utils.authGenerateToken
+    - [x] utils.auth.validateToken → utils.authValidateToken
+    - [x] utils.auth.hashPassword → utils.authHashPassword
+    - [x] utils.auth.verifyPassword → utils.authVerifyPassword
+  - [x] Flatten debug namespace methods:
+    - [x] utils.debug.trace → utils.debugTrace
+    - [x] utils.debug.profile → utils.debugProfile
+    - [x] utils.debug.dump → utils.debugDump
+    - [x] utils.debug.assert → utils.debugAssert
+  - [x] Flatten errors namespace methods:
+    - [x] utils.errors.wrap → utils.errorsWrap
+    - [x] utils.errors.unwrap → utils.errorsUnwrap
+    - [x] utils.errors.isType → utils.errorsIsType
+    - [x] utils.errors.getStack → utils.errorsGetStack
+  - [x] Flatten json namespace methods:
+    - [x] utils.json.encode → utils.jsonEncode
+    - [x] utils.json.decode → utils.jsonDecode
+    - [x] utils.json.validate → utils.jsonValidate
+    - [x] utils.json.prettify → utils.jsonPrettify
+  - [x] Flatten llm namespace methods:
+    - [x] utils.llm.parseResponse → utils.llmParseResponse
+    - [x] utils.llm.formatPrompt → utils.llmFormatPrompt
+    - [x] utils.llm.countTokens → utils.llmCountTokens
+    - [x] utils.llm.splitMessage → utils.llmSplitMessage
+  - [x] Flatten logger namespace methods:
+    - [x] utils.logger.log → utils.loggerLog
+    - [x] utils.logger.error → utils.loggerError
+    - [x] utils.logger.warn → utils.loggerWarn
+    - [x] utils.logger.info → utils.loggerInfo
+    - [x] utils.logger.debug → utils.loggerDebug
+  - [x] Flatten slog namespace methods:
+    - [x] utils.slog.info → utils.slogInfo
+    - [x] utils.slog.error → utils.slogError
+    - [x] utils.slog.warn → utils.slogWarn
+    - [x] utils.slog.debug → utils.slogDebug
+    - [x] utils.slog.withFields → utils.slogWithFields
+  - [x] Flatten general namespace methods:
+    - [x] utils.general.uuid → utils.generalUuid
+    - [x] utils.general.hash → utils.generalHash
+    - [x] utils.general.encode → utils.generalEncode
+    - [x] utils.general.decode → utils.generalDecode
+  - [x] Update tests in utils_test.go
 
 - [ ] **Task 2.3.3.21: Agent Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/agent.go`)
+  - [ ] check if agent bridge has addTool or addTools or similar method.. it should, check in go-llms agent methods and report back
   - [ ] Flatten lifecycle namespace methods:
     - [ ] agent.lifecycle.create → agent.lifecycleCreate
     - [ ] agent.lifecycle.start → agent.lifecycleStart

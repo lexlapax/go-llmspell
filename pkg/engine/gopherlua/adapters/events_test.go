@@ -126,21 +126,32 @@ func TestEventsAdapter_Creation(t *testing.T) {
 		assert.NotEqual(t, lua.LNil, module.RawGetString("publishEvent"))
 		assert.NotEqual(t, lua.LNil, module.RawGetString("subscribe"))
 
-		// Check namespaces exist
-		bus := module.RawGetString("bus")
-		assert.NotEqual(t, lua.LNil, bus, "bus namespace should exist")
+		// Check flattened namespace methods exist
+		assert.NotEqual(t, lua.LNil, module.RawGetString("busPublish"), "busPublish should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("busSubscribe"), "busSubscribe should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("busUnsubscribe"), "busUnsubscribe should exist")
 
-		filters := module.RawGetString("filters")
-		assert.NotEqual(t, lua.LNil, filters, "filters namespace should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("filtersCreate"), "filtersCreate should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("filtersCreateComposite"), "filtersCreateComposite should exist")
 
-		recording := module.RawGetString("recording")
-		assert.NotEqual(t, lua.LNil, recording, "recording namespace should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("recordingStart"), "recordingStart should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("recordingStop"), "recordingStop should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("recordingIsRecording"), "recordingIsRecording should exist")
 
-		replay := module.RawGetString("replay")
-		assert.NotEqual(t, lua.LNil, replay, "replay namespace should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("replayStart"), "replayStart should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("replayPause"), "replayPause should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("replayResume"), "replayResume should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("replayStop"), "replayStop should exist")
 
-		aggregation := module.RawGetString("aggregation")
-		assert.NotEqual(t, lua.LNil, aggregation, "aggregation namespace should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("aggregationCreate"), "aggregationCreate should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("aggregationGetData"), "aggregationGetData should exist")
+
+		// Check namespaces don't exist (flattened)
+		assert.Equal(t, lua.LNil, module.RawGetString("bus"), "bus namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("filters"), "filters namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("recording"), "recording namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("replay"), "replay namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("aggregation"), "aggregation namespace should not exist")
 	})
 }
 
@@ -207,16 +218,16 @@ func TestEventsAdapter_EventPublication(t *testing.T) {
 		err = ms.LoadModule(L, "events")
 		require.NoError(t, err)
 
-		// Test bus namespace methods
+		// Test flattened bus methods
 		err = L.DoString(`
 			local events = require("events")
 			
-			-- Publish through bus namespace
-			local result, err = events.bus.publish({
+			-- Publish through flattened method
+			local result, err = events.busPublish({
 				type = "bus_event",
 				data = { source = "lua_script" }
 			})
-			assert(err == nil, "bus publish should not error: " .. tostring(err))
+			assert(err == nil, "busPublish should not error: " .. tostring(err))
 		`)
 		assert.NoError(t, err)
 	})
@@ -352,7 +363,7 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 			local events = require("events")
 			
 			-- Create pattern filter
-			local filterId, err = events.filters.create({
+			local filterId, err = events.filtersCreate({
 				type = "pattern",
 				pattern = "user.*"
 			})
@@ -396,20 +407,20 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 			local events = require("events")
 			
 			-- Create individual filters
-			local filter1, err1 = events.filters.create({
+			local filter1, err1 = events.filtersCreate({
 				type = "pattern",
 				pattern = "user.*"
 			})
 			assert(err1 == nil, "first filter creation should not error")
 			
-			local filter2, err2 = events.filters.create({
+			local filter2, err2 = events.filtersCreate({
 				type = "type",
 				eventType = "action"
 			})
 			assert(err2 == nil, "second filter creation should not error")
 			
 			-- Create composite filter
-			local compositeId, err = events.filters.createComposite({filter1, filter2}, "AND")
+			local compositeId, err = events.filtersCreateComposite({filter1, filter2}, "AND")
 			assert(err == nil, "composite filter creation should not error: " .. tostring(err))
 			assert(compositeId == "composite-filter-123", "should return composite filter ID")
 		`)
@@ -551,16 +562,16 @@ func TestEventsAdapter_EventRecording(t *testing.T) {
 			local events = require("events")
 			
 			-- Start recording
-			local result, err = events.recording.start()
+			local result, err = events.recordingStart()
 			assert(err == nil, "start recording should not error: " .. tostring(err))
 			
 			-- Check recording status
-			local recording, err = events.recording.isRecording()
+			local recording, err = events.recordingIsRecording()
 			assert(err == nil, "isRecording should not error: " .. tostring(err))
 			assert(recording == true, "should be recording")
 			
 			-- Stop recording
-			local result, err = events.recording.stop()
+			local result, err = events.recordingStop()
 			assert(err == nil, "stop recording should not error: " .. tostring(err))
 		`)
 		assert.NoError(t, err)
@@ -610,7 +621,7 @@ func TestEventsAdapter_EventReplay(t *testing.T) {
 			local events = require("events")
 			
 			-- Start replay
-			local result, err = events.replay.start({
+			local result, err = events.replayStart({
 				agentID = "test-agent",
 				startTime = "2024-01-01T00:00:00Z"
 			}, {
@@ -619,15 +630,15 @@ func TestEventsAdapter_EventReplay(t *testing.T) {
 			assert(err == nil, "replay should not error: " .. tostring(err))
 			
 			-- Pause replay
-			local result, err = events.replay.pause()
+			local result, err = events.replayPause()
 			assert(err == nil, "pause should not error: " .. tostring(err))
 			
 			-- Resume replay
-			local result, err = events.replay.resume()
+			local result, err = events.replayResume()
 			assert(err == nil, "resume should not error: " .. tostring(err))
 			
 			-- Stop replay
-			local result, err = events.replay.stop()
+			local result, err = events.replayStop()
 			assert(err == nil, "stop should not error: " .. tostring(err))
 		`)
 		assert.NoError(t, err)
@@ -677,14 +688,14 @@ func TestEventsAdapter_EventAggregation(t *testing.T) {
 			local events = require("events")
 			
 			-- Create aggregator
-			local aggId, err = events.aggregation.create("count", {
+			local aggId, err = events.aggregationCreate("count", {
 				windowSize = 300
 			})
 			assert(err == nil, "create aggregator should not error: " .. tostring(err))
 			assert(aggId == "agg-count-123", "should return aggregator ID")
 			
 			-- Get aggregated data
-			local data, err = events.aggregation.getData(aggId)
+			local data, err = events.aggregationGetData(aggId)
 			assert(err == nil, "get data should not error: " .. tostring(err))
 			assert(data.type == "count", "should be count aggregator")
 			assert(data.eventCount == 42, "should have 42 events")

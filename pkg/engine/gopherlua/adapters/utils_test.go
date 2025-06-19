@@ -88,33 +88,33 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 		adapter := NewUtilsAdapter(authBridge, debugBridge, errorsBridge, jsonBridge, llmBridge, loggerBridge, slogBridge, utilBridge)
 		require.NotNil(t, adapter)
 
-		// Should have utility-specific methods
+		// Should have utility-specific methods (flattened)
 		methods := adapter.GetMethods()
 
-		// Auth methods
-		assert.Contains(t, methods, "authenticate")
-		assert.Contains(t, methods, "validateToken")
-		assert.Contains(t, methods, "refreshToken")
+		// Auth methods (flattened)
+		assert.Contains(t, methods, "authAuthenticate")
+		assert.Contains(t, methods, "authValidateToken")
+		assert.Contains(t, methods, "authRefreshToken")
 
-		// Debug methods
-		assert.Contains(t, methods, "setDebugLevel")
+		// Debug methods (flattened)
+		assert.Contains(t, methods, "debugSetLevel")
 		assert.Contains(t, methods, "debugLog")
-		assert.Contains(t, methods, "getDebugConfig")
+		assert.Contains(t, methods, "debugGetConfig")
 
-		// Error methods
-		assert.Contains(t, methods, "createError")
-		assert.Contains(t, methods, "wrapError")
-		assert.Contains(t, methods, "aggregateErrors")
+		// Error methods (flattened)
+		assert.Contains(t, methods, "errorsCreateError")
+		assert.Contains(t, methods, "errorsWrapError")
+		assert.Contains(t, methods, "errorsAggregateErrors")
 
-		// JSON methods
-		assert.Contains(t, methods, "parseJSON")
-		assert.Contains(t, methods, "toJSON")
-		assert.Contains(t, methods, "validateJSONSchema")
+		// JSON methods (flattened)
+		assert.Contains(t, methods, "jsonParse")
+		assert.Contains(t, methods, "jsonToJSON")
+		assert.Contains(t, methods, "jsonValidateJSONSchema")
 
-		// General utility methods
-		assert.Contains(t, methods, "generateUUID")
-		assert.Contains(t, methods, "hash")
-		assert.Contains(t, methods, "sleep")
+		// General utility methods (flattened)
+		assert.Contains(t, methods, "generalGenerateUUID")
+		assert.Contains(t, methods, "generalHash")
+		assert.Contains(t, methods, "generalSleep")
 	})
 
 	t.Run("utils_module_structure", func(t *testing.T) {
@@ -143,13 +143,16 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 			assert(utils._adapter == "utils", "should have correct adapter name")
 			assert(utils._version == "1.0.0", "should have correct version")
 			
-			-- Check namespaces exist
-			assert(type(utils.auth) == "table", "auth namespace should exist")
-			assert(type(utils.debug) == "table", "debug namespace should exist")
-			assert(type(utils.errors) == "table", "errors namespace should exist")
-			assert(type(utils.json) == "table", "json namespace should exist")
-			assert(type(utils.logger) == "table", "logger namespace should exist")
-			assert(type(utils.general) == "table", "general namespace should exist")
+			-- Check namespaces don't exist (methods are flattened)
+			assert(utils.auth == nil, "auth namespace should not exist")
+			assert(utils.debug == nil, "debug namespace should not exist")
+			assert(utils.errors == nil, "errors namespace should not exist")
+			assert(utils.json == nil, "json namespace should not exist")
+			assert(utils.logger == nil, "logger namespace should not exist")
+			assert(utils.general == nil, "general namespace should not exist")
+			
+			-- Check flattened methods exist
+			assert(type(utils.authAuthenticate) == "function", "authAuthenticate should be a function")
 		`)
 		assert.NoError(t, err)
 	})
@@ -194,8 +197,8 @@ func TestUtilsAdapter_Auth(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Authenticate with OAuth2
-			local result, err = utils.auth.authenticate({
+			-- Authenticate with OAuth2 (using flattened method)
+			local result, err = utils.authAuthenticate({
 				clientId = "test-client",
 				clientSecret = "test-secret"
 			}, "oauth2")
@@ -244,14 +247,14 @@ func TestUtilsAdapter_Auth(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Validate valid token
-			local result, err = utils.auth.validateToken("valid-token", {})
+			-- Validate valid token (using flattened method)
+			local result, err = utils.authValidateToken("valid-token", {})
 			assert(err == nil, "should not error")
 			assert(result.valid == true, "should be valid")
 			assert(result.userId == "user-123", "should have user ID")
 			
 			-- Validate invalid token
-			local invalid, err2 = utils.auth.validateToken("invalid-token", {})
+			local invalid, err2 = utils.authValidateToken("invalid-token", {})
 			assert(err2 == nil, "should not error")
 			assert(invalid.valid == false, "should be invalid")
 		`)
@@ -291,8 +294,8 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Set debug level
-			local result, err = utils.debug.setLevel("engine", "DEBUG")
+			-- Set debug level (using flattened method)
+			local result, err = utils.debugSetLevel("engine", "DEBUG")
 			assert(err == nil, "should not error")
 			assert(result.set == true, "should be set")
 			assert(result.component == "engine", "should have component")
@@ -333,8 +336,8 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Log debug message
-			local result, err = utils.debug.log("bridge", "test debug message", {})
+			-- Log debug message (using flattened method)
+			local result, err = utils.debugLog("bridge", "test debug message", {})
 			assert(err == nil, "should not error")
 			assert(result.logged == true, "should be logged")
 			assert(result.component == "bridge", "should have component")
@@ -378,8 +381,8 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Create error
-			local result, err = utils.errors.createError("test error", "E001", "validation")
+			-- Create error (using flattened method)
+			local result, err = utils.errorsCreateError("test error", "E001", "validation")
 			assert(err == nil, "should not error")
 			assert(result.created == true, "should be created")
 			assert(result.message == "test error", "should have message")
@@ -420,8 +423,8 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Wrap error
-			local result, err = utils.errors.wrapError({
+			-- Wrap error (using flattened method)
+			local result, err = utils.errorsWrapError({
 				message = "original error"
 			}, {
 				operation = "test",
@@ -472,8 +475,8 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Parse JSON
-			local result, err = utils.json.parse('{"name":"test","value":42}', {})
+			-- Parse JSON (using flattened method)
+			local result, err = utils.jsonParse('{"name":"test","value":42}', {})
 			assert(err == nil, "should not error")
 			assert(result.parsed == true, "should be parsed")
 			assert(result.data.name == "test", "should have name")
@@ -509,8 +512,8 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Serialize to JSON
-			local result, err = utils.json.toJSON({
+			-- Serialize to JSON (using flattened method)
+			local result, err = utils.jsonToJSON({
 				name = "test",
 				value = 42
 			}, {})
@@ -549,8 +552,8 @@ func TestUtilsAdapter_General(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Generate UUID
-			local result, err = utils.general.generateUUID()
+			-- Generate UUID (using flattened method)
+			local result, err = utils.generalGenerateUUID()
 			assert(err == nil, "should not error")
 			assert(type(result.uuid) == "string", "should have UUID string")
 			assert(string.len(result.uuid) == 36, "should be valid UUID length")
@@ -589,8 +592,8 @@ func TestUtilsAdapter_General(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Hash data
-			local result, err = utils.general.hash("test data", "sha256")
+			-- Hash data (using flattened method)
+			local result, err = utils.generalHash("test data", "sha256")
 			assert(err == nil, "should not error")
 			assert(result.hash == "abcdef123456789", "should have hash")
 			assert(result.algorithm == "sha256", "should have algorithm")
@@ -628,8 +631,8 @@ func TestUtilsAdapter_General(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Sleep for duration
-			local result, err = utils.general.sleep(100)
+			-- Sleep for duration (using flattened method)
+			local result, err = utils.generalSleep(100)
 			assert(err == nil, "should not error")
 			assert(result.slept == true, "should have slept")
 			assert(result.duration == 100, "should have correct duration")
@@ -663,8 +666,8 @@ func TestUtilsAdapter_ErrorHandling(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Try authentication with error
-			local result, err = utils.auth.authenticate({}, "oauth2")
+			-- Try authentication with error (using flattened method)
+			local result, err = utils.authAuthenticate({}, "oauth2")
 			assert(err ~= nil, "should have error")
 			assert(string.find(err, "auth service unavailable"), "error should contain message")
 			assert(result == nil, "result should be nil on error")
@@ -706,8 +709,8 @@ func TestUtilsAdapter_ConvenienceMethods(t *testing.T) {
 		err = L.DoString(`
 			local utils = require("utils")
 			
-			-- Retry operation
-			local result, err = utils.general.retry({
+			-- Retry operation (using flattened method)
+			local result, err = utils.generalRetry({
 				action = "test"
 			}, {
 				maxAttempts = 3,

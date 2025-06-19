@@ -117,13 +117,10 @@ func (ea *EventsAdapter) addEventEnhancements(L *lua.LState, module *lua.LTable)
 	ea.addEventConstants(L, module)
 }
 
-// addBusMethods adds event bus-related methods
+// addBusMethods adds event bus-related methods (flattened to module level)
 func (ea *EventsAdapter) addBusMethods(L *lua.LState, module *lua.LTable) {
-	// Create bus namespace
-	bus := L.NewTable()
-
-	// publish method (alias for publishEvent)
-	L.SetField(bus, "publish", L.NewFunction(func(L *lua.LState) int {
+	// busPublish method (flattened from bus.publish)
+	L.SetField(module, "busPublish", L.NewFunction(func(L *lua.LState) int {
 		event := L.CheckTable(1)
 
 		eventMap := ea.tableToMap(L, event)
@@ -142,8 +139,8 @@ func (ea *EventsAdapter) addBusMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// subscribe method (enhanced wrapper)
-	L.SetField(bus, "subscribe", L.NewFunction(func(L *lua.LState) int {
+	// busSubscribe method (flattened from bus.subscribe)
+	L.SetField(module, "busSubscribe", L.NewFunction(func(L *lua.LState) int {
 		pattern := L.CheckString(1)
 		handler := L.CheckFunction(2)
 
@@ -175,8 +172,8 @@ func (ea *EventsAdapter) addBusMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// unsubscribe method
-	L.SetField(bus, "unsubscribe", L.NewFunction(func(L *lua.LState) int {
+	// busUnsubscribe method (flattened from bus.unsubscribe)
+	L.SetField(module, "busUnsubscribe", L.NewFunction(func(L *lua.LState) int {
 		subID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -192,18 +189,12 @@ func (ea *EventsAdapter) addBusMethods(L *lua.LState, module *lua.LTable) {
 		L.Push(lua.LNil)
 		return 1
 	}))
-
-	// Add bus namespace to module
-	L.SetField(module, "bus", bus)
 }
 
-// addFilterMethods adds filter-related methods
+// addFilterMethods adds filter-related methods (flattened to module level)
 func (ea *EventsAdapter) addFilterMethods(L *lua.LState, module *lua.LTable) {
-	// Create filters namespace
-	filters := L.NewTable()
-
-	// create method
-	L.SetField(filters, "create", L.NewFunction(func(L *lua.LState) int {
+	// filtersCreate method (flattened from filters.create)
+	L.SetField(module, "filtersCreate", L.NewFunction(func(L *lua.LState) int {
 		filterConfig := L.CheckTable(1)
 
 		filterMap := ea.tableToMap(L, filterConfig)
@@ -230,8 +221,8 @@ func (ea *EventsAdapter) addFilterMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// createComposite method
-	L.SetField(filters, "createComposite", L.NewFunction(func(L *lua.LState) int {
+	// filtersCreateComposite method (flattened from filters.createComposite)
+	L.SetField(module, "filtersCreateComposite", L.NewFunction(func(L *lua.LState) int {
 		filterIDs := L.CheckTable(1)
 		operator := L.CheckString(2)
 
@@ -267,18 +258,12 @@ func (ea *EventsAdapter) addFilterMethods(L *lua.LState, module *lua.LTable) {
 		L.Push(lua.LNil)
 		return 2
 	}))
-
-	// Add filters namespace to module
-	L.SetField(module, "filters", filters)
 }
 
-// addRecordingMethods adds recording-related methods
+// addRecordingMethods adds recording-related methods (flattened to module level)
 func (ea *EventsAdapter) addRecordingMethods(L *lua.LState, module *lua.LTable) {
-	// Create recording namespace
-	recording := L.NewTable()
-
-	// start method
-	L.SetField(recording, "start", L.NewFunction(func(L *lua.LState) int {
+	// recordingStart method (flattened from recording.start)
+	L.SetField(module, "recordingStart", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		_, err := ea.GetBridge().ExecuteMethod(ctx, "startRecording", []engine.ScriptValue{})
@@ -292,8 +277,8 @@ func (ea *EventsAdapter) addRecordingMethods(L *lua.LState, module *lua.LTable) 
 		return 1
 	}))
 
-	// stop method
-	L.SetField(recording, "stop", L.NewFunction(func(L *lua.LState) int {
+	// recordingStop method (flattened from recording.stop)
+	L.SetField(module, "recordingStop", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		_, err := ea.GetBridge().ExecuteMethod(ctx, "stopRecording", []engine.ScriptValue{})
@@ -307,8 +292,8 @@ func (ea *EventsAdapter) addRecordingMethods(L *lua.LState, module *lua.LTable) 
 		return 1
 	}))
 
-	// isRecording method
-	L.SetField(recording, "isRecording", L.NewFunction(func(L *lua.LState) int {
+	// recordingIsRecording method (flattened from recording.isRecording)
+	L.SetField(module, "recordingIsRecording", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		result, err := ea.GetBridge().ExecuteMethod(ctx, "isRecording", []engine.ScriptValue{})
@@ -329,18 +314,12 @@ func (ea *EventsAdapter) addRecordingMethods(L *lua.LState, module *lua.LTable) 
 		L.Push(lua.LNil)
 		return 2
 	}))
-
-	// Add recording namespace to module
-	L.SetField(module, "recording", recording)
 }
 
-// addReplayMethods adds replay-related methods
+// addReplayMethods adds replay-related methods (flattened to module level)
 func (ea *EventsAdapter) addReplayMethods(L *lua.LState, module *lua.LTable) {
-	// Create replay namespace
-	replay := L.NewTable()
-
-	// start method (alias for replayEvents)
-	L.SetField(replay, "start", L.NewFunction(func(L *lua.LState) int {
+	// replayStart method (flattened from replay.start)
+	L.SetField(module, "replayStart", L.NewFunction(func(L *lua.LState) int {
 		query := L.CheckTable(1)
 		options := L.OptTable(2, L.NewTable())
 
@@ -364,8 +343,8 @@ func (ea *EventsAdapter) addReplayMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// pause method
-	L.SetField(replay, "pause", L.NewFunction(func(L *lua.LState) int {
+	// replayPause method (flattened from replay.pause)
+	L.SetField(module, "replayPause", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		_, err := ea.GetBridge().ExecuteMethod(ctx, "pauseReplay", []engine.ScriptValue{})
@@ -379,8 +358,8 @@ func (ea *EventsAdapter) addReplayMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// resume method
-	L.SetField(replay, "resume", L.NewFunction(func(L *lua.LState) int {
+	// replayResume method (flattened from replay.resume)
+	L.SetField(module, "replayResume", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		_, err := ea.GetBridge().ExecuteMethod(ctx, "resumeReplay", []engine.ScriptValue{})
@@ -394,8 +373,8 @@ func (ea *EventsAdapter) addReplayMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// stop method
-	L.SetField(replay, "stop", L.NewFunction(func(L *lua.LState) int {
+	// replayStop method (flattened from replay.stop)
+	L.SetField(module, "replayStop", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		_, err := ea.GetBridge().ExecuteMethod(ctx, "stopReplay", []engine.ScriptValue{})
@@ -408,18 +387,12 @@ func (ea *EventsAdapter) addReplayMethods(L *lua.LState, module *lua.LTable) {
 		L.Push(lua.LNil)
 		return 1
 	}))
-
-	// Add replay namespace to module
-	L.SetField(module, "replay", replay)
 }
 
-// addAggregationMethods adds aggregation-related methods
+// addAggregationMethods adds aggregation-related methods (flattened to module level)
 func (ea *EventsAdapter) addAggregationMethods(L *lua.LState, module *lua.LTable) {
-	// Create aggregation namespace
-	aggregation := L.NewTable()
-
-	// create method
-	L.SetField(aggregation, "create", L.NewFunction(func(L *lua.LState) int {
+	// aggregationCreate method (flattened from aggregation.create)
+	L.SetField(module, "aggregationCreate", L.NewFunction(func(L *lua.LState) int {
 		aggType := L.CheckString(1)
 		config := L.CheckTable(2)
 
@@ -450,8 +423,8 @@ func (ea *EventsAdapter) addAggregationMethods(L *lua.LState, module *lua.LTable
 		return 2
 	}))
 
-	// getData method
-	L.SetField(aggregation, "getData", L.NewFunction(func(L *lua.LState) int {
+	// aggregationGetData method (flattened from aggregation.getData)
+	L.SetField(module, "aggregationGetData", L.NewFunction(func(L *lua.LState) int {
 		aggID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -475,9 +448,6 @@ func (ea *EventsAdapter) addAggregationMethods(L *lua.LState, module *lua.LTable
 		L.Push(lua.LNil)
 		return 2
 	}))
-
-	// Add aggregation namespace to module
-	L.SetField(module, "aggregation", aggregation)
 }
 
 // addConvenienceMethods adds convenience methods to the module
@@ -643,6 +613,7 @@ func (ea *EventsAdapter) GetMethods() []string {
 
 	// Add event-specific methods if not already present
 	eventMethods := []string{
+		// Base event methods
 		"publishEvent", "subscribe", "subscribeWithFilter", "unsubscribe",
 		"storeEvent", "queryEvents", "getEventHistory",
 		"createFilter", "createCompositeFilter",
@@ -652,6 +623,12 @@ func (ea *EventsAdapter) GetMethods() []string {
 		"startRecording", "stopRecording", "isRecording",
 		"getSubscriptionCount", "getSubscriptionInfo",
 		"correlateEvents",
+		// Flattened namespace methods
+		"busPublish", "busSubscribe", "busUnsubscribe",
+		"filtersCreate", "filtersCreateComposite",
+		"recordingStart", "recordingStop", "recordingIsRecording",
+		"replayStart", "replayPause", "replayResume", "replayStop",
+		"aggregationCreate", "aggregationGetData",
 	}
 
 	methodMap := make(map[string]bool)

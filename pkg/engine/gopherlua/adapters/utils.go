@@ -55,28 +55,14 @@ func (ua *UtilsAdapter) CreateLuaModule() lua.LGFunction {
 		L.SetField(module, "_adapter", lua.LString("utils"))
 		L.SetField(module, "_version", lua.LString("1.0.0"))
 
-		// Add auth namespace
+		// Add all flattened methods
 		ua.addAuthMethods(L, module)
-
-		// Add debug namespace
 		ua.addDebugMethods(L, module)
-
-		// Add errors namespace
 		ua.addErrorMethods(L, module)
-
-		// Add json namespace
 		ua.addJSONMethods(L, module)
-
-		// Add llm namespace
 		ua.addLLMMethods(L, module)
-
-		// Add logger namespace
 		ua.addLoggerMethods(L, module)
-
-		// Add slog namespace
 		ua.addSlogMethods(L, module)
-
-		// Add general utilities namespace
 		ua.addGeneralMethods(L, module)
 
 		// Add utility constants
@@ -88,13 +74,10 @@ func (ua *UtilsAdapter) CreateLuaModule() lua.LGFunction {
 	}
 }
 
-// addAuthMethods adds authentication methods
+// addAuthMethods adds authentication methods (flattened to module level)
 func (ua *UtilsAdapter) addAuthMethods(L *lua.LState, module *lua.LTable) {
-	// Create auth namespace
-	auth := L.NewTable()
-
-	// authenticate method
-	L.SetField(auth, "authenticate", L.NewFunction(func(L *lua.LState) int {
+	// authAuthenticate method (flattened from auth.authenticate)
+	L.SetField(module, "authAuthenticate", L.NewFunction(func(L *lua.LState) int {
 		if ua.authBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("auth bridge not initialized"))
@@ -128,8 +111,8 @@ func (ua *UtilsAdapter) addAuthMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// validateToken method
-	L.SetField(auth, "validateToken", L.NewFunction(func(L *lua.LState) int {
+	// authValidateToken method (flattened from auth.validateToken)
+	L.SetField(module, "authValidateToken", L.NewFunction(func(L *lua.LState) int {
 		if ua.authBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("auth bridge not initialized"))
@@ -137,7 +120,7 @@ func (ua *UtilsAdapter) addAuthMethods(L *lua.LState, module *lua.LTable) {
 		}
 
 		token := L.CheckString(1)
-		options := L.CheckTable(2)
+		options := L.OptTable(2, L.NewTable())
 
 		args := []engine.ScriptValue{
 			engine.NewStringValue(token),
@@ -163,8 +146,8 @@ func (ua *UtilsAdapter) addAuthMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// refreshToken method
-	L.SetField(auth, "refreshToken", L.NewFunction(func(L *lua.LState) int {
+	// authRefreshToken method (flattened from auth.refreshToken)
+	L.SetField(module, "authRefreshToken", L.NewFunction(func(L *lua.LState) int {
 		if ua.authBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("auth bridge not initialized"))
@@ -196,17 +179,115 @@ func (ua *UtilsAdapter) addAuthMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add auth namespace to module
-	L.SetField(module, "auth", auth)
+	// Add methods from TODO that may be missing
+	// authGenerateToken method (flattened from auth.generateToken)
+	L.SetField(module, "authGenerateToken", L.NewFunction(func(L *lua.LState) int {
+		if ua.authBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("auth bridge not initialized"))
+			return 2
+		}
+
+		userData := L.CheckTable(1)
+		options := L.OptTable(2, L.NewTable())
+
+		args := []engine.ScriptValue{
+			ua.tableToScriptValue(L, userData),
+			ua.tableToScriptValue(L, options),
+		}
+
+		result, err := ua.authBridge.ExecuteMethod(context.Background(), "generateToken", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// authHashPassword method (flattened from auth.hashPassword)
+	L.SetField(module, "authHashPassword", L.NewFunction(func(L *lua.LState) int {
+		if ua.authBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("auth bridge not initialized"))
+			return 2
+		}
+
+		password := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(password),
+		}
+
+		result, err := ua.authBridge.ExecuteMethod(context.Background(), "hashPassword", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// authVerifyPassword method (flattened from auth.verifyPassword)
+	L.SetField(module, "authVerifyPassword", L.NewFunction(func(L *lua.LState) int {
+		if ua.authBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("auth bridge not initialized"))
+			return 2
+		}
+
+		password := L.CheckString(1)
+		hash := L.CheckString(2)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(password),
+			engine.NewStringValue(hash),
+		}
+
+		result, err := ua.authBridge.ExecuteMethod(context.Background(), "verifyPassword", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
-// addDebugMethods adds debug methods
+// addDebugMethods adds debug methods (flattened to module level)
 func (ua *UtilsAdapter) addDebugMethods(L *lua.LState, module *lua.LTable) {
-	// Create debug namespace
-	debug := L.NewTable()
-
-	// setLevel method
-	L.SetField(debug, "setLevel", L.NewFunction(func(L *lua.LState) int {
+	// debugSetLevel method (flattened from debug.setLevel)
+	L.SetField(module, "debugSetLevel", L.NewFunction(func(L *lua.LState) int {
 		if ua.debugBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("debug bridge not initialized"))
@@ -240,8 +321,8 @@ func (ua *UtilsAdapter) addDebugMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// log method
-	L.SetField(debug, "log", L.NewFunction(func(L *lua.LState) int {
+	// debugLog method (flattened from debug.log)
+	L.SetField(module, "debugLog", L.NewFunction(func(L *lua.LState) int {
 		if ua.debugBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("debug bridge not initialized"))
@@ -277,8 +358,8 @@ func (ua *UtilsAdapter) addDebugMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// getConfig method
-	L.SetField(debug, "getConfig", L.NewFunction(func(L *lua.LState) int {
+	// debugGetConfig method (flattened from debug.getConfig)
+	L.SetField(module, "debugGetConfig", L.NewFunction(func(L *lua.LState) int {
 		if ua.debugBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("debug bridge not initialized"))
@@ -304,17 +385,154 @@ func (ua *UtilsAdapter) addDebugMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add debug namespace to module
-	L.SetField(module, "debug", debug)
+	// Add methods from TODO that may be missing
+	// debugTrace method (flattened from debug.trace)
+	L.SetField(module, "debugTrace", L.NewFunction(func(L *lua.LState) int {
+		if ua.debugBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("debug bridge not initialized"))
+			return 2
+		}
+
+		message := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(message),
+		}
+
+		result, err := ua.debugBridge.ExecuteMethod(context.Background(), "trace", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// debugProfile method (flattened from debug.profile)
+	L.SetField(module, "debugProfile", L.NewFunction(func(L *lua.LState) int {
+		if ua.debugBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("debug bridge not initialized"))
+			return 2
+		}
+
+		name := L.CheckString(1)
+		action := L.CheckString(2)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(name),
+			engine.NewStringValue(action),
+		}
+
+		result, err := ua.debugBridge.ExecuteMethod(context.Background(), "profile", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// debugDump method (flattened from debug.dump)
+	L.SetField(module, "debugDump", L.NewFunction(func(L *lua.LState) int {
+		if ua.debugBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("debug bridge not initialized"))
+			return 2
+		}
+
+		value := L.Get(1)
+
+		// Convert to script value
+		sv, err := ua.typeConverter.ToLuaScriptValue(L, value)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		args := []engine.ScriptValue{sv}
+
+		result, err := ua.debugBridge.ExecuteMethod(context.Background(), "dump", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// debugAssert method (flattened from debug.assert)
+	L.SetField(module, "debugAssert", L.NewFunction(func(L *lua.LState) int {
+		if ua.debugBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("debug bridge not initialized"))
+			return 2
+		}
+
+		condition := L.CheckBool(1)
+		message := L.CheckString(2)
+
+		args := []engine.ScriptValue{
+			engine.NewBoolValue(condition),
+			engine.NewStringValue(message),
+		}
+
+		result, err := ua.debugBridge.ExecuteMethod(context.Background(), "assert", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
-// addErrorMethods adds error handling methods
+// addErrorMethods adds error handling methods (flattened to module level)
 func (ua *UtilsAdapter) addErrorMethods(L *lua.LState, module *lua.LTable) {
-	// Create errors namespace
-	errors := L.NewTable()
-
-	// createError method
-	L.SetField(errors, "createError", L.NewFunction(func(L *lua.LState) int {
+	// errorsCreateError method (flattened from errors.createError)
+	L.SetField(module, "errorsCreateError", L.NewFunction(func(L *lua.LState) int {
 		if ua.errorsBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("errors bridge not initialized"))
@@ -350,8 +568,8 @@ func (ua *UtilsAdapter) addErrorMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// wrapError method
-	L.SetField(errors, "wrapError", L.NewFunction(func(L *lua.LState) int {
+	// errorsWrapError method (renamed from wrapError)
+	L.SetField(module, "errorsWrapError", L.NewFunction(func(L *lua.LState) int {
 		if ua.errorsBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("errors bridge not initialized"))
@@ -385,8 +603,8 @@ func (ua *UtilsAdapter) addErrorMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// aggregateErrors method
-	L.SetField(errors, "aggregateErrors", L.NewFunction(func(L *lua.LState) int {
+	// errorsAggregateErrors method (flattened from errors.aggregateErrors)
+	L.SetField(module, "errorsAggregateErrors", L.NewFunction(func(L *lua.LState) int {
 		if ua.errorsBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("errors bridge not initialized"))
@@ -418,8 +636,8 @@ func (ua *UtilsAdapter) addErrorMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// categorizeError method
-	L.SetField(errors, "categorizeError", L.NewFunction(func(L *lua.LState) int {
+	// errorsCategorizeError method (flattened from errors.categorizeError)
+	L.SetField(module, "errorsCategorizeError", L.NewFunction(func(L *lua.LState) int {
 		if ua.errorsBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("errors bridge not initialized"))
@@ -451,17 +669,148 @@ func (ua *UtilsAdapter) addErrorMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add errors namespace to module
-	L.SetField(module, "errors", errors)
+	// Add methods from TODO that may be missing
+	// errorsWrap method (flattened from errors.wrap - alias for consistency with TODO)
+	L.SetField(module, "errorsWrap", L.NewFunction(func(L *lua.LState) int {
+		if ua.errorsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("errors bridge not initialized"))
+			return 2
+		}
+
+		originalError := L.CheckTable(1)
+		contextData := L.CheckTable(2)
+
+		args := []engine.ScriptValue{
+			ua.tableToScriptValue(L, originalError),
+			ua.tableToScriptValue(L, contextData),
+		}
+
+		result, err := ua.errorsBridge.ExecuteMethod(context.Background(), "wrapError", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// errorsUnwrap method (flattened from errors.unwrap)
+	L.SetField(module, "errorsUnwrap", L.NewFunction(func(L *lua.LState) int {
+		if ua.errorsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("errors bridge not initialized"))
+			return 2
+		}
+
+		errorData := L.CheckTable(1)
+
+		args := []engine.ScriptValue{
+			ua.tableToScriptValue(L, errorData),
+		}
+
+		result, err := ua.errorsBridge.ExecuteMethod(context.Background(), "unwrapError", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// errorsIsType method (flattened from errors.isType)
+	L.SetField(module, "errorsIsType", L.NewFunction(func(L *lua.LState) int {
+		if ua.errorsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("errors bridge not initialized"))
+			return 2
+		}
+
+		errorData := L.CheckTable(1)
+		errorType := L.CheckString(2)
+
+		args := []engine.ScriptValue{
+			ua.tableToScriptValue(L, errorData),
+			engine.NewStringValue(errorType),
+		}
+
+		result, err := ua.errorsBridge.ExecuteMethod(context.Background(), "isErrorType", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// errorsGetStack method (flattened from errors.getStack)
+	L.SetField(module, "errorsGetStack", L.NewFunction(func(L *lua.LState) int {
+		if ua.errorsBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("errors bridge not initialized"))
+			return 2
+		}
+
+		errorData := L.CheckTable(1)
+
+		args := []engine.ScriptValue{
+			ua.tableToScriptValue(L, errorData),
+		}
+
+		result, err := ua.errorsBridge.ExecuteMethod(context.Background(), "getErrorStack", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
-// addJSONMethods adds JSON processing methods
+// addJSONMethods adds JSON processing methods (flattened to module level)
 func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
-	// Create json namespace
-	json := L.NewTable()
-
-	// parse method
-	L.SetField(json, "parse", L.NewFunction(func(L *lua.LState) int {
+	// jsonParse method (flattened from json.parse)
+	L.SetField(module, "jsonParse", L.NewFunction(func(L *lua.LState) int {
 		if ua.jsonBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("json bridge not initialized"))
@@ -469,7 +818,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 		}
 
 		text := L.CheckString(1)
-		options := L.CheckTable(2)
+		options := L.OptTable(2, L.NewTable())
 
 		args := []engine.ScriptValue{
 			engine.NewStringValue(text),
@@ -495,8 +844,8 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// toJSON method
-	L.SetField(json, "toJSON", L.NewFunction(func(L *lua.LState) int {
+	// jsonToJSON method (flattened from json.toJSON)
+	L.SetField(module, "jsonToJSON", L.NewFunction(func(L *lua.LState) int {
 		if ua.jsonBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("json bridge not initialized"))
@@ -504,7 +853,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 		}
 
 		data := L.CheckTable(1)
-		options := L.CheckTable(2)
+		options := L.OptTable(2, L.NewTable())
 
 		args := []engine.ScriptValue{
 			ua.tableToScriptValue(L, data),
@@ -530,8 +879,8 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// validateJSONSchema method
-	L.SetField(json, "validateJSONSchema", L.NewFunction(func(L *lua.LState) int {
+	// jsonValidateJSONSchema method (flattened from json.validateJSONSchema)
+	L.SetField(module, "jsonValidateJSONSchema", L.NewFunction(func(L *lua.LState) int {
 		if ua.jsonBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("json bridge not initialized"))
@@ -565,8 +914,8 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// extractStructuredData method
-	L.SetField(json, "extractStructuredData", L.NewFunction(func(L *lua.LState) int {
+	// jsonExtractStructuredData method (flattened from json.extractStructuredData)
+	L.SetField(module, "jsonExtractStructuredData", L.NewFunction(func(L *lua.LState) int {
 		if ua.jsonBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("json bridge not initialized"))
@@ -600,17 +949,144 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add json namespace to module
-	L.SetField(module, "json", json)
+	// Add methods from TODO that may be missing
+	// jsonEncode method (flattened from json.encode)
+	L.SetField(module, "jsonEncode", L.NewFunction(func(L *lua.LState) int {
+		if ua.jsonBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("json bridge not initialized"))
+			return 2
+		}
+
+		data := L.CheckTable(1)
+
+		args := []engine.ScriptValue{
+			ua.tableToScriptValue(L, data),
+		}
+
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "encode", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// jsonDecode method (flattened from json.decode)
+	L.SetField(module, "jsonDecode", L.NewFunction(func(L *lua.LState) int {
+		if ua.jsonBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("json bridge not initialized"))
+			return 2
+		}
+
+		text := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(text),
+		}
+
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "decode", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// jsonValidate method (flattened from json.validate)
+	L.SetField(module, "jsonValidate", L.NewFunction(func(L *lua.LState) int {
+		if ua.jsonBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("json bridge not initialized"))
+			return 2
+		}
+
+		text := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(text),
+		}
+
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "validate", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// jsonPrettify method (flattened from json.prettify)
+	L.SetField(module, "jsonPrettify", L.NewFunction(func(L *lua.LState) int {
+		if ua.jsonBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("json bridge not initialized"))
+			return 2
+		}
+
+		text := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(text),
+		}
+
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "prettify", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
-// addLLMMethods adds LLM utility methods
+// addLLMMethods adds LLM utility methods (flattened to module level)
 func (ua *UtilsAdapter) addLLMMethods(L *lua.LState, module *lua.LTable) {
-	// Create llm namespace
-	llm := L.NewTable()
-
-	// createProvider method
-	L.SetField(llm, "createProvider", L.NewFunction(func(L *lua.LState) int {
+	// llmCreateProvider method (flattened from llm.createProvider)
+	L.SetField(module, "llmCreateProvider", L.NewFunction(func(L *lua.LState) int {
 		if ua.llmBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("llm bridge not initialized"))
@@ -644,8 +1120,8 @@ func (ua *UtilsAdapter) addLLMMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// generateTyped method
-	L.SetField(llm, "generateTyped", L.NewFunction(func(L *lua.LState) int {
+	// llmGenerateTyped method (flattened from llm.generateTyped)
+	L.SetField(module, "llmGenerateTyped", L.NewFunction(func(L *lua.LState) int {
 		if ua.llmBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("llm bridge not initialized"))
@@ -681,8 +1157,8 @@ func (ua *UtilsAdapter) addLLMMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// trackCost method
-	L.SetField(llm, "trackCost", L.NewFunction(func(L *lua.LState) int {
+	// llmTrackCost method (flattened from llm.trackCost)
+	L.SetField(module, "llmTrackCost", L.NewFunction(func(L *lua.LState) int {
 		if ua.llmBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("llm bridge not initialized"))
@@ -718,17 +1194,150 @@ func (ua *UtilsAdapter) addLLMMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add llm namespace to module
-	L.SetField(module, "llm", llm)
+	// Add methods from TODO that may be missing
+	// llmParseResponse method (flattened from llm.parseResponse)
+	L.SetField(module, "llmParseResponse", L.NewFunction(func(L *lua.LState) int {
+		if ua.llmBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("llm bridge not initialized"))
+			return 2
+		}
+
+		response := L.CheckString(1)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(response),
+		}
+
+		result, err := ua.llmBridge.ExecuteMethod(context.Background(), "parseResponse", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// llmFormatPrompt method (flattened from llm.formatPrompt)
+	L.SetField(module, "llmFormatPrompt", L.NewFunction(func(L *lua.LState) int {
+		if ua.llmBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("llm bridge not initialized"))
+			return 2
+		}
+
+		template := L.CheckString(1)
+		data := L.CheckTable(2)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(template),
+			ua.tableToScriptValue(L, data),
+		}
+
+		result, err := ua.llmBridge.ExecuteMethod(context.Background(), "formatPrompt", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// llmCountTokens method (flattened from llm.countTokens)
+	L.SetField(module, "llmCountTokens", L.NewFunction(func(L *lua.LState) int {
+		if ua.llmBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("llm bridge not initialized"))
+			return 2
+		}
+
+		text := L.CheckString(1)
+		model := L.CheckString(2)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(text),
+			engine.NewStringValue(model),
+		}
+
+		result, err := ua.llmBridge.ExecuteMethod(context.Background(), "countTokens", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// llmSplitMessage method (flattened from llm.splitMessage)
+	L.SetField(module, "llmSplitMessage", L.NewFunction(func(L *lua.LState) int {
+		if ua.llmBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("llm bridge not initialized"))
+			return 2
+		}
+
+		message := L.CheckString(1)
+		maxTokens := L.CheckNumber(2)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(message),
+			engine.NewNumberValue(float64(maxTokens)),
+		}
+
+		result, err := ua.llmBridge.ExecuteMethod(context.Background(), "splitMessage", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
-// addLoggerMethods adds logger methods
+// addLoggerMethods adds logger methods (flattened to module level)
 func (ua *UtilsAdapter) addLoggerMethods(L *lua.LState, module *lua.LTable) {
-	// Create logger namespace
-	logger := L.NewTable()
-
-	// createLogger method
-	L.SetField(logger, "createLogger", L.NewFunction(func(L *lua.LState) int {
+	// loggerCreateLogger method (flattened from logger.createLogger)
+	L.SetField(module, "loggerCreateLogger", L.NewFunction(func(L *lua.LState) int {
 		if ua.loggerBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("logger bridge not initialized"))
@@ -762,8 +1371,8 @@ func (ua *UtilsAdapter) addLoggerMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// log method
-	L.SetField(logger, "log", L.NewFunction(func(L *lua.LState) int {
+	// loggerLog method (flattened from logger.log)
+	L.SetField(module, "loggerLog", L.NewFunction(func(L *lua.LState) int {
 		if ua.loggerBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("logger bridge not initialized"))
@@ -799,8 +1408,8 @@ func (ua *UtilsAdapter) addLoggerMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// setLogLevel method
-	L.SetField(logger, "setLogLevel", L.NewFunction(func(L *lua.LState) int {
+	// loggerSetLogLevel method (flattened from logger.setLogLevel)
+	L.SetField(module, "loggerSetLogLevel", L.NewFunction(func(L *lua.LState) int {
 		if ua.loggerBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("logger bridge not initialized"))
@@ -834,17 +1443,156 @@ func (ua *UtilsAdapter) addLoggerMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add logger namespace to module
-	L.SetField(module, "logger", logger)
+	// Add methods from TODO that may be missing
+	// loggerError method (flattened from logger.error)
+	L.SetField(module, "loggerError", L.NewFunction(func(L *lua.LState) int {
+		if ua.loggerBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("logger bridge not initialized"))
+			return 2
+		}
+
+		message := L.CheckString(1)
+		contextTable := L.OptTable(2, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue("ERROR"),
+			engine.NewStringValue(message),
+			ua.tableToScriptValue(L, contextTable),
+		}
+
+		result, err := ua.loggerBridge.ExecuteMethod(context.Background(), "log", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// loggerWarn method (flattened from logger.warn)
+	L.SetField(module, "loggerWarn", L.NewFunction(func(L *lua.LState) int {
+		if ua.loggerBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("logger bridge not initialized"))
+			return 2
+		}
+
+		message := L.CheckString(1)
+		contextTable := L.OptTable(2, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue("WARN"),
+			engine.NewStringValue(message),
+			ua.tableToScriptValue(L, contextTable),
+		}
+
+		result, err := ua.loggerBridge.ExecuteMethod(context.Background(), "log", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// loggerInfo method (flattened from logger.info)
+	L.SetField(module, "loggerInfo", L.NewFunction(func(L *lua.LState) int {
+		if ua.loggerBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("logger bridge not initialized"))
+			return 2
+		}
+
+		message := L.CheckString(1)
+		contextTable := L.OptTable(2, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue("INFO"),
+			engine.NewStringValue(message),
+			ua.tableToScriptValue(L, contextTable),
+		}
+
+		result, err := ua.loggerBridge.ExecuteMethod(context.Background(), "log", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// loggerDebug method (flattened from logger.debug)
+	L.SetField(module, "loggerDebug", L.NewFunction(func(L *lua.LState) int {
+		if ua.loggerBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("logger bridge not initialized"))
+			return 2
+		}
+
+		message := L.CheckString(1)
+		contextTable := L.OptTable(2, L.NewTable())
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue("DEBUG"),
+			engine.NewStringValue(message),
+			ua.tableToScriptValue(L, contextTable),
+		}
+
+		result, err := ua.loggerBridge.ExecuteMethod(context.Background(), "log", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
-// addSlogMethods adds structured logging methods
+// addSlogMethods adds structured logging methods (flattened to module level)
 func (ua *UtilsAdapter) addSlogMethods(L *lua.LState, module *lua.LTable) {
-	// Create slog namespace
-	slog := L.NewTable()
-
-	// info method
-	L.SetField(slog, "info", L.NewFunction(func(L *lua.LState) int {
+	// slogInfo method (flattened from slog.info)
+	L.SetField(module, "slogInfo", L.NewFunction(func(L *lua.LState) int {
 		if ua.slogBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("slog bridge not initialized"))
@@ -878,8 +1626,8 @@ func (ua *UtilsAdapter) addSlogMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// warn method
-	L.SetField(slog, "warn", L.NewFunction(func(L *lua.LState) int {
+	// slogWarn method (flattened from slog.warn)
+	L.SetField(module, "slogWarn", L.NewFunction(func(L *lua.LState) int {
 		if ua.slogBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("slog bridge not initialized"))
@@ -913,8 +1661,8 @@ func (ua *UtilsAdapter) addSlogMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// error method
-	L.SetField(slog, "error", L.NewFunction(func(L *lua.LState) int {
+	// slogError method (flattened from slog.error)
+	L.SetField(module, "slogError", L.NewFunction(func(L *lua.LState) int {
 		if ua.slogBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("slog bridge not initialized"))
@@ -948,8 +1696,8 @@ func (ua *UtilsAdapter) addSlogMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// debug method
-	L.SetField(slog, "debug", L.NewFunction(func(L *lua.LState) int {
+	// slogDebug method (flattened from slog.debug)
+	L.SetField(module, "slogDebug", L.NewFunction(func(L *lua.LState) int {
 		if ua.slogBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("slog bridge not initialized"))
@@ -983,17 +1731,45 @@ func (ua *UtilsAdapter) addSlogMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add slog namespace to module
-	L.SetField(module, "slog", slog)
+	// Add method from TODO that may be missing
+	// slogWithFields method (flattened from slog.withFields)
+	L.SetField(module, "slogWithFields", L.NewFunction(func(L *lua.LState) int {
+		if ua.slogBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("slog bridge not initialized"))
+			return 2
+		}
+
+		fields := L.CheckTable(1)
+
+		args := []engine.ScriptValue{
+			ua.tableToScriptValue(L, fields),
+		}
+
+		result, err := ua.slogBridge.ExecuteMethod(context.Background(), "withFields", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
-// addGeneralMethods adds general utility methods
+// addGeneralMethods adds general utility methods (flattened to module level)
 func (ua *UtilsAdapter) addGeneralMethods(L *lua.LState, module *lua.LTable) {
-	// Create general namespace
-	general := L.NewTable()
-
-	// generateUUID method
-	L.SetField(general, "generateUUID", L.NewFunction(func(L *lua.LState) int {
+	// generalGenerateUUID method (flattened from general.generateUUID)
+	L.SetField(module, "generalGenerateUUID", L.NewFunction(func(L *lua.LState) int {
 		if ua.utilBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("util bridge not initialized"))
@@ -1019,8 +1795,8 @@ func (ua *UtilsAdapter) addGeneralMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// hash method
-	L.SetField(general, "hash", L.NewFunction(func(L *lua.LState) int {
+	// generalHash method (flattened from general.hash)
+	L.SetField(module, "generalHash", L.NewFunction(func(L *lua.LState) int {
 		if ua.utilBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("util bridge not initialized"))
@@ -1054,8 +1830,8 @@ func (ua *UtilsAdapter) addGeneralMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// retry method
-	L.SetField(general, "retry", L.NewFunction(func(L *lua.LState) int {
+	// generalRetry method (flattened from general.retry)
+	L.SetField(module, "generalRetry", L.NewFunction(func(L *lua.LState) int {
 		if ua.utilBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("util bridge not initialized"))
@@ -1089,8 +1865,8 @@ func (ua *UtilsAdapter) addGeneralMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// sleep method
-	L.SetField(general, "sleep", L.NewFunction(func(L *lua.LState) int {
+	// generalSleep method (flattened from general.sleep)
+	L.SetField(module, "generalSleep", L.NewFunction(func(L *lua.LState) int {
 		if ua.utilBridge == nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString("util bridge not initialized"))
@@ -1122,8 +1898,103 @@ func (ua *UtilsAdapter) addGeneralMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add general namespace to module
-	L.SetField(module, "general", general)
+	// Add methods from TODO that may be missing
+	// generalUuid method (flattened from general.uuid - alias)
+	L.SetField(module, "generalUuid", L.NewFunction(func(L *lua.LState) int {
+		if ua.utilBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("util bridge not initialized"))
+			return 2
+		}
+
+		result, err := ua.utilBridge.ExecuteMethod(context.Background(), "generateUUID", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// generalEncode method (flattened from general.encode)
+	L.SetField(module, "generalEncode", L.NewFunction(func(L *lua.LState) int {
+		if ua.utilBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("util bridge not initialized"))
+			return 2
+		}
+
+		data := L.CheckString(1)
+		encoding := L.CheckString(2)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(data),
+			engine.NewStringValue(encoding),
+		}
+
+		result, err := ua.utilBridge.ExecuteMethod(context.Background(), "encode", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// generalDecode method (flattened from general.decode)
+	L.SetField(module, "generalDecode", L.NewFunction(func(L *lua.LState) int {
+		if ua.utilBridge == nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString("util bridge not initialized"))
+			return 2
+		}
+
+		data := L.CheckString(1)
+		encoding := L.CheckString(2)
+
+		args := []engine.ScriptValue{
+			engine.NewStringValue(data),
+			engine.NewStringValue(encoding),
+		}
+
+		result, err := ua.utilBridge.ExecuteMethod(context.Background(), "decode", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := ua.typeConverter.FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
 }
 
 // addUtilityConstants adds utility-related constants
@@ -1193,22 +2064,29 @@ func (ua *UtilsAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string
 // GetMethods returns the available methods
 func (ua *UtilsAdapter) GetMethods() []string {
 	methods := []string{
-		// Auth methods
-		"authenticate", "validateToken", "refreshToken",
-		// Debug methods
-		"setDebugLevel", "debugLog", "getDebugConfig",
-		// Error methods
-		"createError", "wrapError", "aggregateErrors", "categorizeError",
-		// JSON methods
-		"parseJSON", "toJSON", "validateJSONSchema", "extractStructuredData",
-		// LLM methods
-		"createProvider", "generateTyped", "trackCost",
-		// Logger methods
-		"createLogger", "log", "setLogLevel",
-		// Slog methods
-		"info", "warn", "error", "debug",
-		// General methods
-		"generateUUID", "hash", "retry", "sleep",
+		// Auth methods (flattened)
+		"authAuthenticate", "authValidateToken", "authRefreshToken", "authGenerateToken",
+		"authHashPassword", "authVerifyPassword",
+		// Debug methods (flattened)
+		"debugSetLevel", "debugLog", "debugGetConfig", "debugTrace",
+		"debugProfile", "debugDump", "debugAssert",
+		// Error methods (flattened)
+		"errorsCreateError", "errorsWrapError", "errorsAggregateErrors", "errorsCategorizeError",
+		"errorsWrap", "errorsUnwrap", "errorsIsType", "errorsGetStack",
+		// JSON methods (flattened)
+		"jsonParse", "jsonToJSON", "jsonValidateJSONSchema", "jsonExtractStructuredData",
+		"jsonEncode", "jsonDecode", "jsonValidate", "jsonPrettify",
+		// LLM methods (flattened)
+		"llmCreateProvider", "llmGenerateTyped", "llmTrackCost",
+		"llmParseResponse", "llmFormatPrompt", "llmCountTokens", "llmSplitMessage",
+		// Logger methods (flattened)
+		"loggerCreateLogger", "loggerLog", "loggerSetLogLevel",
+		"loggerError", "loggerWarn", "loggerInfo", "loggerDebug",
+		// Slog methods (flattened)
+		"slogInfo", "slogWarn", "slogError", "slogDebug", "slogWithFields",
+		// General methods (flattened)
+		"generalGenerateUUID", "generalHash", "generalRetry", "generalSleep",
+		"generalUuid", "generalEncode", "generalDecode",
 	}
 
 	return methods

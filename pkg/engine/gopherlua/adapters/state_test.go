@@ -108,15 +108,33 @@ func TestStateAdapter_Creation(t *testing.T) {
 		assert.NotEqual(t, lua.LNil, module.RawGetString("createState"))
 		assert.NotEqual(t, lua.LNil, module.RawGetString("State")) // Constructor alias
 
-		// Check namespaces exist
-		transforms := module.RawGetString("transforms")
-		assert.NotEqual(t, lua.LNil, transforms, "transforms namespace should exist")
+		// Check flattened namespace methods exist
+		// Transform methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("transformsApply"), "transformsApply should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("transformsRegister"), "transformsRegister should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("transformsChain"), "transformsChain should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("transformsValidate"), "transformsValidate should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("transformsGetAvailable"), "transformsGetAvailable should exist")
 
-		context := module.RawGetString("context")
-		assert.NotEqual(t, lua.LNil, context, "context namespace should exist")
+		// Context methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("contextGet"), "contextGet should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("contextSet"), "contextSet should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("contextMerge"), "contextMerge should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("contextClear"), "contextClear should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("contextCreateShared"), "contextCreateShared should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("contextWithInheritance"), "contextWithInheritance should exist")
 
-		persistence := module.RawGetString("persistence")
-		assert.NotEqual(t, lua.LNil, persistence, "persistence namespace should exist")
+		// Persistence methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("persistenceSave"), "persistenceSave should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("persistenceLoad"), "persistenceLoad should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("persistenceExists"), "persistenceExists should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("persistenceDelete"), "persistenceDelete should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("persistenceListVersions"), "persistenceListVersions should exist")
+
+		// Check namespaces don't exist (flattened)
+		assert.Equal(t, lua.LNil, module.RawGetString("transforms"), "transforms namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("context"), "context namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("persistence"), "persistence namespace should not exist")
 	})
 }
 
@@ -366,7 +384,7 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 			local mockState = { id = "state-123" }
 			
 			-- Apply filter transform
-			local transformed, err = state.transforms.apply("filter", mockState)
+			local transformed, err = state.transformsApply("filter", mockState)
 			assert(err == nil, "transform should not error: " .. tostring(err))
 			assert(transformed.transformed == true, "state should be transformed")
 			assert(transformed.transform == "filter", "should record transform name")
@@ -407,7 +425,7 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 			end
 			
 			-- Register the transform
-			local result, err = state.transforms.register("custom", customTransform)
+			local result, err = state.transformsRegister("custom", customTransform)
 			assert(err == nil, "registration should not error: " .. tostring(err))
 		`)
 		assert.NoError(t, err)
@@ -472,21 +490,21 @@ func TestStateAdapter_StatePersistence(t *testing.T) {
 			local mockState = { id = "state-123", data = { key = "value" } }
 			
 			-- Test save
-			local saveResult, saveErr = state.persistence.save(mockState)
+			local saveResult, saveErr = state.persistenceSave(mockState)
 			assert(saveErr == nil, "save should not error: " .. tostring(saveErr))
 			
 			-- Test load
-			local loadedState, loadErr = state.persistence.load("state-123")
+			local loadedState, loadErr = state.persistenceLoad("state-123")
 			assert(loadErr == nil, "load should not error: " .. tostring(loadErr))
 			assert(loadedState.loaded == true, "state should be loaded")
 			
 			-- Test list
-			local statesList, listErr = state.persistence.list()
+			local statesList, listErr = state.persistenceListVersions()
 			assert(listErr == nil, "list should not error: " .. tostring(listErr))
 			assert(#statesList == 2, "should have 2 states")
 			
 			-- Test delete
-			local deleteResult, deleteErr = state.persistence.delete("state-123")
+			local deleteResult, deleteErr = state.persistenceDelete("state-123")
 			assert(deleteErr == nil, "delete should not error: " .. tostring(deleteErr))
 		`)
 		assert.NoError(t, err)
@@ -531,7 +549,7 @@ func TestStateAdapter_StateContext(t *testing.T) {
 			local state = require("state")
 			
 			-- Create shared context
-			local sharedContext, err = state.context.createShared()
+			local sharedContext, err = state.contextCreateShared()
 			assert(err == nil, "createShared should not error: " .. tostring(err))
 			assert(sharedContext._type == "SharedStateContext", "should be shared context")
 			assert(sharedContext.inheritMessages == true, "should inherit messages")

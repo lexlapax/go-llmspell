@@ -140,13 +140,10 @@ func (sa *StateAdapter) addStateEnhancements(L *lua.LState, module *lua.LTable) 
 	sa.addStateConstants(L, module)
 }
 
-// addTransformMethods adds transform-related methods
+// addTransformMethods adds transform-related methods (flattened to module level)
 func (sa *StateAdapter) addTransformMethods(L *lua.LState, module *lua.LTable) {
-	// Create transforms namespace
-	transforms := L.NewTable()
-
-	// apply method
-	L.SetField(transforms, "apply", L.NewFunction(func(L *lua.LState) int {
+	// transformsApply method (flattened from transforms.apply)
+	L.SetField(module, "transformsApply", L.NewFunction(func(L *lua.LState) int {
 		transformName := L.CheckString(1)
 		stateObj := L.CheckTable(2)
 		options := L.OptTable(3, L.NewTable())
@@ -183,8 +180,8 @@ func (sa *StateAdapter) addTransformMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// register method
-	L.SetField(transforms, "register", L.NewFunction(func(L *lua.LState) int {
+	// transformsRegister method (flattened from transforms.register)
+	L.SetField(module, "transformsRegister", L.NewFunction(func(L *lua.LState) int {
 		transformName := L.CheckString(1)
 		_ = L.CheckFunction(2) // transformFunc - acknowledged but not used in this simplified implementation
 
@@ -213,24 +210,203 @@ func (sa *StateAdapter) addTransformMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// Built-in transforms
-	builtins := L.NewTable()
-	L.SetField(builtins, "filter", lua.LString("filter"))
-	L.SetField(builtins, "flatten", lua.LString("flatten"))
-	L.SetField(builtins, "sanitize", lua.LString("sanitize"))
-	L.SetField(transforms, "builtins", builtins)
+	// transformsChain method (flattened from transforms.chain)
+	L.SetField(module, "transformsChain", L.NewFunction(func(L *lua.LState) int {
+		transformNames := L.CheckTable(1)
+		stateObj := L.CheckTable(2)
 
-	// Add transforms namespace to module
-	L.SetField(module, "transforms", transforms)
+		// Convert transform names to array
+		var transforms []engine.ScriptValue
+		transformNames.ForEach(func(k, v lua.LValue) {
+			if v.Type() == lua.LTString {
+				transforms = append(transforms, engine.NewStringValue(string(v.(lua.LString))))
+			}
+		})
+
+		stateMap := sa.tableToMap(L, stateObj)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewArrayValue(transforms),
+			engine.NewObjectValue(stateMap),
+		}
+
+		result, err := sa.GetBridge().ExecuteMethod(ctx, "chainTransforms", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := sa.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// transformsValidate method (flattened from transforms.validate)
+	L.SetField(module, "transformsValidate", L.NewFunction(func(L *lua.LState) int {
+		transformName := L.CheckString(1)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(transformName)}
+
+		result, err := sa.GetBridge().ExecuteMethod(ctx, "validateTransform", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := sa.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// transformsGetAvailable method (flattened from transforms.getAvailable)
+	L.SetField(module, "transformsGetAvailable", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+
+		result, err := sa.GetBridge().ExecuteMethod(ctx, "getAvailableTransforms", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := sa.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// Add built-in transform constants directly to module
+	L.SetField(module, "TRANSFORM_FILTER", lua.LString("filter"))
+	L.SetField(module, "TRANSFORM_FLATTEN", lua.LString("flatten"))
+	L.SetField(module, "TRANSFORM_SANITIZE", lua.LString("sanitize"))
 }
 
-// addContextMethods adds context-related methods
+// addContextMethods adds context-related methods (flattened to module level)
 func (sa *StateAdapter) addContextMethods(L *lua.LState, module *lua.LTable) {
-	// Create context namespace
-	contextTable := L.NewTable()
+	// contextGet method (flattened from context.get)
+	L.SetField(module, "contextGet", L.NewFunction(func(L *lua.LState) int {
+		key := L.CheckString(1)
 
-	// createShared method
-	L.SetField(contextTable, "createShared", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(key)}
+
+		result, err := sa.GetBridge().ExecuteMethod(ctx, "getContext", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := sa.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// contextSet method (flattened from context.set)
+	L.SetField(module, "contextSet", L.NewFunction(func(L *lua.LState) int {
+		key := L.CheckString(1)
+		value := L.Get(2)
+
+		// Convert value to ScriptValue
+		var converter *gopherlua.LuaTypeConverter
+		if sa.BridgeAdapter != nil {
+			converter = sa.GetTypeConverter()
+		} else {
+			converter = gopherlua.NewLuaTypeConverter()
+		}
+
+		valueScriptValue, err := converter.ToLuaScriptValue(L, value)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{
+			engine.NewStringValue(key),
+			valueScriptValue,
+		}
+
+		_, err = sa.GetBridge().ExecuteMethod(ctx, "setContext", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(lua.LNil)
+		return 1
+	}))
+
+	// contextMerge method (flattened from context.merge)
+	L.SetField(module, "contextMerge", L.NewFunction(func(L *lua.LState) int {
+		contextData := L.CheckTable(1)
+
+		contextMap := sa.tableToMap(L, contextData)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewObjectValue(contextMap)}
+
+		_, err := sa.GetBridge().ExecuteMethod(ctx, "mergeContext", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(lua.LNil)
+		return 1
+	}))
+
+	// contextClear method (flattened from context.clear)
+	L.SetField(module, "contextClear", L.NewFunction(func(L *lua.LState) int {
+		ctx := context.Background()
+
+		_, err := sa.GetBridge().ExecuteMethod(ctx, "clearContext", []engine.ScriptValue{})
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(lua.LNil)
+		return 1
+	}))
+
+	// contextCreateShared method (was createShared in namespace, now flattened)
+	L.SetField(module, "contextCreateShared", L.NewFunction(func(L *lua.LState) int {
 		parentContext := L.OptTable(1, nil)
 
 		var args []engine.ScriptValue
@@ -273,8 +449,8 @@ func (sa *StateAdapter) addContextMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// withInheritance method
-	L.SetField(contextTable, "withInheritance", L.NewFunction(func(L *lua.LState) int {
+	// contextWithInheritance method (was withInheritance in namespace, now flattened)
+	L.SetField(module, "contextWithInheritance", L.NewFunction(func(L *lua.LState) int {
 		sharedContext := L.CheckTable(1)
 		inheritMessages := L.CheckBool(2)
 		inheritArtifacts := L.CheckBool(3)
@@ -321,18 +497,12 @@ func (sa *StateAdapter) addContextMethods(L *lua.LState, module *lua.LTable) {
 		L.Push(lua.LString("context bridge not available"))
 		return 2
 	}))
-
-	// Add context namespace to module
-	L.SetField(module, "context", contextTable)
 }
 
-// addPersistenceMethods adds persistence-related methods
+// addPersistenceMethods adds persistence-related methods (flattened to module level)
 func (sa *StateAdapter) addPersistenceMethods(L *lua.LState, module *lua.LTable) {
-	// Create persistence namespace
-	persistence := L.NewTable()
-
-	// save method
-	L.SetField(persistence, "save", L.NewFunction(func(L *lua.LState) int {
+	// persistenceSave method (flattened from persistence.save)
+	L.SetField(module, "persistenceSave", L.NewFunction(func(L *lua.LState) int {
 		stateObj := L.CheckTable(1)
 
 		stateMap := sa.tableToMap(L, stateObj)
@@ -351,8 +521,8 @@ func (sa *StateAdapter) addPersistenceMethods(L *lua.LState, module *lua.LTable)
 		return 1
 	}))
 
-	// load method
-	L.SetField(persistence, "load", L.NewFunction(func(L *lua.LState) int {
+	// persistenceLoad method (flattened from persistence.load)
+	L.SetField(module, "persistenceLoad", L.NewFunction(func(L *lua.LState) int {
 		stateID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -377,8 +547,34 @@ func (sa *StateAdapter) addPersistenceMethods(L *lua.LState, module *lua.LTable)
 		return 2
 	}))
 
-	// list method
-	L.SetField(persistence, "list", L.NewFunction(func(L *lua.LState) int {
+	// persistenceExists method (flattened from persistence.exists)
+	L.SetField(module, "persistenceExists", L.NewFunction(func(L *lua.LState) int {
+		stateID := L.CheckString(1)
+
+		ctx := context.Background()
+		args := []engine.ScriptValue{engine.NewStringValue(stateID)}
+
+		result, err := sa.GetBridge().ExecuteMethod(ctx, "stateExists", args)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		luaResult, err := sa.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+		if err != nil {
+			L.Push(lua.LNil)
+			L.Push(lua.LString(err.Error()))
+			return 2
+		}
+
+		L.Push(luaResult)
+		L.Push(lua.LNil)
+		return 2
+	}))
+
+	// persistenceListVersions method (flattened from persistence.listVersions)
+	L.SetField(module, "persistenceListVersions", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		result, err := sa.GetBridge().ExecuteMethod(ctx, "listStates", []engine.ScriptValue{})
@@ -400,8 +596,8 @@ func (sa *StateAdapter) addPersistenceMethods(L *lua.LState, module *lua.LTable)
 		return 2
 	}))
 
-	// delete method
-	L.SetField(persistence, "delete", L.NewFunction(func(L *lua.LState) int {
+	// persistenceDelete method (flattened from persistence.delete)
+	L.SetField(module, "persistenceDelete", L.NewFunction(func(L *lua.LState) int {
 		stateID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -417,9 +613,6 @@ func (sa *StateAdapter) addPersistenceMethods(L *lua.LState, module *lua.LTable)
 		L.Push(lua.LNil)
 		return 1
 	}))
-
-	// Add persistence namespace to module
-	L.SetField(module, "persistence", persistence)
 }
 
 // addConvenienceMethods adds convenience methods to the module
@@ -765,6 +958,7 @@ func (sa *StateAdapter) GetMethods() []string {
 
 	// Add state-specific methods if not already present
 	stateMethods := []string{
+		// Base state methods
 		"createState", "saveState", "loadState", "deleteState", "listStates",
 		"get", "set", "delete", "has", "keys", "values",
 		"setMetadata", "getMetadata", "getAllMetadata",
@@ -772,6 +966,15 @@ func (sa *StateAdapter) GetMethods() []string {
 		"addMessage", "messages",
 		"applyTransform", "registerTransform",
 		"mergeStates", "validateState",
+		// Flattened transform methods
+		"transformsApply", "transformsRegister", "transformsChain",
+		"transformsValidate", "transformsGetAvailable",
+		// Flattened context methods
+		"contextGet", "contextSet", "contextMerge", "contextClear",
+		"contextCreateShared", "contextWithInheritance",
+		// Flattened persistence methods
+		"persistenceSave", "persistenceLoad", "persistenceExists",
+		"persistenceDelete", "persistenceListVersions",
 	}
 
 	methodMap := make(map[string]bool)
