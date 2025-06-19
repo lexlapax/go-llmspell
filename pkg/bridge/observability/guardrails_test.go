@@ -200,20 +200,18 @@ func TestGuardrailsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Test required keys guardrail
-				keysArray := []engine.ScriptValue{sv("key1"), sv("key2")}
 				requiredKeysParams := []engine.ScriptValue{
 					sv("required_keys"),
-					svArray(keysArray),
+					svArray("key1", "key2"),
 				}
 				result, err := bridge.ExecuteMethod(ctx, "createRequiredKeysGuardrail", requiredKeysParams)
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
 				// Test content moderation guardrail
-				wordsArray := []engine.ScriptValue{sv("bad_word"), sv("prohibited")}
 				contentParams := []engine.ScriptValue{
 					sv("content_filter"),
-					svArray(wordsArray),
+					svArray("bad_word", "prohibited"),
 				}
 				result, err = bridge.ExecuteMethod(ctx, "createContentModerationGuardrail", contentParams)
 				require.NoError(t, err)

@@ -169,19 +169,19 @@ func TestSlogBridgeLoggingHooks(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("logBeforeGenerate", func(t *testing.T) {
-		messages := []engine.ScriptValue{
-			svMap(map[string]interface{}{
+		messages := svArray(
+			map[string]interface{}{
 				"role":    "user",
 				"content": "Hello AI",
-			}),
-			svMap(map[string]interface{}{
+			},
+			map[string]interface{}{
 				"role":    "assistant",
 				"content": "Hello human",
-			}),
-		}
+			},
+		)
 
 		result, err := bridge.ExecuteMethod(ctx, "logBeforeGenerate", []engine.ScriptValue{
-			svArray(messages),
+			messages,
 		})
 		require.NoError(t, err)
 		assert.True(t, result.IsNil())
