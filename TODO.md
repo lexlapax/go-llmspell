@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 12 of 14 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 13 of 14 completed]
     - 🔲 2.3.4: Lua Standard Library [NOT STARTED]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -82,7 +82,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 8 of 14 adapters completed
+🚧 **IN PROGRESS** - 13 of 14 adapters completed
 
 - [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-18]
   - [x] Create state and context management module
@@ -256,54 +256,54 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - Task-specific model recommendations (function calling, text generation, etc.)
   - Enhanced error handling and validation
 
-- [ ] **Task 2.3.3.13: Utility Bridge Adapters** (`/pkg/engine/gopherlua/adapters/utils.go`)
+- [x] **Task 2.3.3.13: Utility Bridge Adapters** (`/pkg/engine/gopherlua/adapters/utils.go`) ✅ COMPLETE [2025-06-19]
     **look in `/pkg/bridge/util/*.go` for research**
-  - [ ] Implement Auth Bridge Adapter
-    - [ ] Add `authenticate(credentials, scheme)` method for authentication
-    - [ ] Add `validateToken(token, options)` method for token validation
-    - [ ] Add `refreshToken(refreshToken)` method for token refresh
-    - [ ] Add OAuth2 flow support methods
-  - [ ] Implement Debug Bridge Adapter
-    - [ ] Add `setDebugLevel(component, level)` method for debug control
-    - [ ] Add `debugLog(component, message, data)` method for debug logging
-    - [ ] Add `getDebugConfig()` method for configuration retrieval
-    - [ ] Add environment-based debug configuration
-  - [ ] Implement Errors Bridge Adapter
-    - [ ] Add `createError(message, code, category)` method for error creation
-    - [ ] Add `wrapError(error, context)` method for error wrapping
-    - [ ] Add `aggregateErrors(errors)` method for error aggregation
-    - [ ] Add `categorizeError(error)` method for error categorization
-    - [ ] Add error recovery strategy support
-  - [ ] Implement JSON Bridge Adapter
-    - [ ] Add `parseJSON(text, options)` method for JSON parsing
-    - [ ] Add `toJSON(data, options)` method for JSON serialization
-    - [ ] Add `validateJSONSchema(data, schema)` method for validation
-    - [ ] Add `extractStructuredData(text, schema)` method for LLM output parsing
-    - [ ] Add format conversion support (JSON/YAML/XML)
-  - [ ] Implement LLM Utils Bridge Adapter
-    - [ ] Add `createProvider(type, config)` method for provider creation
-    - [ ] Add `generateTyped(prompt, schema, options)` method for typed generation
-    - [ ] Add `getModelCapabilities(model)` method for capability queries
-    - [ ] Add `trackCost(operation, tokens, model)` method for cost tracking
-    - [ ] Add streaming with event support
-  - [ ] Implement Script Logger Bridge Adapter
-    - [ ] Add `createLogger(component, config)` method for logger creation
-    - [ ] Add `log(level, message, context)` method for unified logging
-    - [ ] Add `setLogLevel(component, level)` method for level control
-    - [ ] Add context propagation support
-  - [ ] Implement Slog Bridge Adapter
-    - [ ] Add `info(message, fields)` method for info logging
-    - [ ] Add `warn(message, fields)` method for warning logging
-    - [ ] Add `error(message, fields)` method for error logging
-    - [ ] Add `debug(message, fields)` method for debug logging
-    - [ ] Add emoji enhancement and structured logging hooks
-  - [ ] Implement General Util Bridge Adapter
-    - [ ] Add `generateUUID()` method for UUID generation
-    - [ ] Add `hash(data, algorithm)` method for hashing
-    - [ ] Add `retry(operation, options)` method for retry logic
-    - [ ] Add `sleep(duration)` method for delays
-    - [ ] Add string and time utilities
-  - [ ] make sure tests pass
+  - [x] Implement Auth Bridge Adapter
+    - [x] Add `authenticate(credentials, scheme)` method for authentication
+    - [x] Add `validateToken(token, options)` method for token validation
+    - [x] Add `refreshToken(refreshToken)` method for token refresh
+    - [x] Add OAuth2 flow support methods
+  - [x] Implement Debug Bridge Adapter
+    - [x] Add `setDebugLevel(component, level)` method for debug control
+    - [x] Add `debugLog(component, message, data)` method for debug logging
+    - [x] Add `getDebugConfig()` method for configuration retrieval
+    - [x] Add environment-based debug configuration
+  - [x] Implement Errors Bridge Adapter
+    - [x] Add `createError(message, code, category)` method for error creation
+    - [x] Add `wrapError(error, context)` method for error wrapping
+    - [x] Add `aggregateErrors(errors)` method for error aggregation
+    - [x] Add `categorizeError(error)` method for error categorization
+    - [x] Add error recovery strategy support
+  - [x] Implement JSON Bridge Adapter
+    - [x] Add `parseJSON(text, options)` method for JSON parsing
+    - [x] Add `toJSON(data, options)` method for JSON serialization
+    - [x] Add `validateJSONSchema(data, schema)` method for validation
+    - [x] Add `extractStructuredData(text, schema)` method for LLM output parsing
+    - [x] Add format conversion support (JSON/YAML/XML)
+  - [x] Implement LLM Utils Bridge Adapter
+    - [x] Add `createProvider(type, config)` method for provider creation
+    - [x] Add `generateTyped(prompt, schema, options)` method for typed generation
+    - [x] Add `getModelCapabilities(model)` method for capability queries
+    - [x] Add `trackCost(operation, tokens, model)` method for cost tracking
+    - [x] Add streaming with event support
+  - [x] Implement Script Logger Bridge Adapter
+    - [x] Add `createLogger(component, config)` method for logger creation
+    - [x] Add `log(level, message, context)` method for unified logging
+    - [x] Add `setLogLevel(component, level)` method for level control
+    - [x] Add context propagation support
+  - [x] Implement Slog Bridge Adapter
+    - [x] Add `info(message, fields)` method for info logging
+    - [x] Add `warn(message, fields)` method for warning logging
+    - [x] Add `error(message, fields)` method for error logging
+    - [x] Add `debug(message, fields)` method for debug logging
+    - [x] Add emoji enhancement and structured logging hooks
+  - [x] Implement General Util Bridge Adapter
+    - [x] Add `generateUUID()` method for UUID generation
+    - [x] Add `hash(data, algorithm)` method for hashing
+    - [x] Add `retry(operation, options)` method for retry logic
+    - [x] Add `sleep(duration)` method for delays
+    - [x] Add string and time utilities
+  - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.14: Adapter Testing** (`/pkg/engine/gopherlua/adapters/adapters_test.go`)
   - [ ] Test each adapter functionality
