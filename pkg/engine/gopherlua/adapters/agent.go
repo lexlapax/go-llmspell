@@ -77,29 +77,8 @@ func (aa *AgentAdapter) CreateLuaModule() lua.LGFunction {
 		// Add agent-specific enhancements
 		aa.addAgentEnhancements(L, module)
 
-		// Add lifecycle methods
-		aa.addLifecycleMethods(L, module)
-
-		// Add communication methods
-		aa.addCommunicationMethods(L, module)
-
-		// Add state management methods
-		aa.addStateMethods(L, module)
-
-		// Add event methods
-		aa.addEventMethods(L, module)
-
-		// Add profiling methods
-		aa.addProfilingMethods(L, module)
-
-		// Add workflow methods
-		aa.addWorkflowMethods(L, module)
-
-		// Add hook methods
-		aa.addHookMethods(L, module)
-
-		// Add utility methods
-		aa.addUtilityMethods(L, module)
+		// Add flattened methods from all namespaces
+		aa.addFlattenedMethods(L, module)
 
 		// Add convenience methods
 		aa.addConvenienceMethods(L, module)
@@ -116,13 +95,10 @@ func (aa *AgentAdapter) addAgentEnhancements(L *lua.LState, module *lua.LTable) 
 	aa.addAgentConstants(L, module)
 }
 
-// addLifecycleMethods adds agent lifecycle-related methods
-func (aa *AgentAdapter) addLifecycleMethods(L *lua.LState, module *lua.LTable) {
-	// Create lifecycle namespace
-	lifecycle := L.NewTable()
-
-	// create method (enhanced wrapper)
-	L.SetField(lifecycle, "create", L.NewFunction(func(L *lua.LState) int {
+// addFlattenedMethods adds all flattened methods from all namespaces
+func (aa *AgentAdapter) addFlattenedMethods(L *lua.LState, module *lua.LTable) {
+	// Lifecycle methods - flattened to module level
+	L.SetField(module, "lifecycleCreate", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		config := L.CheckTable(2)
 
@@ -153,8 +129,7 @@ func (aa *AgentAdapter) addLifecycleMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// createLLM method
-	L.SetField(lifecycle, "createLLM", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "lifecycleCreateLLM", L.NewFunction(func(L *lua.LState) int {
 		model := L.CheckString(1)
 		config := L.OptTable(2, L.NewTable())
 
@@ -185,8 +160,7 @@ func (aa *AgentAdapter) addLifecycleMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// list method
-	L.SetField(lifecycle, "list", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "lifecycleList", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		result, err := aa.GetBridge().ExecuteMethod(ctx, "listAgents", []engine.ScriptValue{})
@@ -225,8 +199,7 @@ func (aa *AgentAdapter) addLifecycleMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// get method
-	L.SetField(lifecycle, "get", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "lifecycleGet", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -251,8 +224,7 @@ func (aa *AgentAdapter) addLifecycleMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// remove method
-	L.SetField(lifecycle, "remove", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "lifecycleRemove", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -269,8 +241,7 @@ func (aa *AgentAdapter) addLifecycleMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// getMetrics method
-	L.SetField(lifecycle, "getMetrics", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "lifecycleGetMetrics", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -295,17 +266,8 @@ func (aa *AgentAdapter) addLifecycleMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add lifecycle namespace to module
-	L.SetField(module, "lifecycle", lifecycle)
-}
-
-// addCommunicationMethods adds agent communication-related methods
-func (aa *AgentAdapter) addCommunicationMethods(L *lua.LState, module *lua.LTable) {
-	// Create communication namespace
-	communication := L.NewTable()
-
-	// run method
-	L.SetField(communication, "run", L.NewFunction(func(L *lua.LState) int {
+	// Communication methods - flattened with simplified naming (no "communication" prefix)
+	L.SetField(module, "run", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		input := L.CheckTable(2)
 
@@ -336,8 +298,7 @@ func (aa *AgentAdapter) addCommunicationMethods(L *lua.LState, module *lua.LTabl
 		return 2
 	}))
 
-	// runAsync method
-	L.SetField(communication, "runAsync", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "runAsync", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		input := L.CheckTable(2)
 
@@ -368,8 +329,7 @@ func (aa *AgentAdapter) addCommunicationMethods(L *lua.LState, module *lua.LTabl
 		return 2
 	}))
 
-	// registerTool method
-	L.SetField(communication, "registerTool", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "registerTool", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		toolConfig := L.CheckTable(2)
 
@@ -392,8 +352,7 @@ func (aa *AgentAdapter) addCommunicationMethods(L *lua.LState, module *lua.LTabl
 		return 1
 	}))
 
-	// unregisterTool method
-	L.SetField(communication, "unregisterTool", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "unregisterTool", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		toolName := L.CheckString(2)
 
@@ -414,8 +373,7 @@ func (aa *AgentAdapter) addCommunicationMethods(L *lua.LState, module *lua.LTabl
 		return 1
 	}))
 
-	// listTools method
-	L.SetField(communication, "listTools", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "listTools", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -457,17 +415,8 @@ func (aa *AgentAdapter) addCommunicationMethods(L *lua.LState, module *lua.LTabl
 		return 1
 	}))
 
-	// Add communication namespace to module
-	L.SetField(module, "communication", communication)
-}
-
-// addStateMethods adds agent state management-related methods
-func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
-	// Create state namespace
-	state := L.NewTable()
-
-	// get method
-	L.SetField(state, "get", L.NewFunction(func(L *lua.LState) int {
+	// State methods - flattened to module level
+	L.SetField(module, "stateGet", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -492,8 +441,7 @@ func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// set method
-	L.SetField(state, "set", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "stateSet", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		stateData := L.CheckTable(2)
 
@@ -516,8 +464,7 @@ func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// export method
-	L.SetField(state, "export", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "stateExport", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -542,8 +489,7 @@ func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// import method
-	L.SetField(state, "import", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "stateImport", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		stateData := L.CheckTable(2)
 
@@ -566,8 +512,7 @@ func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// saveSnapshot method
-	L.SetField(state, "saveSnapshot", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "stateSaveSnapshot", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		name := L.CheckString(2)
 
@@ -596,8 +541,7 @@ func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// loadSnapshot method
-	L.SetField(state, "loadSnapshot", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "stateLoadSnapshot", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		snapshotID := L.CheckString(2)
 
@@ -618,8 +562,7 @@ func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// listSnapshots method
-	L.SetField(state, "listSnapshots", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "stateListSnapshots", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -661,17 +604,8 @@ func (aa *AgentAdapter) addStateMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// Add state namespace to module
-	L.SetField(module, "state", state)
-}
-
-// addEventMethods adds agent event-related methods
-func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
-	// Create events namespace
-	events := L.NewTable()
-
-	// emit method
-	L.SetField(events, "emit", L.NewFunction(func(L *lua.LState) int {
+	// Events methods - flattened to module level
+	L.SetField(module, "eventsEmit", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		eventType := L.CheckString(2)
 		data := L.CheckTable(3)
@@ -696,8 +630,7 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// subscribe method
-	L.SetField(events, "subscribe", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "eventsSubscribe", L.NewFunction(func(L *lua.LState) int {
 		filter := L.CheckTable(1)
 		callback := L.CheckFunction(2)
 
@@ -744,8 +677,7 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// unsubscribe method
-	L.SetField(events, "unsubscribe", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "eventsUnsubscribe", L.NewFunction(func(L *lua.LState) int {
 		subscriptionID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -762,8 +694,7 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// startRecording method
-	L.SetField(events, "startRecording", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "eventsStartRecording", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -788,8 +719,7 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// stopRecording method
-	L.SetField(events, "stopRecording", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "eventsStopRecording", L.NewFunction(func(L *lua.LState) int {
 		recordingID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -814,8 +744,7 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// replay method
-	L.SetField(events, "replay", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "eventsReplay", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		options := L.CheckTable(2)
 
@@ -847,17 +776,8 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// Add events namespace to module
-	L.SetField(module, "events", events)
-}
-
-// addProfilingMethods adds agent profiling-related methods
-func (aa *AgentAdapter) addProfilingMethods(L *lua.LState, module *lua.LTable) {
-	// Create profiling namespace
-	profiling := L.NewTable()
-
-	// start method
-	L.SetField(profiling, "start", L.NewFunction(func(L *lua.LState) int {
+	// Profiling methods - flattened to module level
+	L.SetField(module, "profilingStart", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -882,8 +802,7 @@ func (aa *AgentAdapter) addProfilingMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// stop method
-	L.SetField(profiling, "stop", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "profilingStop", L.NewFunction(func(L *lua.LState) int {
 		sessionID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -908,8 +827,7 @@ func (aa *AgentAdapter) addProfilingMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// getMetrics method
-	L.SetField(profiling, "getMetrics", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "profilingGetMetrics", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -934,8 +852,7 @@ func (aa *AgentAdapter) addProfilingMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// getReport method
-	L.SetField(profiling, "getReport", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "profilingGetReport", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 
 		ctx := context.Background()
@@ -960,17 +877,8 @@ func (aa *AgentAdapter) addProfilingMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add profiling namespace to module
-	L.SetField(module, "profiling", profiling)
-}
-
-// addWorkflowMethods adds agent workflow-related methods
-func (aa *AgentAdapter) addWorkflowMethods(L *lua.LState, module *lua.LTable) {
-	// Create workflow namespace
-	workflow := L.NewTable()
-
-	// create method
-	L.SetField(workflow, "create", L.NewFunction(func(L *lua.LState) int {
+	// Workflow methods - flattened to module level
+	L.SetField(module, "workflowCreate", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		workflowConfig := L.CheckTable(2)
 
@@ -1001,8 +909,7 @@ func (aa *AgentAdapter) addWorkflowMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// execute method
-	L.SetField(workflow, "execute", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "workflowExecute", L.NewFunction(func(L *lua.LState) int {
 		workflowID := L.CheckString(1)
 		input := L.CheckTable(2)
 
@@ -1033,8 +940,7 @@ func (aa *AgentAdapter) addWorkflowMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// addStep method
-	L.SetField(workflow, "addStep", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "workflowAddStep", L.NewFunction(func(L *lua.LState) int {
 		workflowID := L.CheckString(1)
 		stepConfig := L.CheckTable(2)
 
@@ -1071,17 +977,8 @@ func (aa *AgentAdapter) addWorkflowMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add workflow namespace to module
-	L.SetField(module, "workflow", workflow)
-}
-
-// addHookMethods adds agent hook-related methods
-func (aa *AgentAdapter) addHookMethods(L *lua.LState, module *lua.LTable) {
-	// Create hooks namespace
-	hooks := L.NewTable()
-
-	// register method
-	L.SetField(hooks, "register", L.NewFunction(func(L *lua.LState) int {
+	// Hooks methods - flattened to module level
+	L.SetField(module, "hooksRegister", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		hookName := L.CheckString(2)
 		hookFunc := L.CheckFunction(3)
@@ -1106,8 +1003,7 @@ func (aa *AgentAdapter) addHookMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// set method (alias for register)
-	L.SetField(hooks, "set", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "hooksSet", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		hookName := L.CheckString(2)
 		hookFunc := L.CheckFunction(3)
@@ -1145,8 +1041,7 @@ func (aa *AgentAdapter) addHookMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// unregister method
-	L.SetField(hooks, "unregister", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "hooksUnregister", L.NewFunction(func(L *lua.LState) int {
 		agentID := L.CheckString(1)
 		hookName := L.CheckString(2)
 
@@ -1167,17 +1062,8 @@ func (aa *AgentAdapter) addHookMethods(L *lua.LState, module *lua.LTable) {
 		return 1
 	}))
 
-	// Add hooks namespace to module
-	L.SetField(module, "hooks", hooks)
-}
-
-// addUtilityMethods adds utility-related methods
-func (aa *AgentAdapter) addUtilityMethods(L *lua.LState, module *lua.LTable) {
-	// Create utils namespace
-	utils := L.NewTable()
-
-	// validateConfig method
-	L.SetField(utils, "validateConfig", L.NewFunction(func(L *lua.LState) int {
+	// Utils methods - flattened to module level
+	L.SetField(module, "utilsValidateConfig", L.NewFunction(func(L *lua.LState) int {
 		config := L.CheckTable(1)
 
 		configMap := aa.tableToMap(L, config)
@@ -1203,9 +1089,6 @@ func (aa *AgentAdapter) addUtilityMethods(L *lua.LState, module *lua.LTable) {
 		L.Push(lua.LNil)
 		return 2
 	}))
-
-	// Add utils namespace to module
-	L.SetField(module, "utils", utils)
 }
 
 // addConvenienceMethods adds convenience methods to the module
@@ -1452,17 +1335,34 @@ func (aa *AgentAdapter) GetMethods() []string {
 		methods = aa.BridgeAdapter.GetMethods()
 	}
 
-	// Add agent-specific methods if not already present
+	// Add agent-specific flattened methods if not already present
 	agentMethods := []string{
+		// Standard convenience methods
 		"createAgent", "createLLMAgent", "listAgents", "getAgent", "removeAgent",
-		"runAgent", "runAgentAsync", "registerAgentTool", "unregisterAgentTool", "listAgentTools",
-		"getAgentState", "setAgentState", "exportAgentState", "importAgentState",
-		"createAgentSnapshot", "restoreAgentSnapshot",
-		"emitAgentEvent", "subscribeAgentEvent", "startAgentEventRecording",
-		"stopAgentEventRecording", "replayAgentEvents",
-		"startAgentProfiling", "stopAgentProfiling", "getAgentMetrics",
-		"createAgentWorkflow", "executeAgentWorkflow",
-		"registerAgentHook", "unregisterAgentHook", "validateAgentConfig",
+
+		// Lifecycle methods (flattened)
+		"lifecycleCreate", "lifecycleCreateLLM", "lifecycleList", "lifecycleGet", "lifecycleRemove", "lifecycleGetMetrics",
+
+		// Communication methods (simplified naming - no "communication" prefix)
+		"run", "runAsync", "registerTool", "unregisterTool", "listTools",
+
+		// State methods (flattened)
+		"stateGet", "stateSet", "stateExport", "stateImport", "stateSaveSnapshot", "stateLoadSnapshot", "stateListSnapshots",
+
+		// Events methods (flattened)
+		"eventsEmit", "eventsSubscribe", "eventsUnsubscribe", "eventsStartRecording", "eventsStopRecording", "eventsReplay",
+
+		// Profiling methods (flattened)
+		"profilingStart", "profilingStop", "profilingGetMetrics", "profilingGetReport",
+
+		// Workflow methods (flattened)
+		"workflowCreate", "workflowExecute", "workflowAddStep",
+
+		// Hooks methods (flattened)
+		"hooksRegister", "hooksSet", "hooksUnregister",
+
+		// Utils methods (flattened)
+		"utilsValidateConfig",
 	}
 
 	methodMap := make(map[string]bool)

@@ -191,49 +191,56 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] utils.general.decode → utils.generalDecode
   - [x] Update tests in utils_test.go
 
-- [ ] **Task 2.3.3.21: Agent Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/agent.go`)
-  - [ ] check if agent bridge has addTool or addTools or similar method.. it should, check in go-llms agent methods and report back
-  - [ ] Flatten lifecycle namespace methods:
-    - [ ] agent.lifecycle.create → agent.lifecycleCreate
-    - [ ] agent.lifecycle.start → agent.lifecycleStart
-    - [ ] agent.lifecycle.stop → agent.lifecycleStop
-    - [ ] agent.lifecycle.restart → agent.lifecycleRestart
-    - [ ] agent.lifecycle.getStatus → agent.lifecycleGetStatus
-  - [ ] Flatten communication namespace methods:
-    - [ ] agent.communication.sendMessage → agent.SendMessage
-    - [ ] agent.communication.broadcastMessage → agent.BroadcastMessage
-    - [ ] agent.communication.registerHandler → agent.RegisterHandler
-    - [ ] agent.communication.unregisterHandler → agent.UnregisterHandler
-  - [ ] Flatten state namespace methods:
-    - [ ] agent.state.get → agent.stateGet
-    - [ ] agent.state.set → agent.stateSet
-    - [ ] agent.state.update → agent.stateUpdate
-    - [ ] agent.state.subscribe → agent.stateSubscribe
-  - [ ] Flatten events namespace methods:
-    - [ ] agent.events.emit → agent.eventsEmit
-    - [ ] agent.events.on → agent.eventsOn
-    - [ ] agent.events.off → agent.eventsOff
-    - [ ] agent.events.getHistory → agent.eventsGetHistory
-  - [ ] Flatten profiling namespace methods:
-    - [ ] agent.profiling.start → agent.profilingStart
-    - [ ] agent.profiling.stop → agent.profilingStop
-    - [ ] agent.profiling.getReport → agent.profilingGetReport
-    - [ ] agent.profiling.reset → agent.profilingReset
-  - [ ] Flatten workflow namespace methods:
-    - [ ] agent.workflow.add → agent.workflowAdd
-    - [ ] agent.workflow.remove → agent.workflowRemove
-    - [ ] agent.workflow.execute → agent.workflowExecute
-    - [ ] agent.workflow.getStatus → agent.workflowGetStatus
-  - [ ] Flatten hooks namespace methods:
-    - [ ] agent.hooks.register → agent.hooksRegister
-    - [ ] agent.hooks.unregister → agent.hooksUnregister
-    - [ ] agent.hooks.trigger → agent.hooksTrigger
-    - [ ] agent.hooks.list → agent.hooksList
-  - [ ] Flatten utils namespace methods:
-    - [ ] agent.utils.validate → agent.utilsValidate
-    - [ ] agent.utils.sanitize → agent.utilsSanitize
-    - [ ] agent.utils.transform → agent.utilsTransform
-  - [ ] Update tests in agent_test.go
+- [x] **Task 2.3.3.21: Agent Adapter Namespace Flattening** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/agent.go`)
+  - [x] check if agent bridge has addTool or addTools or similar method.. it should, check in go-llms agent methods and report back
+    - Found: Agent has AddTool(tool Tool) method, no AddTools bulk method
+    - Note: registerAgentTool is just an alias for registerTool
+    - Pattern: To add agent as tool, wrap with AgentTool first, then use AddTool
+  - [x] Flatten lifecycle namespace methods:
+    - [x] agent.lifecycle.create → agent.lifecycleCreate
+    - [x] agent.lifecycle.createLLM → agent.lifecycleCreateLLM
+    - [x] agent.lifecycle.list → agent.lifecycleList
+    - [x] agent.lifecycle.get → agent.lifecycleGet
+    - [x] agent.lifecycle.remove → agent.lifecycleRemove
+    - [x] agent.lifecycle.getMetrics → agent.lifecycleGetMetrics
+  - [x] Flatten communication namespace methods:
+    - communications methods can be shorted to omit the communication altogether.
+    - [x] agent.communication.run → agent.run
+    - [x] agent.communication.runAsync → agent.runAsync
+    - [x] agent.communication.registerTool → agent.registerTool
+    - [x] agent.communication.unregisterTool → agent.unregisterTool
+    - [x] agent.communication.listTools → agent.listTools
+  - [x] Flatten state namespace methods:
+    - [x] agent.state.get → agent.stateGet
+    - [x] agent.state.set → agent.stateSet
+    - [x] agent.state.export → agent.stateExport
+    - [x] agent.state.import → agent.stateImport
+    - [x] agent.state.saveSnapshot → agent.stateSaveSnapshot
+    - [x] agent.state.loadSnapshot → agent.stateLoadSnapshot
+    - [x] agent.state.listSnapshots → agent.stateListSnapshots
+  - [x] Flatten events namespace methods:
+    - [x] agent.events.emit → agent.eventsEmit
+    - [x] agent.events.subscribe → agent.eventsSubscribe
+    - [x] agent.events.unsubscribe → agent.eventsUnsubscribe
+    - [x] agent.events.startRecording → agent.eventsStartRecording
+    - [x] agent.events.stopRecording → agent.eventsStopRecording
+    - [x] agent.events.replay → agent.eventsReplay
+  - [x] Flatten profiling namespace methods:
+    - [x] agent.profiling.start → agent.profilingStart
+    - [x] agent.profiling.stop → agent.profilingStop
+    - [x] agent.profiling.getMetrics → agent.profilingGetMetrics
+    - [x] agent.profiling.getReport → agent.profilingGetReport
+  - [x] Flatten workflow namespace methods:
+    - [x] agent.workflow.create → agent.workflowCreate
+    - [x] agent.workflow.execute → agent.workflowExecute
+    - [x] agent.workflow.addStep → agent.workflowAddStep
+  - [x] Flatten hooks namespace methods:
+    - [x] agent.hooks.register → agent.hooksRegister
+    - [x] agent.hooks.set → agent.hooksSet
+    - [x] agent.hooks.unregister → agent.hooksUnregister
+  - [x] Flatten utils namespace methods:
+    - [x] agent.utils.validateConfig → agent.utilsValidateConfig
+  - [x] Update tests in agent_test.go
 
 - [ ] **Task 2.3.3.22: Structured Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/structured.go`)
   - [ ] Flatten validation namespace methods:

@@ -55,17 +55,17 @@ func TestAgentAdapter_Creation(t *testing.T) {
 		adapter := NewAgentAdapter(agentBridge)
 		require.NotNil(t, adapter)
 
-		// Should have agent-specific methods
+		// Should have flattened agent-specific methods
 		methods := adapter.GetMethods()
 		assert.Contains(t, methods, "createAgent")
 		assert.Contains(t, methods, "createLLMAgent")
 		assert.Contains(t, methods, "listAgents")
 		assert.Contains(t, methods, "getAgent")
 		assert.Contains(t, methods, "removeAgent")
-		assert.Contains(t, methods, "runAgent")
-		assert.Contains(t, methods, "runAgentAsync")
-		assert.Contains(t, methods, "getAgentState")
-		assert.Contains(t, methods, "setAgentState")
+		assert.Contains(t, methods, "run")
+		assert.Contains(t, methods, "runAsync")
+		assert.Contains(t, methods, "stateGet")
+		assert.Contains(t, methods, "stateSet")
 	})
 
 	t.Run("agent_module_structure", func(t *testing.T) {
@@ -130,27 +130,79 @@ func TestAgentAdapter_Creation(t *testing.T) {
 		assert.NotEqual(t, lua.LNil, module.RawGetString("createAgent"))
 		assert.NotEqual(t, lua.LNil, module.RawGetString("listAgents"))
 
-		// Check namespaces exist
+		// Check that old namespaces do NOT exist (flattened structure)
 		lifecycle := module.RawGetString("lifecycle")
-		assert.NotEqual(t, lua.LNil, lifecycle, "lifecycle namespace should exist")
+		assert.Equal(t, lua.LNil, lifecycle, "lifecycle namespace should NOT exist - methods are flattened")
 
 		communication := module.RawGetString("communication")
-		assert.NotEqual(t, lua.LNil, communication, "communication namespace should exist")
+		assert.Equal(t, lua.LNil, communication, "communication namespace should NOT exist - methods are flattened")
 
 		state := module.RawGetString("state")
-		assert.NotEqual(t, lua.LNil, state, "state namespace should exist")
+		assert.Equal(t, lua.LNil, state, "state namespace should NOT exist - methods are flattened")
 
 		events := module.RawGetString("events")
-		assert.NotEqual(t, lua.LNil, events, "events namespace should exist")
+		assert.Equal(t, lua.LNil, events, "events namespace should NOT exist - methods are flattened")
 
 		profiling := module.RawGetString("profiling")
-		assert.NotEqual(t, lua.LNil, profiling, "profiling namespace should exist")
+		assert.Equal(t, lua.LNil, profiling, "profiling namespace should NOT exist - methods are flattened")
 
 		workflow := module.RawGetString("workflow")
-		assert.NotEqual(t, lua.LNil, workflow, "workflow namespace should exist")
+		assert.Equal(t, lua.LNil, workflow, "workflow namespace should NOT exist - methods are flattened")
 
 		hooks := module.RawGetString("hooks")
-		assert.NotEqual(t, lua.LNil, hooks, "hooks namespace should exist")
+		assert.Equal(t, lua.LNil, hooks, "hooks namespace should NOT exist - methods are flattened")
+
+		// Check flattened methods exist
+		// Lifecycle methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("lifecycleCreate"), "lifecycleCreate should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("lifecycleCreateLLM"), "lifecycleCreateLLM should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("lifecycleList"), "lifecycleList should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("lifecycleGet"), "lifecycleGet should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("lifecycleRemove"), "lifecycleRemove should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("lifecycleGetMetrics"), "lifecycleGetMetrics should exist")
+
+		// Communication methods (simplified naming)
+		assert.NotEqual(t, lua.LNil, module.RawGetString("run"), "run should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("runAsync"), "runAsync should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("registerTool"), "registerTool should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("unregisterTool"), "unregisterTool should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("listTools"), "listTools should exist")
+
+		// State methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("stateGet"), "stateGet should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("stateSet"), "stateSet should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("stateExport"), "stateExport should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("stateImport"), "stateImport should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("stateSaveSnapshot"), "stateSaveSnapshot should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("stateLoadSnapshot"), "stateLoadSnapshot should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("stateListSnapshots"), "stateListSnapshots should exist")
+
+		// Events methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("eventsEmit"), "eventsEmit should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("eventsSubscribe"), "eventsSubscribe should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("eventsUnsubscribe"), "eventsUnsubscribe should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("eventsStartRecording"), "eventsStartRecording should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("eventsStopRecording"), "eventsStopRecording should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("eventsReplay"), "eventsReplay should exist")
+
+		// Profiling methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("profilingStart"), "profilingStart should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("profilingStop"), "profilingStop should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("profilingGetMetrics"), "profilingGetMetrics should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("profilingGetReport"), "profilingGetReport should exist")
+
+		// Workflow methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("workflowCreate"), "workflowCreate should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("workflowExecute"), "workflowExecute should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("workflowAddStep"), "workflowAddStep should exist")
+
+		// Hooks methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("hooksRegister"), "hooksRegister should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("hooksSet"), "hooksSet should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("hooksUnregister"), "hooksUnregister should exist")
+
+		// Utils methods
+		assert.NotEqual(t, lua.LNil, module.RawGetString("utilsValidateConfig"), "utilsValidateConfig should exist")
 	})
 }
 
@@ -192,7 +244,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		// Create agent from Lua
 		err = L.DoString(`
 			local agent = require("agent")
-			local newAgent = agent.lifecycle.create("test-agent", {
+			local newAgent = agent.lifecycleCreate("test-agent", {
 				name = "Test Agent",
 				type = "basic",
 				description = "A test agent"
@@ -241,7 +293,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		// Create LLM agent from Lua
 		err = L.DoString(`
 			local agent = require("agent")
-			local llmAgent = agent.lifecycle.createLLM("Smart Agent", {
+			local llmAgent = agent.lifecycleCreateLLM("Smart Agent", {
 				provider = "openai",
 				model = "gpt-4"
 			}, {
@@ -308,12 +360,12 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 			local agent = require("agent")
 			
 			-- List agents - get individual agents as multiple returns
-			local agent1, agent2 = agent.lifecycle.list()
+			local agent1, agent2 = agent.lifecycleList()
 			assert(agent1.id == "agent-1", "first agent should be agent-1")
 			assert(agent2.id == "agent-2", "second agent should be agent-2")
 			
 			-- Get specific agent
-			local retrievedAgent, err = agent.lifecycle.get("test-agent")
+			local retrievedAgent, err = agent.lifecycleGet("test-agent")
 			assert(err == nil, "get should not error: " .. tostring(err))
 			assert(retrievedAgent.id == "test-agent", "should retrieve correct agent")
 			assert(retrievedAgent.name == "Retrieved Agent", "should have correct name")
@@ -347,7 +399,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		err = L.DoString(`
 			local agent = require("agent")
 			
-			local result, err = agent.lifecycle.remove("test-agent")
+			local result, err = agent.lifecycleRemove("test-agent")
 			assert(err == nil, "remove should not error: " .. tostring(err))
 		`)
 		assert.NoError(t, err)
@@ -386,7 +438,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		err = L.DoString(`
 			local agent = require("agent")
 			
-			local result, err = agent.communication.run("test-agent", {
+			local result, err = agent.run("test-agent", {
 				prompt = "Hello, how are you?",
 				context = "test conversation"
 			})
@@ -428,7 +480,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		err = L.DoString(`
 			local agent = require("agent")
 			
-			local channel, err = agent.communication.runAsync("test-agent", {
+			local channel, err = agent.runAsync("test-agent", {
 				prompt = "Generate a long story",
 				streaming = true
 			})
@@ -498,7 +550,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Register a tool
-			local regResult, regErr = agent.communication.registerTool("test-agent", {
+			local regResult, regErr = agent.registerTool("test-agent", {
 				name = "calculator",
 				description = "Performs mathematical calculations",
 				["function"] = function(a, b) return a + b end
@@ -506,7 +558,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 			assert(regErr == nil, "tool registration should not error: " .. tostring(regErr))
 			
 			-- List tools - get individual tools as multiple returns
-			local tool = agent.communication.listTools("test-agent")
+			local tool = agent.listTools("test-agent")
 			assert(tool.name == "calculator", "should have calculator tool")
 			assert(tool.type == "function", "should be function type")
 		`)
@@ -556,7 +608,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Get agent state
-			local state, getErr = agent.state.get("test-agent")
+			local state, getErr = agent.stateGet("test-agent")
 			assert(getErr == nil, "get state should not error: " .. tostring(getErr))
 			assert(state.agentID == "test-agent", "should have correct agent ID")
 			assert(state.currentStep == 3, "should have current step")
@@ -568,7 +620,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 				currentStep = 4,
 				variables = { counter = 50, mode = "updated" }
 			}
-			local setResult, setErr = agent.state.set("test-agent", newState)
+			local setResult, setErr = agent.stateSet("test-agent", newState)
 			assert(setErr == nil, "set state should not error: " .. tostring(setErr))
 		`)
 		assert.NoError(t, err)
@@ -616,14 +668,14 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Export agent state
-			local exported, exportErr = agent.state.export("test-agent", "json")
+			local exported, exportErr = agent.stateExport("test-agent", "json")
 			assert(exportErr == nil, "export should not error: " .. tostring(exportErr))
 			assert(exported.agentID == "test-agent", "should have agent ID")
 			assert(exported.format == "json", "should be JSON format")
 			assert(exported.version == "1.0", "should have version")
 			
 			-- Import agent state
-			local importResult, importErr = agent.state.import("test-agent", exported)
+			local importResult, importErr = agent.stateImport("test-agent", exported)
 			assert(importErr == nil, "import should not error: " .. tostring(importErr))
 		`)
 		assert.NoError(t, err)
@@ -694,16 +746,16 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Save snapshot
-			local saved, saveErr = agent.state.saveSnapshot("test-agent", "backup-1")
+			local saved, saveErr = agent.stateSaveSnapshot("test-agent", "backup-1")
 			assert(saveErr == nil, "save snapshot should not error: " .. tostring(saveErr))
 			assert(saved.snapshotName == "backup-1", "should have snapshot name")
 			
 			-- Load snapshot
-			local loadResult, loadErr = agent.state.loadSnapshot("test-agent", "backup-1")
+			local loadResult, loadErr = agent.stateLoadSnapshot("test-agent", "backup-1")
 			assert(loadErr == nil, "load snapshot should not error: " .. tostring(loadErr))
 			
 			-- List snapshots - get individual snapshots as multiple returns
-			local snap1, snap2 = agent.state.listSnapshots("test-agent")
+			local snap1, snap2 = agent.stateListSnapshots("test-agent")
 			assert(snap1 == "snapshot-1", "should have first snapshot")
 			assert(snap2 == "snapshot-2", "should have second snapshot")
 		`)
@@ -757,7 +809,7 @@ func TestAgentAdapter_Events(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Emit event
-			local emitResult, emitErr = agent.events.emit("test-agent", "task_completed", {
+			local emitResult, emitErr = agent.eventsEmit("test-agent", "task_completed", {
 				task_id = "task-123",
 				result = "success"
 			})
@@ -767,7 +819,7 @@ func TestAgentAdapter_Events(t *testing.T) {
 			local handler = function(event)
 				print("Received event:", event.type)
 			end
-			local subId, subErr = agent.events.subscribe({
+			local subId, subErr = agent.eventsSubscribe({
 				agentID = "test-agent",
 				eventType = "task_completed"
 			}, handler)
@@ -775,7 +827,7 @@ func TestAgentAdapter_Events(t *testing.T) {
 			assert(subId == "sub-123", "should return subscription ID")
 			
 			-- Unsubscribe
-			local unsubResult, unsubErr = agent.events.unsubscribe(subId)
+			local unsubResult, unsubErr = agent.eventsUnsubscribe(subId)
 			assert(unsubErr == nil, "unsubscribe should not error: " .. tostring(unsubErr))
 		`)
 		assert.NoError(t, err)
@@ -850,17 +902,17 @@ func TestAgentAdapter_Events(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Start recording
-			local recording, startErr = agent.events.startRecording("test-agent")
+			local recording, startErr = agent.eventsStartRecording("test-agent")
 			assert(startErr == nil, "start recording should not error: " .. tostring(startErr))
 			assert(recording.started == true, "recording should be started")
 			
 			-- Stop recording
-			local stopped, stopErr = agent.events.stopRecording(recording.recordingID)
+			local stopped, stopErr = agent.eventsStopRecording(recording.recordingID)
 			assert(stopErr == nil, "stop recording should not error: " .. tostring(stopErr))
 			assert(stopped.eventCount == 25, "should have recorded events")
 			
 			-- Replay events
-			local replayResult, replayErr = agent.events.replay("test-agent", {
+			local replayResult, replayErr = agent.eventsReplay("test-agent", {
 				speed = 2.0,
 				fromTime = "2024-01-01T00:00:00Z"
 			})
@@ -924,18 +976,18 @@ func TestAgentAdapter_Profiling(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Start profiling
-			local sessionID, startErr = agent.profiling.start("test-agent")
+			local sessionID, startErr = agent.profilingStart("test-agent")
 			assert(startErr == nil, "start profiling should not error: " .. tostring(startErr))
 			assert(sessionID == "profile-session-123", "should return session ID")
 			
 			-- Stop profiling
-			local stopped, stopErr = agent.profiling.stop(sessionID)
+			local stopped, stopErr = agent.profilingStop(sessionID)
 			assert(stopErr == nil, "stop profiling should not error: " .. tostring(stopErr))
 			assert(stopped.stopped == true, "should be stopped")
 			assert(stopped.cpuProfile ~= nil, "should have CPU profile")
 			
 			-- Get performance report
-			local report, reportErr = agent.profiling.getReport("test-agent")
+			local report, reportErr = agent.profilingGetReport("test-agent")
 			assert(reportErr == nil, "get report should not error: " .. tostring(reportErr))
 			assert(report.cpuUsage == "15%", "should have CPU usage")
 			assert(report.successRate == 0.987, "should have success rate")
@@ -1014,7 +1066,7 @@ func TestAgentAdapter_Workflow(t *testing.T) {
 			local agent = require("agent")
 			
 			-- Create workflow
-			local workflow, createErr = agent.workflow.create("sequential", {
+			local workflow, createErr = agent.workflowCreate("sequential", {
 				name = "Test Workflow",
 				description = "A test sequential workflow"
 			})
@@ -1022,7 +1074,7 @@ func TestAgentAdapter_Workflow(t *testing.T) {
 			assert(workflow.type == "sequential", "should be sequential workflow")
 			
 			-- Add workflow step
-			local stepResult, stepErr = agent.workflow.addStep(workflow.id, {
+			local stepResult, stepErr = agent.workflowAddStep(workflow.id, {
 				name = "step1",
 				action = "process_input",
 				config = { timeout = 30 }
@@ -1066,7 +1118,7 @@ func TestAgentAdapter_Hooks(t *testing.T) {
 				return input
 			end
 			
-			local hookResult, hookErr = agent.hooks.set("test-agent", "beforeRun", beforeHook)
+			local hookResult, hookErr = agent.hooksSet("test-agent", "beforeRun", beforeHook)
 			assert(hookErr == nil, "set hook should not error: " .. tostring(hookErr))
 		`)
 		assert.NoError(t, err)
@@ -1217,7 +1269,7 @@ func TestAgentAdapter_ConvenienceMethods(t *testing.T) {
 		err = L.DoString(`
 			local agent = require("agent")
 			
-			local metrics, err = agent.lifecycle.getMetrics("test-agent")
+			local metrics, err = agent.lifecycleGetMetrics("test-agent")
 			assert(err == nil, "get metrics should not error: " .. tostring(err))
 			assert(metrics.execution_count == 42, "should have execution count")
 			assert(metrics.success_count == 40, "should have success count")
