@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 8 of 14 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 10 of 14 completed]
     - 🔲 2.3.4: Lua Standard Library [NOT STARTED]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -174,26 +174,26 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Add custom tool support
   - [x] make sure tests pass
 
-- [ ] **Task 2.3.3.10: Observability Bridge Adapters** (`/pkg/engine/gopherlua/adapters/observability.go`)
+- [x] **Task 2.3.3.10: Observability Bridge Adapters** (`/pkg/engine/gopherlua/adapters/observability.go`) ✅ COMPLETE [2025-06-19]
   **look in `/pkg/bridge/observability/*.go` for research**
-  - [ ] Implement Guardrails Bridge Adapter
-    - [ ] Add `enableGuardrails(config)` method for safety system configuration
-    - [ ] Add `validateContent(content, type)` method for content filtering
-    - [ ] Add `addBehavioralConstraint(constraint)` method for behavioral limits
-    - [ ] Add `checkCompliance(request)` method for compliance validation
-  - [ ] Implement Metrics Bridge Adapter
-    - [ ] Add `createCounter(name, labels)` method for counter metrics
-    - [ ] Add `createGauge(name, labels)` method for gauge metrics
-    - [ ] Add `createTimer(name, labels)` method for timing metrics
-    - [ ] Add `recordMetric(name, value, labels)` method for metric recording
-    - [ ] Add `getMetrics()` method for metric aggregation
-  - [ ] Implement Tracing Bridge Adapter
-    - [ ] Add `startSpan(name, options)` method for trace span creation
-    - [ ] Add `addSpanEvent(span, name, attributes)` method for span events
-    - [ ] Add `setSpanAttribute(span, key, value)` method for span attributes
-    - [ ] Add `endSpan(span)` method for span completion
-    - [ ] Add OpenTelemetry-compatible interface
-  - [ ] make sure tests pass
+  - [x] Implement Guardrails Bridge Adapter
+    - [x] Add `enableGuardrails(config)` method for safety system configuration
+    - [x] Add `validateContent(content, type)` method for content filtering
+    - [x] Add `addBehavioralConstraint(constraint)` method for behavioral limits
+    - [x] Add `checkCompliance(request)` method for compliance validation
+  - [x] Implement Metrics Bridge Adapter
+    - [x] Add `createCounter(name, labels)` method for counter metrics
+    - [x] Add `createGauge(name, labels)` method for gauge metrics
+    - [x] Add `createTimer(name, labels)` method for timing metrics
+    - [x] Add `recordMetric(name, value, labels)` method for metric recording
+    - [x] Add `getMetrics()` method for metric aggregation
+  - [x] Implement Tracing Bridge Adapter
+    - [x] Add `startSpan(name, options)` method for trace span creation
+    - [x] Add `addSpanEvent(span, name, attributes)` method for span events
+    - [x] Add `setSpanAttribute(span, key, value)` method for span attributes
+    - [x] Add `endSpan(span)` method for span completion
+    - [x] Add OpenTelemetry-compatible interface
+  - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.11: Schema Bridge Adapter** (`/pkg/engine/gopherlua/adapters/schema.go`)
     **look in `/pkg/bridge/structured/*.go` for research might already be covered in adapters/structured.go**
