@@ -47,7 +47,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Test createTracer method
 				params := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				result, err := bridge.ExecuteMethod(ctx, "createTracer", params)
 				require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create tracer first
 				tracerParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				tracerResult, err := bridge.ExecuteMethod(ctx, "createTracer", tracerParams)
 				require.NoError(t, err)
@@ -80,8 +80,8 @@ func TestTracingBridge(t *testing.T) {
 
 				// Start span
 				spanParams := []engine.ScriptValue{
-					engine.NewStringValue(tracerID),
-					engine.NewStringValue("test-operation"),
+					sv(tracerID),
+					sv("test-operation"),
 				}
 				spanResult, err := bridge.ExecuteMethod(ctx, "startSpan", spanParams)
 				require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// End span
 				endParams := []engine.ScriptValue{
-					engine.NewStringValue(spanID),
+					sv(spanID),
 				}
 				_, err = bridge.ExecuteMethod(ctx, "endSpan", endParams)
 				require.NoError(t, err)
@@ -110,7 +110,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create tracer and span
 				tracerParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				tracerResult, err := bridge.ExecuteMethod(ctx, "createTracer", tracerParams)
 				require.NoError(t, err)
@@ -118,8 +118,8 @@ func TestTracingBridge(t *testing.T) {
 				tracerID := tracerInfo.ToGo().(map[string]interface{})["id"].(string)
 
 				spanParams := []engine.ScriptValue{
-					engine.NewStringValue(tracerID),
-					engine.NewStringValue("test-operation"),
+					sv(tracerID),
+					sv("test-operation"),
 				}
 				spanResult, err := bridge.ExecuteMethod(ctx, "startSpan", spanParams)
 				require.NoError(t, err)
@@ -127,21 +127,21 @@ func TestTracingBridge(t *testing.T) {
 				spanID := spanInfo.ToGo().(map[string]interface{})["id"].(string)
 
 				// Set attributes
-				attributes := map[string]engine.ScriptValue{
-					"operation.type": engine.NewStringValue("test"),
-					"user.id":        engine.NewStringValue("123"),
-					"request.size":   engine.NewNumberValue(1024),
+				attributes := map[string]interface{}{
+					"operation.type": "test",
+					"user.id":        "123",
+					"request.size":   1024,
 				}
 				attrParams := []engine.ScriptValue{
-					engine.NewStringValue(spanID),
-					engine.NewObjectValue(attributes),
+					sv(spanID),
+					svMap(attributes),
 				}
 				_, err = bridge.ExecuteMethod(ctx, "setSpanAttributes", attrParams)
 				require.NoError(t, err)
 
 				// End span
 				endParams := []engine.ScriptValue{
-					engine.NewStringValue(spanID),
+					sv(spanID),
 				}
 				_, err = bridge.ExecuteMethod(ctx, "endSpan", endParams)
 				require.NoError(t, err)
@@ -156,7 +156,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create tracer and span
 				tracerParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				tracerResult, err := bridge.ExecuteMethod(ctx, "createTracer", tracerParams)
 				require.NoError(t, err)
@@ -164,8 +164,8 @@ func TestTracingBridge(t *testing.T) {
 				tracerID := tracerInfo.ToGo().(map[string]interface{})["id"].(string)
 
 				spanParams := []engine.ScriptValue{
-					engine.NewStringValue(tracerID),
-					engine.NewStringValue("test-operation"),
+					sv(tracerID),
+					sv("test-operation"),
 				}
 				spanResult, err := bridge.ExecuteMethod(ctx, "startSpan", spanParams)
 				require.NoError(t, err)
@@ -174,24 +174,24 @@ func TestTracingBridge(t *testing.T) {
 
 				// Record error
 				errorParams := []engine.ScriptValue{
-					engine.NewStringValue(spanID),
-					engine.NewStringValue("test error message"),
+					sv(spanID),
+					sv("test error message"),
 				}
 				_, err = bridge.ExecuteMethod(ctx, "recordSpanError", errorParams)
 				require.NoError(t, err)
 
 				// Set error status
 				statusParams := []engine.ScriptValue{
-					engine.NewStringValue(spanID),
-					engine.NewStringValue("error"),
-					engine.NewStringValue("Operation failed"),
+					sv(spanID),
+					sv("error"),
+					sv("Operation failed"),
 				}
 				_, err = bridge.ExecuteMethod(ctx, "setSpanStatus", statusParams)
 				require.NoError(t, err)
 
 				// End span
 				endParams := []engine.ScriptValue{
-					engine.NewStringValue(spanID),
+					sv(spanID),
 				}
 				_, err = bridge.ExecuteMethod(ctx, "endSpan", endParams)
 				require.NoError(t, err)
@@ -206,7 +206,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create agent tracing hook
 				agentParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				agentHookResult, err := bridge.ExecuteMethod(ctx, "createAgentTracingHook", agentParams)
 				require.NoError(t, err)
@@ -219,7 +219,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create tool call tracing hook
 				toolParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				toolHookResult, err := bridge.ExecuteMethod(ctx, "createToolCallTracingHook", toolParams)
 				require.NoError(t, err)
@@ -232,7 +232,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create event tracing hook
 				eventParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				eventHookResult, err := bridge.ExecuteMethod(ctx, "createEventTracingHook", eventParams)
 				require.NoError(t, err)
@@ -253,7 +253,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create composite hook
 				compositeParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				compositeResult, err := bridge.ExecuteMethod(ctx, "createCompositeTracingHook", compositeParams)
 				require.NoError(t, err)
@@ -281,7 +281,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// Create tracer and span
 				tracerParams := []engine.ScriptValue{
-					engine.NewStringValue("test-tracer"),
+					sv("test-tracer"),
 				}
 				tracerResult, err := bridge.ExecuteMethod(ctx, "createTracer", tracerParams)
 				require.NoError(t, err)
@@ -289,8 +289,8 @@ func TestTracingBridge(t *testing.T) {
 				tracerID := tracerInfo.ToGo().(map[string]interface{})["id"].(string)
 
 				spanParams := []engine.ScriptValue{
-					engine.NewStringValue(tracerID),
-					engine.NewStringValue("test-operation"),
+					sv(tracerID),
+					sv("test-operation"),
 				}
 				spanResult, err := bridge.ExecuteMethod(ctx, "startSpan", spanParams)
 				require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestTracingBridge(t *testing.T) {
 
 				// End span
 				endParams := []engine.ScriptValue{
-					engine.NewStringValue(spanID),
+					sv(spanID),
 				}
 				_, err = bridge.ExecuteMethod(ctx, "endSpan", endParams)
 				require.NoError(t, err)
@@ -413,7 +413,7 @@ func TestTracingBridgeErrors(t *testing.T) {
 
 	// Test methods without initialization
 	params := []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "createTracer", params)
 	assert.Error(t, err)
@@ -428,14 +428,14 @@ func TestTracingBridgeErrors(t *testing.T) {
 	assert.Error(t, err)
 
 	spanParams := []engine.ScriptValue{
-		engine.NewStringValue("invalid-tracer-id"),
-		engine.NewStringValue("test"),
+		sv("invalid-tracer-id"),
+		sv("test"),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "startSpan", spanParams)
 	assert.Error(t, err)
 
 	endParams := []engine.ScriptValue{
-		engine.NewStringValue("invalid-span-id"),
+		sv("invalid-span-id"),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "endSpan", endParams)
 	assert.Error(t, err)
@@ -450,7 +450,7 @@ func TestTracingBridgeConcurrency(t *testing.T) {
 
 	// Create tracer
 	tracerParams := []engine.ScriptValue{
-		engine.NewStringValue("concurrent-tracer"),
+		sv("concurrent-tracer"),
 	}
 	tracerResult, err := bridge.ExecuteMethod(ctx, "createTracer", tracerParams)
 	require.NoError(t, err)
@@ -467,8 +467,8 @@ func TestTracingBridgeConcurrency(t *testing.T) {
 
 			// Start span
 			spanParams := []engine.ScriptValue{
-				engine.NewStringValue(tracerID),
-				engine.NewStringValue(spanName),
+				sv(tracerID),
+				sv(spanName),
 			}
 			spanResult, err := bridge.ExecuteMethod(ctx, "startSpan", spanParams)
 			assert.NoError(t, err)
@@ -476,20 +476,20 @@ func TestTracingBridgeConcurrency(t *testing.T) {
 			spanID := spanInfo.ToGo().(map[string]interface{})["id"].(string)
 
 			// Set attributes
-			attributes := map[string]engine.ScriptValue{
-				"span.number": engine.NewNumberValue(float64(spanNum)),
-				"operation":   engine.NewStringValue("concurrent_test"),
+			attributes := map[string]interface{}{
+				"span.number": float64(spanNum),
+				"operation":   "concurrent_test",
 			}
 			attrParams := []engine.ScriptValue{
-				engine.NewStringValue(spanID),
-				engine.NewObjectValue(attributes),
+				sv(spanID),
+				svMap(attributes),
 			}
 			_, err = bridge.ExecuteMethod(ctx, "setSpanAttributes", attrParams)
 			assert.NoError(t, err)
 
 			// End span
 			endParams := []engine.ScriptValue{
-				engine.NewStringValue(spanID),
+				sv(spanID),
 			}
 			_, err = bridge.ExecuteMethod(ctx, "endSpan", endParams)
 			assert.NoError(t, err)

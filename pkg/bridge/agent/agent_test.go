@@ -80,13 +80,13 @@ func TestAgentBridge_ValidateMethod(t *testing.T) {
 		{
 			name:        "valid createAgent",
 			method:      "createAgent",
-			args:        []engine.ScriptValue{engine.NewStringValue("agent1"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			args:        []engine.ScriptValue{sv("agent1"), svMap(map[string]interface{}{})},
 			expectError: false,
 		},
 		{
 			name:        "invalid createAgent - missing args",
 			method:      "createAgent",
-			args:        []engine.ScriptValue{engine.NewStringValue("agent1")},
+			args:        []engine.ScriptValue{sv("agent1")},
 			expectError: true,
 		},
 		{
@@ -138,14 +138,14 @@ func TestAgentBridge_ExecuteMethod_CreateAgent(t *testing.T) {
 
 	// Test createAgent
 	agentID := "test-agent"
-	config := map[string]engine.ScriptValue{
-		"name":        engine.NewStringValue("Test Agent"),
-		"description": engine.NewStringValue("A test agent"),
+	config := map[string]interface{}{
+		"name":        "Test Agent",
+		"description": "A test agent",
 	}
 
 	args := []engine.ScriptValue{
-		engine.NewStringValue(agentID),
-		engine.NewObjectValue(config),
+		sv(agentID),
+		svMap(config),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "createAgent", args)
@@ -170,26 +170,26 @@ func TestAgentBridge_ExecuteMethod_GetAgent(t *testing.T) {
 
 	// Create an agent first
 	agentID := "test-agent"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Agent"),
+	config := map[string]interface{}{
+		"name": "Test Agent",
 	}
 
 	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(agentID),
-		engine.NewObjectValue(config),
+		sv(agentID),
+		svMap(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createAgent", createArgs)
 	require.NoError(t, err)
 
 	// Test getAgent
-	getArgs := []engine.ScriptValue{engine.NewStringValue(agentID)}
+	getArgs := []engine.ScriptValue{sv(agentID)}
 	result, err := bridge.ExecuteMethod(ctx, "getAgent", getArgs)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
 	// Test getAgent with non-existent ID
-	nonExistentArgs := []engine.ScriptValue{engine.NewStringValue("non-existent")}
+	nonExistentArgs := []engine.ScriptValue{sv("non-existent")}
 	result, err = bridge.ExecuteMethod(ctx, "getAgent", nonExistentArgs)
 	assert.NoError(t, err) // Should return error value, not Go error
 
@@ -206,13 +206,13 @@ func TestAgentBridge_ExecuteMethod_RemoveAgent(t *testing.T) {
 
 	// Create an agent first
 	agentID := "test-agent"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Agent"),
+	config := map[string]interface{}{
+		"name": "Test Agent",
 	}
 
 	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(agentID),
-		engine.NewObjectValue(config),
+		sv(agentID),
+		svMap(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createAgent", createArgs)
@@ -225,7 +225,7 @@ func TestAgentBridge_ExecuteMethod_RemoveAgent(t *testing.T) {
 	assert.Equal(t, 1, len(arrayValue.ToGo().([]interface{})))
 
 	// Remove the agent
-	removeArgs := []engine.ScriptValue{engine.NewStringValue(agentID)}
+	removeArgs := []engine.ScriptValue{sv(agentID)}
 	result, err := bridge.ExecuteMethod(ctx, "removeAgent", removeArgs)
 	assert.NoError(t, err)
 
@@ -248,20 +248,20 @@ func TestAgentBridge_ExecuteMethod_GetAgentMetrics(t *testing.T) {
 
 	// Create an agent first
 	agentID := "test-agent"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Agent"),
+	config := map[string]interface{}{
+		"name": "Test Agent",
 	}
 
 	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(agentID),
-		engine.NewObjectValue(config),
+		sv(agentID),
+		svMap(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createAgent", createArgs)
 	require.NoError(t, err)
 
 	// Get metrics
-	metricsArgs := []engine.ScriptValue{engine.NewStringValue(agentID)}
+	metricsArgs := []engine.ScriptValue{sv(agentID)}
 	result, err := bridge.ExecuteMethod(ctx, "getAgentMetrics", metricsArgs)
 	assert.NoError(t, err)
 

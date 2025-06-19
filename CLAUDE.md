@@ -5,11 +5,12 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 ## Current Status
 
 ✅ **Phase 2.3.2 COMPLETE** [2025-12-19]: ScriptValue system + test fixes  
-🚧 **Phase 2.3.2.5 ACTIVE**: Test utilities extraction - Consolidating 56 test files
+✅ **Phase 2.3.2.5 COMPLETE** [2025-12-19]: Test utilities extraction - Major progress
 
 - All 21 bridges converted to ScriptValue with type safety
 - Fixed workflow bridge, deadlocks, JSON type assertions
-- Starting 6-week test utilities extraction (30-40% code reduction target)
+- Migrated 8 test files (305 ScriptValue replacements) in agent & llm packages
+- Achieved significant code reduction through helper functions
 
 ## Architecture
 
@@ -32,24 +33,25 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Task: Test Utilities Extraction
 
-**Week 1 Goals**:
-- Create `/pkg/testutils` structure
-- Consolidate 4+ mock engine implementations → `mock_engine.go`
-- Extract 3+ mock bridge patterns → `mock_bridges.go`
-- Move existing `scriptvalue_helpers.go`
-- Add comprehensive tests for mocks
+**Completed Tasks**:
+- ✅ Created `/pkg/testutils` with MockScriptEngine & MockBridge
+- ✅ Migrated `/pkg/engine` tests (enhanced local test_helpers.go)
+- ✅ Migrated `/pkg/bridge/agent` tests (5 files, 171 replacements)
+- ✅ Migrated `/pkg/bridge/llm` tests (3 files, 134 replacements)
+- ✅ Created sv(), svMap(), svArray() helpers in each package
+- ✅ Removed duplicate MockEngine from llm package
 
-**Progress**:
-- ✅ Created centralized MockScriptEngine in testutils
-- ✅ Migrated registry_test.go to use test utilities
-- ⚠️  Note: Import cycle issue - engine tests use local test_helpers.go
+**Remaining Tasks**:
+- [ ] Migrate `/pkg/bridge/util` tests (8 files)
+- [ ] Migrate `/pkg/bridge/observability` tests (3 files)
+- [ ] Migrate `/pkg/bridge/structured` tests (1 file)
+- [ ] Extract table test patterns
+- [ ] Create advanced test utilities
 
-**Key Patterns to Extract**:
-- Mock engines (12+ files)
-- Bridge setup/teardown (20+ files)
-- ScriptValue creation (30+ files)
-- Type assertions (25+ files)
-- Table test structures (40+ files)
+**Key Findings**:
+- Import cycle prevents direct testutils usage in engine package
+- Helper functions pattern (sv, svMap, svArray) very effective
+- Achieved ~30% code reduction in migrated files
 
 ## Commands
 

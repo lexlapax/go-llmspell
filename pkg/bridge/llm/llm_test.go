@@ -5,7 +5,6 @@ package llm
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -13,42 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// MockEngine implements engine.ScriptEngine for testing
-type MockEngine struct {
-	bridges map[string]engine.Bridge
-}
-
-func NewMockEngine() *MockEngine {
-	return &MockEngine{
-		bridges: make(map[string]engine.Bridge),
-	}
-}
-
-func (m *MockEngine) RegisterBridge(bridge engine.Bridge) error {
-	m.bridges[bridge.GetID()] = bridge
-	return nil
-}
-
-func (m *MockEngine) GetBridge(id string) (engine.Bridge, error) {
-	bridge, ok := m.bridges[id]
-	if !ok {
-		return nil, fmt.Errorf("bridge not found: %s", id)
-	}
-	return bridge, nil
-}
-
-func (m *MockEngine) Execute(script string) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *MockEngine) ExecuteFile(filename string) (interface{}, error) {
-	return nil, nil
-}
-
-func (m *MockEngine) Close() error {
-	return nil
-}
 
 func TestLLMBridge_Initialization(t *testing.T) {
 	bridge := NewLLMBridge()
@@ -155,21 +118,21 @@ func TestLLMBridge_TextGeneration(t *testing.T) {
 
 	// Set mock provider
 	args := []engine.ScriptValue{
-		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("mock-provider"),
+		svMap(map[string]interface{}{
 			"model": "mock-model",
-		})),
+		}),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "setProvider", args)
 	require.NoError(t, err)
 
 	// Test generate
 	args = []engine.ScriptValue{
-		engine.NewStringValue("Hello, world!"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("Hello, world!"),
+		svMap(map[string]interface{}{
 			"temperature": 0.7,
 			"max_tokens":  100,
-		})),
+		}),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "generate", args)
@@ -190,10 +153,10 @@ func TestLLMBridge_MessageGeneration(t *testing.T) {
 
 	// Set mock provider
 	args := []engine.ScriptValue{
-		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("mock-provider"),
+		svMap(map[string]interface{}{
 			"model": "mock-model",
-		})),
+		}),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "setProvider", args)
 	require.NoError(t, err)
@@ -211,10 +174,10 @@ func TestLLMBridge_MessageGeneration(t *testing.T) {
 	}
 
 	args = []engine.ScriptValue{
-		engine.NewArrayValue(engine.ConvertSliceToScriptValue(messages)),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		svArray(messages...),
+		svMap(map[string]interface{}{
 			"temperature": 0.7,
-		})),
+		}),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "generateMessage", args)
@@ -236,20 +199,20 @@ func TestLLMBridge_Streaming(t *testing.T) {
 
 	// Set mock provider
 	args := []engine.ScriptValue{
-		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("mock-provider"),
+		svMap(map[string]interface{}{
 			"model": "mock-model",
-		})),
+		}),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "setProvider", args)
 	require.NoError(t, err)
 
 	// Test stream
 	args = []engine.ScriptValue{
-		engine.NewStringValue("Tell me a story"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("Tell me a story"),
+		svMap(map[string]interface{}{
 			"temperature": 0.7,
-		})),
+		}),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "stream", args)
@@ -284,8 +247,8 @@ func TestLLMBridge_SchemaValidation(t *testing.T) {
 	}
 
 	args := []engine.ScriptValue{
-		engine.NewStringValue("person"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(schema)),
+		sv("person"),
+		svMap(schema),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "addResponseSchema", args)
@@ -294,7 +257,7 @@ func TestLLMBridge_SchemaValidation(t *testing.T) {
 
 	// Test getResponseSchema
 	args = []engine.ScriptValue{
-		engine.NewStringValue("person"),
+		sv("person"),
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "getResponseSchema", args)
@@ -315,10 +278,10 @@ func TestLLMBridge_StructuredGeneration(t *testing.T) {
 
 	// Set mock provider
 	args := []engine.ScriptValue{
-		engine.NewStringValue("mock-provider"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("mock-provider"),
+		svMap(map[string]interface{}{
 			"model": "mock-model",
-		})),
+		}),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "setProvider", args)
 	require.NoError(t, err)
@@ -337,19 +300,19 @@ func TestLLMBridge_StructuredGeneration(t *testing.T) {
 	}
 
 	args = []engine.ScriptValue{
-		engine.NewStringValue("list"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(schema)),
+		sv("list"),
+		svMap(schema),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "addResponseSchema", args)
 	require.NoError(t, err)
 
 	// Test generateWithSchema
 	args = []engine.ScriptValue{
-		engine.NewStringValue("Generate a list of colors"),
-		engine.NewStringValue("list"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("Generate a list of colors"),
+		sv("list"),
+		svMap(map[string]interface{}{
 			"temperature": 0.7,
-		})),
+		}),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "generateWithSchema", args)
@@ -367,7 +330,7 @@ func TestLLMBridge_ErrorHandling(t *testing.T) {
 
 	// Test method call before initialization
 	args := []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "generate", args)
@@ -390,7 +353,7 @@ func TestLLMBridge_ErrorHandling(t *testing.T) {
 
 	// Test wrong argument types
 	args = []engine.ScriptValue{
-		engine.NewNumberValue(123), // Should be string
+		sv(123), // Should be string
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "generate", args)
@@ -410,24 +373,24 @@ func TestLLMBridge_ProviderMetrics(t *testing.T) {
 
 	// Set provider
 	args := []engine.ScriptValue{
-		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("test-provider"),
+		svMap(map[string]interface{}{
 			"model": "test-model",
-		})),
+		}),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "setProvider", args)
 	require.NoError(t, err)
 
 	// Generate some text to create metrics
 	args = []engine.ScriptValue{
-		engine.NewStringValue("Hello"),
+		sv("Hello"),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "generate", args)
 	require.NoError(t, err)
 
 	// Test getProviderMetrics
 	args = []engine.ScriptValue{
-		engine.NewStringValue("test-provider"),
+		sv("test-provider"),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "getProviderMetrics", args)
@@ -454,7 +417,7 @@ func TestLLMBridge_FallbackChain(t *testing.T) {
 	}
 
 	args := []engine.ScriptValue{
-		engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)),
+		svArray(providers...),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "setFallbackChain", args)
@@ -481,7 +444,7 @@ func TestLLMBridge_ValidateMethod(t *testing.T) {
 
 	// Test valid method with correct args
 	args := []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	}
 	err := bridge.ValidateMethod("generate", args)
 	assert.NoError(t, err)
@@ -542,10 +505,10 @@ func TestLLMBridge_Concurrency(t *testing.T) {
 
 	// Set provider
 	args := []engine.ScriptValue{
-		engine.NewStringValue("test-provider"),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(map[string]interface{}{
+		sv("test-provider"),
+		svMap(map[string]interface{}{
 			"model": "test-model",
-		})),
+		}),
 	}
 	_, err := bridge.ExecuteMethod(ctx, "setProvider", args)
 	require.NoError(t, err)
@@ -558,7 +521,7 @@ func TestLLMBridge_Concurrency(t *testing.T) {
 			defer func() { done <- true }()
 
 			args := []engine.ScriptValue{
-				engine.NewStringValue("Hello " + string(rune(n))),
+				sv("Hello " + string(rune(n))),
 			}
 
 			result, err := bridge.ExecuteMethod(ctx, "generate", args)

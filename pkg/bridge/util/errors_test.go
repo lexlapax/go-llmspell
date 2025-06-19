@@ -114,17 +114,17 @@ func TestUtilErrorsBridgeCreateError(t *testing.T) {
 		{
 			name: "simple error",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test error message"),
+				sv("test error message"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "error with metadata",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test error with metadata"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"code":   engine.NewNumberValue(500),
-					"module": engine.NewStringValue("auth"),
+				sv("test error with metadata"),
+				svMap(map[string]interface{}{
+					"code":   500,
+					"module": "auth",
 				}),
 			},
 			wantErr: false,
@@ -137,7 +137,7 @@ func TestUtilErrorsBridgeCreateError(t *testing.T) {
 		{
 			name: "invalid message type",
 			args: []engine.ScriptValue{
-				engine.NewNumberValue(123),
+				sv(123),
 			},
 			wantErr: true,
 		},
@@ -165,7 +165,7 @@ func TestUtilErrorsBridgeWrapError(t *testing.T) {
 
 	// First create an error to wrap
 	origErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
-		engine.NewStringValue("original error"),
+		sv("original error"),
 	})
 	require.NoError(t, err)
 
@@ -178,7 +178,7 @@ func TestUtilErrorsBridgeWrapError(t *testing.T) {
 			name: "wrap error simple",
 			args: []engine.ScriptValue{
 				origErr,
-				engine.NewStringValue("wrapper message"),
+				sv("wrapper message"),
 			},
 			wantErr: false,
 		},
@@ -186,9 +186,9 @@ func TestUtilErrorsBridgeWrapError(t *testing.T) {
 			name: "wrap error with metadata",
 			args: []engine.ScriptValue{
 				origErr,
-				engine.NewStringValue("wrapper with metadata"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"wrap_level": engine.NewNumberValue(1),
+				sv("wrapper with metadata"),
+				svMap(map[string]interface{}{
+					"wrap_level": 1,
 				}),
 			},
 			wantErr: false,
@@ -203,8 +203,8 @@ func TestUtilErrorsBridgeWrapError(t *testing.T) {
 		{
 			name: "invalid error type",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("not an error"),
-				engine.NewStringValue("wrapper"),
+				sv("not an error"),
+				sv("wrapper"),
 			},
 			wantErr: true,
 		},
@@ -232,10 +232,10 @@ func TestUtilErrorsBridgeErrorSerialization(t *testing.T) {
 
 	// Create an error with metadata
 	testErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
-		engine.NewStringValue("test serialization error"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"code":     engine.NewStringValue("ERR_001"),
-			"severity": engine.NewNumberValue(5),
+		sv("test serialization error"),
+		svMap(map[string]interface{}{
+			"code":     "ERR_001",
+			"severity": 5,
 		}),
 	})
 	require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestUtilErrorsBridgeErrorSerialization(t *testing.T) {
 
 	// Deserialize from JSON
 	deserializedErr, err := bridge.ExecuteMethod(ctx, "errorFromJSON", []engine.ScriptValue{
-		engine.NewStringValue(jsonStr),
+		sv(jsonStr),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeCustom, deserializedErr.Type())
@@ -270,9 +270,9 @@ func TestUtilErrorsBridgeBackoffStrategies(t *testing.T) {
 
 	t.Run("exponential backoff", func(t *testing.T) {
 		strategy, err := bridge.ExecuteMethod(ctx, "createExponentialBackoffStrategy", []engine.ScriptValue{
-			engine.NewNumberValue(100),  // baseDelay
-			engine.NewNumberValue(5000), // maxDelay
-			engine.NewNumberValue(3),    // maxRetries
+			sv(100),  // baseDelay
+			sv(5000), // maxDelay
+			sv(3),    // maxRetries
 		})
 		require.NoError(t, err)
 		assert.Equal(t, engine.TypeCustom, strategy.Type())
@@ -280,8 +280,8 @@ func TestUtilErrorsBridgeBackoffStrategies(t *testing.T) {
 
 	t.Run("linear backoff", func(t *testing.T) {
 		strategy, err := bridge.ExecuteMethod(ctx, "createLinearBackoffStrategy", []engine.ScriptValue{
-			engine.NewNumberValue(500), // delay
-			engine.NewNumberValue(5),   // maxRetries
+			sv(500), // delay
+			sv(5),   // maxRetries
 		})
 		require.NoError(t, err)
 		assert.Equal(t, engine.TypeCustom, strategy.Type())
@@ -289,9 +289,9 @@ func TestUtilErrorsBridgeBackoffStrategies(t *testing.T) {
 
 	t.Run("invalid parameters", func(t *testing.T) {
 		_, err := bridge.ExecuteMethod(ctx, "createExponentialBackoffStrategy", []engine.ScriptValue{
-			engine.NewStringValue("not a number"),
-			engine.NewNumberValue(5000),
-			engine.NewNumberValue(3),
+			sv("not a number"),
+			sv(5000),
+			sv(3),
 		})
 		assert.Error(t, err)
 	})
@@ -316,11 +316,11 @@ func TestUtilErrorsBridgeErrorCategorization(t *testing.T) {
 
 	// Register custom category
 	result, err := bridge.ExecuteMethod(ctx, "registerErrorCategory", []engine.ScriptValue{
-		engine.NewStringValue("custom"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"description": engine.NewStringValue("Custom error category"),
-			"retryable":   engine.NewBoolValue(true),
-			"fatal":       engine.NewBoolValue(false),
+		sv("custom"),
+		svMap(map[string]interface{}{
+			"description": "Custom error category",
+			"retryable":   true,
+			"fatal":       false,
 		}),
 	})
 	require.NoError(t, err)
@@ -346,10 +346,10 @@ func TestUtilErrorsBridgeErrorAggregation(t *testing.T) {
 
 	// Create some errors to aggregate
 	err1, _ := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
-		engine.NewStringValue("error 1"),
+		sv("error 1"),
 	})
 	err2, _ := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
-		engine.NewStringValue("error 2"),
+		sv("error 2"),
 	})
 
 	// Add errors to aggregator
@@ -369,8 +369,8 @@ func TestUtilErrorsBridgeErrorAggregation(t *testing.T) {
 
 	// Test aggregateErrors method
 	aggregatedErr, err := bridge.ExecuteMethod(ctx, "aggregateErrors", []engine.ScriptValue{
-		engine.NewArrayValue([]engine.ScriptValue{err1, err2}),
-		engine.NewStringValue("Multiple errors occurred"),
+		svArray(err1, err2),
+		sv("Multiple errors occurred"),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeCustom, aggregatedErr.Type())
@@ -384,10 +384,10 @@ func TestUtilErrorsBridgeErrorInspection(t *testing.T) {
 
 	// Create test error
 	testErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
-		engine.NewStringValue("test error"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"retryable": engine.NewBoolValue(true),
-			"fatal":     engine.NewBoolValue(false),
+		sv("test error"),
+		svMap(map[string]interface{}{
+			"retryable": true,
+			"fatal":     false,
 		}),
 	})
 	require.NoError(t, err)
@@ -407,8 +407,8 @@ func TestUtilErrorsBridgeErrorInspection(t *testing.T) {
 	t.Run("categorizeError", func(t *testing.T) {
 		// Create network error
 		networkErr, _ := bridge.ExecuteMethod(ctx, "createErrorWithCode", []engine.ScriptValue{
-			engine.NewStringValue("NETWORK_ERROR"),
-			engine.NewStringValue("Connection failed"),
+			sv("NETWORK_ERROR"),
+			sv("Connection failed"),
 		})
 
 		result, err := bridge.ExecuteMethod(ctx, "categorizeError", []engine.ScriptValue{networkErr})
@@ -426,10 +426,10 @@ func TestUtilErrorsBridgeErrorContext(t *testing.T) {
 
 	// Create error with context
 	testErr, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
-		engine.NewStringValue("context test error"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"user_id":    engine.NewNumberValue(123),
-			"request_id": engine.NewStringValue("req-456"),
+		sv("context test error"),
+		svMap(map[string]interface{}{
+			"user_id":    123,
+			"request_id": "req-456",
 		}),
 	})
 	require.NoError(t, err)
@@ -446,9 +446,9 @@ func TestUtilErrorsBridgeErrorContext(t *testing.T) {
 	// Enrich error with additional context
 	enrichedErr, err := bridge.ExecuteMethod(ctx, "enrichError", []engine.ScriptValue{
 		testErr,
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"timestamp": engine.NewStringValue("2024-01-01"),
-			"severity":  engine.NewNumberValue(5),
+		svMap(map[string]interface{}{
+			"timestamp": "2024-01-01",
+			"severity":  5,
 		}),
 	})
 	require.NoError(t, err)
@@ -477,7 +477,7 @@ func TestUtilErrorsBridgeValidateMethod(t *testing.T) {
 
 	// ValidateMethod should always return nil as validation is handled by engine
 	err := bridge.ValidateMethod("createError", []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	})
 	assert.NoError(t, err)
 
@@ -539,7 +539,7 @@ func TestUtilErrorsBridgeErrorHandling(t *testing.T) {
 
 	// Test method execution before initialization
 	_, err := bridge.ExecuteMethod(ctx, "createError", []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not initialized")

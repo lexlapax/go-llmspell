@@ -20,38 +20,14 @@ import (
 	"github.com/lexlapax/go-llms/pkg/testutils/helpers"
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
 // Test helper functions using go-llms testutils patterns
 
 // toScriptValue converts test values to ScriptValue for testing
 func toScriptValue(v interface{}) engine.ScriptValue {
-	switch val := v.(type) {
-	case string:
-		return engine.NewStringValue(val)
-	case float64:
-		return engine.NewNumberValue(val)
-	case int:
-		return engine.NewNumberValue(float64(val))
-	case bool:
-		return engine.NewBoolValue(val)
-	case nil:
-		return engine.NewNilValue()
-	case []interface{}:
-		elements := make([]engine.ScriptValue, len(val))
-		for i, elem := range val {
-			elements[i] = toScriptValue(elem)
-		}
-		return engine.NewArrayValue(elements)
-	case map[string]interface{}:
-		fields := make(map[string]engine.ScriptValue)
-		for k, v := range val {
-			fields[k] = toScriptValue(v)
-		}
-		return engine.NewObjectValue(fields)
-	default:
-		return engine.NewStringValue(fmt.Sprintf("%v", v))
-	}
+	return engine.ConvertToScriptValue(v)
 }
 
 // toScriptValues converts multiple test values to ScriptValue slice
@@ -79,15 +55,17 @@ func setupTestBridge(t *testing.T) (*StateManagerBridge, context.Context) {
 }
 
 // setupTestBridgeWithEngine creates bridge with mock script engine for script integration tests
-func setupTestBridgeWithEngine(t *testing.T) (*StateManagerBridge, context.Context, *MockScriptEngine) {
+func setupTestBridgeWithEngine(t *testing.T) (*StateManagerBridge, context.Context, *stateTestEngine) {
 	t.Helper()
 
 	bridge, ctx := setupTestBridge(t)
-	engine := &MockScriptEngine{}
-	err := bridge.RegisterWithEngine(engine)
+	eng := newStateTestEngine()
+	err := eng.Initialize(engine.EngineConfig{})
+	require.NoError(t, err)
+	err = bridge.RegisterWithEngine(eng)
 	require.NoError(t, err)
 
-	return bridge, ctx, engine
+	return bridge, ctx, eng
 }
 
 // createTestStateManager creates a go-llms StateManager for testing
@@ -237,10 +215,10 @@ func TestStateManagerBridge_Permissions(t *testing.T) {
 }
 
 func TestStateManagerBridge_StateLifecycle(t *testing.T) {
-	_, ctx, engine := setupTestBridgeWithEngine(t)
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Test createState
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	require.NoError(t, err)
 
 	stateObj, ok := result.(map[string]interface{})
@@ -248,7 +226,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	assert.NotEmpty(t, stateObj["id"], "Created state should have ID")
 
 	// Test state.set
-	_, err = engine.CallFunction("state.set", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 		"state": stateObj,
 		"key":   "test_key",
 		"value": "test_value",
@@ -258,7 +236,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Test state.get
-	result, err = engine.CallFunction("state.get", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.get", ctx, map[string]interface{}{
 		"state": stateObj,
 		"key":   "test_key",
 	})
@@ -272,7 +250,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Test state.has
-	result, err = engine.CallFunction("state.has", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.has", ctx, map[string]interface{}{
 		"state": stateObj,
 		"key":   "test_key",
 	})
@@ -285,7 +263,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Test state.keys
-	result, err = engine.CallFunction("state.keys", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.keys", ctx, map[string]interface{}{
 		"state": stateObj,
 	})
 	if err != nil {
@@ -298,7 +276,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Test saveState
-	_, err = engine.CallFunction("state.saveState", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.saveState", ctx, map[string]interface{}{
 		"state": stateObj,
 	})
 	if err != nil {
@@ -309,7 +287,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	stateID := stateObj["id"].(string)
 
 	// Test listStates after save to see what's actually saved
-	result, err = engine.CallFunction("state.listStates", ctx, map[string]interface{}{})
+	result, err = testEngine.CallFunction("state.listStates", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("listStates failed after save: %v", err)
 	}
@@ -317,7 +295,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	t.Logf("Saved state IDs: %v, expected ID: %s", savedIDs, stateID)
 
 	// Test loadState
-	result, err = engine.CallFunction("state.loadState", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.loadState", ctx, map[string]interface{}{
 		"id": stateID,
 	})
 	if err != nil {
@@ -336,7 +314,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Verify the loaded state has the data we saved
-	result, err = engine.CallFunction("state.get", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.get", ctx, map[string]interface{}{
 		"state": loadedState,
 		"key":   "test_key",
 	})
@@ -349,7 +327,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Test listStates
-	result, err = engine.CallFunction("state.listStates", ctx, map[string]interface{}{})
+	result, err = testEngine.CallFunction("state.listStates", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("listStates failed: %v", err)
 	}
@@ -360,7 +338,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Test deleteState
-	_, err = engine.CallFunction("state.deleteState", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.deleteState", ctx, map[string]interface{}{
 		"id": stateID,
 	})
 	if err != nil {
@@ -368,7 +346,7 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 	}
 
 	// Verify state is deleted
-	result, err = engine.CallFunction("state.listStates", ctx, map[string]interface{}{})
+	result, err = testEngine.CallFunction("state.listStates", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("listStates failed after delete: %v", err)
 	}
@@ -380,35 +358,17 @@ func TestStateManagerBridge_StateLifecycle(t *testing.T) {
 }
 
 func TestStateManagerBridge_StateTransforms(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
-
-	// Initialize bridge to register built-in transforms
-	err = bridge.Initialize(ctx)
-	if err != nil {
-		t.Fatalf("Failed to initialize bridge: %v", err)
-	}
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
 	stateObj := result.(map[string]interface{})
 
 	// Add some test data
-	_, err = engine.CallFunction("state.set", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 		"state": stateObj,
 		"key":   "test.nested.key",
 		"value": "test_value",
@@ -418,7 +378,7 @@ func TestStateManagerBridge_StateTransforms(t *testing.T) {
 	}
 
 	// Register a test transform
-	_, err = engine.CallFunction("state.registerTransform", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.registerTransform", ctx, map[string]interface{}{
 		"name": "test_transform",
 		"transform": func(ctx context.Context, state *domain.State) (*domain.State, error) {
 			newState := state.Clone()
@@ -431,7 +391,7 @@ func TestStateManagerBridge_StateTransforms(t *testing.T) {
 	}
 
 	// Apply the transform
-	result, err = engine.CallFunction("state.applyTransform", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.applyTransform", ctx, map[string]interface{}{
 		"name":  "test_transform",
 		"state": stateObj,
 	})
@@ -445,7 +405,7 @@ func TestStateManagerBridge_StateTransforms(t *testing.T) {
 	}
 
 	// Verify transform was applied
-	result, err = engine.CallFunction("state.get", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.get", ctx, map[string]interface{}{
 		"state": transformedState,
 		"key":   "transformed",
 	})
@@ -463,7 +423,7 @@ func TestStateManagerBridge_StateTransforms(t *testing.T) {
 	for _, transformName := range builtinTransforms {
 		t.Run("builtin_transform_"+transformName, func(t *testing.T) {
 			// The built-in transforms should be automatically registered
-			result, err := engine.CallFunction("state.applyTransform", ctx, map[string]interface{}{
+			result, err := testEngine.CallFunction("state.applyTransform", ctx, map[string]interface{}{
 				"name":  transformName,
 				"state": stateObj,
 			})
@@ -480,29 +440,17 @@ func TestStateManagerBridge_StateTransforms(t *testing.T) {
 }
 
 func TestStateManagerBridge_StateValidation(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
 	stateObj := result.(map[string]interface{})
 
 	// Register a test validator
-	_, err = engine.CallFunction("state.registerValidator", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.registerValidator", ctx, map[string]interface{}{
 		"name": "test_validator",
 		"validator": func(state *domain.State) error {
 			if !state.Has("required_key") {
@@ -516,7 +464,7 @@ func TestStateManagerBridge_StateValidation(t *testing.T) {
 	}
 
 	// Test validation failure
-	_, err = engine.CallFunction("state.validateState", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.validateState", ctx, map[string]interface{}{
 		"name":  "test_validator",
 		"state": stateObj,
 	})
@@ -525,7 +473,7 @@ func TestStateManagerBridge_StateValidation(t *testing.T) {
 	}
 
 	// Add required key and test validation success
-	_, err = engine.CallFunction("state.set", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 		"state": stateObj,
 		"key":   "required_key",
 		"value": "present",
@@ -534,7 +482,7 @@ func TestStateManagerBridge_StateValidation(t *testing.T) {
 		t.Fatalf("state.set failed: %v", err)
 	}
 
-	_, err = engine.CallFunction("state.validateState", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.validateState", ctx, map[string]interface{}{
 		"name":  "test_validator",
 		"state": stateObj,
 	})
@@ -544,36 +492,24 @@ func TestStateManagerBridge_StateValidation(t *testing.T) {
 }
 
 func TestStateManagerBridge_StateMerging(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create multiple test states
-	state1, _ := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	state1, _ := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	state1Obj := state1.(map[string]interface{})
-	_, _ = engine.CallFunction("state.set", ctx, map[string]interface{}{
+	_, _ = testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 		"state": state1Obj, "key": "key1", "value": "value1",
 	})
-	_, _ = engine.CallFunction("state.set", ctx, map[string]interface{}{
+	_, _ = testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 		"state": state1Obj, "key": "shared", "value": "from_state1",
 	})
 
-	state2, _ := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	state2, _ := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	state2Obj := state2.(map[string]interface{})
-	_, _ = engine.CallFunction("state.set", ctx, map[string]interface{}{
+	_, _ = testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 		"state": state2Obj, "key": "key2", "value": "value2",
 	})
-	_, _ = engine.CallFunction("state.set", ctx, map[string]interface{}{
+	_, _ = testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 		"state": state2Obj, "key": "shared", "value": "from_state2",
 	})
 
@@ -613,7 +549,7 @@ func TestStateManagerBridge_StateMerging(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Test mergeStates
-			result, err := engine.CallFunction("state.mergeStates", ctx, map[string]interface{}{
+			result, err := testEngine.CallFunction("state.mergeStates", ctx, map[string]interface{}{
 				"states":   []interface{}{state1Obj, state2Obj},
 				"strategy": tc.strategy,
 			})
@@ -628,7 +564,7 @@ func TestStateManagerBridge_StateMerging(t *testing.T) {
 
 			// Verify merged state contains expected keys
 			for expectedKey, expectedValue := range tc.expected {
-				result, err := engine.CallFunction("state.get", ctx, map[string]interface{}{
+				result, err := testEngine.CallFunction("state.get", ctx, map[string]interface{}{
 					"state": mergedState,
 					"key":   expectedKey,
 				})
@@ -652,22 +588,10 @@ func TestStateManagerBridge_StateMerging(t *testing.T) {
 }
 
 func TestStateManagerBridge_ArtifactManagement(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
@@ -675,7 +599,7 @@ func TestStateManagerBridge_ArtifactManagement(t *testing.T) {
 
 	// Create an artifact
 	artifactData := []byte("test artifact data")
-	result, err = engine.CallFunction("artifacts.create", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("artifacts.create", ctx, map[string]interface{}{
 		"name": "test_artifact",
 		"type": "data",
 		"data": artifactData,
@@ -690,7 +614,7 @@ func TestStateManagerBridge_ArtifactManagement(t *testing.T) {
 	}
 
 	// Add artifact to state
-	_, err = engine.CallFunction("state.addArtifact", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.addArtifact", ctx, map[string]interface{}{
 		"state":    stateObj,
 		"artifact": artifactObj,
 	})
@@ -700,7 +624,7 @@ func TestStateManagerBridge_ArtifactManagement(t *testing.T) {
 
 	// Get artifact from state
 	artifactID := artifactObj["id"].(string)
-	result, err = engine.CallFunction("state.getArtifact", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.getArtifact", ctx, map[string]interface{}{
 		"state": stateObj,
 		"id":    artifactID,
 	})
@@ -714,7 +638,7 @@ func TestStateManagerBridge_ArtifactManagement(t *testing.T) {
 	}
 
 	// Get all artifacts
-	result, err = engine.CallFunction("state.artifacts", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.artifacts", ctx, map[string]interface{}{
 		"state": stateObj,
 	})
 	if err != nil {
@@ -728,29 +652,17 @@ func TestStateManagerBridge_ArtifactManagement(t *testing.T) {
 }
 
 func TestStateManagerBridge_MessageManagement(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
 	stateObj := result.(map[string]interface{})
 
 	// Create a message
-	result, err = engine.CallFunction("messages.create", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("messages.create", ctx, map[string]interface{}{
 		"role":    "user",
 		"content": "Hello, world!",
 	})
@@ -764,7 +676,7 @@ func TestStateManagerBridge_MessageManagement(t *testing.T) {
 	}
 
 	// Add message to state
-	_, err = engine.CallFunction("state.addMessage", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.addMessage", ctx, map[string]interface{}{
 		"state":   stateObj,
 		"message": messageObj,
 	})
@@ -773,7 +685,7 @@ func TestStateManagerBridge_MessageManagement(t *testing.T) {
 	}
 
 	// Get messages from state
-	result, err = engine.CallFunction("state.messages", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.messages", ctx, map[string]interface{}{
 		"state": stateObj,
 	})
 	if err != nil {
@@ -792,29 +704,17 @@ func TestStateManagerBridge_MessageManagement(t *testing.T) {
 }
 
 func TestStateManagerBridge_MetadataManagement(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
 	stateObj := result.(map[string]interface{})
 
 	// Set metadata
-	_, err = engine.CallFunction("state.setMetadata", ctx, map[string]interface{}{
+	_, err = testEngine.CallFunction("state.setMetadata", ctx, map[string]interface{}{
 		"state": stateObj,
 		"key":   "test_meta",
 		"value": "test_value",
@@ -824,7 +724,7 @@ func TestStateManagerBridge_MetadataManagement(t *testing.T) {
 	}
 
 	// Get metadata
-	result, err = engine.CallFunction("state.getMetadata", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.getMetadata", ctx, map[string]interface{}{
 		"state": stateObj,
 		"key":   "test_meta",
 	})
@@ -838,7 +738,7 @@ func TestStateManagerBridge_MetadataManagement(t *testing.T) {
 	}
 
 	// Get all metadata
-	result, err = engine.CallFunction("state.getAllMetadata", ctx, map[string]interface{}{
+	result, err = testEngine.CallFunction("state.getAllMetadata", ctx, map[string]interface{}{
 		"state": stateObj,
 	})
 	if err != nil {
@@ -852,22 +752,10 @@ func TestStateManagerBridge_MetadataManagement(t *testing.T) {
 }
 
 func TestStateManagerBridge_TypeConversion(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
@@ -892,7 +780,7 @@ func TestStateManagerBridge_TypeConversion(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Set value
-			_, err := engine.CallFunction("state.set", ctx, map[string]interface{}{
+			_, err := testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 				"state": stateObj,
 				"key":   tc.key,
 				"value": tc.value,
@@ -902,7 +790,7 @@ func TestStateManagerBridge_TypeConversion(t *testing.T) {
 			}
 
 			// Get value
-			result, err := engine.CallFunction("state.get", ctx, map[string]interface{}{
+			result, err := testEngine.CallFunction("state.get", ctx, map[string]interface{}{
 				"state": stateObj,
 				"key":   tc.key,
 			})
@@ -924,22 +812,10 @@ func TestStateManagerBridge_TypeConversion(t *testing.T) {
 
 func TestStateManagerBridge_ConcurrentAccess(t *testing.T) {
 	t.Skip("Skipping concurrent access test - needs refactoring for proper state isolation")
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
@@ -958,7 +834,7 @@ func TestStateManagerBridge_ConcurrentAccess(t *testing.T) {
 				value := fmt.Sprintf("value_%d_%d", goroutineID, j)
 
 				// Set value
-				_, err := engine.CallFunction("state.set", ctx, map[string]interface{}{
+				_, err := testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 					"state": stateObj,
 					"key":   key,
 					"value": value,
@@ -969,7 +845,7 @@ func TestStateManagerBridge_ConcurrentAccess(t *testing.T) {
 				}
 
 				// Get value
-				_, err = engine.CallFunction("state.get", ctx, map[string]interface{}{
+				_, err = testEngine.CallFunction("state.get", ctx, map[string]interface{}{
 					"state": stateObj,
 					"key":   key,
 				})
@@ -991,22 +867,10 @@ func TestStateManagerBridge_ConcurrentAccess(t *testing.T) {
 }
 
 func TestStateManagerBridge_Performance(t *testing.T) {
-	manager := createTestStateManager()
-	bridge, err := NewStateManagerBridge(manager)
-	if err != nil {
-		t.Fatalf("Failed to create bridge: %v", err)
-	}
-
-	engine := &MockScriptEngine{}
-	err = bridge.RegisterWithEngine(engine)
-	if err != nil {
-		t.Fatalf("Failed to register bridge: %v", err)
-	}
-
-	ctx := context.Background()
+	_, ctx, testEngine := setupTestBridgeWithEngine(t)
 
 	// Create a test state
-	result, err := engine.CallFunction("state.createState", ctx, map[string]interface{}{})
+	result, err := testEngine.CallFunction("state.createState", ctx, map[string]interface{}{})
 	if err != nil {
 		t.Fatalf("createState failed: %v", err)
 	}
@@ -1020,7 +884,7 @@ func TestStateManagerBridge_Performance(t *testing.T) {
 		key := fmt.Sprintf("perf_key_%d", i)
 		value := fmt.Sprintf("perf_value_%d", i)
 
-		_, err := engine.CallFunction("state.set", ctx, map[string]interface{}{
+		_, err := testEngine.CallFunction("state.set", ctx, map[string]interface{}{
 			"state": stateObj,
 			"key":   key,
 			"value": value,
@@ -1042,208 +906,183 @@ func TestStateManagerBridge_Performance(t *testing.T) {
 
 // Helper functions for testing
 
-// MockScriptEngine implements the ScriptEngine interface for testing
-type MockScriptEngine struct {
+// stateTestEngine extends MockScriptEngine with state-specific functionality
+type stateTestEngine struct {
+	*testutils.MockScriptEngine
 	functions map[string]interface{}
 }
 
-func (m *MockScriptEngine) Initialize(config engine.EngineConfig) error {
-	m.functions = make(map[string]interface{})
-	return nil
+func newStateTestEngine() *stateTestEngine {
+	return &stateTestEngine{
+		MockScriptEngine: testutils.NewMockScriptEngine(),
+		functions:        make(map[string]interface{}),
+	}
 }
 
-func (m *MockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (engine.ScriptValue, error) {
-	return engine.NewNilValue(), nil
+func (e *stateTestEngine) RegisterFunction(name string, fn interface{}) {
+	e.functions[name] = fn
 }
 
-func (m *MockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (engine.ScriptValue, error) {
-	return engine.NewNilValue(), nil
-}
-
-func (m *MockScriptEngine) Shutdown() error {
-	return nil
-}
-
-func (m *MockScriptEngine) UnregisterBridge(name string) error {
-	return nil
-}
-
-func (m *MockScriptEngine) GetBridge(name string) (engine.Bridge, error) {
-	return nil, nil
-}
-
-func (m *MockScriptEngine) ToNative(scriptValue engine.ScriptValue) (interface{}, error) {
-	return scriptValue.ToGo(), nil
-}
-
-func (m *MockScriptEngine) FromNative(goValue interface{}) (engine.ScriptValue, error) {
-	return toScriptValue(goValue), nil
-}
-
-func (m *MockScriptEngine) Name() string {
-	return "mock"
-}
-
-func (m *MockScriptEngine) Version() string {
-	return "1.0.0"
-}
-
-func (m *MockScriptEngine) FileExtensions() []string {
-	return []string{".mock"}
-}
-
-func (m *MockScriptEngine) SetMemoryLimit(bytes int64) error {
-	return nil
-}
-
-func (m *MockScriptEngine) SetTimeout(duration time.Duration) error {
-	return nil
-}
-
-func (m *MockScriptEngine) GetMetrics() engine.EngineMetrics {
-	return engine.EngineMetrics{}
-}
-
-func (m *MockScriptEngine) CreateContext(options engine.ContextOptions) (engine.ScriptContext, error) {
-	return nil, nil
-}
-
-func (m *MockScriptEngine) DestroyContext(ctx engine.ScriptContext) error {
-	return nil
-}
-
-func (m *MockScriptEngine) ExecuteScript(ctx context.Context, script string, options engine.ExecutionOptions) (*engine.ExecutionResult, error) {
-	return nil, nil
-}
-
-func (m *MockScriptEngine) RegisterBridge(bridge engine.Bridge) error {
-	if m.functions == nil {
-		m.functions = make(map[string]interface{})
+func (e *stateTestEngine) RegisterBridge(bridge engine.Bridge) error {
+	// First register with the base mock
+	if err := e.MockScriptEngine.RegisterBridge(bridge); err != nil {
+		return err
 	}
 
-	// Register bridge methods based on bridge type
-	switch b := bridge.(type) {
-	case *StateManagerBridge:
-		// Register all state manager bridge methods
-		m.functions["state.createState"] = b.createState
-		m.functions["state.saveState"] = b.saveState
-		m.functions["state.loadState"] = b.loadState
-		m.functions["state.deleteState"] = b.deleteState
-		m.functions["state.listStates"] = b.listStates
-		m.functions["state.get"] = b.get
-		m.functions["state.set"] = b.set
-		m.functions["state.delete"] = b.delete
-		m.functions["state.has"] = b.has
-		m.functions["state.keys"] = b.keys
-		m.functions["state.values"] = b.values
-		m.functions["state.setMetadata"] = b.setMetadata
-		m.functions["state.getMetadata"] = b.getMetadata
-		m.functions["state.getAllMetadata"] = b.getAllMetadata
-		m.functions["state.addArtifact"] = b.addArtifact
-		m.functions["state.getArtifact"] = b.getArtifact
-		m.functions["state.artifacts"] = b.artifacts
-		m.functions["state.addMessage"] = b.addMessage
-		m.functions["state.messages"] = b.messages
-		m.functions["state.registerTransform"] = b.registerTransform
-		m.functions["state.applyTransform"] = b.applyTransform
-		m.functions["state.registerValidator"] = b.registerValidator
-		m.functions["state.validateState"] = b.validateState
-		m.functions["state.mergeStates"] = b.mergeStates
+	// For state_manager bridge, also register its methods as functions
+	if bridge.GetID() == "state_manager" {
+		methods := bridge.Methods()
+		// Debug: Print available methods
+		// fmt.Printf("Registering %d methods for state_manager bridge\n", len(methods))
+		for _, method := range methods {
+			methodName := method.Name
+			// Capture methodName in the closure properly
+			capturedMethodName := methodName
+			// Create a function that calls bridge ExecuteMethod
+			funcName := "state." + methodName
+			// fmt.Printf("Registering function: %s\n", funcName)
+			e.functions[funcName] = func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+				// Convert params to ScriptValues based on method signature
+				var args []engine.ScriptValue
+				
+				// Handle methods that expect individual parameters
+				switch capturedMethodName {
+				case "set":
+					// set expects: state, key, value
+					if state, ok := params["state"]; ok {
+						args = append(args, toScriptValue(state))
+					}
+					if key, ok := params["key"]; ok {
+						args = append(args, toScriptValue(key))
+					}
+					if value, ok := params["value"]; ok {
+						args = append(args, toScriptValue(value))
+					}
+				
+				case "get", "delete", "has":
+					// These expect: state, key
+					if state, ok := params["state"]; ok {
+						args = append(args, toScriptValue(state))
+					}
+					if key, ok := params["key"]; ok {
+						args = append(args, toScriptValue(key))
+					}
+				
+				case "keys", "values", "getAllMetadata", "artifacts", "messages":
+					// These expect: state
+					if state, ok := params["state"]; ok {
+						args = append(args, toScriptValue(state))
+					}
+				
+				case "setMetadata":
+					// setMetadata expects: state, key, value
+					if state, ok := params["state"]; ok {
+						args = append(args, toScriptValue(state))
+					}
+					if key, ok := params["key"]; ok {
+						args = append(args, toScriptValue(key))
+					}
+					if value, ok := params["value"]; ok {
+						args = append(args, toScriptValue(value))
+					}
+				
+				case "getMetadata":
+					// getMetadata expects: state, key
+					if state, ok := params["state"]; ok {
+						args = append(args, toScriptValue(state))
+					}
+					if key, ok := params["key"]; ok {
+						args = append(args, toScriptValue(key))
+					}
+				
+				case "addArtifact", "addMessage":
+					// These expect: state, artifact/message
+					if state, ok := params["state"]; ok {
+						args = append(args, toScriptValue(state))
+					}
+					if artifact, ok := params["artifact"]; ok {
+						args = append(args, toScriptValue(artifact))
+					}
+					if message, ok := params["message"]; ok {
+						args = append(args, toScriptValue(message))
+					}
+				
+				case "getArtifact":
+					// getArtifact expects: state, index
+					if state, ok := params["state"]; ok {
+						args = append(args, toScriptValue(state))
+					}
+					if index, ok := params["index"]; ok {
+						args = append(args, toScriptValue(index))
+					}
+				
+				default:
+					// For other methods, handle different parameter styles
+					if params != nil {
+						if paramsSlice, ok := params["args"].([]interface{}); ok {
+							args = toScriptValues(paramsSlice...)
+						} else {
+							// Pass each parameter as a separate argument
+							// Common pattern: state parameter
+							if state, ok := params["state"]; ok {
+								args = append(args, toScriptValue(state))
+							}
+							// Add other common parameters
+							if name, ok := params["name"]; ok {
+								args = append(args, toScriptValue(name))
+							}
+							if id, ok := params["id"]; ok {
+								args = append(args, toScriptValue(id))
+							}
+							// If no specific params found, pass the whole map as one argument
+							if len(args) == 0 {
+								args = []engine.ScriptValue{toScriptValue(params)}
+							}
+						}
+					}
+				}
+				// fmt.Printf("Calling ExecuteMethod for %s with %d args\n", capturedMethodName, len(args))
 
-		// Register helper functions needed by tests
-		m.functions["artifacts.create"] = func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
-			name, _ := params["name"].(string)
-			artifactType, _ := params["type"].(string)
-			data, _ := params["data"].([]byte)
+				result, err := bridge.ExecuteMethod(ctx, capturedMethodName, args)
+				if err != nil {
+					// fmt.Printf("ExecuteMethod error for %s: %v\n", capturedMethodName, err)
+					return nil, err
+				}
 
-			artifact := domain.NewArtifact(name, domain.ArtifactType(artifactType), data)
-			return map[string]interface{}{
-				"id":   artifact.ID,
-				"name": artifact.Name,
-				"type": string(artifact.Type),
-				"data": data,
-			}, nil
-		}
-
-		m.functions["messages.create"] = func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
-			role, _ := params["role"].(string)
-			content, _ := params["content"].(string)
-			return map[string]interface{}{
-				"role":    role,
-				"content": content,
-			}, nil
+				// Convert result back to native Go value
+				return result.ToGo(), nil
+			}
 		}
 	}
 
 	return nil
 }
 
-func (m *MockScriptEngine) ListBridges() []string {
-	return []string{}
-}
-
-func (m *MockScriptEngine) Features() []engine.EngineFeature {
-	return []engine.EngineFeature{}
-}
-
-func (m *MockScriptEngine) SetResourceLimits(limits engine.ResourceLimits) error {
-	return nil
-}
-
-func (m *MockScriptEngine) RegisterFunction(name string, fn interface{}) {
-	m.functions[name] = fn
-}
-
-func (m *MockScriptEngine) CallFunction(name string, ctx context.Context, params map[string]interface{}) (interface{}, error) {
-	fn, exists := m.functions[name]
+func (e *stateTestEngine) CallFunction(name string, ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	// fmt.Printf("CallFunction called with name: %s, available functions: %d\n", name, len(e.functions))
+	fn, exists := e.functions[name]
 	if !exists {
-		return nil, fmt.Errorf("function %s not found", name)
+		// Print available functions
+		// fmt.Printf("Available functions:\n")
+		// for fname := range e.functions {
+		// 	fmt.Printf("  - %s\n", fname)
+		// }
+		return nil, fmt.Errorf("function not found: %s", name)
 	}
 
-	// Simple function call simulation - in real implementation this would
-	// involve proper type conversion and script engine integration
-	switch f := fn.(type) {
-	case func(context.Context, map[string]interface{}) (interface{}, error):
-		return f(ctx, params)
-	default:
-		return nil, fmt.Errorf("unsupported function type for %s", name)
+	// For state methods, call the function
+	if strings.HasPrefix(name, "state.") {
+		if callFn, ok := fn.(func(context.Context, map[string]interface{}) (interface{}, error)); ok {
+			return callFn(ctx, params)
+		}
 	}
-}
 
-// Task 1.4.11.1: Engine Event Bus
-func (m *MockScriptEngine) GetEventBus() engine.EventBus {
-	return engine.NewDefaultEventBus()
-}
+	// Simple mock - just check if function exists and return test data
+	if name == "getStateObject" || name == "setValue" || name == "getValue" {
+		return fn, nil
+	}
 
-// Task 1.4.11.2: Type Conversion Registry
-func (m *MockScriptEngine) RegisterTypeConverter(fromType, toType string, converter engine.TypeConverterFunc) error {
-	return nil
-}
-
-func (m *MockScriptEngine) GetTypeRegistry() engine.TypeRegistry {
-	return engine.NewDefaultTypeRegistry()
-}
-
-// Task 1.4.11.3: Engine Profiling
-func (m *MockScriptEngine) EnableProfiling(config engine.ProfilingConfig) error {
-	return nil
-}
-
-func (m *MockScriptEngine) DisableProfiling() error {
-	return nil
-}
-
-func (m *MockScriptEngine) GetProfilingReport() (*engine.ProfilingReport, error) {
-	return &engine.ProfilingReport{}, nil
-}
-
-// Task 1.4.11.4: Engine API Export
-func (m *MockScriptEngine) ExportAPI(format engine.ExportFormat) ([]byte, error) {
-	return []byte("{}"), nil
-}
-
-func (m *MockScriptEngine) GenerateClientLibrary(language string, options engine.ClientLibraryOptions) ([]byte, error) {
-	return []byte("{}"), nil
+	return nil, nil
 }
 
 // Additional interface compliance and error handling tests consolidated from manager_simple_test.go

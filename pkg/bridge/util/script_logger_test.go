@@ -105,19 +105,19 @@ func TestScriptLoggerBridgeUnifiedLog(t *testing.T) {
 		{
 			name: "log with level and message only",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("info"),
-				engine.NewStringValue("Test message"),
+				sv("info"),
+				sv("Test message"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "log with level, message, and attributes",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("warn"),
-				engine.NewStringValue("Warning message"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"code":   engine.NewNumberValue(404),
-					"reason": engine.NewStringValue("not found"),
+				sv("warn"),
+				sv("Warning message"),
+				svMap(map[string]interface{}{
+					"code":   404,
+					"reason": "not found",
 				}),
 			},
 			wantErr: false,
@@ -125,35 +125,35 @@ func TestScriptLoggerBridgeUnifiedLog(t *testing.T) {
 		{
 			name: "log with level, component, and message",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("debug"),
-				engine.NewStringValue("agent"),
-				engine.NewStringValue("Debug message"),
+				sv("debug"),
+				sv("agent"),
+				sv("Debug message"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "log with all parameters",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("error"),
-				engine.NewStringValue("workflow"),
-				engine.NewStringValue("Error occurred"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"step":  engine.NewNumberValue(3),
-					"error": engine.NewStringValue("timeout"),
+				sv("error"),
+				sv("workflow"),
+				sv("Error occurred"),
+				svMap(map[string]interface{}{
+					"step":  3,
+					"error": "timeout",
 				}),
 			},
 			wantErr: false,
 		},
 		{
 			name:    "missing required arguments",
-			args:    []engine.ScriptValue{engine.NewStringValue("info")},
+			args:    []engine.ScriptValue{sv("info")},
 			wantErr: true,
 		},
 		{
 			name: "invalid level type",
 			args: []engine.ScriptValue{
-				engine.NewNumberValue(123),
-				engine.NewStringValue("message"),
+				sv(123),
+				sv("message"),
 			},
 			wantErr: true,
 		},
@@ -179,18 +179,18 @@ func TestScriptLoggerBridgeContextManagement(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test setGlobalContext
-	globalAttrs := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"app":     engine.NewStringValue("test-app"),
-		"version": engine.NewStringValue("1.0.0"),
+	globalAttrs := svMap(map[string]interface{}{
+		"app":     "test-app",
+		"version": "1.0.0",
 	})
 	result, err := bridge.ExecuteMethod(ctx, "setGlobalContext", []engine.ScriptValue{globalAttrs})
 	require.NoError(t, err)
 	assert.True(t, result.IsNil())
 
 	// Test withContext
-	contextAttrs := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"session_id": engine.NewStringValue("abc123"),
-		"user_id":    engine.NewNumberValue(42),
+	contextAttrs := svMap(map[string]interface{}{
+		"session_id": "abc123",
+		"user_id":    42,
 	})
 	result, err = bridge.ExecuteMethod(ctx, "withContext", []engine.ScriptValue{contextAttrs})
 	require.NoError(t, err)
@@ -203,10 +203,10 @@ func TestScriptLoggerBridgeContextManagement(t *testing.T) {
 
 	// Test logWithContext
 	result, err = bridge.ExecuteMethod(ctx, "logWithContext", []engine.ScriptValue{
-		engine.NewStringValue("info"),
-		engine.NewStringValue("Context test"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"action": engine.NewStringValue("test"),
+		sv("info"),
+		sv("Context test"),
+		svMap(map[string]interface{}{
+			"action": "test",
 		}),
 	})
 	require.NoError(t, err)
@@ -236,14 +236,11 @@ func TestScriptLoggerBridgeConfiguration(t *testing.T) {
 	assert.True(t, config["enable_structure"].(engine.BoolValue).Value())
 
 	// Configure logger
-	newConfig := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"level":        engine.NewStringValue("debug"),
-		"format":       engine.NewStringValue("json"),
-		"enable_debug": engine.NewBoolValue(false),
-		"components": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewStringValue("agent"),
-			engine.NewStringValue("workflow"),
-		}),
+	newConfig := svMap(map[string]interface{}{
+		"level":        "debug",
+		"format":       "json",
+		"enable_debug": false,
+		"components":   svArray("agent", "workflow"),
 	})
 	result, err = bridge.ExecuteMethod(ctx, "configure", []engine.ScriptValue{newConfig})
 	require.NoError(t, err)
@@ -266,7 +263,7 @@ func TestScriptLoggerBridgeComponentManagement(t *testing.T) {
 
 	// Enable component
 	result, err := bridge.ExecuteMethod(ctx, "enableComponent", []engine.ScriptValue{
-		engine.NewStringValue("test-component"),
+		sv("test-component"),
 	})
 	require.NoError(t, err)
 	assert.True(t, result.IsNil())
@@ -289,7 +286,7 @@ func TestScriptLoggerBridgeComponentManagement(t *testing.T) {
 
 	// Disable component
 	result, err = bridge.ExecuteMethod(ctx, "disableComponent", []engine.ScriptValue{
-		engine.NewStringValue("test-component"),
+		sv("test-component"),
 	})
 	require.NoError(t, err)
 	assert.True(t, result.IsNil())
@@ -303,10 +300,10 @@ func TestScriptLoggerBridgeConvenienceMethods(t *testing.T) {
 
 	// Test debug
 	result, err := bridge.ExecuteMethod(ctx, "debug", []engine.ScriptValue{
-		engine.NewStringValue("Debug message"),
-		engine.NewStringValue("test-component"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"step": engine.NewNumberValue(1),
+		sv("Debug message"),
+		sv("test-component"),
+		svMap(map[string]interface{}{
+			"step": 1,
 		}),
 	})
 	require.NoError(t, err)
@@ -314,9 +311,9 @@ func TestScriptLoggerBridgeConvenienceMethods(t *testing.T) {
 
 	// Test info
 	result, err = bridge.ExecuteMethod(ctx, "info", []engine.ScriptValue{
-		engine.NewStringValue("Info message"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"user": engine.NewStringValue("john"),
+		sv("Info message"),
+		svMap(map[string]interface{}{
+			"user": "john",
 		}),
 	})
 	require.NoError(t, err)
@@ -324,9 +321,9 @@ func TestScriptLoggerBridgeConvenienceMethods(t *testing.T) {
 
 	// Test warn
 	result, err = bridge.ExecuteMethod(ctx, "warn", []engine.ScriptValue{
-		engine.NewStringValue("Warning message"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"threshold": engine.NewNumberValue(90),
+		sv("Warning message"),
+		svMap(map[string]interface{}{
+			"threshold": 90,
 		}),
 	})
 	require.NoError(t, err)
@@ -334,9 +331,9 @@ func TestScriptLoggerBridgeConvenienceMethods(t *testing.T) {
 
 	// Test error
 	result, err = bridge.ExecuteMethod(ctx, "error", []engine.ScriptValue{
-		engine.NewStringValue("Error message"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"code": engine.NewStringValue("ERR_001"),
+		sv("Error message"),
+		svMap(map[string]interface{}{
+			"code": "ERR_001",
 		}),
 	})
 	require.NoError(t, err)
@@ -350,12 +347,12 @@ func TestScriptLoggerBridgeBridgeError(t *testing.T) {
 	require.NoError(t, err)
 
 	result, err := bridge.ExecuteMethod(ctx, "logBridgeError", []engine.ScriptValue{
-		engine.NewStringValue("llm"),
-		engine.NewStringValue("generate"),
-		engine.NewStringValue("API timeout"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"duration": engine.NewNumberValue(5000),
-			"retries":  engine.NewNumberValue(3),
+		sv("llm"),
+		sv("generate"),
+		sv("API timeout"),
+		svMap(map[string]interface{}{
+			"duration": 5000,
+			"retries":  3,
 		}),
 	})
 	require.NoError(t, err)
@@ -363,9 +360,9 @@ func TestScriptLoggerBridgeBridgeError(t *testing.T) {
 
 	// Test without optional context
 	result, err = bridge.ExecuteMethod(ctx, "logBridgeError", []engine.ScriptValue{
-		engine.NewStringValue("tool"),
-		engine.NewStringValue("execute"),
-		engine.NewStringValue("Tool not found"),
+		sv("tool"),
+		sv("execute"),
+		sv("Tool not found"),
 	})
 	require.NoError(t, err)
 	assert.True(t, result.IsNil())
@@ -378,11 +375,11 @@ func TestScriptLoggerBridgeFormatMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	result, err := bridge.ExecuteMethod(ctx, "formatMessage", []engine.ScriptValue{
-		engine.NewStringValue("User {user} completed task {task} in {duration}ms"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"user":     engine.NewStringValue("john"),
-			"task":     engine.NewStringValue("upload"),
-			"duration": engine.NewNumberValue(1500),
+		sv("User {user} completed task {task} in {duration}ms"),
+		svMap(map[string]interface{}{
+			"user":     "john",
+			"task":     "upload",
+			"duration": 1500,
 		}),
 	})
 	require.NoError(t, err)
@@ -396,8 +393,8 @@ func TestScriptLoggerBridgeValidateMethod(t *testing.T) {
 
 	// ValidateMethod should always return nil as validation is handled by engine
 	err := bridge.ValidateMethod("log", []engine.ScriptValue{
-		engine.NewStringValue("info"),
-		engine.NewStringValue("test"),
+		sv("info"),
+		sv("test"),
 	})
 	assert.NoError(t, err)
 
@@ -456,8 +453,8 @@ func TestScriptLoggerBridgeErrorHandling(t *testing.T) {
 
 	// Test method execution before initialization
 	_, err := bridge.ExecuteMethod(ctx, "log", []engine.ScriptValue{
-		engine.NewStringValue("info"),
-		engine.NewStringValue("test"),
+		sv("info"),
+		sv("test"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not initialized")

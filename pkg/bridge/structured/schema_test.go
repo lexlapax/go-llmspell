@@ -36,7 +36,7 @@ func setupTestBridgeWithFileRepo(t *testing.T) (*SchemaBridge, context.Context, 
 	bridge, ctx := setupTestBridge(t)
 	tmpDir := t.TempDir()
 
-	args := []engine.ScriptValue{engine.NewStringValue(tmpDir)}
+	args := []engine.ScriptValue{sv(tmpDir)}
 	_, err := bridge.ExecuteMethod(ctx, "initializeFileRepository", args)
 	require.NoError(t, err)
 	require.NotNil(t, bridge.fileRepo)
@@ -167,7 +167,7 @@ func TestSchemaBridge_ValidateMethod(t *testing.T) {
 		{
 			name:        "valid createSchema call",
 			methodName:  "createSchema",
-			args:        []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(createTestSchema()))},
+			args:        []engine.ScriptValue{svMap(createTestSchema())},
 			shouldError: false,
 		},
 		{
@@ -187,7 +187,7 @@ func TestSchemaBridge_ValidateMethod(t *testing.T) {
 		{
 			name:        "uninitialized bridge",
 			methodName:  "createSchema",
-			args:        []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(createTestSchema()))},
+			args:        []engine.ScriptValue{svMap(createTestSchema())},
 			shouldError: true,
 			errorMsg:    "not initialized",
 		},
@@ -221,7 +221,7 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 
 	t.Run("createSchema", func(t *testing.T) {
 		schemaData := createTestSchema()
-		args := []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData))}
+		args := []engine.ScriptValue{svMap(schemaData)}
 
 		result, err := bridge.ExecuteMethod(ctx, "createSchema", args)
 		require.NoError(t, err)
@@ -239,8 +239,8 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 			"maxLength": 100,
 		}
 		args := []engine.ScriptValue{
-			engine.NewStringValue("string"),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(constraints)),
+			sv("string"),
+			svMap(constraints),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "createProperty", args)
@@ -261,8 +261,8 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 		testData := createTestData()
 
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData)),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(testData)),
+			svMap(schemaData),
+			svMap(testData),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "validateJSON", args)
@@ -281,8 +281,8 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 		testData := createTestData()
 
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData)),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(testData)),
+			svMap(schemaData),
+			svMap(testData),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "validateStruct", args)
@@ -298,7 +298,7 @@ func TestSchemaBridge_SchemaOperations(t *testing.T) {
 		jsonSchema, err := json.Marshal(schemaData)
 		require.NoError(t, err)
 
-		args := []engine.ScriptValue{engine.NewStringValue(string(jsonSchema))}
+		args := []engine.ScriptValue{sv(string(jsonSchema))}
 
 		result, err := bridge.ExecuteMethod(ctx, "convertJSONSchema", args)
 		require.NoError(t, err)
@@ -323,8 +323,8 @@ func TestSchemaBridge_Repository(t *testing.T) {
 
 	t.Run("saveSchema", func(t *testing.T) {
 		args := []engine.ScriptValue{
-			engine.NewStringValue(schemaName),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData)),
+			sv(schemaName),
+			svMap(schemaData),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "saveSchema", args)
@@ -333,7 +333,7 @@ func TestSchemaBridge_Repository(t *testing.T) {
 	})
 
 	t.Run("getSchema", func(t *testing.T) {
-		args := []engine.ScriptValue{engine.NewStringValue(schemaName)}
+		args := []engine.ScriptValue{sv(schemaName)}
 
 		result, err := bridge.ExecuteMethod(ctx, "getSchema", args)
 		require.NoError(t, err)
@@ -346,7 +346,7 @@ func TestSchemaBridge_Repository(t *testing.T) {
 	})
 
 	t.Run("deleteSchema", func(t *testing.T) {
-		args := []engine.ScriptValue{engine.NewStringValue(schemaName)}
+		args := []engine.ScriptValue{sv(schemaName)}
 
 		result, err := bridge.ExecuteMethod(ctx, "deleteSchema", args)
 		require.NoError(t, err)
@@ -377,7 +377,7 @@ func TestSchemaBridge_GenerationMethods(t *testing.T) {
 			},
 		}
 
-		args := []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(typeInfo))}
+		args := []engine.ScriptValue{svMap(typeInfo)}
 
 		result, err := bridge.ExecuteMethod(ctx, "generateSchemaFromType", args)
 		require.NoError(t, err)
@@ -402,9 +402,9 @@ func TestSchemaBridge_VersioningMethods(t *testing.T) {
 
 	t.Run("saveSchemaVersion", func(t *testing.T) {
 		args := []engine.ScriptValue{
-			engine.NewStringValue(schemaName),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData)),
-			engine.NewNumberValue(1),
+			sv(schemaName),
+			svMap(schemaData),
+			sv(1),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "saveSchemaVersion", args)
@@ -414,8 +414,8 @@ func TestSchemaBridge_VersioningMethods(t *testing.T) {
 
 	t.Run("getSchemaVersion", func(t *testing.T) {
 		args := []engine.ScriptValue{
-			engine.NewStringValue(schemaName),
-			engine.NewNumberValue(1),
+			sv(schemaName),
+			sv(1),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "getSchemaVersion", args)
@@ -424,7 +424,7 @@ func TestSchemaBridge_VersioningMethods(t *testing.T) {
 	})
 
 	t.Run("listSchemaVersions", func(t *testing.T) {
-		args := []engine.ScriptValue{engine.NewStringValue(schemaName)}
+		args := []engine.ScriptValue{sv(schemaName)}
 
 		result, err := bridge.ExecuteMethod(ctx, "listSchemaVersions", args)
 		require.NoError(t, err)
@@ -433,8 +433,8 @@ func TestSchemaBridge_VersioningMethods(t *testing.T) {
 
 	t.Run("setCurrentSchemaVersion", func(t *testing.T) {
 		args := []engine.ScriptValue{
-			engine.NewStringValue(schemaName),
-			engine.NewNumberValue(1),
+			sv(schemaName),
+			sv(1),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "setCurrentSchemaVersion", args)
@@ -458,8 +458,8 @@ func TestSchemaBridge_MigrationMethods(t *testing.T) {
 		}
 
 		args := []engine.ScriptValue{
-			engine.NewStringValue("test-migrator"),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(migrator)),
+			sv("test-migrator"),
+			svMap(migrator),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "registerMigrator", args)
@@ -469,9 +469,9 @@ func TestSchemaBridge_MigrationMethods(t *testing.T) {
 
 	t.Run("migrateSchema", func(t *testing.T) {
 		args := []engine.ScriptValue{
-			engine.NewStringValue("test-schema"),
-			engine.NewNumberValue(1),
-			engine.NewNumberValue(2),
+			sv("test-schema"),
+			sv(1),
+			sv(2),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "migrateSchema", args)
@@ -499,7 +499,7 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 			"version": "1.0",
 		}
 
-		args := []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(data))}
+		args := []engine.ScriptValue{svMap(data)}
 
 		result, err := bridge.ExecuteMethod(ctx, "importRepository", args)
 		require.NoError(t, err)
@@ -508,7 +508,7 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 
 	t.Run("exportToJSONSchema", func(t *testing.T) {
 		schemaData := createTestSchema()
-		args := []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData))}
+		args := []engine.ScriptValue{svMap(schemaData)}
 
 		result, err := bridge.ExecuteMethod(ctx, "exportToJSONSchema", args)
 		require.NoError(t, err)
@@ -517,7 +517,7 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 
 	t.Run("exportToOpenAPI", func(t *testing.T) {
 		schemaData := createTestSchema()
-		args := []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData))}
+		args := []engine.ScriptValue{svMap(schemaData)}
 
 		result, err := bridge.ExecuteMethod(ctx, "exportToOpenAPI", args)
 		require.NoError(t, err)
@@ -530,8 +530,8 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 		require.NoError(t, err)
 
 		args := []engine.ScriptValue{
-			engine.NewStringValue(string(jsonSchema)),
-			engine.NewStringValue("jsonschema"),
+			sv(string(jsonSchema)),
+			sv("jsonschema"),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "importFromString", args)
@@ -542,9 +542,9 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 	t.Run("convertFormat", func(t *testing.T) {
 		schemaData := createTestSchema()
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData)),
-			engine.NewStringValue("internal"),
-			engine.NewStringValue("jsonschema"),
+			svMap(schemaData),
+			sv("internal"),
+			sv("jsonschema"),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "convertFormat", args)
@@ -558,8 +558,8 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 			createTestSchema(),
 		}
 		args := []engine.ScriptValue{
-			engine.NewArrayValue(engine.ConvertSliceToScriptValue(schemas)),
-			engine.NewStringValue("union"),
+			svArray(engine.ConvertSliceToScriptValue(schemas)),
+			sv("union"),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "mergeSchemas", args)
@@ -571,8 +571,8 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 		schema1 := createTestSchema()
 		schema2 := createTestSchema()
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schema1)),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schema2)),
+			svMap(schema1),
+			svMap(schema2),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "generateDiff", args)
@@ -583,8 +583,8 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 	t.Run("exportCollection", func(t *testing.T) {
 		schemaIds := []interface{}{"schema1", "schema2"}
 		args := []engine.ScriptValue{
-			engine.NewArrayValue(engine.ConvertSliceToScriptValue(schemaIds)),
-			engine.NewStringValue("bundle"),
+			svArray(engine.ConvertSliceToScriptValue(schemaIds)),
+			sv("bundle"),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "exportCollection", args)
@@ -598,8 +598,8 @@ func TestSchemaBridge_ImportExportMethods(t *testing.T) {
 			"format":  "bundle",
 		}
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(collection)),
-			engine.NewBoolValue(false),
+			svMap(collection),
+			sv(false),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "importCollection", args)
@@ -624,7 +624,7 @@ func TestSchemaBridge_TagMethods(t *testing.T) {
 			},
 		}
 
-		args := []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(structData))}
+		args := []engine.ScriptValue{svMap(structData)}
 
 		result, err := bridge.ExecuteMethod(ctx, "generateFromTags", args)
 		require.NoError(t, err)
@@ -633,7 +633,7 @@ func TestSchemaBridge_TagMethods(t *testing.T) {
 
 	t.Run("setTagPriority", func(t *testing.T) {
 		tags := []interface{}{"json", "validate", "schema"}
-		args := []engine.ScriptValue{engine.NewArrayValue(engine.ConvertSliceToScriptValue(tags))}
+		args := []engine.ScriptValue{svArray(engine.ConvertSliceToScriptValue(tags))}
 
 		result, err := bridge.ExecuteMethod(ctx, "setTagPriority", args)
 		require.NoError(t, err)
@@ -646,8 +646,8 @@ func TestSchemaBridge_TagMethods(t *testing.T) {
 			"pattern": "^custom:",
 		}
 		args := []engine.ScriptValue{
-			engine.NewStringValue("custom"),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(parser)),
+			sv("custom"),
+			svMap(parser),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "registerTagParser", args)
@@ -660,7 +660,7 @@ func TestSchemaBridge_TagMethods(t *testing.T) {
 			"field": "name",
 			"tags":  "required,min=1,max=100",
 		}
-		args := []engine.ScriptValue{engine.NewObjectValue(engine.ConvertMapToScriptValue(structData))}
+		args := []engine.ScriptValue{svMap(structData)}
 
 		result, err := bridge.ExecuteMethod(ctx, "extractValidationRules", args)
 		require.NoError(t, err)
@@ -673,8 +673,8 @@ func TestSchemaBridge_TagMethods(t *testing.T) {
 			"docs": true,
 		}
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(structData)),
-			engine.NewBoolValue(true),
+			svMap(structData),
+			sv(true),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "generateWithDocumentation", args)
@@ -696,8 +696,8 @@ func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 			"description": "Custom email validation",
 		}
 		args := []engine.ScriptValue{
-			engine.NewStringValue("email-validator"),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(validator)),
+			sv("email-validator"),
+			svMap(validator),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "registerCustomValidator", args)
@@ -716,8 +716,8 @@ func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 			"email": "test@example.com",
 		}
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(data)),
-			engine.NewStringValue("email-validator"),
+			svMap(data),
+			sv("email-validator"),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "validateWithCustom", args)
@@ -726,7 +726,7 @@ func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 	})
 
 	t.Run("unregisterCustomValidator", func(t *testing.T) {
-		args := []engine.ScriptValue{engine.NewStringValue("email-validator")}
+		args := []engine.ScriptValue{sv("email-validator")}
 
 		result, err := bridge.ExecuteMethod(ctx, "unregisterCustomValidator", args)
 		require.NoError(t, err)
@@ -741,9 +741,9 @@ func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 		}
 
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData)),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(testData)),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(callback)),
+			svMap(schemaData),
+			svMap(testData),
+			svMap(callback),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "validateAsync", args)
@@ -757,8 +757,8 @@ func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 			"condition": "age > 18",
 		}
 		args := []engine.ScriptValue{
-			engine.NewStringValue("age-validator"),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(validator)),
+			sv("age-validator"),
+			svMap(validator),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "registerConditionalValidator", args)
@@ -771,8 +771,8 @@ func TestSchemaBridge_CustomValidationMethods(t *testing.T) {
 			"age": 25,
 		}
 		args := []engine.ScriptValue{
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(data)),
-			engine.NewStringValue("age-validator"),
+			svMap(data),
+			sv("age-validator"),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "validateConditional", args)
@@ -827,7 +827,7 @@ func TestSchemaBridge_ErrorHandling(t *testing.T) {
 		{
 			name:          "createSchema with wrong type",
 			method:        "createSchema",
-			args:          []engine.ScriptValue{engine.NewStringValue("not-an-object")},
+			args:          []engine.ScriptValue{sv("not-an-object")},
 			expectError:   true,
 			errorContains: "expected object",
 		},
@@ -841,14 +841,14 @@ func TestSchemaBridge_ErrorHandling(t *testing.T) {
 		{
 			name:          "getSchema with wrong type",
 			method:        "getSchema",
-			args:          []engine.ScriptValue{engine.NewNumberValue(123)},
+			args:          []engine.ScriptValue{sv(123)},
 			expectError:   true,
 			errorContains: "expected string",
 		},
 		{
 			name:          "validateJSON with missing schema",
 			method:        "validateJSON",
-			args:          []engine.ScriptValue{engine.NewStringValue("not-schema")},
+			args:          []engine.ScriptValue{sv("not-schema")},
 			expectError:   true,
 			errorContains: "requires at least 2 arguments",
 		},
@@ -972,15 +972,15 @@ func TestSchemaBridge_ConcurrentAccess(t *testing.T) {
 			schemaName := fmt.Sprintf("concurrent-schema-%d", id)
 			schemaData := createTestSchema()
 			args := []engine.ScriptValue{
-				engine.NewStringValue(schemaName),
-				engine.NewObjectValue(engine.ConvertMapToScriptValue(schemaData)),
+				sv(schemaName),
+				svMap(schemaData),
 			}
 
 			_, err := bridge.ExecuteMethod(ctx, "saveSchema", args)
 			assert.NoError(t, err)
 
 			// Get schema
-			getArgs := []engine.ScriptValue{engine.NewStringValue(schemaName)}
+			getArgs := []engine.ScriptValue{sv(schemaName)}
 			_, err = bridge.ExecuteMethod(ctx, "getSchema", getArgs)
 			assert.NoError(t, err)
 

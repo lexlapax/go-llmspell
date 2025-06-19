@@ -46,7 +46,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Create counter
 				result, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
-					engine.NewStringValue("test_counter"),
+					sv("test_counter"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
@@ -59,20 +59,20 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Increment counter
 				_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
-					engine.NewStringValue(counterID),
+					sv(counterID),
 				})
 				require.NoError(t, err)
 
 				// Increment by specific value
 				_, err = bridge.ExecuteMethod(ctx, "incrementCounterBy", []engine.ScriptValue{
-					engine.NewStringValue(counterID),
-					engine.NewNumberValue(5),
+					sv(counterID),
+					sv(5),
 				})
 				require.NoError(t, err)
 
 				// Get counter value
 				result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []engine.ScriptValue{
-					engine.NewStringValue(counterID),
+					sv(counterID),
 				})
 				require.NoError(t, err)
 				numValue, ok := result.(engine.NumberValue)
@@ -89,7 +89,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Create gauge
 				result, err := bridge.ExecuteMethod(ctx, "createGauge", []engine.ScriptValue{
-					engine.NewStringValue("test_gauge"),
+					sv("test_gauge"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
@@ -102,27 +102,27 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Set gauge value
 				_, err = bridge.ExecuteMethod(ctx, "setGaugeValue", []engine.ScriptValue{
-					engine.NewStringValue(gaugeID),
-					engine.NewNumberValue(42.5),
+					sv(gaugeID),
+					sv(42.5),
 				})
 				require.NoError(t, err)
 
 				// Increment gauge
 				_, err = bridge.ExecuteMethod(ctx, "incrementGauge", []engine.ScriptValue{
-					engine.NewStringValue(gaugeID),
+					sv(gaugeID),
 				})
 				require.NoError(t, err)
 
 				// Add to gauge
 				_, err = bridge.ExecuteMethod(ctx, "addToGaugeValue", []engine.ScriptValue{
-					engine.NewStringValue(gaugeID),
-					engine.NewNumberValue(7.5),
+					sv(gaugeID),
+					sv(7.5),
 				})
 				require.NoError(t, err)
 
 				// Get gauge value
 				result, err = bridge.ExecuteMethod(ctx, "getGaugeValue", []engine.ScriptValue{
-					engine.NewStringValue(gaugeID),
+					sv(gaugeID),
 				})
 				require.NoError(t, err)
 				numValue, ok := result.(engine.NumberValue)
@@ -139,7 +139,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Create ratio counter
 				result, err := bridge.ExecuteMethod(ctx, "createRatioCounter", []engine.ScriptValue{
-					engine.NewStringValue("test_ratio"),
+					sv("test_ratio"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
@@ -152,29 +152,29 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Increment numerator and denominator
 				_, err = bridge.ExecuteMethod(ctx, "incrementRatioNumerator", []engine.ScriptValue{
-					engine.NewStringValue(ratioID),
+					sv(ratioID),
 				})
 				require.NoError(t, err)
 				_, err = bridge.ExecuteMethod(ctx, "incrementRatioNumerator", []engine.ScriptValue{
-					engine.NewStringValue(ratioID),
+					sv(ratioID),
 				})
 				require.NoError(t, err)
 				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []engine.ScriptValue{
-					engine.NewStringValue(ratioID),
+					sv(ratioID),
 				})
 				require.NoError(t, err)
 				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []engine.ScriptValue{
-					engine.NewStringValue(ratioID),
+					sv(ratioID),
 				})
 				require.NoError(t, err)
 				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []engine.ScriptValue{
-					engine.NewStringValue(ratioID),
+					sv(ratioID),
 				})
 				require.NoError(t, err)
 
 				// Get ratio
 				result, err = bridge.ExecuteMethod(ctx, "getRatio", []engine.ScriptValue{
-					engine.NewStringValue(ratioID),
+					sv(ratioID),
 				})
 				require.NoError(t, err)
 				numValue, ok := result.(engine.NumberValue)
@@ -183,7 +183,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Get raw values
 				result, err = bridge.ExecuteMethod(ctx, "getRatioValues", []engine.ScriptValue{
-					engine.NewStringValue(ratioID),
+					sv(ratioID),
 				})
 				require.NoError(t, err)
 				values, ok := result.(engine.ObjectValue)
@@ -202,7 +202,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Create timer
 				result, err := bridge.ExecuteMethod(ctx, "createTimer", []engine.ScriptValue{
-					engine.NewStringValue("test_timer"),
+					sv("test_timer"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
@@ -215,7 +215,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Start timer
 				_, err = bridge.ExecuteMethod(ctx, "startTimer", []engine.ScriptValue{
-					engine.NewStringValue(timerID),
+					sv(timerID),
 				})
 				require.NoError(t, err)
 
@@ -224,7 +224,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Stop timer
 				result, err = bridge.ExecuteMethod(ctx, "stopTimer", []engine.ScriptValue{
-					engine.NewStringValue(timerID),
+					sv(timerID),
 				})
 				require.NoError(t, err)
 				duration, ok := result.(engine.NumberValue)
@@ -233,14 +233,14 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Record manual duration
 				_, err = bridge.ExecuteMethod(ctx, "recordTimerDuration", []engine.ScriptValue{
-					engine.NewStringValue(timerID),
-					engine.NewNumberValue(0.05), // 50ms
+					sv(timerID),
+					sv(0.05), // 50ms
 				})
 				require.NoError(t, err)
 
 				// Get timer stats
 				result, err = bridge.ExecuteMethod(ctx, "getTimerStats", []engine.ScriptValue{
-					engine.NewStringValue(timerID),
+					sv(timerID),
 				})
 				require.NoError(t, err)
 				stats, ok := result.(engine.ObjectValue)
@@ -260,15 +260,15 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Create various metrics
 				_, err = bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
-					engine.NewStringValue("counter1"),
+					sv("counter1"),
 				})
 				require.NoError(t, err)
 				_, err = bridge.ExecuteMethod(ctx, "createGauge", []engine.ScriptValue{
-					engine.NewStringValue("gauge1"),
+					sv("gauge1"),
 				})
 				require.NoError(t, err)
 				_, err = bridge.ExecuteMethod(ctx, "createTimer", []engine.ScriptValue{
-					engine.NewStringValue("timer1"),
+					sv("timer1"),
 				})
 				require.NoError(t, err)
 
@@ -294,7 +294,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Create and modify counter
 				result, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
-					engine.NewStringValue("reset_counter"),
+					sv("reset_counter"),
 				})
 				require.NoError(t, err)
 				counterInfo := result.(engine.ObjectValue)
@@ -302,14 +302,14 @@ func TestMetricsBridge(t *testing.T) {
 				counterID := counterMap["id"].(string)
 
 				_, err = bridge.ExecuteMethod(ctx, "incrementCounterBy", []engine.ScriptValue{
-					engine.NewStringValue(counterID),
-					engine.NewNumberValue(10),
+					sv(counterID),
+					sv(10),
 				})
 				require.NoError(t, err)
 
 				// Verify value
 				result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []engine.ScriptValue{
-					engine.NewStringValue(counterID),
+					sv(counterID),
 				})
 				require.NoError(t, err)
 				numValue := result.(engine.NumberValue)
@@ -321,7 +321,7 @@ func TestMetricsBridge(t *testing.T) {
 
 				// Counter should be gone - this will return an error
 				_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
-					engine.NewStringValue(counterID),
+					sv(counterID),
 				})
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "not found")
@@ -374,7 +374,7 @@ func TestMetricsBridgeErrors(t *testing.T) {
 
 	// Test methods without initialization
 	_, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not initialized")
@@ -390,20 +390,20 @@ func TestMetricsBridgeErrors(t *testing.T) {
 
 	// Test with non-existent counter ID
 	_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
-		engine.NewStringValue("invalid-id"),
+		sv("invalid-id"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 
 	_, err = bridge.ExecuteMethod(ctx, "setGaugeValue", []engine.ScriptValue{
-		engine.NewStringValue("invalid-id"),
-		engine.NewNumberValue(42),
+		sv("invalid-id"),
+		sv(42),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 
 	_, err = bridge.ExecuteMethod(ctx, "startTimer", []engine.ScriptValue{
-		engine.NewStringValue("invalid-id"),
+		sv("invalid-id"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -418,7 +418,7 @@ func TestMetricsBridgeConcurrency(t *testing.T) {
 
 	// Create counter
 	result, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
-		engine.NewStringValue("concurrent_counter"),
+		sv("concurrent_counter"),
 	})
 	require.NoError(t, err)
 	counterInfo := result.(engine.ObjectValue)
@@ -432,7 +432,7 @@ func TestMetricsBridgeConcurrency(t *testing.T) {
 	for i := 0; i < numRoutines; i++ {
 		go func() {
 			_, err := bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
-				engine.NewStringValue(counterID),
+				sv(counterID),
 			})
 			assert.NoError(t, err)
 			done <- true
@@ -446,7 +446,7 @@ func TestMetricsBridgeConcurrency(t *testing.T) {
 
 	// Check final value
 	result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []engine.ScriptValue{
-		engine.NewStringValue(counterID),
+		sv(counterID),
 	})
 	require.NoError(t, err)
 	numValue := result.(engine.NumberValue)

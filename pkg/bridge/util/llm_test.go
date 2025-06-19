@@ -166,7 +166,7 @@ func TestUtilLLMBridgeValidateMethod(t *testing.T) {
 
 	// ValidateMethod should always return nil as validation is handled by engine
 	err := bridge.ValidateMethod("createProvider", []engine.ScriptValue{
-		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+		svMap(map[string]interface{}{}),
 	})
 	assert.NoError(t, err)
 

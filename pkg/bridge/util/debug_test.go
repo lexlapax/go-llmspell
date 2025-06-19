@@ -87,7 +87,7 @@ func TestDebugBridgeExecuteMethod(t *testing.T) {
 			name:   "enableDebugComponent",
 			method: "enableDebugComponent",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test-component"),
+				sv("test-component"),
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
@@ -99,7 +99,7 @@ func TestDebugBridgeExecuteMethod(t *testing.T) {
 			name:   "isDebugEnabled - after enable",
 			method: "isDebugEnabled",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test-component"),
+				sv("test-component"),
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
@@ -112,8 +112,8 @@ func TestDebugBridgeExecuteMethod(t *testing.T) {
 			name:   "debugPrintln",
 			method: "debugPrintln",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test-component"),
-				engine.NewStringValue("test message"),
+				sv("test-component"),
+				sv("test message"),
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
@@ -125,12 +125,9 @@ func TestDebugBridgeExecuteMethod(t *testing.T) {
 			name:   "debugPrintf",
 			method: "debugPrintf",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test-component"),
-				engine.NewStringValue("test %s %d"),
-				engine.NewArrayValue([]engine.ScriptValue{
-					engine.NewStringValue("hello"),
-					engine.NewNumberValue(42),
-				}),
+				sv("test-component"),
+				sv("test %s %d"),
+				svArray("hello", 42),
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
@@ -162,7 +159,7 @@ func TestDebugBridgeExecuteMethod(t *testing.T) {
 			name:   "disableDebugComponent",
 			method: "disableDebugComponent",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test-component"),
+				sv("test-component"),
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
@@ -174,7 +171,7 @@ func TestDebugBridgeExecuteMethod(t *testing.T) {
 			name:   "isDebugEnabled - after disable",
 			method: "isDebugEnabled",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test-component"),
+				sv("test-component"),
 			},
 			wantErr: false,
 			checkResult: func(t *testing.T, result engine.ScriptValue, err error) {
@@ -187,9 +184,9 @@ func TestDebugBridgeExecuteMethod(t *testing.T) {
 			name:   "setCustomLogger",
 			method: "setCustomLogger",
 			args: []engine.ScriptValue{
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"prefix": engine.NewStringValue("[CUSTOM]"),
-					"flags":  engine.NewStringValue("datetime"),
+				svMap(map[string]interface{}{
+					"prefix": "[CUSTOM]",
+					"flags":  "datetime",
 				}),
 			},
 			wantErr: false,
@@ -263,9 +260,9 @@ func TestDebugBridgeValidateMethod(t *testing.T) {
 			name:   "valid debugPrintf with all args",
 			method: "debugPrintf",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("component"),
-				engine.NewStringValue("format"),
-				engine.NewArrayValue([]engine.ScriptValue{}),
+				sv("component"),
+				sv("format"),
+				svArray(),
 			},
 			shouldError: false,
 		},
@@ -273,23 +270,23 @@ func TestDebugBridgeValidateMethod(t *testing.T) {
 			name:   "valid debugPrintf without optional args",
 			method: "debugPrintf",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("component"),
-				engine.NewStringValue("format"),
+				sv("component"),
+				sv("format"),
 			},
 			shouldError: false,
 		},
 		{
 			name:        "invalid debugPrintf - missing required args",
 			method:      "debugPrintf",
-			args:        []engine.ScriptValue{engine.NewStringValue("component")},
+			args:        []engine.ScriptValue{sv("component")},
 			shouldError: true,
 		},
 		{
 			name:   "valid debugPrintln",
 			method: "debugPrintln",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("component"),
-				engine.NewStringValue("message"),
+				sv("component"),
+				sv("message"),
 			},
 			shouldError: false,
 		},
@@ -335,43 +332,34 @@ func TestDebugBridgeTypeConversions(t *testing.T) {
 			name:   "string format args",
 			method: "debugPrintf",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test"),
-				engine.NewStringValue("String: %s"),
-				engine.NewArrayValue([]engine.ScriptValue{
-					engine.NewStringValue("hello"),
-				}),
+				sv("test"),
+				sv("String: %s"),
+				svArray("hello"),
 			},
 		},
 		{
 			name:   "number format args",
 			method: "debugPrintf",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test"),
-				engine.NewStringValue("Number: %d, Float: %f"),
-				engine.NewArrayValue([]engine.ScriptValue{
-					engine.NewNumberValue(42),
-					engine.NewNumberValue(3.14),
-				}),
+				sv("test"),
+				sv("Number: %d, Float: %f"),
+				svArray(42, 3.14),
 			},
 		},
 		{
 			name:   "mixed format args",
 			method: "debugPrintf",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test"),
-				engine.NewStringValue("Mixed: %s %d %v"),
-				engine.NewArrayValue([]engine.ScriptValue{
-					engine.NewStringValue("hello"),
-					engine.NewNumberValue(42),
-					engine.NewBoolValue(true),
-				}),
+				sv("test"),
+				sv("Mixed: %s %d %v"),
+				svArray("hello", 42, true),
 			},
 		},
 	}
 
 	// Enable test component
 	_, err = bridge.ExecuteMethod(ctx, "enableDebugComponent", []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	})
 	require.NoError(t, err)
 

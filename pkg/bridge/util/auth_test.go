@@ -114,9 +114,9 @@ func TestUtilAuthBridgeCreateAuthConfig(t *testing.T) {
 		{
 			name: "create bearer auth config",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("bearer"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"token": engine.NewStringValue("test-token-123"),
+				sv("bearer"),
+				svMap(map[string]interface{}{
+					"token": "test-token-123",
 				}),
 			},
 			wantErr: false,
@@ -131,10 +131,10 @@ func TestUtilAuthBridgeCreateAuthConfig(t *testing.T) {
 		{
 			name: "create api key auth config",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("apiKey"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"key":    engine.NewStringValue("api-key-456"),
-					"header": engine.NewStringValue("X-API-Key"),
+				sv("apiKey"),
+				svMap(map[string]interface{}{
+					"key":    "api-key-456",
+					"header": "X-API-Key",
 				}),
 			},
 			wantErr: false,
@@ -148,23 +148,23 @@ func TestUtilAuthBridgeCreateAuthConfig(t *testing.T) {
 		{
 			name: "missing auth type",
 			args: []engine.ScriptValue{
-				engine.NewNilValue(),
-				engine.NewObjectValue(map[string]engine.ScriptValue{}),
+				sv(nil),
+				svMap(map[string]interface{}{}),
 			},
 			wantErr: true,
 		},
 		{
 			name: "missing credentials",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("bearer"),
+				sv("bearer"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid credentials type",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("bearer"),
-				engine.NewStringValue("not-an-object"),
+				sv("bearer"),
+				sv("not-an-object"),
 			},
 			wantErr: true,
 		},
@@ -193,7 +193,7 @@ func TestUtilAuthBridgeOAuth2Operations(t *testing.T) {
 
 	t.Run("discoverOAuth2Endpoints", func(t *testing.T) {
 		result, err := bridge.ExecuteMethod(ctx, "discoverOAuth2Endpoints", []engine.ScriptValue{
-			engine.NewStringValue("https://auth.example.com"),
+			sv("https://auth.example.com"),
 		})
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -214,20 +214,20 @@ func TestUtilAuthBridgeOAuth2Operations(t *testing.T) {
 		// This would fail with a real JWT parsing, so we expect an error
 		// In a real test, we'd use a valid JWT token
 		_, err := bridge.ExecuteMethod(ctx, "parseJWTClaims", []engine.ScriptValue{
-			engine.NewStringValue("invalid-jwt"),
+			sv("invalid-jwt"),
 		})
 		assert.Error(t, err)
 	})
 
 	t.Run("autoRefreshToken", func(t *testing.T) {
 		result, err := bridge.ExecuteMethod(ctx, "autoRefreshToken", []engine.ScriptValue{
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"type": engine.NewStringValue("oauth2"),
-				"data": engine.NewObjectValue(map[string]engine.ScriptValue{
-					"access_token": engine.NewStringValue("test-token"),
-				}),
+			svMap(map[string]interface{}{
+				"type": "oauth2",
+				"data": map[string]interface{}{
+					"access_token": "test-token",
+				},
 			}),
-			engine.NewNumberValue(600), // 10 minutes
+			sv(600), // 10 minutes
 		})
 		require.NoError(t, err)
 		require.NotNil(t, result)
@@ -247,10 +247,10 @@ func TestUtilAuthBridgeMultiSchemeAuth(t *testing.T) {
 
 	// Register auth scheme
 	result, err := bridge.ExecuteMethod(ctx, "registerAuthScheme", []engine.ScriptValue{
-		engine.NewStringValue("/api/v1"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"type":        engine.NewStringValue("bearer"),
-			"description": engine.NewStringValue("Bearer token authentication"),
+		sv("/api/v1"),
+		svMap(map[string]interface{}{
+			"type":        "bearer",
+			"description": "Bearer token authentication",
 		}),
 	})
 	require.NoError(t, err)
@@ -258,7 +258,7 @@ func TestUtilAuthBridgeMultiSchemeAuth(t *testing.T) {
 
 	// Get auth schemes
 	result, err = bridge.ExecuteMethod(ctx, "getAuthSchemes", []engine.ScriptValue{
-		engine.NewStringValue("/api/v1/users"),
+		sv("/api/v1/users"),
 	})
 	require.NoError(t, err)
 	require.NotNil(t, result)
@@ -275,11 +275,11 @@ func TestUtilAuthBridgeCredentialSerialization(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	authConfig := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"type": engine.NewStringValue("apiKey"),
-		"data": engine.NewObjectValue(map[string]engine.ScriptValue{
-			"key": engine.NewStringValue("secret-key-123"),
-		}),
+	authConfig := svMap(map[string]interface{}{
+		"type": "apiKey",
+		"data": map[string]interface{}{
+			"key": "secret-key-123",
+		},
 	})
 
 	// Serialize credentials
@@ -305,18 +305,18 @@ func TestUtilAuthBridgeCredentialCaching(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	authConfig := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"type": engine.NewStringValue("bearer"),
-		"data": engine.NewObjectValue(map[string]engine.ScriptValue{
-			"token": engine.NewStringValue("cached-token"),
-		}),
+	authConfig := svMap(map[string]interface{}{
+		"type": "bearer",
+		"data": map[string]interface{}{
+			"token": "cached-token",
+		},
 	})
 
 	// Cache credentials
 	result, err := bridge.ExecuteMethod(ctx, "cacheCredentials", []engine.ScriptValue{
-		engine.NewStringValue("test-cache-key"),
+		sv("test-cache-key"),
 		authConfig,
-		engine.NewNumberValue(1800), // 30 minutes TTL
+		sv(1800), // 30 minutes TTL
 	})
 	require.NoError(t, err)
 	assert.True(t, result.(engine.BoolValue).Value())
@@ -340,11 +340,11 @@ func TestUtilAuthBridgeEventLogging(t *testing.T) {
 
 	// Log auth event
 	result, err := bridge.ExecuteMethod(ctx, "logAuthEvent", []engine.ScriptValue{
-		engine.NewStringValue("login"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"user":     engine.NewStringValue("test-user"),
-			"provider": engine.NewStringValue("oauth2"),
-			"success":  engine.NewBoolValue(true),
+		sv("login"),
+		svMap(map[string]interface{}{
+			"user":     "test-user",
+			"provider": "oauth2",
+			"success":  true,
 		}),
 	})
 	require.NoError(t, err)
@@ -356,8 +356,8 @@ func TestUtilAuthBridgeValidateMethod(t *testing.T) {
 
 	// ValidateMethod should always return nil as validation is handled by engine
 	err := bridge.ValidateMethod("createAuthConfig", []engine.ScriptValue{
-		engine.NewStringValue("bearer"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+		sv("bearer"),
+		svMap(map[string]interface{}{}),
 	})
 	assert.NoError(t, err)
 

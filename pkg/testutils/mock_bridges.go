@@ -151,6 +151,22 @@ func (b *MockBridge) WithInitFunc(f func(ctx context.Context) error) *MockBridge
 	return b
 }
 
+// WithInitialized sets the initialized state directly
+func (b *MockBridge) WithInitialized(initialized bool) *MockBridge {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.initialized = initialized
+	return b
+}
+
+// WithCleanupError sets an error to be returned by Cleanup
+func (b *MockBridge) WithCleanupError(err error) *MockBridge {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.cleanupError = err
+	return b
+}
+
 // GetMethodCalls returns all calls for a specific method
 func (b *MockBridge) GetMethodCalls(method string) []methodCall {
 	b.mu.RLock()
@@ -175,6 +191,13 @@ func (b *MockBridge) GetInitCallCount() int {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initCalls
+}
+
+// IsCleanedUp returns whether the bridge has been cleaned up
+func (b *MockBridge) IsCleanedUp() bool {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.cleanedUp
 }
 
 // Bridge interface implementation

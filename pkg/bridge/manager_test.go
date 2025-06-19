@@ -15,108 +15,10 @@ import (
 
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// Mock implementations for testing
-type mockBridge struct {
-	id            string
-	initialized   bool
-	cleanedUp     bool
-	dependencies  []string
-	initError     error
-	cleanupError  error
-	initCallCount int
-	mu            sync.Mutex
-	initFunc      func(ctx context.Context) error // Allow overriding initialization
-}
-
-func (m *mockBridge) GetID() string {
-	return m.id
-}
-
-func (m *mockBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
-		Name:         m.id,
-		Version:      "1.0.0",
-		Description:  "Mock bridge for testing",
-		Dependencies: m.dependencies,
-	}
-}
-
-func (m *mockBridge) Initialize(ctx context.Context) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.initCallCount++
-
-	// Use custom init function if provided
-	if m.initFunc != nil {
-		return m.initFunc(ctx)
-	}
-
-	if m.initError != nil {
-		return m.initError
-	}
-	m.initialized = true
-	return nil
-}
-
-func (m *mockBridge) Cleanup(ctx context.Context) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.cleanupError != nil {
-		return m.cleanupError
-	}
-	m.cleanedUp = true
-	m.initialized = false
-	return nil
-}
-
-func (m *mockBridge) IsInitialized() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.initialized
-}
-
-func (m *mockBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(m)
-}
-
-func (m *mockBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
-		{
-			Name:        "test",
-			Description: "Test method",
-			ReturnType:  "string",
-		},
-	}
-}
-
-func (m *mockBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
-	return nil
-}
-
-func (m *mockBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if !m.IsInitialized() {
-		return nil, fmt.Errorf("bridge not initialized")
-	}
-
-	switch name {
-	case "test":
-		return engine.NewStringValue("test result"), nil
-	default:
-		return nil, fmt.Errorf("unknown method: %s", name)
-	}
-}
-
-func (m *mockBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{}
-}
-
-func (m *mockBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{}
-}
 
 // Tests for BridgeManager
 func TestNewBridgeManager(t *testing.T) {
@@ -127,7 +29,7 @@ func TestNewBridgeManager(t *testing.T) {
 func TestBridgeLifecycleManagement(t *testing.T) {
 	t.Run("Register and Initialize Bridge", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "test-bridge"}
+		bridge := testutils.NewMockBridge("test-bridge")
 
 		// Register bridge
 		err := manager.RegisterBridge(bridge)
@@ -137,13 +39,13 @@ func TestBridgeLifecycleManagement(t *testing.T) {
 		ctx := context.Background()
 		err = manager.InitializeBridge(ctx, "test-bridge")
 		assert.NoError(t, err)
-		assert.True(t, bridge.initialized)
+		assert.True(t, bridge.IsInitialized())
 	})
 
 	t.Run("Initialize All Bridges", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge1 := &mockBridge{id: "bridge1"}
-		bridge2 := &mockBridge{id: "bridge2"}
+		bridge1 := testutils.NewMockBridge("bridge1")
+		bridge2 := testutils.NewMockBridge("bridge2")
 
 		_ = manager.RegisterBridge(bridge1)
 		_ = manager.RegisterBridge(bridge2)
@@ -151,27 +53,27 @@ func TestBridgeLifecycleManagement(t *testing.T) {
 		ctx := context.Background()
 		err := manager.InitializeAll(ctx)
 		assert.NoError(t, err)
-		assert.True(t, bridge1.initialized)
-		assert.True(t, bridge2.initialized)
+		assert.True(t, bridge1.IsInitialized())
+		assert.True(t, bridge2.IsInitialized())
 	})
 
 	t.Run("Cleanup Bridge", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "test-bridge", initialized: true}
+		bridge := testutils.NewMockBridge("test-bridge").WithInitialized(true)
 
 		_ = manager.RegisterBridge(bridge)
 
 		ctx := context.Background()
 		err := manager.CleanupBridge(ctx, "test-bridge")
 		assert.NoError(t, err)
-		assert.True(t, bridge.cleanedUp)
-		assert.False(t, bridge.initialized)
+		assert.True(t, bridge.IsCleanedUp())
+		assert.False(t, bridge.IsInitialized())
 	})
 
 	t.Run("Cleanup All Bridges", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge1 := &mockBridge{id: "bridge1", initialized: true}
-		bridge2 := &mockBridge{id: "bridge2", initialized: true}
+		bridge1 := testutils.NewMockBridge("bridge1").WithInitialized(true)
+		bridge2 := testutils.NewMockBridge("bridge2").WithInitialized(true)
 
 		_ = manager.RegisterBridge(bridge1)
 		_ = manager.RegisterBridge(bridge2)
@@ -179,16 +81,14 @@ func TestBridgeLifecycleManagement(t *testing.T) {
 		ctx := context.Background()
 		err := manager.CleanupAll(ctx)
 		assert.NoError(t, err)
-		assert.True(t, bridge1.cleanedUp)
-		assert.True(t, bridge2.cleanedUp)
+		assert.True(t, bridge1.IsCleanedUp())
+		assert.True(t, bridge2.IsCleanedUp())
 	})
 
 	t.Run("Initialize Error Handling", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{
-			id:        "error-bridge",
-			initError: errors.New("init failed"),
-		}
+		bridge := testutils.NewMockBridge("error-bridge").
+			WithInitError(errors.New("init failed"))
 
 		_ = manager.RegisterBridge(bridge)
 
@@ -196,16 +96,14 @@ func TestBridgeLifecycleManagement(t *testing.T) {
 		err := manager.InitializeBridge(ctx, "error-bridge")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "init failed")
-		assert.False(t, bridge.initialized)
+		assert.False(t, bridge.IsInitialized())
 	})
 
 	t.Run("Cleanup Error Handling", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{
-			id:           "error-bridge",
-			initialized:  true,
-			cleanupError: errors.New("cleanup failed"),
-		}
+		bridge := testutils.NewMockBridge("error-bridge").
+			WithInitialized(true).
+			WithCleanupError(errors.New("cleanup failed"))
 
 		_ = manager.RegisterBridge(bridge)
 
@@ -227,7 +125,7 @@ func TestThreadSafeBridgeRegistration(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
-				bridge := &mockBridge{id: fmt.Sprintf("bridge-%d", id)}
+				bridge := testutils.NewMockBridge(fmt.Sprintf("bridge-%d", id))
 				if err := manager.RegisterBridge(bridge); err != nil {
 					errorChan <- err
 				}
@@ -249,8 +147,8 @@ func TestThreadSafeBridgeRegistration(t *testing.T) {
 
 	t.Run("Duplicate Registration Prevention", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge1 := &mockBridge{id: "duplicate"}
-		bridge2 := &mockBridge{id: "duplicate"}
+		bridge1 := testutils.NewMockBridge("duplicate")
+		bridge2 := testutils.NewMockBridge("duplicate")
 
 		err := manager.RegisterBridge(bridge1)
 		assert.NoError(t, err)
@@ -262,7 +160,7 @@ func TestThreadSafeBridgeRegistration(t *testing.T) {
 
 	t.Run("Concurrent Access to Same Bridge", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "concurrent-test"}
+		bridge := testutils.NewMockBridge("concurrent-test")
 		_ = manager.RegisterBridge(bridge)
 
 		ctx := context.Background()
@@ -280,7 +178,7 @@ func TestThreadSafeBridgeRegistration(t *testing.T) {
 		wg.Wait()
 
 		// Bridge should only be initialized once
-		assert.Equal(t, 1, bridge.initCallCount)
+		assert.Equal(t, 1, bridge.GetInitCallCount())
 	})
 }
 
@@ -289,9 +187,9 @@ func TestBridgeDependencyResolution(t *testing.T) {
 		manager := NewBridgeManager()
 
 		// Create bridges with dependencies
-		bridgeA := &mockBridge{id: "bridgeA"}
-		bridgeB := &mockBridge{id: "bridgeB", dependencies: []string{"bridgeA"}}
-		bridgeC := &mockBridge{id: "bridgeC", dependencies: []string{"bridgeB"}}
+		bridgeA := testutils.NewMockBridge("bridgeA")
+		bridgeB := testutils.NewMockBridge("bridgeB").WithDependencies("bridgeA")
+		bridgeC := testutils.NewMockBridge("bridgeC").WithDependencies("bridgeB")
 
 		// Register in reverse order to test resolution
 		_ = manager.RegisterBridge(bridgeC)
@@ -304,17 +202,17 @@ func TestBridgeDependencyResolution(t *testing.T) {
 		assert.NoError(t, err)
 
 		// All dependencies should be initialized
-		assert.True(t, bridgeA.initialized)
-		assert.True(t, bridgeB.initialized)
-		assert.True(t, bridgeC.initialized)
+		assert.True(t, bridgeA.IsInitialized())
+		assert.True(t, bridgeB.IsInitialized())
+		assert.True(t, bridgeC.IsInitialized())
 	})
 
 	t.Run("Circular Dependency Detection", func(t *testing.T) {
 		manager := NewBridgeManager()
 
 		// Create circular dependency
-		bridgeA := &mockBridge{id: "bridgeA", dependencies: []string{"bridgeB"}}
-		bridgeB := &mockBridge{id: "bridgeB", dependencies: []string{"bridgeA"}}
+		bridgeA := testutils.NewMockBridge("bridgeA").WithDependencies("bridgeB")
+		bridgeB := testutils.NewMockBridge("bridgeB").WithDependencies("bridgeA")
 
 		_ = manager.RegisterBridge(bridgeA)
 		_ = manager.RegisterBridge(bridgeB)
@@ -328,7 +226,7 @@ func TestBridgeDependencyResolution(t *testing.T) {
 	t.Run("Missing Dependency", func(t *testing.T) {
 		manager := NewBridgeManager()
 
-		bridge := &mockBridge{id: "bridge", dependencies: []string{"missing"}}
+		bridge := testutils.NewMockBridge("bridge").WithDependencies("missing")
 		_ = manager.RegisterBridge(bridge)
 
 		ctx := context.Background()
@@ -340,9 +238,9 @@ func TestBridgeDependencyResolution(t *testing.T) {
 	t.Run("Multiple Dependencies", func(t *testing.T) {
 		manager := NewBridgeManager()
 
-		bridgeA := &mockBridge{id: "bridgeA"}
-		bridgeB := &mockBridge{id: "bridgeB"}
-		bridgeC := &mockBridge{id: "bridgeC", dependencies: []string{"bridgeA", "bridgeB"}}
+		bridgeA := testutils.NewMockBridge("bridgeA")
+		bridgeB := testutils.NewMockBridge("bridgeB")
+		bridgeC := testutils.NewMockBridge("bridgeC").WithDependencies("bridgeA", "bridgeB")
 
 		_ = manager.RegisterBridge(bridgeA)
 		_ = manager.RegisterBridge(bridgeB)
@@ -352,16 +250,16 @@ func TestBridgeDependencyResolution(t *testing.T) {
 		err := manager.InitializeWithDependencies(ctx, "bridgeC")
 		assert.NoError(t, err)
 
-		assert.True(t, bridgeA.initialized)
-		assert.True(t, bridgeB.initialized)
-		assert.True(t, bridgeC.initialized)
+		assert.True(t, bridgeA.IsInitialized())
+		assert.True(t, bridgeB.IsInitialized())
+		assert.True(t, bridgeC.IsInitialized())
 	})
 }
 
 func TestHotReloading(t *testing.T) {
 	t.Run("Reload Single Bridge", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "reload-test"}
+		bridge := testutils.NewMockBridge("reload-test")
 
 		_ = manager.RegisterBridge(bridge)
 		ctx := context.Background()
@@ -369,22 +267,22 @@ func TestHotReloading(t *testing.T) {
 		// Initialize bridge
 		err := manager.InitializeBridge(ctx, "reload-test")
 		assert.NoError(t, err)
-		assert.True(t, bridge.initialized)
-		assert.Equal(t, 1, bridge.initCallCount)
+		assert.True(t, bridge.IsInitialized())
+		assert.Equal(t, 1, bridge.GetInitCallCount())
 
 		// Reload bridge
 		err = manager.ReloadBridge(ctx, "reload-test")
 		assert.NoError(t, err)
-		assert.True(t, bridge.initialized)
-		assert.True(t, bridge.cleanedUp)
-		assert.Equal(t, 2, bridge.initCallCount)
+		assert.True(t, bridge.IsInitialized())
+		assert.True(t, bridge.IsCleanedUp())
+		assert.Equal(t, 2, bridge.GetInitCallCount())
 	})
 
 	t.Run("Reload With Dependencies", func(t *testing.T) {
 		manager := NewBridgeManager()
 
-		bridgeA := &mockBridge{id: "bridgeA"}
-		bridgeB := &mockBridge{id: "bridgeB", dependencies: []string{"bridgeA"}}
+		bridgeA := testutils.NewMockBridge("bridgeA")
+		bridgeB := testutils.NewMockBridge("bridgeB").WithDependencies("bridgeA")
 
 		_ = manager.RegisterBridge(bridgeA)
 		_ = manager.RegisterBridge(bridgeB)
@@ -397,8 +295,8 @@ func TestHotReloading(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Both bridges should be reloaded due to dependency
-		assert.Equal(t, 2, bridgeA.initCallCount)
-		assert.Equal(t, 2, bridgeB.initCallCount)
+		assert.Equal(t, 2, bridgeA.GetInitCallCount())
+		assert.Equal(t, 2, bridgeB.GetInitCallCount())
 	})
 
 	t.Run("Reload Non-existent Bridge", func(t *testing.T) {
@@ -412,7 +310,7 @@ func TestHotReloading(t *testing.T) {
 
 	t.Run("Watch Bridge Changes", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "watch-test"}
+		bridge := testutils.NewMockBridge("watch-test")
 
 		_ = manager.RegisterBridge(bridge)
 		ctx, cancel := context.WithCancel(context.Background())
@@ -441,7 +339,7 @@ func TestHotReloading(t *testing.T) {
 func TestBridgeQueries(t *testing.T) {
 	t.Run("Get Bridge", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "test-bridge"}
+		bridge := testutils.NewMockBridge("test-bridge")
 		_ = manager.RegisterBridge(bridge)
 
 		// Get existing bridge
@@ -463,8 +361,8 @@ func TestBridgeQueries(t *testing.T) {
 		assert.Empty(t, bridges)
 
 		// Add bridges
-		bridge1 := &mockBridge{id: "bridge1"}
-		bridge2 := &mockBridge{id: "bridge2"}
+		bridge1 := testutils.NewMockBridge("bridge1")
+		bridge2 := testutils.NewMockBridge("bridge2")
 		_ = manager.RegisterBridge(bridge1)
 		_ = manager.RegisterBridge(bridge2)
 
@@ -476,7 +374,7 @@ func TestBridgeQueries(t *testing.T) {
 
 	t.Run("Is Bridge Initialized", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "test-bridge"}
+		bridge := testutils.NewMockBridge("test-bridge")
 		_ = manager.RegisterBridge(bridge)
 
 		// Not initialized
@@ -497,7 +395,7 @@ func TestBridgeQueries(t *testing.T) {
 
 	t.Run("Get Bridge Metadata", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: "test-bridge"}
+		bridge := testutils.NewMockBridge("test-bridge")
 		_ = manager.RegisterBridge(bridge)
 
 		metadata, err := manager.GetBridgeMetadata("test-bridge")
@@ -513,177 +411,45 @@ func TestBridgeQueries(t *testing.T) {
 func TestBridgeEngineIntegration(t *testing.T) {
 	t.Run("Register Bridges with Engine", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge1 := &mockBridge{id: "bridge1"}
-		bridge2 := &mockBridge{id: "bridge2"}
+		bridge1 := testutils.NewMockBridge("bridge1")
+		bridge2 := testutils.NewMockBridge("bridge2")
 
 		_ = manager.RegisterBridge(bridge1)
 		_ = manager.RegisterBridge(bridge2)
 
 		// Mock engine
-		engine := &mockScriptEngine{}
+		mockEngine := testutils.NewMockScriptEngine()
+		err := mockEngine.Initialize(engine.EngineConfig{})
+		require.NoError(t, err)
 
-		err := manager.RegisterBridgesWithEngine(engine)
+		err = manager.RegisterBridgesWithEngine(mockEngine)
 		assert.NoError(t, err)
-		assert.Len(t, engine.bridges, 2)
+		assert.Len(t, mockEngine.ListBridges(), 2)
 	})
 
 	t.Run("Register Specific Bridges with Engine", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge1 := &mockBridge{id: "bridge1"}
-		bridge2 := &mockBridge{id: "bridge2"}
-		bridge3 := &mockBridge{id: "bridge3"}
+		bridge1 := testutils.NewMockBridge("bridge1")
+		bridge2 := testutils.NewMockBridge("bridge2")
+		bridge3 := testutils.NewMockBridge("bridge3")
 
 		_ = manager.RegisterBridge(bridge1)
 		_ = manager.RegisterBridge(bridge2)
 		_ = manager.RegisterBridge(bridge3)
 
-		engine := &mockScriptEngine{}
+		mockEngine := testutils.NewMockScriptEngine()
+		err := mockEngine.Initialize(engine.EngineConfig{})
+		require.NoError(t, err)
 
-		err := manager.RegisterSpecificBridgesWithEngine(engine, []string{"bridge1", "bridge3"})
+		err = manager.RegisterSpecificBridgesWithEngine(mockEngine, []string{"bridge1", "bridge3"})
 		assert.NoError(t, err)
-		assert.Len(t, engine.bridges, 2)
-		assert.Contains(t, engine.bridges, bridge1)
-		assert.Contains(t, engine.bridges, bridge3)
+
+		// Check that the bridges were registered
+		bridgeNames := mockEngine.ListBridges()
+		assert.Len(t, bridgeNames, 2)
+		assert.Contains(t, bridgeNames, "bridge1")
+		assert.Contains(t, bridgeNames, "bridge3")
 	})
-}
-
-// Mock ScriptEngine for testing
-type mockScriptEngine struct {
-	bridges []engine.Bridge
-}
-
-func (m *mockScriptEngine) GetInfo() engine.EngineInfo {
-	return engine.EngineInfo{Name: "mock", Version: "1.0.0"}
-}
-
-func (m *mockScriptEngine) Initialize(config engine.EngineConfig) error {
-	return nil
-}
-
-func (m *mockScriptEngine) RegisterBridge(bridge engine.Bridge) error {
-	m.bridges = append(m.bridges, bridge)
-	return nil
-}
-
-func (m *mockScriptEngine) ExecuteScript(ctx context.Context, script string, options engine.ExecutionOptions) (*engine.ExecutionResult, error) {
-	return &engine.ExecutionResult{}, nil
-}
-
-func (m *mockScriptEngine) CreateContext(options engine.ContextOptions) (engine.ScriptContext, error) {
-	return nil, nil
-}
-
-func (m *mockScriptEngine) GetMetrics() engine.EngineMetrics {
-	return engine.EngineMetrics{}
-}
-
-func (m *mockScriptEngine) SetResourceLimits(limits engine.ResourceLimits) error {
-	return nil
-}
-
-func (m *mockScriptEngine) Cleanup() error {
-	return nil
-}
-
-func (m *mockScriptEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (engine.ScriptValue, error) {
-	return engine.NewNilValue(), nil
-}
-
-func (m *mockScriptEngine) ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (engine.ScriptValue, error) {
-	return engine.NewNilValue(), nil
-}
-
-func (m *mockScriptEngine) Shutdown() error {
-	return nil
-}
-
-func (m *mockScriptEngine) GetBridge(name string) (engine.Bridge, error) {
-	return nil, nil
-}
-
-func (m *mockScriptEngine) ToNative(scriptValue engine.ScriptValue) (interface{}, error) {
-	return scriptValue.ToGo(), nil
-}
-
-func (m *mockScriptEngine) FromNative(goValue interface{}) (engine.ScriptValue, error) {
-	// Use centralized conversion function
-	return engine.ConvertToScriptValue(goValue), nil
-}
-
-func (m *mockScriptEngine) Name() string {
-	return "mock"
-}
-
-func (m *mockScriptEngine) Version() string {
-	return "1.0.0"
-}
-
-func (m *mockScriptEngine) FileExtensions() []string {
-	return []string{".mock"}
-}
-
-func (m *mockScriptEngine) Features() []engine.EngineFeature {
-	return []engine.EngineFeature{}
-}
-
-func (m *mockScriptEngine) SetMemoryLimit(bytes int64) error {
-	return nil
-}
-
-func (m *mockScriptEngine) SetTimeout(duration time.Duration) error {
-	return nil
-}
-
-func (m *mockScriptEngine) ListBridges() []string {
-	names := make([]string, 0, len(m.bridges))
-	for _, b := range m.bridges {
-		names = append(names, b.GetID())
-	}
-	return names
-}
-
-func (m *mockScriptEngine) UnregisterBridge(name string) error {
-	return nil
-}
-
-func (m *mockScriptEngine) DestroyContext(ctx engine.ScriptContext) error {
-	return nil
-}
-
-// Task 1.4.11.1: Engine Event Bus
-func (m *mockScriptEngine) GetEventBus() engine.EventBus {
-	return engine.NewDefaultEventBus()
-}
-
-// Task 1.4.11.2: Type Conversion Registry
-func (m *mockScriptEngine) RegisterTypeConverter(fromType, toType string, converter engine.TypeConverterFunc) error {
-	return nil
-}
-
-func (m *mockScriptEngine) GetTypeRegistry() engine.TypeRegistry {
-	return engine.NewDefaultTypeRegistry()
-}
-
-// Task 1.4.11.3: Engine Profiling
-func (m *mockScriptEngine) EnableProfiling(config engine.ProfilingConfig) error {
-	return nil
-}
-
-func (m *mockScriptEngine) DisableProfiling() error {
-	return nil
-}
-
-func (m *mockScriptEngine) GetProfilingReport() (*engine.ProfilingReport, error) {
-	return &engine.ProfilingReport{}, nil
-}
-
-// Task 1.4.11.4: Engine API Export
-func (m *mockScriptEngine) ExportAPI(format engine.ExportFormat) ([]byte, error) {
-	return []byte("{}"), nil
-}
-
-func (m *mockScriptEngine) GenerateClientLibrary(language string, options engine.ClientLibraryOptions) ([]byte, error) {
-	return []byte("{}"), nil
 }
 
 // Performance and stress tests
@@ -694,7 +460,7 @@ func TestBridgeManagerPerformance(t *testing.T) {
 
 		start := time.Now()
 		for i := 0; i < numBridges; i++ {
-			bridge := &mockBridge{id: fmt.Sprintf("bridge-%d", i)}
+			bridge := testutils.NewMockBridge(fmt.Sprintf("bridge-%d", i))
 			err := manager.RegisterBridge(bridge)
 			require.NoError(t, err)
 		}
@@ -720,7 +486,7 @@ func TestBridgeManagerPerformance(t *testing.T) {
 
 		// Register initial bridges
 		for i := 0; i < numBridges; i++ {
-			bridge := &mockBridge{id: fmt.Sprintf("bridge-%d", i)}
+			bridge := testutils.NewMockBridge(fmt.Sprintf("bridge-%d", i))
 			_ = manager.RegisterBridge(bridge)
 		}
 
@@ -763,7 +529,7 @@ func TestBridgeManagerEdgeCases(t *testing.T) {
 
 	t.Run("Empty Bridge ID", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{id: ""}
+		bridge := testutils.NewMockBridge("")
 		err := manager.RegisterBridge(bridge)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "empty bridge ID")
@@ -771,21 +537,15 @@ func TestBridgeManagerEdgeCases(t *testing.T) {
 
 	t.Run("Context Cancellation", func(t *testing.T) {
 		manager := NewBridgeManager()
-		bridge := &mockBridge{
-			id:        "slow-bridge",
-			initError: nil,
-		}
-
-		// Override Initialize to be slow
-		bridge.initFunc = func(ctx context.Context) error {
-			select {
-			case <-time.After(time.Second):
-				bridge.initialized = true
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
+		bridge := testutils.NewMockBridge("slow-bridge").
+			WithInitFunc(func(ctx context.Context) error {
+				select {
+				case <-time.After(time.Second):
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			})
 
 		_ = manager.RegisterBridge(bridge)
 
@@ -804,7 +564,7 @@ func BenchmarkBridgeRegistration(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bridge := &mockBridge{id: fmt.Sprintf("bridge-%d", i)}
+		bridge := testutils.NewMockBridge(fmt.Sprintf("bridge-%d", i))
 		_ = manager.RegisterBridge(bridge)
 	}
 }
@@ -814,7 +574,7 @@ func BenchmarkBridgeGet(b *testing.B) {
 
 	// Pre-register bridges
 	for i := 0; i < 100; i++ {
-		bridge := &mockBridge{id: fmt.Sprintf("bridge-%d", i)}
+		bridge := testutils.NewMockBridge(fmt.Sprintf("bridge-%d", i))
 		_ = manager.RegisterBridge(bridge)
 	}
 
@@ -829,7 +589,7 @@ func BenchmarkBridgeList(b *testing.B) {
 
 	// Pre-register bridges
 	for i := 0; i < 1000; i++ {
-		bridge := &mockBridge{id: fmt.Sprintf("bridge-%d", i)}
+		bridge := testutils.NewMockBridge(fmt.Sprintf("bridge-%d", i))
 		_ = manager.RegisterBridge(bridge)
 	}
 
@@ -868,7 +628,7 @@ func TestBridgeManagerEventSystem(t *testing.T) {
 		assert.NotEmpty(t, subscriptionIDs)
 
 		// Register a bridge to trigger events
-		bridge := &mockBridge{id: "test-bridge"}
+		bridge := testutils.NewMockBridge("test-bridge")
 		err := manager.RegisterBridge(bridge)
 		assert.NoError(t, err)
 
@@ -888,7 +648,7 @@ func TestBridgeManagerEventSystem(t *testing.T) {
 		manager := NewBridgeManagerWithEvents(nil, nil)
 		defer func() { _ = manager.Cleanup() }()
 
-		bridge := &mockBridge{id: "metrics-bridge"}
+		bridge := testutils.NewMockBridge("metrics-bridge")
 		err := manager.RegisterBridge(bridge)
 		assert.NoError(t, err)
 
@@ -915,10 +675,8 @@ func TestBridgeManagerEventSystem(t *testing.T) {
 		manager := NewBridgeManagerWithEvents(nil, nil)
 		defer func() { _ = manager.Cleanup() }()
 
-		bridge := &mockBridge{
-			id:        "failure-bridge",
-			initError: errors.New("initialization failed"),
-		}
+		bridge := testutils.NewMockBridge("failure-bridge").
+			WithInitError(errors.New("initialization failed"))
 		err := manager.RegisterBridge(bridge)
 		assert.NoError(t, err)
 
@@ -942,9 +700,9 @@ func TestBridgeManagerEventSystem(t *testing.T) {
 		defer func() { _ = manager.Cleanup() }()
 
 		// Register multiple bridges
-		bridge1 := &mockBridge{id: "bridge1"}
-		bridge2 := &mockBridge{id: "bridge2"}
-		bridge3 := &mockBridge{id: "bridge3", initError: errors.New("failed")}
+		bridge1 := testutils.NewMockBridge("bridge1")
+		bridge2 := testutils.NewMockBridge("bridge2")
+		bridge3 := testutils.NewMockBridge("bridge3").WithInitError(errors.New("failed"))
 
 		_ = manager.RegisterBridge(bridge1)
 		_ = manager.RegisterBridge(bridge2)
@@ -1010,7 +768,7 @@ func TestBridgeManagerEventSystem(t *testing.T) {
 		assert.NotNil(t, manager.GetEventStore())
 
 		// Should be able to register and initialize bridges normally
-		bridge := &mockBridge{id: "compat-bridge"}
+		bridge := testutils.NewMockBridge("compat-bridge")
 		err := manager.RegisterBridge(bridge)
 		assert.NoError(t, err)
 
@@ -1034,9 +792,7 @@ func TestBridgeManagerDocumentationGeneration(t *testing.T) {
 	ctx := context.Background()
 
 	// Register a test bridge
-	testBridge := &mockBridge{
-		id: "test-doc-bridge",
-	}
+	testBridge := testutils.NewMockBridge("test-doc-bridge")
 
 	err := manager.RegisterBridge(testBridge)
 	assert.NoError(t, err)
@@ -1113,8 +869,8 @@ func TestBridgeManagerStateSerialization(t *testing.T) {
 		defer func() { _ = manager.Cleanup() }()
 
 		// Register some test bridges
-		bridge1 := &mockBridge{id: "bridge1"}
-		bridge2 := &mockBridge{id: "bridge2", dependencies: []string{"bridge1"}}
+		bridge1 := testutils.NewMockBridge("bridge1")
+		bridge2 := testutils.NewMockBridge("bridge2").WithDependencies("bridge1")
 
 		err := manager.RegisterBridge(bridge1)
 		assert.NoError(t, err)
@@ -1176,8 +932,8 @@ func TestBridgeManagerStateSerialization(t *testing.T) {
 		manager1 := NewBridgeManager()
 		defer func() { _ = manager1.Cleanup() }()
 
-		bridge1 := &mockBridge{id: "bridge1"}
-		bridge2 := &mockBridge{id: "bridge2", dependencies: []string{"bridge1"}}
+		bridge1 := testutils.NewMockBridge("bridge1")
+		bridge2 := testutils.NewMockBridge("bridge2").WithDependencies("bridge1")
 
 		_ = manager1.RegisterBridge(bridge1)
 		_ = manager1.RegisterBridge(bridge2)
@@ -1216,7 +972,7 @@ func TestBridgeManagerStateSerialization(t *testing.T) {
 		defer func() { _ = manager1.Cleanup() }()
 
 		// Setup initial state
-		bridge := &mockBridge{id: "test-bridge"}
+		bridge := testutils.NewMockBridge("test-bridge")
 		_ = manager1.RegisterBridge(bridge)
 		_ = manager1.InitializeBridge(context.Background(), "test-bridge")
 
@@ -1330,7 +1086,7 @@ func TestBridgeManagerStateSerialization(t *testing.T) {
 		manager := NewBridgeManager()
 		defer func() { _ = manager.Cleanup() }()
 
-		bridge := &mockBridge{id: "test-bridge"}
+		bridge := testutils.NewMockBridge("test-bridge")
 		_ = manager.RegisterBridge(bridge)
 
 		// Test metrics update
@@ -1374,10 +1130,8 @@ func TestBridgeManagerStateSerialization(t *testing.T) {
 		defer func() { _ = manager.Cleanup() }()
 
 		// Register a bridge that will fail
-		failureBridge := &mockBridge{
-			id:        "failure-bridge",
-			initError: errors.New("initialization failed"),
-		}
+		failureBridge := testutils.NewMockBridge("failure-bridge").
+			WithInitError(errors.New("initialization failed"))
 		_ = manager.RegisterBridge(failureBridge)
 
 		// Try to initialize (will fail)
@@ -1447,7 +1201,7 @@ func TestBridgeManagerStateSerialization(t *testing.T) {
 		manager := NewBridgeManager()
 		defer func() { _ = manager.Cleanup() }()
 
-		bridge := &mockBridge{id: "test"}
+		bridge := testutils.NewMockBridge("test")
 		_ = manager.RegisterBridge(bridge)
 
 		// Test pretty formatting

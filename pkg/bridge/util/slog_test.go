@@ -94,7 +94,7 @@ func TestSlogBridgeBasicLogging(t *testing.T) {
 			name:   "info with message only",
 			method: "info",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("Test info message"),
+				sv("Test info message"),
 			},
 			wantErr: false,
 		},
@@ -102,8 +102,8 @@ func TestSlogBridgeBasicLogging(t *testing.T) {
 			name:   "warn with emoji",
 			method: "warn",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("Warning message"),
-				engine.NewStringValue("⚠️"),
+				sv("Warning message"),
+				sv("⚠️"),
 			},
 			wantErr: false,
 		},
@@ -111,11 +111,11 @@ func TestSlogBridgeBasicLogging(t *testing.T) {
 			name:   "error with attributes",
 			method: "error",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("Error occurred"),
-				engine.NewStringValue("❌"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"error_code": engine.NewNumberValue(500),
-					"reason":     engine.NewStringValue("internal error"),
+				sv("Error occurred"),
+				sv("❌"),
+				svMap(map[string]interface{}{
+					"error_code": 500,
+					"reason":     "internal error",
 				}),
 			},
 			wantErr: false,
@@ -124,11 +124,11 @@ func TestSlogBridgeBasicLogging(t *testing.T) {
 			name:   "debug with all params",
 			method: "debug",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("Debug info"),
-				engine.NewStringValue("🐛"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"step":  engine.NewNumberValue(1),
-					"value": engine.NewStringValue("test"),
+				sv("Debug info"),
+				sv("🐛"),
+				svMap(map[string]interface{}{
+					"step":  1,
+					"value": "test",
 				}),
 			},
 			wantErr: false,
@@ -143,7 +143,7 @@ func TestSlogBridgeBasicLogging(t *testing.T) {
 			name:   "invalid message type",
 			method: "info",
 			args: []engine.ScriptValue{
-				engine.NewNumberValue(123),
+				sv(123),
 			},
 			wantErr: true,
 		},
@@ -170,26 +170,26 @@ func TestSlogBridgeLoggingHooks(t *testing.T) {
 
 	t.Run("logBeforeGenerate", func(t *testing.T) {
 		messages := []engine.ScriptValue{
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"role":    engine.NewStringValue("user"),
-				"content": engine.NewStringValue("Hello AI"),
+			svMap(map[string]interface{}{
+				"role":    "user",
+				"content": "Hello AI",
 			}),
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"role":    engine.NewStringValue("assistant"),
-				"content": engine.NewStringValue("Hello human"),
+			svMap(map[string]interface{}{
+				"role":    "assistant",
+				"content": "Hello human",
 			}),
 		}
 
 		result, err := bridge.ExecuteMethod(ctx, "logBeforeGenerate", []engine.ScriptValue{
-			engine.NewArrayValue(messages),
+			svArray(messages),
 		})
 		require.NoError(t, err)
 		assert.True(t, result.IsNil())
 	})
 
 	t.Run("logAfterGenerate", func(t *testing.T) {
-		response := engine.NewObjectValue(map[string]engine.ScriptValue{
-			"content": engine.NewStringValue("Generated response"),
+		response := svMap(map[string]interface{}{
+			"content": "Generated response",
 		})
 
 		result, err := bridge.ExecuteMethod(ctx, "logAfterGenerate", []engine.ScriptValue{
@@ -201,7 +201,7 @@ func TestSlogBridgeLoggingHooks(t *testing.T) {
 		// Test with error
 		result, err = bridge.ExecuteMethod(ctx, "logAfterGenerate", []engine.ScriptValue{
 			response,
-			engine.NewStringValue("API error occurred"),
+			sv("API error occurred"),
 		})
 		require.NoError(t, err)
 		assert.True(t, result.IsNil())
@@ -209,10 +209,10 @@ func TestSlogBridgeLoggingHooks(t *testing.T) {
 
 	t.Run("logBeforeToolCall", func(t *testing.T) {
 		result, err := bridge.ExecuteMethod(ctx, "logBeforeToolCall", []engine.ScriptValue{
-			engine.NewStringValue("web_search"),
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"query": engine.NewStringValue("golang tutorials"),
-				"limit": engine.NewNumberValue(10),
+			sv("web_search"),
+			svMap(map[string]interface{}{
+				"query": "golang tutorials",
+				"limit": 10,
 			}),
 		})
 		require.NoError(t, err)
@@ -221,12 +221,9 @@ func TestSlogBridgeLoggingHooks(t *testing.T) {
 
 	t.Run("logAfterToolCall", func(t *testing.T) {
 		result, err := bridge.ExecuteMethod(ctx, "logAfterToolCall", []engine.ScriptValue{
-			engine.NewStringValue("web_search"),
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"results": engine.NewArrayValue([]engine.ScriptValue{
-					engine.NewStringValue("result1"),
-					engine.NewStringValue("result2"),
-				}),
+			sv("web_search"),
+			svMap(map[string]interface{}{
+				"results": svArray("result1", "result2"),
 			}),
 		})
 		require.NoError(t, err)
@@ -234,9 +231,9 @@ func TestSlogBridgeLoggingHooks(t *testing.T) {
 
 		// Test with error
 		result, err = bridge.ExecuteMethod(ctx, "logAfterToolCall", []engine.ScriptValue{
-			engine.NewStringValue("web_search"),
-			engine.NewNilValue(),
-			engine.NewStringValue("Network timeout"),
+			sv("web_search"),
+			sv(nil),
+			sv("Network timeout"),
 		})
 		require.NoError(t, err)
 		assert.True(t, result.IsNil())
@@ -256,7 +253,7 @@ func TestSlogBridgeLogLevel(t *testing.T) {
 
 	// Set log level to detailed
 	result, err = bridge.ExecuteMethod(ctx, "setLogLevel", []engine.ScriptValue{
-		engine.NewStringValue("detailed"),
+		sv("detailed"),
 	})
 	require.NoError(t, err)
 	assert.True(t, result.IsNil())
@@ -268,7 +265,7 @@ func TestSlogBridgeLogLevel(t *testing.T) {
 
 	// Test invalid level
 	_, err = bridge.ExecuteMethod(ctx, "setLogLevel", []engine.ScriptValue{
-		engine.NewStringValue("invalid"),
+		sv("invalid"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid log level")
@@ -286,16 +283,16 @@ func TestSlogBridgeConfigureLogger(t *testing.T) {
 	}{
 		{
 			name: "json format with debug level",
-			config: engine.NewObjectValue(map[string]engine.ScriptValue{
-				"format": engine.NewStringValue("json"),
-				"level":  engine.NewStringValue("debug"),
+			config: svMap(map[string]interface{}{
+				"format": "json",
+				"level":  "debug",
 			}),
 		},
 		{
 			name: "text format with error level",
-			config: engine.NewObjectValue(map[string]engine.ScriptValue{
-				"format": engine.NewStringValue("text"),
-				"level":  engine.NewStringValue("error"),
+			config: svMap(map[string]interface{}{
+				"format": "text",
+				"level":  "error",
 			}),
 		},
 	}
@@ -317,10 +314,10 @@ func TestSlogBridgeWithAttributes(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	attributes := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"component":  engine.NewStringValue("auth"),
-		"session_id": engine.NewStringValue("abc123"),
-		"user_id":    engine.NewNumberValue(42),
+	attributes := svMap(map[string]interface{}{
+		"component":  "auth",
+		"session_id": "abc123",
+		"user_id":    42,
 	})
 
 	result, err := bridge.ExecuteMethod(ctx, "withAttributes", []engine.ScriptValue{
@@ -341,7 +338,7 @@ func TestSlogBridgeValidateMethod(t *testing.T) {
 
 	// ValidateMethod should always return nil as validation is handled by engine
 	err := bridge.ValidateMethod("info", []engine.ScriptValue{
-		engine.NewStringValue("test message"),
+		sv("test message"),
 	})
 	assert.NoError(t, err)
 
@@ -403,7 +400,7 @@ func TestSlogBridgeErrorHandling(t *testing.T) {
 
 	// Test method execution before initialization
 	_, err := bridge.ExecuteMethod(ctx, "info", []engine.ScriptValue{
-		engine.NewStringValue("test"),
+		sv("test"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not initialized")
@@ -419,7 +416,7 @@ func TestSlogBridgeErrorHandling(t *testing.T) {
 
 	// Test invalid arguments
 	_, err = bridge.ExecuteMethod(ctx, "logBeforeGenerate", []engine.ScriptValue{
-		engine.NewStringValue("not an array"),
+		sv("not an array"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "must be an array")

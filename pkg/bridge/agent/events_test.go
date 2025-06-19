@@ -77,7 +77,7 @@ func TestEventsBridge_ValidateMethod(t *testing.T) {
 		{
 			name:        "valid publishEvent",
 			method:      "publishEvent",
-			args:        []engine.ScriptValue{engine.NewObjectValue(map[string]engine.ScriptValue{"type": engine.NewStringValue("test")})},
+			args:        []engine.ScriptValue{svMap(map[string]interface{}{"type": "test"})},
 			expectError: false,
 		},
 		{
@@ -89,13 +89,13 @@ func TestEventsBridge_ValidateMethod(t *testing.T) {
 		{
 			name:        "valid subscribe",
 			method:      "subscribe",
-			args:        []engine.ScriptValue{engine.NewStringValue("test-event"), engine.NewFunctionValue("handler", func(args []engine.ScriptValue) (engine.ScriptValue, error) { return engine.NewNilValue(), nil })},
+			args:        []engine.ScriptValue{sv("test-event"), engine.NewFunctionValue("handler", func(args []engine.ScriptValue) (engine.ScriptValue, error) { return engine.NewNilValue(), nil })},
 			expectError: false,
 		},
 		{
 			name:        "valid queryEvents",
 			method:      "queryEvents",
-			args:        []engine.ScriptValue{engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			args:        []engine.ScriptValue{svMap(map[string]interface{}{})},
 			expectError: false,
 		},
 		{
@@ -125,14 +125,14 @@ func TestEventsBridge_ExecuteMethod_PublishEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test publish event
-	eventData := map[string]engine.ScriptValue{
-		"type":    engine.NewStringValue("test-event"),
-		"message": engine.NewStringValue("Hello World"),
-		"count":   engine.NewNumberValue(42),
+	eventData := map[string]interface{}{
+		"type":    "test-event",
+		"message": "Hello World",
+		"count":   42,
 	}
 
 	args := []engine.ScriptValue{
-		engine.NewObjectValue(eventData),
+		svMap(eventData),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "publishEvent", args)
@@ -155,7 +155,7 @@ func TestEventsBridge_ExecuteMethod_Subscribe(t *testing.T) {
 	})
 
 	args := []engine.ScriptValue{
-		engine.NewStringValue(eventPattern),
+		sv(eventPattern),
 		handler,
 	}
 
@@ -231,9 +231,9 @@ func TestEventsBridge_ExecuteMethod_QueryEvents(t *testing.T) {
 
 	// Publish an event
 	eventArgs := []engine.ScriptValue{
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"type": engine.NewStringValue("test-event"),
-			"data": engine.NewStringValue("test"),
+		svMap(map[string]interface{}{
+			"type": "test-event",
+			"data": "test",
 		}),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "publishEvent", eventArgs)
@@ -244,8 +244,8 @@ func TestEventsBridge_ExecuteMethod_QueryEvents(t *testing.T) {
 
 	// Query events
 	queryArgs := []engine.ScriptValue{
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"limit": engine.NewNumberValue(10),
+		svMap(map[string]interface{}{
+			"limit": 10,
 		}),
 	}
 	result, err := bridge.ExecuteMethod(ctx, "queryEvents", queryArgs)
@@ -266,7 +266,7 @@ func TestEventsBridge_ExecuteMethod_Unsubscribe(t *testing.T) {
 
 	// Subscribe first
 	subscribeArgs := []engine.ScriptValue{
-		engine.NewStringValue("test-event"),
+		sv("test-event"),
 		engine.NewFunctionValue("handler", func(args []engine.ScriptValue) (engine.ScriptValue, error) {
 			return engine.NewNilValue(), nil
 		}),
@@ -278,7 +278,7 @@ func TestEventsBridge_ExecuteMethod_Unsubscribe(t *testing.T) {
 	subscriptionID := subscribeResult.(engine.StringValue).Value()
 
 	// Now unsubscribe
-	unsubscribeArgs := []engine.ScriptValue{engine.NewStringValue(subscriptionID)}
+	unsubscribeArgs := []engine.ScriptValue{sv(subscriptionID)}
 	result, err := bridge.ExecuteMethod(ctx, "unsubscribe", unsubscribeArgs)
 	assert.NoError(t, err)
 
@@ -350,7 +350,7 @@ func TestEventsBridge_NotInitialized(t *testing.T) {
 
 	// Should fail when not initialized
 	result, err := bridge.ExecuteMethod(ctx, "publishEvent", []engine.ScriptValue{
-		engine.NewObjectValue(map[string]engine.ScriptValue{"type": engine.NewStringValue("test")}),
+		svMap(map[string]interface{}{"type": "test"}),
 	})
 	assert.NoError(t, err) // Should return error value, not Go error
 

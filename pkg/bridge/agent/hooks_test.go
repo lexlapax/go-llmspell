@@ -74,9 +74,9 @@ func TestHooksBridge_ValidateMethod(t *testing.T) {
 			name:   "valid registerHook",
 			method: "registerHook",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("test-hook"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"priority": engine.NewNumberValue(10),
+				sv("test-hook"),
+				svMap(map[string]interface{}{
+					"priority": 10,
 				}),
 			},
 			expectError: false,
@@ -84,7 +84,7 @@ func TestHooksBridge_ValidateMethod(t *testing.T) {
 		{
 			name:        "invalid registerHook - missing args",
 			method:      "registerHook",
-			args:        []engine.ScriptValue{engine.NewStringValue("test-hook")},
+			args:        []engine.ScriptValue{sv("test-hook")},
 			expectError: true,
 		},
 		{
@@ -97,8 +97,8 @@ func TestHooksBridge_ValidateMethod(t *testing.T) {
 			name:   "valid executeHooks",
 			method: "executeHooks",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("beforeGenerate"),
-				engine.NewObjectValue(map[string]engine.ScriptValue{}),
+				sv("beforeGenerate"),
+				svMap(map[string]interface{}{}),
 			},
 			expectError: false,
 		},
@@ -130,14 +130,14 @@ func TestHooksBridge_ExecuteMethod_RegisterHook(t *testing.T) {
 
 	// Test registerHook
 	hookID := "test-hook"
-	hookDef := map[string]engine.ScriptValue{
-		"priority":       engine.NewNumberValue(10),
+	hookDef := map[string]interface{}{
+		"priority":       10,
 		"beforeGenerate": engine.NewFunctionValue("beforeGenerate", func(ctx interface{}, messages interface{}) {}),
 	}
 
 	args := []engine.ScriptValue{
-		engine.NewStringValue(hookID),
-		engine.NewObjectValue(hookDef),
+		sv(hookID),
+		svMap(hookDef),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "registerHook", args)
@@ -164,9 +164,9 @@ func TestHooksBridge_ExecuteMethod_ListHooks(t *testing.T) {
 
 	// Register a hook
 	registerArgs := []engine.ScriptValue{
-		engine.NewStringValue("test-hook"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"priority": engine.NewNumberValue(5),
+		sv("test-hook"),
+		svMap(map[string]interface{}{
+			"priority": 5,
 		}),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
@@ -191,16 +191,16 @@ func TestHooksBridge_ExecuteMethod_EnableDisableHook(t *testing.T) {
 
 	// Register a hook first
 	registerArgs := []engine.ScriptValue{
-		engine.NewStringValue(hookID),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"priority": engine.NewNumberValue(5),
+		sv(hookID),
+		svMap(map[string]interface{}{
+			"priority": 5,
 		}),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
 	require.NoError(t, err)
 
 	// Test disableHook
-	args := []engine.ScriptValue{engine.NewStringValue(hookID)}
+	args := []engine.ScriptValue{sv(hookID)}
 	result, err := bridge.ExecuteMethod(ctx, "disableHook", args)
 	assert.NoError(t, err)
 
@@ -227,9 +227,9 @@ func TestHooksBridge_ExecuteMethod_ExecuteHooks(t *testing.T) {
 
 	// Register a hook first
 	registerArgs := []engine.ScriptValue{
-		engine.NewStringValue(hookID),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"priority":       engine.NewNumberValue(5),
+		sv(hookID),
+		svMap(map[string]interface{}{
+			"priority":       5,
 			"beforeGenerate": engine.NewFunctionValue("beforeGenerate", func(ctx interface{}, messages interface{}) {}),
 		}),
 	}
@@ -238,9 +238,9 @@ func TestHooksBridge_ExecuteMethod_ExecuteHooks(t *testing.T) {
 
 	// Execute hooks of a specific type
 	executeArgs := []engine.ScriptValue{
-		engine.NewStringValue("beforeGenerate"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"messages": engine.NewArrayValue([]engine.ScriptValue{}),
+		sv("beforeGenerate"),
+		svMap(map[string]interface{}{
+			"messages": svArray(),
 		}),
 	}
 
@@ -261,9 +261,9 @@ func TestHooksBridge_ExecuteMethod_UnregisterHook(t *testing.T) {
 
 	// Register a hook first
 	registerArgs := []engine.ScriptValue{
-		engine.NewStringValue(hookID),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"priority": engine.NewNumberValue(5),
+		sv(hookID),
+		svMap(map[string]interface{}{
+			"priority": 5,
 		}),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)
@@ -276,7 +276,7 @@ func TestHooksBridge_ExecuteMethod_UnregisterHook(t *testing.T) {
 	assert.Equal(t, 1, len(hooks), "Should have one hook")
 
 	// Unregister the hook
-	unregisterArgs := []engine.ScriptValue{engine.NewStringValue(hookID)}
+	unregisterArgs := []engine.ScriptValue{sv(hookID)}
 	result, err = bridge.ExecuteMethod(ctx, "unregisterHook", unregisterArgs)
 	assert.NoError(t, err)
 
@@ -299,9 +299,9 @@ func TestHooksBridge_ExecuteMethod_ClearHooks(t *testing.T) {
 
 	// Register a hook first
 	registerArgs := []engine.ScriptValue{
-		engine.NewStringValue("test-hook"),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"priority": engine.NewNumberValue(5),
+		sv("test-hook"),
+		svMap(map[string]interface{}{
+			"priority": 5,
 		}),
 	}
 	_, err = bridge.ExecuteMethod(ctx, "registerHook", registerArgs)

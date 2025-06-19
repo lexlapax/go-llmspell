@@ -112,9 +112,9 @@ func TestUtilJSONBridgeMarshal(t *testing.T) {
 		{
 			name: "marshal simple object",
 			args: []engine.ScriptValue{
-				engine.NewObjectValue(map[string]engine.ScriptValue{
-					"name": engine.NewStringValue("test"),
-					"age":  engine.NewNumberValue(25),
+				svMap(map[string]interface{}{
+					"name": "test",
+					"age":  25,
 				}),
 			},
 			wantJSON: `{"age":25,"name":"test"}`,
@@ -123,11 +123,7 @@ func TestUtilJSONBridgeMarshal(t *testing.T) {
 		{
 			name: "marshal array",
 			args: []engine.ScriptValue{
-				engine.NewArrayValue([]engine.ScriptValue{
-					engine.NewNumberValue(1),
-					engine.NewNumberValue(2),
-					engine.NewNumberValue(3),
-				}),
+				svArray(1, 2, 3),
 			},
 			wantJSON: `[1,2,3]`,
 			wantErr:  false,
@@ -135,7 +131,7 @@ func TestUtilJSONBridgeMarshal(t *testing.T) {
 		{
 			name: "marshal string",
 			args: []engine.ScriptValue{
-				engine.NewStringValue("hello world"),
+				sv("hello world"),
 			},
 			wantJSON: `"hello world"`,
 			wantErr:  false,
@@ -143,7 +139,7 @@ func TestUtilJSONBridgeMarshal(t *testing.T) {
 		{
 			name: "marshal null",
 			args: []engine.ScriptValue{
-				engine.NewNilValue(),
+				sv(nil),
 			},
 			wantJSON: `null`,
 			wantErr:  false,
@@ -175,9 +171,9 @@ func TestUtilJSONBridgeMarshalIndent(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	obj := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("test"),
-		"age":  engine.NewNumberValue(25),
+	obj := svMap(map[string]interface{}{
+		"name": "test",
+		"age":  25,
 	})
 
 	// Test default indentation
@@ -191,8 +187,8 @@ func TestUtilJSONBridgeMarshalIndent(t *testing.T) {
 	// Test custom indentation
 	result, err = bridge.ExecuteMethod(ctx, "marshalIndent", []engine.ScriptValue{
 		obj,
-		engine.NewStringValue(">>"),
-		engine.NewStringValue("\t"),
+		sv(">>"),
+		sv("\t"),
 	})
 	require.NoError(t, err)
 	jsonStr = result.(engine.StringValue).Value()
@@ -261,7 +257,7 @@ func TestUtilJSONBridgeUnmarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := bridge.ExecuteMethod(ctx, "unmarshal", []engine.ScriptValue{
-				engine.NewStringValue(tt.json),
+				sv(tt.json),
 			})
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -279,8 +275,8 @@ func TestUtilJSONBridgeMarshalToBytes(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	obj := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"test": engine.NewBoolValue(true),
+	obj := svMap(map[string]interface{}{
+		"test": true,
 	})
 
 	result, err := bridge.ExecuteMethod(ctx, "marshalToBytes", []engine.ScriptValue{obj})
@@ -308,13 +304,13 @@ func TestUtilJSONBridgeUnmarshalFromBytes(t *testing.T) {
 
 	// Create byte array ScriptValue
 	jsonBytes := []byte(`{"success":true}`)
-	scriptBytes := make([]engine.ScriptValue, len(jsonBytes))
+	bytes := make([]interface{}, len(jsonBytes))
 	for i, b := range jsonBytes {
-		scriptBytes[i] = engine.NewNumberValue(float64(b))
+		bytes[i] = float64(b)
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "unmarshalFromBytes", []engine.ScriptValue{
-		engine.NewArrayValue(scriptBytes),
+		svArray(bytes...),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeObject, result.Type())
@@ -331,7 +327,7 @@ func TestUtilJSONBridgeUnmarshalStrict(t *testing.T) {
 
 	// Test normal unmarshal
 	result, err := bridge.ExecuteMethod(ctx, "unmarshalStrict", []engine.ScriptValue{
-		engine.NewStringValue(`{"name":"test"}`),
+		sv(`{"name":"test"}`),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeObject, result.Type())
@@ -339,8 +335,8 @@ func TestUtilJSONBridgeUnmarshalStrict(t *testing.T) {
 	// Test with disallow unknown fields
 	// This would fail with unknown fields in a strictly typed struct
 	_, err = bridge.ExecuteMethod(ctx, "unmarshalStrict", []engine.ScriptValue{
-		engine.NewStringValue(`{"name":"test","unknown":"field"}`),
-		engine.NewBoolValue(true),
+		sv(`{"name":"test","unknown":"field"}`),
+		sv(true),
 	})
 	// For generic interface{} unmarshaling, this will still succeed
 	// as we're not unmarshaling into a struct with defined fields
@@ -361,8 +357,8 @@ func TestUtilJSONBridgeStreaming(t *testing.T) {
 	assert.Equal(t, engine.TypeCustom, encoder.Type())
 
 	// Encode value
-	obj := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"stream": engine.NewBoolValue(true),
+	obj := svMap(map[string]interface{}{
+		"stream": true,
 	})
 	result, err := bridge.ExecuteMethod(ctx, "encodeStream", []engine.ScriptValue{encoder, obj})
 	require.NoError(t, err)
@@ -393,22 +389,22 @@ func TestUtilJSONBridgeParseStructured(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	schema := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"type": engine.NewStringValue("object"),
-		"properties": engine.NewObjectValue(map[string]engine.ScriptValue{
-			"name": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"type": engine.NewStringValue("string"),
-			}),
-			"age": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"type": engine.NewStringValue("number"),
-			}),
-		}),
+	schema := svMap(map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+				"type": "string",
+			},
+			"age": map[string]interface{}{
+				"type": "number",
+			},
+		},
 	})
 
 	output := "Here's the JSON: {\"name\":\"John\",\"age\":30}"
 
 	result, err := bridge.ExecuteMethod(ctx, "parseStructured", []engine.ScriptValue{
-		engine.NewStringValue(output),
+		sv(output),
 		schema,
 	})
 	require.NoError(t, err)
@@ -424,7 +420,7 @@ func TestUtilJSONBridgeParseWithRecovery(t *testing.T) {
 	// Test with malformed content
 	malformed := `Some text before {"valid":"json"} and some after`
 	result, err := bridge.ExecuteMethod(ctx, "parseWithRecovery", []engine.ScriptValue{
-		engine.NewStringValue(malformed),
+		sv(malformed),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeString, result.Type())
@@ -438,18 +434,18 @@ func TestUtilJSONBridgeEnhancePrompt(t *testing.T) {
 	require.NoError(t, err)
 
 	prompt := "Extract user information"
-	schema := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"type": engine.NewStringValue("object"),
-		"properties": engine.NewObjectValue(map[string]engine.ScriptValue{
-			"name": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"type": engine.NewStringValue("string"),
-			}),
-		}),
+	schema := svMap(map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"name": map[string]interface{}{
+				"type": "string",
+			},
+		},
 	})
 
 	// Test basic enhancement
 	result, err := bridge.ExecuteMethod(ctx, "enhancePrompt", []engine.ScriptValue{
-		engine.NewStringValue(prompt),
+		sv(prompt),
 		schema,
 	})
 	require.NoError(t, err)
@@ -458,11 +454,11 @@ func TestUtilJSONBridgeEnhancePrompt(t *testing.T) {
 	assert.Contains(t, enhanced, prompt)
 
 	// Test with options
-	options := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"examples": engine.NewBoolValue(true),
+	options := svMap(map[string]interface{}{
+		"examples": true,
 	})
 	result, err = bridge.ExecuteMethod(ctx, "enhancePrompt", []engine.ScriptValue{
-		engine.NewStringValue(prompt),
+		sv(prompt),
 		schema,
 		options,
 	})
@@ -480,9 +476,9 @@ func TestUtilJSONBridgeConvertFormat(t *testing.T) {
 
 	// Test JSON to YAML conversion
 	result, err := bridge.ExecuteMethod(ctx, "convertFormat", []engine.ScriptValue{
-		engine.NewStringValue(jsonData),
-		engine.NewStringValue("json"),
-		engine.NewStringValue("yaml"),
+		sv(jsonData),
+		sv("json"),
+		sv("yaml"),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeString, result.Type())
@@ -491,14 +487,14 @@ func TestUtilJSONBridgeConvertFormat(t *testing.T) {
 	assert.Contains(t, yamlStr, "test")
 
 	// Test with options
-	options := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"pretty":     engine.NewBoolValue(true),
-		"indentSize": engine.NewNumberValue(4),
+	options := svMap(map[string]interface{}{
+		"pretty":     true,
+		"indentSize": 4,
 	})
 	result, err = bridge.ExecuteMethod(ctx, "convertFormat", []engine.ScriptValue{
-		engine.NewStringValue(jsonData),
-		engine.NewStringValue("json"),
-		engine.NewStringValue("yaml"),
+		sv(jsonData),
+		sv("json"),
+		sv("yaml"),
 		options,
 	})
 	require.NoError(t, err)
@@ -514,7 +510,7 @@ func TestUtilJSONBridgePrettyPrint(t *testing.T) {
 	compactJSON := `{"a":1,"b":2,"c":{"d":3}}`
 
 	result, err := bridge.ExecuteMethod(ctx, "prettyPrint", []engine.ScriptValue{
-		engine.NewStringValue(compactJSON),
+		sv(compactJSON),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeString, result.Type())
@@ -540,7 +536,7 @@ func TestUtilJSONBridgeMinify(t *testing.T) {
 	}`
 
 	result, err := bridge.ExecuteMethod(ctx, "minify", []engine.ScriptValue{
-		engine.NewStringValue(prettyJSON),
+		sv(prettyJSON),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, engine.TypeString, result.Type())
@@ -556,7 +552,7 @@ func TestUtilJSONBridgeValidateMethod(t *testing.T) {
 
 	// ValidateMethod should always return nil as validation is handled by engine
 	err := bridge.ValidateMethod("marshal", []engine.ScriptValue{
-		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+		svMap(map[string]interface{}{}),
 	})
 	assert.NoError(t, err)
 
@@ -611,7 +607,7 @@ func TestUtilJSONBridgeErrorHandling(t *testing.T) {
 
 	// Test method execution before initialization
 	_, err := bridge.ExecuteMethod(ctx, "marshal", []engine.ScriptValue{
-		engine.NewObjectValue(map[string]engine.ScriptValue{}),
+		svMap(map[string]interface{}{}),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not initialized")
