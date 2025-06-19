@@ -53,12 +53,144 @@ See TODO-DONE-ARCHIVE.md for full Phase 1 completion details.
       - Added helper function convertScriptValueToInterface for go-llms compatibility
       - Fixed error returns to proper error propagation (not engine.NewErrorValue())
       - Verified compilation success and proper ScriptValue usage throughout
-    - ⏳ State package bridges (2 bridges) - Need updates  
-    - ⏳ Util package bridges (8 bridges) - Need updates
+    - ✅ State package bridges (2 bridges) - COMPLETED [2025-06-19]
+    - ✅ Util package bridges (8 bridges) - COMPLETED [2025-06-19]
   - ⏳ Phase 5: Update GopherLua Engine - Not started
   - ⏳ Phase 6: Update Other Engines - Not started
   - ⏳ Phase 7: Update Tests - Not started
   - ⏳ Phase 8: Cleanup and Documentation - Not started
+
+#### 2.3.2.5: Test Utilities Extraction
+✅ **COMPLETED [2025-06-19]** - Extracted common test patterns to centralized testutils package
+
+##### Phase 1: Foundation (Week 1)
+- ✅ **Task 2.3.2.5.1: Create Core Mock Implementations** [2025-06-18]
+  - ✅ Create `/pkg/testutils` directory structure (already existed)
+  - ✅ Implement `mock_engine.go` - Consolidated mock engine implementations
+    - ✅ Created comprehensive MockScriptEngine with builder pattern
+    - ✅ Full ScriptEngine interface implementation with all required methods
+    - ✅ Execute call tracking and state management
+  - ✅ Implement `mock_bridges.go` - Common mock bridge patterns
+    - ✅ Created MockBridge with method handler support
+    - ✅ Created MockAsyncBridge for async operations
+    - ✅ Builder pattern for easy configuration
+  - ✅ Enhanced existing `scriptvalue_helpers.go`
+  - ✅ Added comprehensive tests (mock_engine_test.go, mock_bridges_test.go)
+  - ✅ Updated test files to use centralized mocks:
+    - ✅ registry_test.go - Using testMockScriptEngine
+    - ✅ interface_test.go - Using test helpers
+    - ✅ integration_test.go - Using wrapper types
+    - Note: Created engine/test_helpers.go to avoid import cycles
+    - Note: Some mocks kept local (e.g., bridge/manager_test.go) due to import constraints
+
+##### Phase 2: Core Helpers (Week 2)
+- ✅ **Task 2.3.2.5.2: Implement Bridge Test Helpers** [2025-06-18]
+  - ✅ Create `bridge_helpers.go` with common setup/teardown patterns
+    - ✅ Implement SetupTestBridge for initialization + cleanup
+    - ✅ Implement SetupTestBridgeWithEngine for mock engine integration
+    - ✅ Add AssertBridgeInitialized verification helper
+    - ✅ Add AssertBridgeMethod for method verification
+  - ✅ Create `builders.go` with ScriptValue fluent builders
+    - ✅ Implement ScriptValueBuilder with method chaining
+    - ✅ Add quick creators: StringValue, NumberValue, etc.
+    - ✅ Add ObjectFromMap and ArrayFromSlice converters
+    - ✅ Create test data factory methods
+  - ✅ Create `assertions.go` with type assertion helpers
+    - ✅ Implement AssertScriptValueType for type checking
+    - ✅ Add AssertErrorValue for error validation
+    - ✅ Add AssertObjectHasFields for object validation
+    - ✅ Add AssertArrayLength for array validation
+    - ✅ Implement RequireNoGoError for ErrorValue checks
+  - ✅ Add comprehensive tests for helpers, builders and assertions
+
+##### Phase 3: Progressive Migration - Engine Package (Week 3)
+- ✅ **Task 2.3.2.5.3: Migrate `/pkg/engine` Tests** [2025-06-19]
+  - ✅ Enhanced `test_helpers.go` with common helper functions
+    - ✅ Added createTestArgs() for common test arguments
+    - ✅ Added createTestObject() for standard test objects
+    - ✅ Added createTestArray() for mixed-type arrays
+    - ✅ Added assertScriptValueType() and assertScriptValueEquals()
+  - ✅ Migrated `conversion_test.go` to use helper functions
+    - ✅ Updated TestValidateStringArg to use createTestArgs()
+    - ✅ Updated TestValidateObjectArg to use createTestObject()
+    - ✅ Updated TestValidateArrayArg to use createTestArray()
+  - ✅ Migrated `scriptvalue_test.go` to use helper functions
+    - ✅ Updated ArrayValue tests to use createMixedTypeArray()
+    - ✅ Updated ObjectValue tests to use createTestObject()
+  - ✅ Migrated `registry_test.go` to use mock implementations [2025-06-18]
+  - Note: Full testutils migration not possible due to import cycles
+  - Note: Achieved code reduction within engine package constraints
+  - ✅ Verify all engine tests pass after migration
+
+##### Phase 4: Progressive Migration - Bridge Package (Week 4)
+- ✅ **Task 2.3.2.5.4: Migrate `/pkg/bridge` Tests** [2025-06-19 22:15]
+  - ✅ Migrated `manager_test.go` to use MockScriptEngine from testutils
+    - ✅ Removed 137 lines of duplicate mockScriptEngine implementation
+    - ✅ Replaced with testutils.NewMockScriptEngine()
+    - ✅ Updated engine initialization and bridge listing
+  - ✅ Migrate state package tests to use testutils [2025-06-19]
+    - ✅ Replaced all mockScriptEngine with testutils version
+    - ✅ Created stateTestEngine wrapper for state-specific functionality
+    - ✅ Fixed closure capture issue in RegisterBridge
+    - Note: Found bug - state/manager.go ExecuteMethod missing implementations for:
+      - set, get, has, keys, values, delete, setMetadata, getMetadata, etc.
+      - These methods are defined in Methods() but not in ExecuteMethod switch
+      - Tests will fail until this is fixed in the bridge implementation
+  - ✅ Migrate workflow_test.go [2025-06-19]
+    - ✅ Updated workflow_test.go - reduced 75 engine.New*Value calls
+    - ✅ Created helper functions: sv(), svMap(), svArray()
+    - ✅ Workflow tests pass
+  - ✅ Migrate remaining agent package tests [2025-06-19]
+    - ✅ hooks_test.go (31 occurrences) - migrated using sv(), svMap(), svArray()
+    - ✅ tools_test.go (28 occurrences) - migrated using sv(), svMap(), svArray()
+    - ✅ events_test.go (20 occurrences) - migrated using sv(), svMap(), svArray()
+    - ✅ agent_test.go (19 occurrences) - migrated using sv(), svMap(), svArray()
+    - ✅ tool_registry_test.go (18 occurrences) - migrated using sv(), svMap(), svArray()
+    - ✅ All agent package tests passing
+    - Note: Helper functions already existed in test_helpers.go, reused those
+  - ✅ Migrate remaining bridge test files [2025-06-19]
+    - ✅ Update llm package tests (3 files) [2025-06-19]
+      - ✅ llm_test.go - removed MockEngine, migrated 45 occurrences
+      - ✅ providers_test.go - migrated 48 occurrences
+      - ✅ pool_test.go - migrated 41 occurrences
+      - ✅ All tests passing, achieved 134 total replacements
+    - ✅ Update util package tests (8 files) [2025-06-19]
+      - ✅ script_logger_test.go - migrated 69 occurrences
+      - ✅ json_test.go - migrated 57 occurrences  
+      - ✅ slog_test.go - migrated 51 occurrences
+      - ✅ errors_test.go - migrated 50 occurrences
+      - ✅ auth_test.go - migrated 41 occurrences
+      - ✅ debug_test.go - migrated 38 occurrences
+      - ✅ llm_test.go - migrated 1 occurrence
+      - ✅ util_test.go - migrated 1 occurrence
+      - ✅ Total: 308 replacements across util package
+    - ✅ Update observability package tests (3 files) [2025-06-19]
+      - ✅ guardrails_test.go - migrated 60 occurrences
+      - ✅ metrics_test.go - migrated 42 occurrences
+      - ✅ tracing_test.go - migrated 43 occurrences
+      - ✅ Fixed map[string]engine.ScriptValue to map[string]interface{} issues
+      - ✅ Total: 145 replacements across observability package
+    - ✅ Update structured package tests (1 file) [2025-06-19]
+      - ✅ schema_test.go - migrated 70 occurrences
+      - ✅ Fixed engine.ConvertMapToScriptValue wrapper issues
+      - ✅ All tests passing
+  - ✅ Achieved significant code reduction by removing mockScriptEngine
+  - ✅ **Bridge Package Test Failures Completely Fixed** [2025-06-19 23:00]
+    - **State Manager Bridge Fully Fixed**:
+      - ✅ Added missing ExecuteMethod cases for: get, set, delete, has, keys, values, registerTransform, registerValidator, validateState
+      - ✅ Added metadata operations: setMetadata, getMetadata, getAllMetadata  
+      - ✅ Added artifact operations: addArtifact, getArtifact, artifacts
+      - ✅ Added message operations: addMessage, messages
+      - ✅ **Fixed state object preservation**: Enhanced test engine with convertResultToGo() and toScriptValue() to preserve __state references
+      - ✅ **Fixed ExecuteMethod state conversion**: Added __state field preservation in createState, loadState, applyTransform, mergeStates cases
+      - ✅ Added extractStateObject() helper to safely extract state objects from ScriptValues
+      - ✅ Enhanced parameter handling in stateTestEngine for all transform/validation/merge operations
+      - ✅ Added flexible valueEquals() function for robust type conversion testing (handles int/float64 conversions, arrays)
+      - ✅ ALL state tests now pass (100% pass rate)
+    - ✅ **Observability Bridge Fixed**: Fixed guardrails test svArray parameter usage (was passing ScriptValue[], now passes interface{}[])
+    - ✅ **Util Bridge Fixed**: Fixed slog test message array parameter conversion 
+    - ✅ **Performance**: State operations: 1000 ops in 58ms (avg: 58µs per operation)
+    - ✅ **Test Coverage**: All originally failing bridge tests now pass
 
 ---
 

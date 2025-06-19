@@ -19,14 +19,11 @@ import (
 func TestBridgeAdapter_Creation(t *testing.T) {
 	t.Run("create_adapter_from_bridge", func(t *testing.T) {
 		// Create a mock bridge
-		mockBridge := &mockBridge{
-			id: "test-bridge",
-			metadata: engine.BridgeMetadata{
-				Name:        "Test Bridge",
-				Version:     "1.0.0",
-				Description: "A test bridge",
-			},
-		}
+		mockBridge := NewMockBridge("test-bridge").WithMetadata(engine.BridgeMetadata{
+			Name:        "Test Bridge",
+			Version:     "1.0.0",
+			Description: "A test bridge",
+		})
 
 		// Create adapter
 		adapter := NewBridgeAdapter(mockBridge)
@@ -38,15 +35,12 @@ func TestBridgeAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("adapter_exposes_metadata", func(t *testing.T) {
-		mockBridge := &mockBridge{
-			id: "test-bridge",
-			metadata: engine.BridgeMetadata{
-				Name:        "Test Bridge",
-				Version:     "1.0.0",
-				Description: "A test bridge",
-				Author:      "Test Author",
-			},
-		}
+		mockBridge := NewMockBridge("test-bridge").WithMetadata(engine.BridgeMetadata{
+			Name:        "Test Bridge",
+			Version:     "1.0.0",
+			Description: "A test bridge",
+			Author:      "Test Author",
+		})
 
 		adapter := NewBridgeAdapter(mockBridge)
 		metadata := adapter.GetMetadata()

@@ -4,8 +4,6 @@
 package gopherlua
 
 import (
-	"context"
-	"fmt"
 	"testing"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
@@ -14,111 +12,18 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// MockBridge implements engine.Bridge for testing
-type MockBridge struct {
-	id          string
-	initialized bool
-	metadata    engine.BridgeMetadata
-}
-
-func (mb *MockBridge) GetID() string {
-	return mb.id
-}
-
-func (mb *MockBridge) GetMetadata() engine.BridgeMetadata {
-	return mb.metadata
-}
-
-func (mb *MockBridge) Initialize(ctx context.Context) error {
-	mb.initialized = true
-	return nil
-}
-
-func (mb *MockBridge) Cleanup(ctx context.Context) error {
-	mb.initialized = false
-	return nil
-}
-
-func (mb *MockBridge) IsInitialized() bool {
-	return mb.initialized
-}
-
-func (mb *MockBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return nil
-}
-
-func (mb *MockBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
-		{
-			Name:        "testMethod",
-			Description: "A test method",
-			Parameters: []engine.ParameterInfo{
-				{Name: "input", Type: "string", Required: true},
-			},
-			ReturnType: "string",
-		},
-		{
-			Name:        "calculateSum",
-			Description: "Calculate sum of two numbers",
-			Parameters: []engine.ParameterInfo{
-				{Name: "a", Type: "number", Required: true},
-				{Name: "b", Type: "number", Required: true},
-			},
-			ReturnType: "number",
-		},
-	}
-}
-
-func (mb *MockBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
-	return nil
-}
-
-func (mb *MockBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	// Mock implementation for testing
-	switch name {
-	case "testMethod":
-		return engine.NewStringValue("test result"), nil
-	case "mathOperation":
-		return engine.NewNumberValue(42), nil
-	default:
-		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), fmt.Errorf("unknown method: %s", name)
-	}
-}
-
-func (mb *MockBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
-		"MockBridge": {
-			GoType:     "MockBridge",
-			ScriptType: "bridge_object",
-			Converter:  "bridge_converter",
-		},
-	}
-}
-
-func (mb *MockBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
-		{
-			Type:        engine.PermissionMemory,
-			Resource:    "bridge_memory",
-			Actions:     []string{"read", "write"},
-			Description: "Memory access for bridge operations",
-		},
-	}
-}
+// MockBridge implementation moved to test_helpers.go
 
 func TestBridgeConverter_BasicOperations(t *testing.T) {
 	converter := NewBridgeConverter()
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := &MockBridge{
-		id: "test_bridge",
-		metadata: engine.BridgeMetadata{
-			Name:        "Test Bridge",
-			Version:     "1.0.0",
-			Description: "A bridge for testing",
-		},
-	}
+	bridge := NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
+		Name:        "Test Bridge",
+		Version:     "1.0.0",
+		Description: "A bridge for testing",
+	})
 
 	t.Run("bridge_to_userdata", func(t *testing.T) {
 		result, err := converter.BridgeToLua(L, bridge)
@@ -154,14 +59,11 @@ func TestBridgeConverter_MetatableGeneration(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := &MockBridge{
-		id: "test_bridge",
-		metadata: engine.BridgeMetadata{
-			Name:        "Test Bridge",
-			Version:     "1.0.0",
-			Description: "A bridge for testing",
-		},
-	}
+	bridge := NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
+		Name:        "Test Bridge",
+		Version:     "1.0.0",
+		Description: "A bridge for testing",
+	})
 
 	t.Run("metatable_contains_methods", func(t *testing.T) {
 		metatable := converter.GenerateMetatable(L, bridge)
@@ -205,14 +107,11 @@ func TestBridgeConverter_MethodWrapping(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := &MockBridge{
-		id: "test_bridge",
-		metadata: engine.BridgeMetadata{
-			Name:        "Test Bridge",
-			Version:     "1.0.0",
-			Description: "A bridge for testing",
-		},
-	}
+	bridge := NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
+		Name:        "Test Bridge",
+		Version:     "1.0.0",
+		Description: "A bridge for testing",
+	})
 
 	t.Run("wrap_method_basic", func(t *testing.T) {
 		methodInfo := engine.MethodInfo{
