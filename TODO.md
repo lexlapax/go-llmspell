@@ -92,33 +92,33 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 #### 2.3.5: Lua Standard Library
 Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing.
 
-- [ ] **Task 2.3.5.1: Promise & Async Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
-    - [ ] Implement Promise class with full async support
-      - [ ] Add `Promise.new(executor)` constructor
-      - [ ] Add `then/catch/finally` chain methods
-      - [ ] Add `Promise.all(promises)` for concurrent execution
-      - [ ] Add `Promise.race(promises)` for first-wins scenarios
-      - [ ] Add `Promise.resolve(value)` and `Promise.reject(error)` helpers
-    - [ ] Add async/await syntax sugar
-      - [ ] Add `async(func)` wrapper for promise-returning functions
-      - [ ] Add `await(promise, timeout)` method with timeout support
-      - [ ] Add `sleep(duration)` utility for delays
-    - [ ] Add coroutine integration
-      - [ ] Add `spawn(func, args)` for concurrent execution
-      - [ ] Add `yield()` for cooperative multitasking
-      - [ ] Add channel-based communication helpers
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/promise_test.go`)
-    - [ ] Test promise constructor and executor behavior
-    - [ ] Test promise resolution/rejection with various types
-    - [ ] Test promise chaining (then/catch/finally)
-    - [ ] Test Promise.all concurrent execution
-    - [ ] Test Promise.race timing behavior
-    - [ ] Test timeout and cancellation
-    - [ ] Test error propagation through chains
-    - [ ] Test memory leaks in long chains
-    - [ ] Test coroutine integration
-    - [ ] Benchmark promise creation/resolution
+- [x] **Task 2.3.5.1: Promise & Async Library** ✅ COMPLETED [2025-06-19]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
+    - [x] Implement Promise class with full async support
+      - [x] Add `Promise.new(executor)` constructor
+      - [x] Add `andThen/onError/onFinally` chain methods (renamed to avoid Lua keywords)
+      - [x] Add `Promise.all(promises)` for concurrent execution
+      - [x] Add `Promise.race(promises)` for first-wins scenarios
+      - [x] Add `Promise.resolve(value)` and `Promise.reject(error)` helpers
+    - [x] Add async/await syntax sugar
+      - [x] Add `async(func)` wrapper for promise-returning functions
+      - [x] Add `await(promise, timeout)` method with timeout support
+      - [x] Add `sleep(duration)` utility for delays
+    - [x] Add coroutine integration
+      - [x] Add `spawn(func, args)` for concurrent execution
+      - [x] Add `yield()` for cooperative multitasking
+      - [x] Add channel-based communication helpers
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/promise_test.go`)
+    - [x] Test promise constructor and executor behavior
+    - [x] Test promise resolution/rejection with various types
+    - [x] Test promise chaining (andThen/onError/onFinally)
+    - [x] Test Promise.all concurrent execution
+    - [x] Test Promise.race timing behavior
+    - [x] Test timeout and cancellation
+    - [x] Test error propagation through chains
+    - [x] Test memory leaks in long chains
+    - [x] Test coroutine integration
+    - [x] Benchmark promise creation/resolution
 
 - [ ] **Task 2.3.5.2: LLM Operations Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/llm.lua`)
