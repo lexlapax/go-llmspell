@@ -77,23 +77,8 @@ func (sa *StructuredAdapter) CreateLuaModule() lua.LGFunction {
 		// Add structured-specific enhancements
 		sa.addStructuredEnhancements(L, module)
 
-		// Add validation methods
-		sa.addValidationMethods(L, module)
-
-		// Add generation methods
-		sa.addGenerationMethods(L, module)
-
-		// Add repository methods
-		sa.addRepositoryMethods(L, module)
-
-		// Add import/export methods
-		sa.addImportExportMethods(L, module)
-
-		// Add custom validation methods
-		sa.addCustomValidationMethods(L, module)
-
-		// Add utility methods
-		sa.addUtilityMethods(L, module)
+		// Add flattened methods from all namespaces
+		sa.addFlattenedMethods(L, module)
 
 		// Add convenience methods
 		sa.addConvenienceMethods(L, module)
@@ -110,13 +95,10 @@ func (sa *StructuredAdapter) addStructuredEnhancements(L *lua.LState, module *lu
 	sa.addStructuredConstants(L, module)
 }
 
-// addValidationMethods adds validation-related methods
-func (sa *StructuredAdapter) addValidationMethods(L *lua.LState, module *lua.LTable) {
-	// Create validation namespace
-	validation := L.NewTable()
-
-	// validateJSON method (enhanced wrapper)
-	L.SetField(validation, "validateJSON", L.NewFunction(func(L *lua.LState) int {
+// addFlattenedMethods adds all flattened methods from all namespaces
+func (sa *StructuredAdapter) addFlattenedMethods(L *lua.LState, module *lua.LTable) {
+	// Validation methods - flattened to module level
+	L.SetField(module, "validationValidateJSON", L.NewFunction(func(L *lua.LState) int {
 		schema := L.CheckTable(1)
 		data := L.CheckTable(2)
 
@@ -148,8 +130,7 @@ func (sa *StructuredAdapter) addValidationMethods(L *lua.LState, module *lua.LTa
 		return 2
 	}))
 
-	// validateStruct method
-	L.SetField(validation, "validateStruct", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "validationValidateStruct", L.NewFunction(func(L *lua.LState) int {
 		schema := L.CheckTable(1)
 		data := L.CheckTable(2)
 
@@ -181,17 +162,8 @@ func (sa *StructuredAdapter) addValidationMethods(L *lua.LState, module *lua.LTa
 		return 2
 	}))
 
-	// Add validation namespace to module
-	L.SetField(module, "validation", validation)
-}
-
-// addGenerationMethods adds generation-related methods
-func (sa *StructuredAdapter) addGenerationMethods(L *lua.LState, module *lua.LTable) {
-	// Create generation namespace
-	generation := L.NewTable()
-
-	// fromType method
-	L.SetField(generation, "fromType", L.NewFunction(func(L *lua.LState) int {
+	// Generation methods - flattened to module level
+	L.SetField(module, "generationFromType", L.NewFunction(func(L *lua.LState) int {
 		typeInfo := L.CheckTable(1)
 
 		typeInfoMap := sa.tableToMap(L, typeInfo)
@@ -218,8 +190,7 @@ func (sa *StructuredAdapter) addGenerationMethods(L *lua.LState, module *lua.LTa
 		return 2
 	}))
 
-	// fromTags method
-	L.SetField(generation, "fromTags", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "generationFromTags", L.NewFunction(func(L *lua.LState) int {
 		structData := L.CheckTable(1)
 
 		structDataMap := sa.tableToMap(L, structData)
@@ -246,8 +217,7 @@ func (sa *StructuredAdapter) addGenerationMethods(L *lua.LState, module *lua.LTa
 		return 2
 	}))
 
-	// fromJSONSchema method
-	L.SetField(generation, "fromJSONSchema", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "generationFromJSONSchema", L.NewFunction(func(L *lua.LState) int {
 		jsonSchema := L.CheckString(1)
 
 		ctx := context.Background()
@@ -272,17 +242,8 @@ func (sa *StructuredAdapter) addGenerationMethods(L *lua.LState, module *lua.LTa
 		return 2
 	}))
 
-	// Add generation namespace to module
-	L.SetField(module, "generation", generation)
-}
-
-// addRepositoryMethods adds repository-related methods
-func (sa *StructuredAdapter) addRepositoryMethods(L *lua.LState, module *lua.LTable) {
-	// Create repository namespace
-	repository := L.NewTable()
-
-	// save method
-	L.SetField(repository, "save", L.NewFunction(func(L *lua.LState) int {
+	// Repository methods - flattened to module level
+	L.SetField(module, "repositorySave", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 		schema := L.CheckTable(2)
 
@@ -305,8 +266,7 @@ func (sa *StructuredAdapter) addRepositoryMethods(L *lua.LState, module *lua.LTa
 		return 1
 	}))
 
-	// get method
-	L.SetField(repository, "get", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "repositoryGet", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 
 		ctx := context.Background()
@@ -331,8 +291,7 @@ func (sa *StructuredAdapter) addRepositoryMethods(L *lua.LState, module *lua.LTa
 		return 2
 	}))
 
-	// delete method
-	L.SetField(repository, "delete", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "repositoryDelete", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 
 		ctx := context.Background()
@@ -349,8 +308,7 @@ func (sa *StructuredAdapter) addRepositoryMethods(L *lua.LState, module *lua.LTa
 		return 1
 	}))
 
-	// initializeFile method
-	L.SetField(repository, "initializeFile", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "repositoryInitializeFile", L.NewFunction(func(L *lua.LState) int {
 		directory := L.CheckString(1)
 
 		ctx := context.Background()
@@ -367,17 +325,8 @@ func (sa *StructuredAdapter) addRepositoryMethods(L *lua.LState, module *lua.LTa
 		return 1
 	}))
 
-	// Add repository namespace to module
-	L.SetField(module, "repository", repository)
-}
-
-// addImportExportMethods adds import/export-related methods
-func (sa *StructuredAdapter) addImportExportMethods(L *lua.LState, module *lua.LTable) {
-	// Create importExport namespace
-	importExport := L.NewTable()
-
-	// toJSONSchema method
-	L.SetField(importExport, "toJSONSchema", L.NewFunction(func(L *lua.LState) int {
+	// ImportExport methods - flattened to module level
+	L.SetField(module, "importExportToJSONSchema", L.NewFunction(func(L *lua.LState) int {
 		schema := L.CheckTable(1)
 
 		schemaMap := sa.tableToMap(L, schema)
@@ -404,8 +353,7 @@ func (sa *StructuredAdapter) addImportExportMethods(L *lua.LState, module *lua.L
 		return 2
 	}))
 
-	// toOpenAPI method
-	L.SetField(importExport, "toOpenAPI", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "importExportToOpenAPI", L.NewFunction(func(L *lua.LState) int {
 		schema := L.CheckTable(1)
 
 		schemaMap := sa.tableToMap(L, schema)
@@ -432,8 +380,7 @@ func (sa *StructuredAdapter) addImportExportMethods(L *lua.LState, module *lua.L
 		return 2
 	}))
 
-	// fromFile method
-	L.SetField(importExport, "fromFile", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "importExportFromFile", L.NewFunction(func(L *lua.LState) int {
 		filePath := L.CheckString(1)
 		format := L.OptString(2, "json")
 
@@ -462,8 +409,7 @@ func (sa *StructuredAdapter) addImportExportMethods(L *lua.LState, module *lua.L
 		return 2
 	}))
 
-	// merge method
-	L.SetField(importExport, "merge", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "importExportMerge", L.NewFunction(func(L *lua.LState) int {
 		schemas := L.CheckTable(1)
 		strategy := L.OptString(2, "merge_all")
 
@@ -501,17 +447,8 @@ func (sa *StructuredAdapter) addImportExportMethods(L *lua.LState, module *lua.L
 		return 2
 	}))
 
-	// Add importExport namespace to module
-	L.SetField(module, "importExport", importExport)
-}
-
-// addCustomValidationMethods adds custom validation-related methods
-func (sa *StructuredAdapter) addCustomValidationMethods(L *lua.LState, module *lua.LTable) {
-	// Create custom namespace
-	custom := L.NewTable()
-
-	// registerValidator method
-	L.SetField(custom, "registerValidator", L.NewFunction(func(L *lua.LState) int {
+	// Custom methods - flattened to module level
+	L.SetField(module, "customRegisterValidator", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 		validator := L.CheckTable(2)
 
@@ -534,8 +471,7 @@ func (sa *StructuredAdapter) addCustomValidationMethods(L *lua.LState, module *l
 		return 1
 	}))
 
-	// validate method
-	L.SetField(custom, "validate", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "customValidate", L.NewFunction(func(L *lua.LState) int {
 		data := L.CheckTable(1)
 		validatorName := L.CheckString(2)
 
@@ -566,8 +502,7 @@ func (sa *StructuredAdapter) addCustomValidationMethods(L *lua.LState, module *l
 		return 2
 	}))
 
-	// listValidators method
-	L.SetField(custom, "listValidators", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "customListValidators", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		result, err := sa.GetBridge().ExecuteMethod(ctx, "listCustomValidators", []engine.ScriptValue{})
@@ -606,8 +541,7 @@ func (sa *StructuredAdapter) addCustomValidationMethods(L *lua.LState, module *l
 		return 1
 	}))
 
-	// validateAsync method
-	L.SetField(custom, "validateAsync", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "customValidateAsync", L.NewFunction(func(L *lua.LState) int {
 		schema := L.CheckTable(1)
 		data := L.CheckTable(2)
 
@@ -639,8 +573,7 @@ func (sa *StructuredAdapter) addCustomValidationMethods(L *lua.LState, module *l
 		return 2
 	}))
 
-	// getMetrics method
-	L.SetField(custom, "getMetrics", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "customGetMetrics", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		result, err := sa.GetBridge().ExecuteMethod(ctx, "getValidationMetrics", []engine.ScriptValue{})
@@ -662,17 +595,8 @@ func (sa *StructuredAdapter) addCustomValidationMethods(L *lua.LState, module *l
 		return 2
 	}))
 
-	// Add custom namespace to module
-	L.SetField(module, "custom", custom)
-}
-
-// addUtilityMethods adds utility-related methods
-func (sa *StructuredAdapter) addUtilityMethods(L *lua.LState, module *lua.LTable) {
-	// Create utils namespace
-	utils := L.NewTable()
-
-	// generateDiff method
-	L.SetField(utils, "generateDiff", L.NewFunction(func(L *lua.LState) int {
+	// Utils methods - flattened to module level
+	L.SetField(module, "utilsGenerateDiff", L.NewFunction(func(L *lua.LState) int {
 		oldSchema := L.CheckTable(1)
 		newSchema := L.CheckTable(2)
 
@@ -703,9 +627,6 @@ func (sa *StructuredAdapter) addUtilityMethods(L *lua.LState, module *lua.LTable
 		L.Push(lua.LNil)
 		return 2
 	}))
-
-	// Add utils namespace to module
-	L.SetField(module, "utils", utils)
 }
 
 // addConvenienceMethods adds convenience methods to the module
@@ -880,22 +801,28 @@ func (sa *StructuredAdapter) GetMethods() []string {
 		methods = sa.BridgeAdapter.GetMethods()
 	}
 
-	// Add structured-specific methods if not already present
+	// Add structured-specific flattened methods if not already present
 	structuredMethods := []string{
-		"createSchema", "createProperty", "validateJSON", "validateStruct",
-		"generateSchemaFromType", "convertJSONSchema",
-		"saveSchema", "getSchema", "deleteSchema",
-		"initializeFileRepository", "saveSchemaVersion", "getSchemaVersion",
-		"listSchemaVersions", "setCurrentSchemaVersion",
-		"registerMigrator", "migrateSchema", "exportRepository", "importRepository",
-		"generateFromTags", "setTagPriority", "registerTagParser",
-		"extractValidationRules", "generateWithDocumentation",
-		"exportToJSONSchema", "exportToOpenAPI", "importFromFile", "importFromString",
-		"convertFormat", "mergeSchemas", "generateDiff",
-		"exportCollection", "importCollection",
-		"registerCustomValidator", "unregisterCustomValidator", "listCustomValidators",
-		"validateWithCustom", "validateAsync", "getValidationMetrics",
-		"clearValidationCache", "registerConditionalValidator", "validateConditional",
+		// Standard convenience methods
+		"createSchema", "createProperty",
+
+		// Validation methods (flattened)
+		"validationValidateJSON", "validationValidateStruct",
+
+		// Generation methods (flattened)
+		"generationFromType", "generationFromTags", "generationFromJSONSchema",
+
+		// Repository methods (flattened)
+		"repositorySave", "repositoryGet", "repositoryDelete", "repositoryInitializeFile",
+
+		// ImportExport methods (flattened)
+		"importExportToJSONSchema", "importExportToOpenAPI", "importExportFromFile", "importExportMerge",
+
+		// Custom methods (flattened)
+		"customRegisterValidator", "customValidate", "customListValidators", "customValidateAsync", "customGetMetrics",
+
+		// Utils methods (flattened)
+		"utilsGenerateDiff",
 	}
 
 	methodMap := make(map[string]bool)

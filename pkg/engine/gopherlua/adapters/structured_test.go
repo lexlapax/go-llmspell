@@ -58,17 +58,17 @@ func TestStructuredAdapter_Creation(t *testing.T) {
 		adapter := NewStructuredAdapter(structuredBridge)
 		require.NotNil(t, adapter)
 
-		// Should have structured-specific methods
+		// Should have flattened structured-specific methods
 		methods := adapter.GetMethods()
 		assert.Contains(t, methods, "createSchema")
 		assert.Contains(t, methods, "createProperty")
-		assert.Contains(t, methods, "validateJSON")
-		assert.Contains(t, methods, "validateStruct")
-		assert.Contains(t, methods, "generateSchemaFromType")
-		assert.Contains(t, methods, "convertJSONSchema")
-		assert.Contains(t, methods, "saveSchema")
-		assert.Contains(t, methods, "getSchema")
-		assert.Contains(t, methods, "deleteSchema")
+		assert.Contains(t, methods, "validationValidateJSON")
+		assert.Contains(t, methods, "validationValidateStruct")
+		assert.Contains(t, methods, "generationFromType")
+		assert.Contains(t, methods, "generationFromJSONSchema")
+		assert.Contains(t, methods, "repositorySave")
+		assert.Contains(t, methods, "repositoryGet")
+		assert.Contains(t, methods, "repositoryDelete")
 	})
 
 	t.Run("structured_module_structure", func(t *testing.T) {
@@ -130,21 +130,21 @@ func TestStructuredAdapter_Creation(t *testing.T) {
 		assert.NotEqual(t, lua.LNil, module.RawGetString("createSchema"))
 		assert.NotEqual(t, lua.LNil, module.RawGetString("validateJSON"))
 
-		// Check namespaces exist
-		validation := module.RawGetString("validation")
-		assert.NotEqual(t, lua.LNil, validation, "validation namespace should exist")
+		// Check flattened methods exist (namespaces have been flattened)
+		validationMethod := module.RawGetString("validationValidateJSON")
+		assert.NotEqual(t, lua.LNil, validationMethod, "validationValidateJSON flattened method should exist")
 
-		generation := module.RawGetString("generation")
-		assert.NotEqual(t, lua.LNil, generation, "generation namespace should exist")
+		generationMethod := module.RawGetString("generationFromType")
+		assert.NotEqual(t, lua.LNil, generationMethod, "generationFromType flattened method should exist")
 
-		repository := module.RawGetString("repository")
-		assert.NotEqual(t, lua.LNil, repository, "repository namespace should exist")
+		repositoryMethod := module.RawGetString("repositorySave")
+		assert.NotEqual(t, lua.LNil, repositoryMethod, "repositorySave flattened method should exist")
 
-		importExport := module.RawGetString("importExport")
-		assert.NotEqual(t, lua.LNil, importExport, "importExport namespace should exist")
+		importExportMethod := module.RawGetString("importExportToJSONSchema")
+		assert.NotEqual(t, lua.LNil, importExportMethod, "importExportToJSONSchema flattened method should exist")
 
-		custom := module.RawGetString("custom")
-		assert.NotEqual(t, lua.LNil, custom, "custom namespace should exist")
+		customMethod := module.RawGetString("customRegisterValidator")
+		assert.NotEqual(t, lua.LNil, customMethod, "customRegisterValidator flattened method should exist")
 	})
 }
 
@@ -306,7 +306,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 				age = 30
 			}
 			
-			local result, err = structured.validation.validateJSON(schema, data)
+			local result, err = structured.validationValidateJSON(schema, data)
 			assert(err == nil, "validation should not error: " .. tostring(err))
 			assert(result.valid == true, "data should be valid")
 			assert(#result.errors == 0, "should have no errors")
@@ -365,7 +365,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 				age = 30  -- missing required 'name'
 			}
 			
-			local result, err = structured.validation.validateJSON(schema, data)
+			local result, err = structured.validationValidateJSON(schema, data)
 			assert(err == nil, "validation should not error: " .. tostring(err))
 			assert(result.valid == false, "data should be invalid")
 			assert(#result.errors == 1, "should have one error")
@@ -419,7 +419,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 				count = 42
 			}
 			
-			local result, err = structured.validation.validateStruct(schema, structData)
+			local result, err = structured.validationValidateStruct(schema, structData)
 			assert(err == nil, "struct validation should not error: " .. tostring(err))
 			assert(result.valid == true, "struct should be valid")
 		`)
@@ -476,7 +476,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 				}
 			}
 			
-			local result, err = structured.generation.fromType(typeInfo)
+			local result, err = structured.generationFromType(typeInfo)
 			assert(err == nil, "generation should not error: " .. tostring(err))
 			assert(result.generated == true, "schema should be generated")
 			assert(result.source == "type", "source should be 'type'")
@@ -536,7 +536,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 				}
 			}
 			
-			local result, err = structured.generation.fromTags(structData)
+			local result, err = structured.generationFromTags(structData)
 			assert(err == nil, "tag generation should not error: " .. tostring(err))
 			assert(result.generated == true, "schema should be generated")
 			assert(result.source == "tags", "source should be 'tags'")
@@ -585,7 +585,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 				}
 			}]]
 			
-			local result, err = structured.generation.fromJSONSchema(jsonSchema)
+			local result, err = structured.generationFromJSONSchema(jsonSchema)
 			assert(err == nil, "conversion should not error: " .. tostring(err))
 			assert(result.converted == true, "schema should be converted")
 			assert(result.source == "json", "source should be 'json'")
@@ -654,17 +654,17 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 			}
 			
 			-- Save schema
-			local saveResult, saveErr = structured.repository.save("user-schema", schema)
+			local saveResult, saveErr = structured.repositorySave("user-schema", schema)
 			assert(saveErr == nil, "save should not error: " .. tostring(saveErr))
 			
 			-- Get schema
-			local getResult, getErr = structured.repository.get("user-schema")
+			local getResult, getErr = structured.repositoryGet("user-schema")
 			assert(getErr == nil, "get should not error: " .. tostring(getErr))
 			assert(getResult.found == true, "schema should be found")
 			assert(getResult.name == "user-schema", "schema name should match")
 			
 			-- Delete schema
-			local deleteResult, deleteErr = structured.repository.delete("user-schema")
+			local deleteResult, deleteErr = structured.repositoryDelete("user-schema")
 			assert(deleteErr == nil, "delete should not error: " .. tostring(deleteErr))
 		`)
 		assert.NoError(t, err)
@@ -696,7 +696,7 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 		err = L.DoString(`
 			local structured = require("structured")
 			
-			local result, err = structured.repository.initializeFile("/tmp/schemas")
+			local result, err = structured.repositoryInitializeFile("/tmp/schemas")
 			assert(err == nil, "file repository init should not error: " .. tostring(err))
 		`)
 		assert.NoError(t, err)
@@ -743,7 +743,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 				}
 			}
 			
-			local jsonSchema, err = structured.importExport.toJSONSchema(schema)
+			local jsonSchema, err = structured.importExportToJSONSchema(schema)
 			assert(err == nil, "export should not error: " .. tostring(err))
 			assert(type(jsonSchema) == "string", "result should be string")
 			assert(string.find(jsonSchema, "object"), "should contain 'object'")
@@ -790,7 +790,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 				}
 			}
 			
-			local openApiSchema, err = structured.importExport.toOpenAPI(schema)
+			local openApiSchema, err = structured.importExportToOpenAPI(schema)
 			assert(err == nil, "OpenAPI export should not error: " .. tostring(err))
 			assert(type(openApiSchema) == "string", "result should be string")
 		`)
@@ -831,7 +831,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		err = L.DoString(`
 			local structured = require("structured")
 			
-			local result, err = structured.importExport.fromFile("/path/to/schema.json", "json")
+			local result, err = structured.importExportFromFile("/path/to/schema.json", "json")
 			assert(err == nil, "import should not error: " .. tostring(err))
 			assert(result.imported == true, "schema should be imported")
 			assert(result.source == "file", "source should be 'file'")
@@ -894,7 +894,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 				}
 			}
 			
-			local result, err = structured.importExport.merge({schema1, schema2}, "deep")
+			local result, err = structured.importExportMerge({schema1, schema2}, "deep")
 			assert(err == nil, "merge should not error: " .. tostring(err))
 			assert(result.merged == true, "schemas should be merged")
 			assert(result.count == 2, "should have merged 2 schemas")
@@ -947,7 +947,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 			end
 			
 			-- Register validator
-			local regResult, regErr = structured.custom.registerValidator("email", {
+			local regResult, regErr = structured.customRegisterValidator("email", {
 				validator = emailValidator,
 				description = "Validates email format"
 			})
@@ -955,7 +955,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 			
 			-- Use custom validator
 			local data = { email = "test@example.com" }
-			local result, err = structured.custom.validate(data, "email")
+			local result, err = structured.customValidate(data, "email")
 			assert(err == nil, "custom validation should not error: " .. tostring(err))
 			assert(result.valid == true, "validation should pass")
 			assert(result.customResult == true, "custom validation should pass")
@@ -994,7 +994,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 		err = L.DoString(`
 			local structured = require("structured")
 			
-			local validator1, validator2, validator3 = structured.custom.listValidators()
+			local validator1, validator2, validator3 = structured.customListValidators()
 			assert(validator1 == "email", "first validator should be email")
 			assert(validator2 == "phone", "second validator should be phone")
 			assert(validator3 == "url", "third validator should be url")
@@ -1050,13 +1050,13 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 			local data = { name = "test" }
 			
 			-- Start async validation
-			local asyncResult, asyncErr = structured.custom.validateAsync(schema, data)
+			local asyncResult, asyncErr = structured.customValidateAsync(schema, data)
 			assert(asyncErr == nil, "async validation should not error: " .. tostring(asyncErr))
 			assert(asyncResult.async == true, "should be async validation")
 			assert(asyncResult.status == "queued", "should be queued")
 			
 			-- Get validation metrics
-			local metrics, metricsErr = structured.custom.getMetrics()
+			local metrics, metricsErr = structured.customGetMetrics()
 			assert(metricsErr == nil, "metrics should not error: " .. tostring(metricsErr))
 			assert(metrics.totalValidations == 100, "should have 100 total validations")
 			assert(metrics.asyncValidations == 10, "should have 10 async validations")
@@ -1128,7 +1128,7 @@ func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 			
 			local invalidSchema = "{ invalid json }"
 			
-			local result, err = structured.generation.fromJSONSchema(invalidSchema)
+			local result, err = structured.generationFromJSONSchema(invalidSchema)
 			assert(result == nil, "result should be nil on error")
 			assert(string.find(err, "invalid JSON schema format"), "should contain format error")
 		`)
@@ -1227,7 +1227,7 @@ func TestStructuredAdapter_ConvenienceMethods(t *testing.T) {
 				}
 			}
 			
-			local diff, err = structured.utils.generateDiff(oldSchema, newSchema)
+			local diff, err = structured.utilsGenerateDiff(oldSchema, newSchema)
 			assert(err == nil, "diff generation should not error: " .. tostring(err))
 			assert(diff.changeCount == 2, "should have 2 changes")
 			assert(#diff.added == 1, "should have 1 added property")

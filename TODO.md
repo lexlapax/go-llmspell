@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 15 of 24 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 16 of 24 completed]
     - 🚧 2.3.4: Lua Standard Library [IN PROGRESS]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -415,6 +415,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
 
 - [ ] **Task 2.3.5.3: Agent Management Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/agent.lua`)
+    - [ ] where is `agent.run(..)` or `agent.runAsync(..)`?
     - [ ] Agent lifecycle management
       - [ ] Add `agent.create(name, config)` for agent creation
       - [ ] Add `agent.configure(agent, settings)` for configuration
@@ -427,6 +428,12 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
       - [ ] Add `agent.add_tools(agent, tools)` for tool assignment
       - [ ] Add `agent.create_tool(name, func, schema)` for custom tools
       - [ ] Add `agent.tool_chain(tools, data)` for tool pipelines
+    - [ ] Workflow orchestration helpers -  **think hard.. I think the workflow should not be in events.lua but agent.lua or separate**
+      - [ ] where is `workflow.serial`.. or other tyupes of workflows?
+      - [ ] Add `workflow.create(steps)` for workflow definition
+      - [ ] Add `workflow.run(workflow, input)` for execution
+      - [ ] Add `workflow.parallel(steps)` for concurrent execution
+      - [ ] Add `workflow.conditional(condition, then_step, else_step)` for branching
   - [ ] Testing (`/pkg/engine/gopherlua/stdlib/agent_test.go`)
     - [ ] Test agent lifecycle state transitions
     - [ ] Test multi-agent communication patterns
@@ -435,6 +442,9 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test agent cloning with modifications
     - [ ] Test delegation and collaboration
     - [ ] Test concurrent agent operations
+    - [ ] Test workflow execution with branching
+    - [ ] Test parallel step coordination
+    - [ ] Test workflow cancellation
     - [ ] Test error handling in agent workflows
 
 - [ ] **Task 2.3.5.4: State Management Library**
@@ -462,30 +472,22 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [ ] Test state transformation chains
     - [ ] Benchmark state operations
 
-- [ ] **Task 2.3.5.5: Event & Workflow Library**
+- [ ] **Task 2.3.5.5: Event & Hooks Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/events.lua`)
     - [ ] Event system utilities
       - [ ] Add `events.emit(event, data)` for event emission
       - [ ] Add `events.on(event, handler)` for event subscription
       - [ ] Add `events.once(event, handler)` for one-time handlers
       - [ ] Add `events.off(event, handler)` for unsubscription
-    - [ ] Workflow orchestration helpers
-      - [ ] Add `workflow.create(steps)` for workflow definition
-      - [ ] Add `workflow.run(workflow, input)` for execution
-      - [ ] Add `workflow.parallel(steps)` for concurrent execution
-      - [ ] Add `workflow.conditional(condition, then_step, else_step)` for branching
-    - [ ] Hook and lifecycle utilities
+    - [ ] Hook and lifecycle utilities - **this might need to be separate in hooks.lua**
       - [ ] Add `hooks.before(event, handler)` for pre-hooks
       - [ ] Add `hooks.after(event, handler)` for post-hooks
       - [ ] Add `hooks.around(event, wrapper)` for around-hooks
   - [ ] Testing (`/pkg/engine/gopherlua/stdlib/events_test.go`)
     - [ ] Test event emission and subscription ordering
     - [ ] Test one-time handler cleanup
-    - [ ] Test workflow execution with branching
-    - [ ] Test parallel step coordination
     - [ ] Test hook execution order (before/after/around)
     - [ ] Test event handler errors
-    - [ ] Test workflow cancellation
     - [ ] Test memory leaks in event handlers
 
 - [ ] **Task 2.3.5.6: Structured Data Library**
@@ -519,7 +521,7 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
       - [ ] Add `tools.define(name, description, schema, func)` for tool creation
       - [ ] Add `tools.register_library(library)` for tool library loading
       - [ ] Add `tools.compose(tools)` for tool composition
-    - [ ] Tool execution utilities
+    - [ ] Tool execution utilities - **is there a tools.async_execute?**
       - [ ] Add `tools.execute_safe(tool, params)` for safe execution
       - [ ] Add `tools.pipeline(tools, data)` for tool pipelines
       - [ ] Add `tools.parallel_execute(tools, params)` for concurrent execution

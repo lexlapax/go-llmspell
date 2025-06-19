@@ -237,12 +237,10 @@ func TestCrossAdapterCommunication(t *testing.T) {
 					"name": engine.NewStringValue("Assistant"),
 				}), nil
 			}).
-			WithMethod("registerTool", engine.MethodInfo{
-				Name: "registerTool",
+			WithMethod("registerAgentTool", engine.MethodInfo{
+				Name: "registerAgentTool",
 			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-				return engine.NewObjectValue(map[string]engine.ScriptValue{
-					"registered": engine.NewBoolValue(true),
-				}), nil
+				return engine.NewNilValue(), nil
 			})
 
 		toolsAdapter := NewToolsAdapter(toolsBridge)
@@ -271,9 +269,8 @@ func TestCrossAdapterCommunication(t *testing.T) {
 			
 			-- Register tools with agent
 			for _, tool in ipairs(toolList) do
-				local result, err3 = agent.registerTool(myAgent.id, tool.name)
+				local result, err3 = agent.registerTool(myAgent.id, tool)
 				assert(err3 == nil, "should register tool")
-				assert(result.registered == true, "tool should be registered")
 			end
 		`)
 		assert.NoError(t, err)
