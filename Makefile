@@ -9,6 +9,11 @@ GOFMT=gofmt
 GOVET=$(GOCMD) vet
 GOLINT=golangci-lint
 
+# Lua parameters
+LUACHECK=luacheck
+STYLUA=$(HOME)/.cargo/bin/stylua
+LUA_FILES=pkg/engine/gopherlua/stdlib/*.lua examples/**/*.lua
+
 # Binary names
 BINARY_NAME=llmspell
 BINARY_DIR=bin
@@ -22,10 +27,10 @@ TEST_FLAGS=-v -race
 COVERAGE_FILE=coverage.out
 COVERAGE_HTML=coverage.html
 
-.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help build-examples mod bench bench-run
+.PHONY: all build clean test coverage fmt vet lint test-integration test-unit deps help build-examples mod bench bench-run lua-fmt lua-lint lua-check lua-syntax
 
 # Default target
-all: clean fmt vet test build
+all: clean fmt vet lint test build
 
 # Build the binary
 build:
@@ -71,10 +76,10 @@ coverage:
 	@echo "✅ Coverage report generated: $(COVERAGE_HTML)"
 
 # Format code
-fmt:
-	@echo "Formatting code..."
+fmt: lua-fmt
+	@echo "Formatting Go code..."
 	@find . -name "*.go" -not -path "./go-llms/*" -not -path "./vendor/*" | xargs $(GOFMT) -w
-	@echo "✅ Format complete"
+	@echo "✅ Go format complete"
 
 # Run go vet
 vet:
@@ -83,10 +88,11 @@ vet:
 	@echo "✅ Vet complete"
 
 # Run linter
-lint:
-	@echo "Running linter..."
+lint: lua-lint
+	@echo "Running Go linter..."
 	@if command -v $(GOLINT) >/dev/null 2>&1; then \
 		$(GOLINT) run ./cmd/... ./pkg/...; \
+		echo "✅ Go lint complete"; \
 	else \
 		echo "⚠️  golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
 	fi
@@ -174,6 +180,42 @@ watch:
 		echo "⚠️  air not installed. Install with: go install github.com/cosmtrek/air@latest"; \
 	fi
 
+# Lua formatting and linting targets
+
+# Format Lua code with stylua
+lua-fmt:
+	@echo "Formatting Lua code..."
+	@if command -v $(STYLUA) >/dev/null 2>&1; then \
+		$(STYLUA) pkg/engine/gopherlua/stdlib/*.lua; \
+		echo "✅ Lua format complete (stdlib files only)"; \
+	else \
+		echo "⚠️  stylua not installed. Install with: cargo install stylua"; \
+	fi
+
+# Lint Lua code with luacheck
+lua-lint:
+	@echo "Linting Lua code..."
+	@if command -v $(LUACHECK) >/dev/null 2>&1; then \
+		$(LUACHECK) $$(find . -name "*.lua" -not -path "./go-llms/*" -not -path "./vendor/*"); \
+		echo "✅ Lua lint complete"; \
+	else \
+		echo "⚠️  luacheck not installed. Install with your package manager"; \
+	fi
+
+# Check Lua syntax only
+lua-syntax:
+	@echo "Checking Lua syntax..."
+	@if command -v lua >/dev/null 2>&1; then \
+		find . -name "*.lua" -not -path "./go-llms/*" -not -path "./vendor/*" -exec lua -l {} \; 2>/dev/null || true; \
+		echo "✅ Lua syntax check complete"; \
+	else \
+		echo "⚠️  lua interpreter not installed"; \
+	fi
+
+# Combined Lua check (syntax + lint + format)
+lua-check: lua-syntax lua-lint lua-fmt
+	@echo "✅ All Lua checks complete"
+
 # Show migration status
 migration-status:
 	@echo "🔄 Go-LLMSpell v0.3.3 Migration Status"
@@ -207,16 +249,16 @@ migration-status:
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  make              - Run all (clean, fmt, vet, test, build)"
+	@echo "  make              - Run all (clean, fmt, vet, lint, test, build)"
 	@echo "  make build        - Build the binary"
 	@echo "  make clean        - Clean build artifacts"
 	@echo "  make test         - Run unit tests"
 	@echo "  make test-integration - Run integration tests"
 	@echo "  make test-all     - Run all tests (unit + integration)"
 	@echo "  make coverage     - Generate test coverage report"
-	@echo "  make fmt          - Format code"
+	@echo "  make fmt          - Format code (Go + Lua)"
 	@echo "  make vet          - Run go vet"
-	@echo "  make lint         - Run linter (golangci-lint)"
+	@echo "  make lint         - Run linter (Go + Lua)"
 	@echo "  make mod          - Download dependencies and tidy modules"
 	@echo "  make deps         - Alias for 'make mod'"
 	@echo "  make build-examples - Build examples (with to_be_migrated tag)"
@@ -226,5 +268,12 @@ help:
 	@echo "  make bench        - Run benchmarks"
 	@echo "  make quick        - Quick build (clean + build)"
 	@echo "  make watch        - Watch for changes and rebuild"
+	@echo ""
+	@echo "Lua-specific targets:"
+	@echo "  make lua-fmt      - Format Lua code with stylua"
+	@echo "  make lua-lint     - Lint Lua code with luacheck"
+	@echo "  make lua-syntax   - Check Lua syntax"
+	@echo "  make lua-check    - Run all Lua checks (syntax + lint + format)"
+	@echo ""
 	@echo "  make migration-status - Show v0.3.3 migration progress"
 	@echo "  make help         - Show this help message"

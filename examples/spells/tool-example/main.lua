@@ -2,108 +2,93 @@
 -- Demonstrates how to register and use tools in Lua scripts
 
 -- Register a simple calculator tool
-tools.register(
-    "calculator",
-    "Performs basic arithmetic operations",
-    {
-        type = "object",
-        properties = {
-            operation = { type = "string", enum = {"add", "subtract", "multiply", "divide"} },
-            a = { type = "number" },
-            b = { type = "number" }
-        },
-        required = {"operation", "a", "b"}
+tools.register("calculator", "Performs basic arithmetic operations", {
+    type = "object",
+    properties = {
+        operation = { type = "string", enum = { "add", "subtract", "multiply", "divide" } },
+        a = { type = "number" },
+        b = { type = "number" },
     },
-    function(params)
-        local op = params.operation
-        local a = params.a
-        local b = params.b
-        
-        if op == "add" then
-            return a + b
-        elseif op == "subtract" then
-            return a - b
-        elseif op == "multiply" then
-            return a * b
-        elseif op == "divide" then
-            if b == 0 then
-                return nil, "Division by zero"
-            end
-            return a / b
-        else
-            return nil, "Unknown operation: " .. op
+    required = { "operation", "a", "b" },
+}, function(params)
+    local op = params.operation
+    local a = params.a
+    local b = params.b
+
+    if op == "add" then
+        return a + b
+    elseif op == "subtract" then
+        return a - b
+    elseif op == "multiply" then
+        return a * b
+    elseif op == "divide" then
+        if b == 0 then
+            return nil, "Division by zero"
         end
+        return a / b
+    else
+        return nil, "Unknown operation: " .. op
     end
-)
+end)
 
 -- Register a string manipulation tool
-tools.register(
-    "string_tools",
-    "Provides string manipulation utilities",
-    {
-        type = "object",
-        properties = {
-            action = { type = "string", enum = {"upper", "lower", "reverse", "length"} },
-            text = { type = "string" }
-        },
-        required = {"action", "text"}
+tools.register("string_tools", "Provides string manipulation utilities", {
+    type = "object",
+    properties = {
+        action = { type = "string", enum = { "upper", "lower", "reverse", "length" } },
+        text = { type = "string" },
     },
-    function(params)
-        local action = params.action
-        local text = params.text
-        
-        if action == "upper" then
-            return string.upper(text)
-        elseif action == "lower" then
-            return string.lower(text)
-        elseif action == "reverse" then
-            return string.reverse(text)
-        elseif action == "length" then
-            return string.len(text)
-        else
-            return nil, "Unknown action: " .. action
-        end
+    required = { "action", "text" },
+}, function(params)
+    local action = params.action
+    local text = params.text
+
+    if action == "upper" then
+        return string.upper(text)
+    elseif action == "lower" then
+        return string.lower(text)
+    elseif action == "reverse" then
+        return string.reverse(text)
+    elseif action == "length" then
+        return string.len(text)
+    else
+        return nil, "Unknown action: " .. action
     end
-)
+end)
 
 -- Register a JSON processing tool
-tools.register(
-    "json_processor",
-    "Processes JSON data",
-    {
-        type = "object",
-        properties = {
-            action = { type = "string", enum = {"parse", "stringify", "get_field"} },
-            data = { type = "string" },
-            field = { type = "string" }
-        },
-        required = {"action"}
+tools.register("json_processor", "Processes JSON data", {
+    type = "object",
+    properties = {
+        action = { type = "string", enum = { "parse", "stringify", "get_field" } },
+        data = { type = "string" },
+        field = { type = "string" },
     },
-    function(params)
-        local action = params.action
-        
-        if action == "parse" then
-            if not params.data then
-                return nil, "data field is required for parse action"
-            end
-            return json.decode(params.data)
-        elseif action == "stringify" then
-            if not params.data then
-                return nil, "data field is required for stringify action"
-            end
-            -- For stringify, we expect already parsed data
-            return json.encode(params.data)
-        elseif action == "get_field" then
-            if not params.data or not params.field then
-                return nil, "data and field are required for get_field action"
-            end
-            local parsed = json.decode(params.data)
-            return parsed[params.field]
-        else
-            return nil, "Unknown action: " .. action
+    required = { "action" },
+}, function(params)
+    local action = params.action
+
+    if action == "parse" then
+        if not params.data then
+            return nil, "data field is required for parse action"
         end
+        return json.decode(params.data)
+    elseif action == "stringify" then
+        if not params.data then
+            return nil, "data field is required for stringify action"
+        end
+        -- For stringify, we expect already parsed data
+        return json.encode(params.data)
+    elseif action == "get_field" then
+        if not params.data or not params.field then
+            return nil, "data and field are required for get_field action"
+        end
+        local parsed = json.decode(params.data)
+        return parsed[params.field]
+    else
+        return nil, "Unknown action: " .. action
     end
-)
+end)
 
 -- List all registered tools
 print("=== Registered Tools ===")
@@ -117,7 +102,7 @@ print()
 print("=== Calculator Tool Tests ===")
 
 -- Test addition
-local result, err = tools.execute("calculator", {operation = "add", a = 10, b = 5})
+local result, err = tools.execute("calculator", { operation = "add", a = 10, b = 5 })
 if err then
     print("Error:", err)
 else
@@ -125,7 +110,7 @@ else
 end
 
 -- Test division
-result, err = tools.execute("calculator", {operation = "divide", a = 20, b = 4})
+result, err = tools.execute("calculator", { operation = "divide", a = 20, b = 4 })
 if err then
     print("Error:", err)
 else
@@ -133,7 +118,7 @@ else
 end
 
 -- Test division by zero
-result, err = tools.execute("calculator", {operation = "divide", a = 10, b = 0})
+result, err = tools.execute("calculator", { operation = "divide", a = 10, b = 0 })
 if err then
     print("Division by zero error:", err)
 else
@@ -145,14 +130,14 @@ print()
 -- Test string tools
 print("=== String Tools Tests ===")
 
-result, err = tools.execute("string_tools", {action = "upper", text = "hello world"})
+result, err = tools.execute("string_tools", { action = "upper", text = "hello world" })
 if err then
     print("Error:", err)
 else
     print("Upper case:", result)
 end
 
-result, err = tools.execute("string_tools", {action = "reverse", text = "hello"})
+result, err = tools.execute("string_tools", { action = "reverse", text = "hello" })
 if err then
     print("Error:", err)
 else
@@ -165,7 +150,7 @@ print()
 print("=== JSON Processor Tests ===")
 
 local jsonData = '{"name": "Alice", "age": 30, "city": "New York"}'
-result, err = tools.execute("json_processor", {action = "parse", data = jsonData})
+result, err = tools.execute("json_processor", { action = "parse", data = jsonData })
 if err then
     print("Error:", err)
 else
@@ -175,7 +160,8 @@ else
     end
 end
 
-result, err = tools.execute("json_processor", {action = "get_field", data = jsonData, field = "name"})
+result, err =
+    tools.execute("json_processor", { action = "get_field", data = jsonData, field = "name" })
 if err then
     print("Error:", err)
 else
@@ -188,7 +174,7 @@ print()
 print("=== Parameter Validation Tests ===")
 
 -- Valid parameters
-local isValid, err = tools.validate("calculator", {operation = "add", a = 1, b = 2})
+local isValid, err = tools.validate("calculator", { operation = "add", a = 1, b = 2 })
 if isValid then
     print("Valid parameters for calculator")
 else
@@ -196,7 +182,7 @@ else
 end
 
 -- Missing required parameter
-isValid, err = tools.validate("calculator", {operation = "add", a = 1})
+isValid, err = tools.validate("calculator", { operation = "add", a = 1 })
 if isValid then
     print("Valid parameters")
 else
@@ -204,7 +190,7 @@ else
 end
 
 -- Wrong type
-isValid, err = tools.validate("string_tools", {action = "upper", text = 123})
+isValid, err = tools.validate("string_tools", { action = "upper", text = 123 })
 if isValid then
     print("Valid parameters")
 else

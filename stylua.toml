@@ -1,0 +1,15 @@
+# StyLua configuration for go-llmspell project
+# Lua code formatting rules
+
+# Basic formatting
+column_width = 100
+line_endings = "Unix"
+indent_type = "Spaces"
+indent_width = 4
+quote_style = "AutoPreferDouble"
+
+# Function calls
+call_parentheses = "Always"
+
+# Collapse simple statements
+collapse_simple_statement = "Never"

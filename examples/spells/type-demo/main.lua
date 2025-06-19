@@ -8,20 +8,20 @@ print("=== ScriptValue Type System Demo ===\n")
 
 -- 1. Basic Types
 print("1. Basic Types:")
-print("   Nil:", nil)                    -- ScriptValue: NilValue
-print("   Boolean:", true)                -- ScriptValue: BoolValue
-print("   Number:", 42.5)                 -- ScriptValue: NumberValue
-print("   String:", "hello world")        -- ScriptValue: StringValue
+print("   Nil:", nil) -- ScriptValue: NilValue
+print("   Boolean:", true) -- ScriptValue: BoolValue
+print("   Number:", 42.5) -- ScriptValue: NumberValue
+print("   String:", "hello world") -- ScriptValue: StringValue
 
 -- 2. Collections
 print("\n2. Collections:")
-local array = {1, 2, "three", true}      -- ScriptValue: ArrayValue
+local array = { 1, 2, "three", true } -- ScriptValue: ArrayValue
 print("   Array:", table.concat(array, ", "))
 
-local object = {                         -- ScriptValue: ObjectValue
+local object = { -- ScriptValue: ObjectValue
     name = "test",
     age = 25,
-    active = true
+    active = true,
 }
 print("   Object fields:")
 for k, v in pairs(object) do
@@ -32,13 +32,13 @@ end
 print("\n3. Nested Structures:")
 local nested = {
     users = {
-        {name = "Alice", age = 30},
-        {name = "Bob", age = 25}
+        { name = "Alice", age = 30 },
+        { name = "Bob", age = 25 },
     },
     settings = {
         theme = "dark",
-        notifications = true
-    }
+        notifications = true,
+    },
 }
 print("   Complex nested structure created")
 
@@ -69,18 +69,18 @@ print("   The bridge validates types and returns appropriate errors if mismatche
 -- Example with util module if available
 if util then
     print("\n7. Real Bridge Example (util module):")
-    
+
     -- JSON encoding/decoding shows type conversion
     local data = {
         name = "test",
         count = 42,
         enabled = true,
-        items = {"a", "b", "c"}
+        items = { "a", "b", "c" },
     }
-    
+
     local json_str = util.json_encode(data)
     print("   Encoded to JSON:", json_str)
-    
+
     local decoded = util.json_decode(json_str)
     print("   Decoded back - type preserved")
     print("     name:", decoded.name, "(type:", type(decoded.name), ")")
@@ -90,10 +90,10 @@ end
 
 -- 8. Type Conversion Edge Cases
 print("\n8. Type Conversion Edge Cases:")
-print("   Empty table: {}")               -- Could be ArrayValue or ObjectValue
+print("   Empty table: {}") -- Could be ArrayValue or ObjectValue
 print("   Mixed array: {1, 'two', true}") -- ArrayValue with mixed types
-print("   Sparse array: {[1]=1, [3]=3}")  -- Becomes ObjectValue
-print("   Float vs int: 42.0 vs 42")     -- Both are NumberValue
+print("   Sparse array: {[1]=1, [3]=3}") -- Becomes ObjectValue
+print("   Float vs int: 42.0 vs 42") -- Both are NumberValue
 
 print("\n=== Demo Complete ===")
 
@@ -102,6 +102,6 @@ return {
     status = "success",
     results = {
         types_demonstrated = 8,
-        message = "ScriptValue system provides type safety between Lua and Go"
-    }
+        message = "ScriptValue system provides type safety between Lua and Go",
+    },
 }

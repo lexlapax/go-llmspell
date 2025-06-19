@@ -19,19 +19,19 @@ if web_fetch then
     print("web_fetch tool found!")
     print("Description: " .. web_fetch.description)
     print("Parameters: " .. json.encode(web_fetch.parameters))
-    
+
     -- Test with a simple URL (example.com is a safe test site)
     local params = {
-        url = "https://example.com"
+        url = "https://example.com",
     }
-    
+
     -- Validate parameters first
     local ok, err = pcall(tools.validate, "web_fetch", params)
     if not ok then
         print("Parameter validation failed: " .. tostring(err))
     else
         print("Parameters validated successfully")
-        
+
         -- Execute the tool
         print("\nFetching https://example.com...")
         local success, result = pcall(tools.execute, "web_fetch", params)
@@ -60,7 +60,7 @@ print("Example 2: Parameter validation")
 -- Try with invalid parameters
 print("Testing web_fetch with invalid URL...")
 local invalid_params = {
-    url = "not-a-valid-url"
+    url = "not-a-valid-url",
 }
 
 local success, result = pcall(tools.execute, "web_fetch", invalid_params)
@@ -91,20 +91,24 @@ local tool_info = tools.get("web_fetch")
 if tool_info then
     print("Tool: " .. tool_info.name)
     print("Description: " .. tool_info.description)
-    
+
     if tool_info.parameters and tool_info.parameters.properties then
         print("Parameters:")
         for param_name, param_info in pairs(tool_info.parameters.properties) do
-            print(string.format("  - %s (%s): %s", 
-                param_name, 
-                param_info.type or "unknown",
-                param_info.description or "No description"))
+            print(
+                string.format(
+                    "  - %s (%s): %s",
+                    param_name,
+                    param_info.type or "unknown",
+                    param_info.description or "No description"
+                )
+            )
             if param_info.format then
                 print("    Format: " .. param_info.format)
             end
         end
     end
-    
+
     if tool_info.parameters and tool_info.parameters.required then
         print("Required parameters: " .. table.concat(tool_info.parameters.required, ", "))
     end

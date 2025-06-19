@@ -18,14 +18,14 @@ function Promise.new(executor)
     if type(executor) ~= "function" then
         error("Promise executor must be a function")
     end
-    
+
     local self = setmetatable({
         state = PENDING,
         value = nil,
         reason = nil,
-        handlers = {}
+        handlers = {},
     }, Promise)
-    
+
     -- Resolve function
     local function resolve(value)
         if self.state == PENDING then
@@ -34,7 +34,7 @@ function Promise.new(executor)
             self:_handleChain()
         end
     end
-    
+
     -- Reject function
     local function reject(reason)
         if self.state == PENDING then
@@ -43,13 +43,13 @@ function Promise.new(executor)
             self:_handleChain()
         end
     end
-    
+
     -- Execute the executor function
     local success, err = pcall(executor, resolve, reject)
     if not success then
         reject(err)
     end
-    
+
     return self
 end
 
@@ -84,9 +84,9 @@ function Promise:andThen(onFulfilled, onRejected)
             onFulfilled = onFulfilled,
             onRejected = onRejected,
             resolve = resolve,
-            reject = reject
+            reject = reject,
         }
-        
+
         if self.state == PENDING then
             table.insert(self.handlers, handler)
         else
@@ -121,18 +121,19 @@ function Promise:onError(onRejected)
     return self:andThen(nil, onRejected)
 end
 
--- Add finally handler  
+-- Add finally handler
 function Promise:onFinally(onFinally)
-    return self:andThen(
-        function(value)
-            if onFinally then onFinally() end
-            return value
-        end,
-        function(reason)
-            if onFinally then onFinally() end
-            error(reason)
+    return self:andThen(function(value)
+        if onFinally then
+            onFinally()
         end
-    )
+        return value
+    end, function(reason)
+        if onFinally then
+            onFinally()
+        end
+        error(reason)
+    end)
 end
 
 -- Promise.resolve - create a resolved promise
@@ -154,17 +155,17 @@ function Promise.all(promises)
     if type(promises) ~= "table" then
         return Promise.reject("Promise.all requires a table of promises")
     end
-    
+
     return Promise.new(function(resolve, reject)
         local results = {}
         local count = #promises
         local completed = 0
-        
+
         if count == 0 then
             resolve({})
             return
         end
-        
+
         for i, promise in ipairs(promises) do
             if type(promise) == "table" and promise.andThen then
                 promise:andThen(function(value)
@@ -193,10 +194,10 @@ function Promise.race(promises)
     if type(promises) ~= "table" then
         return Promise.reject("Promise.race requires a table of promises")
     end
-    
+
     return Promise.new(function(resolve, reject)
         local settled = false
-        
+
         for _, promise in ipairs(promises) do
             if type(promise) == "table" and promise.andThen then
                 promise:andThen(function(value)
@@ -229,9 +230,9 @@ function promise.async(func)
     if type(func) ~= "function" then
         error("async() requires a function")
     end
-    
+
     return function(...)
-        local args = {...}
+        local args = { ... }
         return Promise.new(function(resolve, reject)
             local success, result = pcall(func, table.unpack(args))
             if success then
@@ -246,24 +247,24 @@ end
 -- await: wait for a promise to resolve (with optional timeout)
 function promise.await(promiseOrFunc, timeout)
     local targetPromise
-    
+
     -- If it's a function, call it to get the promise
     if type(promiseOrFunc) == "function" then
         targetPromise = promiseOrFunc()
     else
         targetPromise = promiseOrFunc
     end
-    
+
     if not (type(targetPromise) == "table" and targetPromise.andThen) then
         error("await() requires a promise")
     end
-    
+
     -- Simple blocking implementation for now
     -- In a real implementation, this would yield to the coroutine scheduler
     local completed = false
     local result = nil
     local error_msg = nil
-    
+
     targetPromise:andThen(function(value)
         result = value
         completed = true
@@ -271,11 +272,11 @@ function promise.await(promiseOrFunc, timeout)
         error_msg = reason
         completed = true
     end)
-    
+
     -- Simple spin-wait (not ideal for production)
     local start_time = os.clock()
     local timeout_seconds = timeout or 30 -- Default 30 second timeout
-    
+
     while not completed do
         if timeout and (os.clock() - start_time) > timeout_seconds then
             error("Promise timeout after " .. timeout_seconds .. " seconds")
@@ -283,11 +284,11 @@ function promise.await(promiseOrFunc, timeout)
         -- Yield briefly to prevent busy waiting
         coroutine.yield()
     end
-    
+
     if error_msg then
         error(error_msg)
     end
-    
+
     return result
 end
 
@@ -296,7 +297,7 @@ function promise.sleep(duration)
     if type(duration) ~= "number" or duration < 0 then
         error("sleep() requires a positive number (seconds)")
     end
-    
+
     return Promise.new(function(resolve)
         -- In a real implementation, this would use the Go async runtime
         -- For now, use a simple timer approach
@@ -315,8 +316,8 @@ function promise.spawn(func, ...)
     if type(func) ~= "function" then
         error("spawn() requires a function")
     end
-    
-    local args = {...}
+
+    local args = { ... }
     return Promise.new(function(resolve, reject)
         local co = coroutine.create(function()
             local success, result = pcall(func, table.unpack(args))
@@ -326,7 +327,7 @@ function promise.spawn(func, ...)
                 reject(result)
             end
         end)
-        
+
         -- Start the coroutine
         local success, err = coroutine.resume(co)
         if not success then
@@ -348,15 +349,15 @@ function promise.create_channel(name, buffer_size)
     if type(name) ~= "string" then
         error("create_channel() requires a string name")
     end
-    
+
     buffer_size = buffer_size or 0
     channels[name] = {
         buffer = {},
         buffer_size = buffer_size,
         waiting_senders = {},
-        waiting_receivers = {}
+        waiting_receivers = {},
     }
-    
+
     return name
 end
 
@@ -366,13 +367,13 @@ function promise.send(channel_name, value)
     if not channel then
         error("Channel not found: " .. tostring(channel_name))
     end
-    
+
     return Promise.new(function(resolve, reject)
         if #channel.buffer < channel.buffer_size then
             table.insert(channel.buffer, value)
             resolve()
         else
-            table.insert(channel.waiting_senders, {value = value, resolve = resolve})
+            table.insert(channel.waiting_senders, { value = value, resolve = resolve })
         end
     end)
 end
@@ -383,12 +384,12 @@ function promise.receive(channel_name)
     if not channel then
         error("Channel not found: " .. tostring(channel_name))
     end
-    
+
     return Promise.new(function(resolve, reject)
         if #channel.buffer > 0 then
             local value = table.remove(channel.buffer, 1)
             resolve(value)
-            
+
             -- Process waiting senders
             if #channel.waiting_senders > 0 then
                 local sender = table.remove(channel.waiting_senders, 1)

@@ -26,10 +26,10 @@ end
 print("\n=== Demo: Conversation with Context ===\n")
 
 local conversation = {
-    {role = "system", content = system_prompt},
-    {role = "user", content = "What is the capital of France?"},
-    {role = "assistant", content = "The capital of France is Paris."},
-    {role = "user", content = "Tell me an interesting fact about it."}
+    { role = "system", content = system_prompt },
+    { role = "user", content = "What is the capital of France?" },
+    { role = "assistant", content = "The capital of France is Paris." },
+    { role = "user", content = "Tell me an interesting fact about it." },
 }
 
 -- Build the full prompt from conversation history

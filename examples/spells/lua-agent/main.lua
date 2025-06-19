@@ -8,16 +8,17 @@ print("1. Creating a Research Agent that uses tools and LLM...")
 
 local research_agent = {
     system_prompt = "You are a research assistant that gathers information from the web and provides comprehensive summaries.",
-    
+
     execute = function(self, input, options)
         -- First, extract what to search for using the LLM
-        local extract_prompt = "Extract the main topic or URL from this request. If it's a URL, return just the URL. If it's a topic, suggest a good URL to research it. User request: " .. input
-        
+        local extract_prompt = "Extract the main topic or URL from this request. If it's a URL, return just the URL. If it's a topic, suggest a good URL to research it. User request: "
+            .. input
+
         local url_or_topic, err = llm.chat(extract_prompt)
         if err then
             return "Failed to process request: " .. err
         end
-        
+
         -- Check if we have web_fetch tool available
         local tools_list = tools.list()
         local has_web_fetch = false
@@ -27,35 +28,36 @@ local research_agent = {
                 break
             end
         end
-        
+
         if not has_web_fetch then
             return "Web fetch tool not available. Please ensure built-in tools are enabled."
         end
-        
+
         -- Use web_fetch to get content
         print("  → Fetching web content...")
         local fetch_result, fetch_err = tools.execute("web_fetch", {
-            url = url_or_topic:match("^https?://") and url_or_topic or "https://en.wikipedia.org/wiki/" .. url_or_topic:gsub(" ", "_")
+            url = url_or_topic:match("^https?://") and url_or_topic
+                or "https://en.wikipedia.org/wiki/" .. url_or_topic:gsub(" ", "_"),
         })
-        
+
         if fetch_err then
             return "Failed to fetch web content: " .. fetch_err
         end
-        
+
         -- Now use LLM to summarize the fetched content
         local summary_prompt = string.format(
             "Based on the following web content, provide a comprehensive summary about '%s':\n\n%s\n\nProvide a clear, informative summary.",
             input,
             fetch_result.content or fetch_result
         )
-        
+
         local summary, summary_err = llm.chat(summary_prompt)
         if summary_err then
             return "Failed to generate summary: " .. summary_err
         end
-        
+
         return summary
-    end
+    end,
 }
 
 -- Register the research agent
@@ -88,27 +90,27 @@ tools.register("code_analyzer", "Analyzes code complexity and structure", {
     properties = {
         code = {
             type = "string",
-            description = "The code to analyze"
+            description = "The code to analyze",
         },
         language = {
             type = "string",
             description = "Programming language",
-            default = "lua"
-        }
+            default = "lua",
+        },
     },
-    required = {"code"}
+    required = { "code" },
 }, function(params)
     -- Simple code analysis
     local code = params.code
     local lines = 0
     local functions = 0
     local loops = 0
-    
+
     -- Count lines
     for _ in code:gmatch("[^\n]+") do
         lines = lines + 1
     end
-    
+
     -- Count functions (Lua specific)
     for _ in code:gmatch("function%s+%w+") do
         functions = functions + 1
@@ -116,7 +118,7 @@ tools.register("code_analyzer", "Analyzes code complexity and structure", {
     for _ in code:gmatch("=%s*function") do
         functions = functions + 1
     end
-    
+
     -- Count loops
     for _ in code:gmatch("for%s+") do
         loops = loops + 1
@@ -124,32 +126,33 @@ tools.register("code_analyzer", "Analyzes code complexity and structure", {
     for _ in code:gmatch("while%s+") do
         loops = loops + 1
     end
-    
+
     return {
         lines = lines,
         functions = functions,
         loops = loops,
-        complexity = functions + loops
+        complexity = functions + loops,
     }
 end)
 
 -- Create the code analysis agent
 local code_agent = {
     system_prompt = "You are a code review expert that analyzes code quality and provides actionable feedback.",
-    
+
     execute = function(self, input, options)
         -- First analyze the code structure
         local analysis, analysis_err = tools.execute("code_analyzer", {
             code = input,
-            language = "lua"
+            language = "lua",
         })
-        
+
         if analysis_err then
             return "Failed to analyze code: " .. analysis_err
         end
-        
+
         -- Use LLM to provide detailed review based on metrics
-        local review_prompt = string.format([[
+        local review_prompt = string.format(
+            [[
 Based on the following code metrics and the code itself, provide a detailed code review:
 
 Metrics:
@@ -168,16 +171,28 @@ Please provide:
 2. Potential improvements
 3. Best practices recommendations
 4. Any bugs or issues found
-]], analysis.lines, analysis.functions, analysis.loops, analysis.complexity, input)
-        
+]],
+            analysis.lines,
+            analysis.functions,
+            analysis.loops,
+            analysis.complexity,
+            input
+        )
+
         local review, review_err = llm.chat(review_prompt)
         if review_err then
             return "Failed to generate code review: " .. review_err
         end
-        
-        return string.format("=== Code Analysis Results ===\nMetrics: %d lines, %d functions, %d loops (complexity: %d)\n\n%s",
-            analysis.lines, analysis.functions, analysis.loops, analysis.complexity, review)
-    end
+
+        return string.format(
+            "=== Code Analysis Results ===\nMetrics: %d lines, %d functions, %d loops (complexity: %d)\n\n%s",
+            analysis.lines,
+            analysis.functions,
+            analysis.loops,
+            analysis.complexity,
+            review
+        )
+    end,
 }
 
 -- Register the code agent
@@ -228,7 +243,7 @@ print("3. Creating a Multi-step Planning Agent...")
 
 local planning_agent = {
     system_prompt = "You are a planning assistant that breaks down complex tasks into actionable steps.",
-    
+
     execute = function(self, input, options)
         -- Step 1: Break down the task using LLM
         local breakdown_prompt = "Break down this task into 3-5 concrete steps: " .. input
@@ -236,9 +251,10 @@ local planning_agent = {
         if err then
             return "Failed to create plan: " .. err
         end
-        
+
         -- Step 2: For each step, determine if tools are needed
-        local detailed_plan_prompt = string.format([[
+        local detailed_plan_prompt = string.format(
+            [[
 For this task: "%s"
 
 I've identified these steps:
@@ -250,15 +266,18 @@ Now, for each step, identify:
 3. Expected outcomes
 
 Format as a detailed action plan.
-]], input, steps)
-        
+]],
+            input,
+            steps
+        )
+
         local detailed_plan, plan_err = llm.chat(detailed_plan_prompt)
         if plan_err then
             return "Failed to create detailed plan: " .. plan_err
         end
-        
+
         return string.format("=== Task Planning Results ===\nTask: %s\n\n%s", input, detailed_plan)
-    end
+    end,
 }
 
 -- Register the planning agent
@@ -272,7 +291,10 @@ end
 
 -- Test the planning agent
 print("\nTesting planning agent:")
-result, err = agents.execute("planning-agent", "Create a web scraper that extracts article titles from a news website")
+result, err = agents.execute(
+    "planning-agent",
+    "Create a web scraper that extracts article titles from a news website"
+)
 if result then
     print(result)
 else
@@ -282,7 +304,7 @@ end
 print("\n=== Summary ===")
 print("This example demonstrated proper agent patterns:")
 print("1. Research Agent - Combines web_fetch tool with LLM summarization")
-print("2. Code Analysis Agent - Uses custom Lua tool + LLM for code review")  
+print("2. Code Analysis Agent - Uses custom Lua tool + LLM for code review")
 print("3. Planning Agent - Multi-step LLM orchestration for task breakdown")
 print("\nKey concepts:")
 print("- Agents orchestrate multiple LLM calls")

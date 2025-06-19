@@ -34,15 +34,18 @@ print("Page fetched successfully (" .. #content .. " bytes)")
 local prompt = ""
 
 if style == "brief" then
-    prompt = string.format([[
+    prompt = string.format(
+        [[
 Please provide a brief summary (2-3 sentences) of the following web page content:
 
 %s
 
-Summary:]], content)
-
+Summary:]],
+        content
+    )
 elseif style == "detailed" then
-    prompt = string.format([[
+    prompt = string.format(
+        [[
 Please provide a detailed summary of the following web page content. Include:
 1. Main topic or purpose
 2. Key points or arguments
@@ -52,16 +55,19 @@ Please provide a detailed summary of the following web page content. Include:
 Content:
 %s
 
-Detailed Summary:]], content)
-
+Detailed Summary:]],
+        content
+    )
 elseif style == "bullet-points" then
-    prompt = string.format([[
+    prompt = string.format(
+        [[
 Please summarize the following web page content as bullet points:
 
 %s
 
-Summary (bullet points):]], content)
-
+Summary (bullet points):]],
+        content
+    )
 else
     error("Unknown style: " .. style .. ". Use 'brief', 'detailed', or 'bullet-points'")
 end
@@ -86,18 +92,23 @@ if storage then
     local filename = string.gsub(url, "https?://", "")
     filename = string.gsub(filename, "[^%w%-_.]", "_")
     filename = "summary_" .. filename .. ".txt"
-    
+
     -- Save with metadata
-    local output = string.format([[
+    local output = string.format(
+        [[
 URL: %s
 Date: [date unavailable]
 Style: %s
 
 %s
-]], url, style, summary)
-    
+]],
+        url,
+        style,
+        summary
+    )
+
     local save_err = storage.write(filename, output)
-    
+
     if save_err then
         print("\nWarning: Could not save summary: " .. save_err)
     else

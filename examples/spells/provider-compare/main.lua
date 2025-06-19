@@ -48,23 +48,23 @@ function test_provider(provider_name, callback)
             break
         end
     end
-    
+
     if not is_available then
         callback(nil, "provider '" .. provider_name .. "' not initialized (check API key)")
         return
     end
-    
+
     -- Switch to provider
     local switch_err = llm.set_provider(provider_name)
-    
+
     if switch_err then
         callback(nil, switch_err)
         return
     end
-    
+
     -- Make synchronous call since we can't guarantee provider state in async
     local response, chat_err = llm.chat(prompt)
-    
+
     if chat_err then
         callback(nil, chat_err)
     else
@@ -78,18 +78,18 @@ print("(Note: Due to provider switching requirements, requests run sequentially)
 
 for i, provider in ipairs(providers_to_test) do
     print("\n  [" .. i .. "/" .. total .. "] Testing " .. provider .. "...")
-    
+
     test_provider(provider, function(response, err)
         if err then
             results[provider] = {
                 success = false,
-                error = err
+                error = err,
             }
             print("       Result: ✗ Failed - " .. err)
         else
             results[provider] = {
                 success = true,
-                response = response
+                response = response,
             }
             print("       Result: ✓ Success")
         end
@@ -109,10 +109,10 @@ print(string.rep("=", 80))
 
 for _, provider in ipairs(providers_to_test) do
     local result = results[provider]
-    
+
     print("\n" .. string.upper(provider))
     print(string.rep("-", #provider))
-    
+
     if result and result.success then
         print("Status: Success")
         print("Response:")

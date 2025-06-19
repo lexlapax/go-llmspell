@@ -8,7 +8,7 @@ if not prompts or type(prompts) ~= "table" or #prompts == 0 then
         "What is the capital of France?",
         "Explain quantum computing in one sentence",
         "What's 2+2?",
-        "Why is the sky blue?"
+        "Why is the sky blue?",
     }
 end
 
@@ -54,21 +54,28 @@ end
 -- Example 2: Promise chaining for sequential operations
 print("=== Example 2: Promise Chaining ===\n")
 
-local chain_result = promise.new(function(resolve, reject)
-    resolve("Tell me a short joke")
-end):next(function(prompt)
-    print("Step 1: Asking for joke...")
-    local result, err = llm.complete(prompt, 50)
-    if err then error(err) end
-    return result
-end):next(function(joke)
-    print("Step 2: Got joke: " .. joke)
-    print("\nAsking for explanation...")
-    local prompt = "Explain why this is funny: " .. joke
-    local result, err = llm.complete(prompt, 100)
-    if err then error(err) end
-    return "JOKE: " .. joke .. "\nEXPLANATION: " .. result
-end)
+local chain_result = promise
+    .new(function(resolve, reject)
+        resolve("Tell me a short joke")
+    end)
+    :next(function(prompt)
+        print("Step 1: Asking for joke...")
+        local result, err = llm.complete(prompt, 50)
+        if err then
+            error(err)
+        end
+        return result
+    end)
+    :next(function(joke)
+        print("Step 2: Got joke: " .. joke)
+        print("\nAsking for explanation...")
+        local prompt = "Explain why this is funny: " .. joke
+        local result, err = llm.complete(prompt, 100)
+        if err then
+            error(err)
+        end
+        return "JOKE: " .. joke .. "\nEXPLANATION: " .. result
+    end)
 
 local final_result = chain_result:await()
 print("\nFinal result:")
@@ -81,7 +88,7 @@ local race_promises = {}
 local approaches = {
     "Explain AI in technical terms",
     "Explain AI like I'm five",
-    "Explain AI with an analogy"
+    "Explain AI with an analogy",
 }
 
 for i, approach in ipairs(approaches) do
@@ -110,23 +117,25 @@ end
 -- Example 4: Error handling with catch
 print("\n=== Example 4: Error Handling with .catch() ===\n")
 
-local error_promise = promise.new(function(resolve, reject)
-    -- Intentionally use invalid parameters
-    local result, err = llm.complete("", 0)
-    if err then
-        reject(err)
-    else
-        resolve(result)
-    end
-end):catch(function(err)
-    print("Caught error: " .. err)
-    -- Recover with a default prompt
-    local result, err2 = llm.complete("Say hello", 20)
-    if err2 then
-        return "Failed to recover: " .. err2
-    end
-    return "Recovered with: " .. result
-end)
+local error_promise = promise
+    .new(function(resolve, reject)
+        -- Intentionally use invalid parameters
+        local result, err = llm.complete("", 0)
+        if err then
+            reject(err)
+        else
+            resolve(result)
+        end
+    end)
+    :catch(function(err)
+        print("Caught error: " .. err)
+        -- Recover with a default prompt
+        local result, err2 = llm.complete("Say hello", 20)
+        if err2 then
+            return "Failed to recover: " .. err2
+        end
+        return "Recovered with: " .. result
+    end)
 
 local recovered = error_promise:await()
 print("Final result: " .. recovered)
