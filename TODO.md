@@ -82,7 +82,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 6 of 14 adapters completed
+🚧 **IN PROGRESS** - 7 of 14 adapters completed
 
 - [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-18]
   - [x] Create state and context management module
@@ -129,29 +129,28 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Comprehensive test coverage with TDD approach
   - [x] Array handling patterns following bridge adapter conventions
 
-- [ ] **Task 2.3.3.7: Hooks Bridge Adapter** (`/pkg/engine/gopherlua/adapters/hooks.go`)
+- [x] **Task 2.3.3.7: Hooks Bridge Adapter** (`/pkg/engine/gopherlua/adapters/hooks.go`) ✅ COMPLETE [2025-06-19]
   **look in `/pkg/bridge/agent/hooks.go` for research**
-  - [ ] Create hooks module for lifecycle events
-    - [ ] Implement `registerHook(event, callback)` method
-    - [ ] Add `unregisterHook(event, hookId)` method
-    - [ ] Add `listHooks(event)` method
-    - [ ] Implement hook priority system
-  - [ ] Add pre/post generation hooks
-    - [ ] Implement `beforeGenerate` hook
-    - [ ] Implement `afterGenerate` hook
-    - [ ] Add request/response modification support
-    - [ ] Implement hook context passing
-  - [ ] Add streaming hooks
-    - [ ] Implement `onStreamStart` hook
-    - [ ] Implement `onStreamChunk` hook
-    - [ ] Implement `onStreamEnd` hook
-    - [ ] Add stream modification support
-  - [ ] Add error and retry hooks
-    - [ ] Implement `onError` hook
-    - [ ] Implement `beforeRetry` hook
-    - [ ] Add error recovery strategies
-    - [ ] Implement custom retry logic
-  - [ ] make sure tests pass
+  - [x] Create hooks module for lifecycle events
+    - [x] Implement `registerHook(id, definition)` method
+    - [x] Add `unregisterHook(id)` method
+    - [x] Add `listHooks()` method
+    - [x] Implement hook priority system
+  - [x] Add lifecycle hooks
+    - [x] Implement `beforeGenerate` hook
+    - [x] Implement `afterGenerate` hook
+    - [x] Implement `beforeToolCall` hook
+    - [x] Implement `afterToolCall` hook
+  - [x] Add hook management
+    - [x] Implement `enableHook(id)` method
+    - [x] Implement `disableHook(id)` method
+    - [x] Implement `getHookInfo(id)` method
+    - [x] Implement `clearHooks()` method
+  - [x] Add convenience features
+    - [x] Hook builder pattern for easy creation
+    - [x] Batch enable/disable operations
+    - [x] Hook type and priority constants
+  - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.8: Workflow Bridge Adapter** (`/pkg/engine/gopherlua/adapters/workflow.go`)
   **look in `/pkg/bridge/agent/workflow.go` for research**

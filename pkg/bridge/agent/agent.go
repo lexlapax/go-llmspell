@@ -1499,8 +1499,8 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 
 		// Mock config validation result
 		result := map[string]engine.ScriptValue{
-			"valid":   engine.NewBoolValue(true),
-			"errors":  engine.NewArrayValue([]engine.ScriptValue{}),
+			"valid":    engine.NewBoolValue(true),
+			"errors":   engine.NewArrayValue([]engine.ScriptValue{}),
 			"warnings": engine.NewArrayValue([]engine.ScriptValue{}),
 		}
 		return engine.NewObjectValue(result), nil

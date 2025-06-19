@@ -677,7 +677,7 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 
 		// Extract agentID and eventType from filter table
 		filterMap := aa.tableToMap(L, filter)
-		
+
 		var agentID, eventType string
 		if agentIDVal, ok := filterMap["agentID"]; ok {
 			if agentIDStr, ok := agentIDVal.(engine.StringValue); ok {
@@ -795,7 +795,7 @@ func (aa *AgentAdapter) addEventMethods(L *lua.LState, module *lua.LTable) {
 
 		// Extract options from table
 		optionsMap := aa.tableToMap(L, options)
-		
+
 		ctx := context.Background()
 		args := []engine.ScriptValue{
 			engine.NewStringValue(agentID),
