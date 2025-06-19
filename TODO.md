@@ -116,7 +116,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.6: Agent Bridge Adapter** (`/pkg/engine/gopherlua/adapters/agent.go`)
-  **look in `/pkg/bridge/agent/*.go` for research**
+  **look in `/pkg/bridge/agent/agent.go` for research**
   - [ ] Create agent module with agent lifecycle
     - [ ] Implement `createAgent(name, provider, options)` method
     - [ ] Add `getAgent(name)` method
