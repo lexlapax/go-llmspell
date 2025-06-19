@@ -24,7 +24,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.2.0: ScriptValue Type System Refactoring [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.0.X: Fix ScriptValue Bridge Test Failures [COMPLETED - 2025-06-19]
     - ✅ 2.3.2.5: Test Utilities Extraction [COMPLETED - 2025-06-19]
-    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 14 of 24 completed]
+    - 🚧 2.3.3: Bridge Adapters [IN PROGRESS - 15 of 24 completed]
     - 🚧 2.3.4: Lua Standard Library [IN PROGRESS]
   - Phase 2.4: Advanced Features & Optimization - NOT STARTED
 - 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
@@ -82,7 +82,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 14 of 24 adapters implemented
+🚧 **IN PROGRESS** - 15 of 24 adapters implemented
 **See TODO-DONE.md for completed task details**
 
 **Design Decision**: Tasks 15-24 implement complete method flattening for consistency:
@@ -98,133 +98,9 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - Tasks 18-24 depend on 16-17 for LLM adapter but are independent for other adapters
 - Recommended order: 15 → 16-17 → 18-24
 
-- [ ] **Task 2.3.3.15: Tool Registry Bridge Enhancement** (enhance `/pkg/engine/gopherlua/adapters/tools.go`)
-  - [ ] Extend existing ToolsAdapter with registry bridge functionality
-  - [ ] Note: Integrates both ToolsBridge and ToolsRegistryBridge from go-llms
-  - [ ] Implement tool discovery methods:
-    - [ ] getTool (complete tool info, not just metadata)
-    - [ ] listToolsByPermission (filter by required permissions)
-    - [ ] listToolsByResourceUsage (filter by resource criteria)
-  - [ ] Implement tool documentation:
-    - [ ] getToolDocumentation (comprehensive docs with examples, constraints, schemas)
-  - [ ] Implement MCP export functionality:
-    - [ ] exportToolToMCP (export single tool to MCP format)
-    - [ ] exportAllToolsToMCP (export entire catalog)
-  - [ ] Implement registry management:
-    - [ ] clearRegistry (for testing)
-    - [ ] getRegistryStats (tool counts, categories, etc.)
-  - [ ] Add flat methods to existing tools adapter (consistent with current tools.go pattern):
-    - [ ] tools.listToolsByPermission(permission)
-    - [ ] tools.listToolsByResourceUsage(criteria)
-    - [ ] tools.getToolDocumentation(name)
-    - [ ] tools.exportToolToMCP(name)
-    - [ ] tools.exportAllToolsToMCP()
-    - [ ] tools.clearRegistry()
-    - [ ] tools.getRegistryStats()
-  - [ ] Initialize tool registry bridge in ToolsAdapter constructor
-  - [ ] Write comprehensive tests (enhance `tools_test.go`):
-    - [ ] Test all discovery methods
-    - [ ] Test filtering by permissions and resources
-    - [ ] Test MCP export functionality
-    - [ ] Test registry management operations
-    - [ ] Test error handling and edge cases
-  - [ ] Ensure both bridges (tools and tool_registry) work together
-
-- [ ] **Task 2.3.3.16: LLM Pool Bridge Enhancement** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
-  - [ ] Extend existing LLMAdapter with pool bridge functionality
-  - [ ] Flatten namespace methods to module-level for consistency (e.g., pool.create → poolCreate)
-  - [ ] Keep backend PoolBridge methods unchanged, only flatten at Lua interface
-  - [ ] Implement pool management methods:
-    - [ ] createPool (round_robin, failover, fastest, weighted, least_used strategies)
-    - [ ] getPool, listPools, removePool
-  - [ ] Implement pool metrics:
-    - [ ] getPoolMetrics (requests, successes, failures, latency)
-    - [ ] getProviderHealth (health status of providers in pool)
-    - [ ] resetPoolMetrics
-  - [ ] Implement pool generation methods:
-    - [ ] generateWithPool (text generation using pool)
-    - [ ] generateMessageWithPool (message-based generation)
-    - [ ] streamWithPool (streaming with automatic failover)
-  - [ ] Implement object pooling (performance optimization):
-    - [ ] getResponseFromPool, returnResponseToPool
-    - [ ] getTokenFromPool, returnTokenToPool
-    - [ ] getChannelFromPool, returnChannelToPool
-  - [ ] Convert namespace methods to flat methods in LLMAdapter:
-    - [ ] Pool management methods:
-      - [ ] llm.poolCreate(name, providers, strategy)
-      - [ ] llm.poolGet(name)
-      - [ ] llm.poolList()
-      - [ ] llm.poolRemove(name)
-    - [ ] Pool metrics methods:
-      - [ ] llm.poolGetMetrics(poolName)
-      - [ ] llm.poolGetProviderHealth(poolName)
-      - [ ] llm.poolResetMetrics(poolName)
-    - [ ] Pool generation methods:
-      - [ ] llm.poolGenerate(poolName, prompt, options)
-      - [ ] llm.poolGenerateMessage(poolName, messages, options)
-      - [ ] llm.poolStream(poolName, prompt, options)
-    - [ ] Pool object pooling methods (for performance):
-      - [ ] llm.poolGetResponse()
-      - [ ] llm.poolReturnResponse(response)
-      - [ ] llm.poolGetToken()
-      - [ ] llm.poolReturnToken(token)
-      - [ ] llm.poolGetChannel()
-      - [ ] llm.poolReturnChannel(channel)
-  - [ ] Refactor existing namespace methods to flat methods:
-    - [ ] Convert llm.pool.create to llm.poolCreate
-    - [ ] Convert llm.pool.generate to llm.poolGenerate
-    - [ ] Convert llm.pool.getMetrics to llm.poolGetMetrics
-    - [ ] Convert llm.pool.getHealth to llm.poolGetHealth
-    - [ ] Also refactor existing models namespace:
-      - [ ] Convert llm.models.list to llm.modelsList
-      - [ ] Convert llm.models.info to llm.modelsInfo
-    - [ ] Keep backward compatibility or provide migration guide
-    - [ ] Update existing tests that use namespace pattern
-  - [ ] Write comprehensive tests (enhance `llm_test.go` or create `llm_pool_test.go`)
-  - [ ] Ensure pool and providers bridges are properly initialized in LLMAdapter
-
-- [ ] **Task 2.3.3.17: LLM Providers Bridge Enhancement** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
-  - [ ] Extend existing LLMAdapter with providers bridge functionality
-  - [ ] Flatten namespace methods to module-level (e.g., providers.templates.get → providersTemplatesGet)
-  - [ ] Keep backend ProvidersBridge methods unchanged, only flatten at Lua interface
-  - [ ] Implement provider creation methods:
-    - [ ] createProvider (dynamic provider creation)
-    - [ ] createProviderFromEnvironment (env-based setup)
-    - [ ] getProvider, listProviders, removeProvider
-  - [ ] Implement template management:
-    - [ ] getProviderTemplate (openai, anthropic, gemini, etc.)
-    - [ ] listProviderTemplates
-    - [ ] validateProviderConfig
-  - [ ] Implement multi-provider functionality:
-    - [ ] createMultiProvider (consensus, fastest, primary strategies)
-    - [ ] configureMultiProvider
-    - [ ] getMultiProvider
-  - [ ] Implement mock provider support:
-    - [ ] createMockProvider (for testing)
-  - [ ] Convert namespace methods to flat methods in LLMAdapter:
-    - [ ] Provider management methods:
-      - [ ] llm.providersCreate(type, name, config)
-      - [ ] llm.providersCreateFromEnvironment(type, name)
-      - [ ] llm.providersGet(name)
-      - [ ] llm.providersList()
-      - [ ] llm.providersRemove(name)
-    - [ ] Template methods:
-      - [ ] llm.providersTemplatesGet(type)
-      - [ ] llm.providersTemplatesList()
-      - [ ] llm.providersTemplatesValidate(type, config)
-    - [ ] Multi-provider methods:
-      - [ ] llm.providersCreateMulti(name, providers, strategy)
-      - [ ] llm.providersConfigureMulti(name, config)
-      - [ ] llm.providersGetMulti(name)
-    - [ ] Mock provider support:
-      - [ ] llm.providersCreateMock(name, config)
-  - [ ] Refactor existing provider namespace methods:
-    - [ ] Convert llm.providers.create to llm.providersCreate
-    - [ ] Convert llm.providers.get to llm.providersGet
-    - [ ] Convert llm.providers.list to llm.providersList
-    - [ ] Update any existing tests using the old pattern
-  - [ ] Write comprehensive tests (enhance `llm_test.go` or create `llm_providers_test.go`)
-  - [ ] Ensure providers bridge methods are properly exposed
+- [x] **Task 2.3.3.15: Tool Registry Bridge Enhancement** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/tools.go`)
+- [x] **Task 2.3.3.16: LLM Pool Bridge Enhancement** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
+- [x] **Task 2.3.3.17: LLM Providers Bridge Enhancement** ✅ **[COMPLETED - 2025-06-19]** (enhance `/pkg/engine/gopherlua/adapters/llm.go`)
 
 - [ ] **Task 2.3.3.18: Events Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/events.go`)
   - [ ] Flatten bus namespace methods:
@@ -313,8 +189,6 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] utils.general.decode → utils.generalDecode
   - [ ] Update tests in utils_test.go
 
-  - [ ] Update tests in utils_test.go
-
 - [ ] **Task 2.3.3.21: Agent Adapter Namespace Flattening** (enhance `/pkg/engine/gopherlua/adapters/agent.go`)
   - [ ] Flatten lifecycle namespace methods:
     - [ ] agent.lifecycle.create → agent.lifecycleCreate
@@ -323,10 +197,10 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] agent.lifecycle.restart → agent.lifecycleRestart
     - [ ] agent.lifecycle.getStatus → agent.lifecycleGetStatus
   - [ ] Flatten communication namespace methods:
-    - [ ] agent.communication.sendMessage → agent.communicationSendMessage
-    - [ ] agent.communication.broadcastMessage → agent.communicationBroadcastMessage
-    - [ ] agent.communication.registerHandler → agent.communicationRegisterHandler
-    - [ ] agent.communication.unregisterHandler → agent.communicationUnregisterHandler
+    - [ ] agent.communication.sendMessage → agent.SendMessage
+    - [ ] agent.communication.broadcastMessage → agent.BroadcastMessage
+    - [ ] agent.communication.registerHandler → agent.RegisterHandler
+    - [ ] agent.communication.unregisterHandler → agent.UnregisterHandler
   - [ ] Flatten state namespace methods:
     - [ ] agent.state.get → agent.stateGet
     - [ ] agent.state.set → agent.stateSet

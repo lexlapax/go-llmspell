@@ -95,6 +95,11 @@ func TestToolsAdapter_Creation(t *testing.T) {
 		assert.Contains(t, methods, "getToolInfo")
 		assert.Contains(t, methods, "validateToolInput")
 		assert.Contains(t, methods, "registerCustomTool")
+
+		// Should NOT have registry methods without registry bridge
+		assert.NotContains(t, methods, "getTool")
+		assert.NotContains(t, methods, "listToolsByPermission")
+		assert.NotContains(t, methods, "getToolDocumentation")
 	})
 
 	t.Run("tools_module_structure", func(t *testing.T) {
@@ -871,6 +876,256 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 			assert(#taggedTools == 2, "should find 2 tools")
 			assert(taggedTools[1].name == "tool1", "should have tool1")
 			assert(taggedTools[2].name == "tool2", "should have tool2")
+		`)
+		assert.NoError(t, err)
+	})
+}
+
+func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
+	t.Run("create_adapter_with_registry", func(t *testing.T) {
+		// Create tools bridge mock
+		toolsBridge := testutils.NewMockBridge("tools").
+			WithInitialized(true)
+
+		// Create registry bridge mock
+		registryBridge := testutils.NewMockBridge("tools_registry").
+			WithInitialized(true).
+			WithMethod("getTool", engine.MethodInfo{
+				Name:        "getTool",
+				Description: "Get complete tool info",
+				ReturnType:  "object",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				toolName := args[0].(engine.StringValue).Value()
+				if toolName == "calculator" {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"name":                  engine.NewStringValue("calculator"),
+						"description":           engine.NewStringValue("Advanced calculator"),
+						"category":              engine.NewStringValue("math"),
+						"version":               engine.NewStringValue("2.0.0"),
+						"is_deterministic":      engine.NewBoolValue(true),
+						"requires_confirmation": engine.NewBoolValue(false),
+					}), nil
+				}
+				return engine.NewErrorValue(fmt.Errorf("tool not found: %s", toolName)), nil
+			}).
+			WithMethod("listToolsByPermission", engine.MethodInfo{
+				Name: "listToolsByPermission",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				permission := args[0].(engine.StringValue).Value()
+				if permission == "network" {
+					return engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name":        engine.NewStringValue("weather"),
+							"description": engine.NewStringValue("Weather API"),
+						}),
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name":        engine.NewStringValue("news"),
+							"description": engine.NewStringValue("News API"),
+						}),
+					}), nil
+				}
+				return engine.NewArrayValue([]engine.ScriptValue{}), nil
+			}).
+			WithMethod("getRegistryStats", engine.MethodInfo{
+				Name: "getRegistryStats",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"total_tools":        engine.NewNumberValue(10),
+					"total_categories":   engine.NewNumberValue(3),
+					"deprecated_tools":   engine.NewNumberValue(1),
+					"experimental_tools": engine.NewNumberValue(2),
+				}), nil
+			})
+
+		// Create adapter with registry
+		adapter := NewToolsAdapterWithRegistry(toolsBridge, registryBridge)
+		require.NotNil(t, adapter)
+
+		// Should have both tools and registry methods
+		methods := adapter.GetMethods()
+		assert.Contains(t, methods, "listTools")
+		assert.Contains(t, methods, "getTool")
+		assert.Contains(t, methods, "listToolsByPermission")
+		assert.Contains(t, methods, "getToolDocumentation")
+		assert.Contains(t, methods, "exportToolToMCP")
+		assert.Contains(t, methods, "getRegistryStats")
+	})
+
+	t.Run("registry_methods_in_lua", func(t *testing.T) {
+		// Create mocks
+		toolsBridge := testutils.NewMockBridge("tools").
+			WithInitialized(true)
+
+		registryBridge := testutils.NewMockBridge("tools_registry").
+			WithInitialized(true).
+			WithMethod("getTool", engine.MethodInfo{
+				Name: "getTool",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"name":              engine.NewStringValue("calculator"),
+					"version":           engine.NewStringValue("2.0.0"),
+					"is_deterministic":  engine.NewBoolValue(true),
+					"estimated_latency": engine.NewStringValue("low"),
+				}), nil
+			}).
+			WithMethod("listToolsByPermission", engine.MethodInfo{
+				Name: "listToolsByPermission",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewArrayValue([]engine.ScriptValue{
+					engine.NewObjectValue(map[string]engine.ScriptValue{
+						"name": engine.NewStringValue("api_tool"),
+					}),
+				}), nil
+			}).
+			WithMethod("listToolsByResourceUsage", engine.MethodInfo{
+				Name: "listToolsByResourceUsage",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				criteria := args[0].(engine.ObjectValue).Fields()
+				if maxMem, ok := criteria["maxMemory"]; ok && maxMem.(engine.StringValue).Value() == "low" {
+					return engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name": engine.NewStringValue("light_tool"),
+						}),
+					}), nil
+				}
+				return engine.NewArrayValue([]engine.ScriptValue{}), nil
+			}).
+			WithMethod("getToolDocumentation", engine.MethodInfo{
+				Name: "getToolDocumentation",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"name":               engine.NewStringValue("calculator"),
+					"usage_instructions": engine.NewStringValue("Use for math operations"),
+					"examples":           engine.NewStringValue("add(2, 3) => 5"),
+					"constraints":        engine.NewStringValue("Numbers only"),
+				}), nil
+			}).
+			WithMethod("exportToolToMCP", engine.MethodInfo{
+				Name: "exportToolToMCP",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"name":        engine.NewStringValue("calculator"),
+					"description": engine.NewStringValue("Math tool"),
+					"inputSchema": engine.NewStringValue("{}"),
+				}), nil
+			}).
+			WithMethod("exportAllToolsToMCP", engine.MethodInfo{
+				Name: "exportAllToolsToMCP",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"version":     engine.NewStringValue("1.0.0"),
+					"description": engine.NewStringValue("Tool catalog"),
+					"tools": engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name": engine.NewStringValue("tool1"),
+						}),
+					}),
+				}), nil
+			}).
+			WithMethod("clearRegistry", engine.MethodInfo{
+				Name: "clearRegistry",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewNilValue(), nil
+			}).
+			WithMethod("getRegistryStats", engine.MethodInfo{
+				Name: "getRegistryStats",
+			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+				return engine.NewObjectValue(map[string]engine.ScriptValue{
+					"total_tools": engine.NewNumberValue(5),
+				}), nil
+			})
+
+		// Create adapter with registry
+		adapter := NewToolsAdapterWithRegistry(toolsBridge, registryBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "tools")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "tools")
+		require.NoError(t, err)
+
+		// Test all registry methods
+		err = L.DoString(`
+			local tools = require("tools")
+			
+			-- Test getTool
+			local tool, err = tools.getTool("calculator")
+			assert(err == nil, "should not error")
+			assert(tool.name == "calculator", "should get tool")
+			assert(tool.version == "2.0.0", "should have version")
+			assert(tool.is_deterministic == true, "should be deterministic")
+			
+			-- Test listToolsByPermission
+			local netTools = {tools.listToolsByPermission("network")}
+			assert(#netTools == 1, "should find 1 network tool")
+			assert(netTools[1].name == "api_tool", "should have api_tool")
+			
+			-- Test listToolsByResourceUsage
+			local lightTools = {tools.listToolsByResourceUsage({maxMemory = "low"})}
+			assert(#lightTools == 1, "should find 1 light tool")
+			assert(lightTools[1].name == "light_tool", "should have light_tool")
+			
+			-- Test getToolDocumentation
+			local doc, err = tools.getToolDocumentation("calculator")
+			assert(err == nil, "should not error")
+			assert(doc.usage_instructions ~= nil, "should have usage")
+			assert(doc.examples ~= nil, "should have examples")
+			
+			-- Test exportToolToMCP
+			local mcp, err = tools.exportToolToMCP("calculator")
+			assert(err == nil, "should not error")
+			assert(mcp.name == "calculator", "should export tool")
+			assert(mcp.inputSchema ~= nil, "should have schema")
+			
+			-- Test exportAllToolsToMCP
+			local catalog, err = tools.exportAllToolsToMCP()
+			assert(err == nil, "should not error")
+			assert(catalog.version == "1.0.0", "should have version")
+			assert(#catalog.tools == 1, "should have tools")
+			
+			-- Test clearRegistry (careful in real usage!)
+			local result, err = tools.clearRegistry()
+			assert(err == nil, "should not error")
+			
+			-- Test getRegistryStats
+			local stats, err = tools.getRegistryStats()
+			assert(err == nil, "should not error")
+			assert(stats.total_tools == 5, "should have stats")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("registry_methods_without_bridge", func(t *testing.T) {
+		// Create adapter without registry bridge
+		toolsBridge := testutils.NewMockBridge("tools").
+			WithInitialized(true)
+
+		adapter := NewToolsAdapter(toolsBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "tools")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "tools")
+		require.NoError(t, err)
+
+		// Registry methods should not exist
+		err = L.DoString(`
+			local tools = require("tools")
+			
+			-- These methods should not exist
+			assert(tools.getTool == nil, "getTool should not exist")
+			assert(tools.listToolsByPermission == nil, "listToolsByPermission should not exist")
+			assert(tools.getToolDocumentation == nil, "getToolDocumentation should not exist")
+			assert(tools.exportToolToMCP == nil, "exportToolToMCP should not exist")
+			assert(tools.getRegistryStats == nil, "getRegistryStats should not exist")
 		`)
 		assert.NoError(t, err)
 	})

@@ -94,13 +94,11 @@ func (la *LLMAdapter) addLLMEnhancements(L *lua.LState, module *lua.LTable) {
 	la.addConstants(L, module)
 }
 
-// addProviderMethods adds provider management methods
+// addProviderMethods adds provider management methods as flat methods
 func (la *LLMAdapter) addProviderMethods(L *lua.LState, module *lua.LTable) {
-	// Create provider namespace
-	providers := L.NewTable()
-
-	// createProvider method
-	L.SetField(providers, "create", L.NewFunction(func(L *lua.LState) int {
+	// Provider management methods - flattened
+	// providersCreate method
+	L.SetField(module, "providersCreate", L.NewFunction(func(L *lua.LState) int {
 		providerType := L.CheckString(1)
 		name := L.CheckString(2)
 		config := L.OptTable(3, L.NewTable())
@@ -136,8 +134,8 @@ func (la *LLMAdapter) addProviderMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// getProvider method
-	L.SetField(providers, "get", L.NewFunction(func(L *lua.LState) int {
+	// providersGet method
+	L.SetField(module, "providersGet", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 
 		ctx := context.Background()
@@ -163,8 +161,8 @@ func (la *LLMAdapter) addProviderMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// listProviders method
-	L.SetField(providers, "list", L.NewFunction(func(L *lua.LState) int {
+	// providersList method
+	L.SetField(module, "providersList", L.NewFunction(func(L *lua.LState) int {
 		ctx := context.Background()
 
 		result, err := la.GetBridge().ExecuteMethod(ctx, "listProviders", []engine.ScriptValue{})
@@ -188,7 +186,7 @@ func (la *LLMAdapter) addProviderMethods(L *lua.LState, module *lua.LTable) {
 	}))
 
 	// Add provider templates support
-	L.SetField(providers, "getTemplate", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "providersGetTemplate", L.NewFunction(func(L *lua.LState) int {
 		templateName := L.CheckString(1)
 
 		ctx := context.Background()
@@ -215,7 +213,7 @@ func (la *LLMAdapter) addProviderMethods(L *lua.LState, module *lua.LTable) {
 	}))
 
 	// Multi-provider support
-	L.SetField(providers, "createMulti", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "providersCreateMulti", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 		providerList := L.CheckTable(2)
 		strategy := L.CheckString(3)
@@ -260,17 +258,379 @@ func (la *LLMAdapter) addProviderMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add providers namespace to module
-	L.SetField(module, "providers", providers)
+	// Additional provider methods if providers bridge is available
+	if la.providersBridge != nil {
+		// providersCreateFromEnvironment method
+		L.SetField(module, "providersCreateFromEnvironment", L.NewFunction(func(L *lua.LState) int {
+			providerType := L.CheckString(1)
+			name := L.CheckString(2)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(providerType),
+				engine.NewStringValue(name),
+			}
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "createProviderFromEnvironment", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersRemove method
+		L.SetField(module, "providersRemove", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(name)}
+
+			_, err := la.providersBridge.ExecuteMethod(ctx, "removeProvider", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersTemplatesList method
+		L.SetField(module, "providersTemplatesList", L.NewFunction(func(L *lua.LState) int {
+			ctx := context.Background()
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "listProviderTemplates", []engine.ScriptValue{})
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersTemplatesValidate method
+		L.SetField(module, "providersTemplatesValidate", L.NewFunction(func(L *lua.LState) int {
+			providerType := L.CheckString(1)
+			config := L.CheckTable(2)
+
+			// Convert config to map
+			configMap := la.tableToMap(config)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(providerType),
+				engine.NewObjectValue(configMap),
+			}
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "validateProviderConfig", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersConfigureMulti method
+		L.SetField(module, "providersConfigureMulti", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+			config := L.CheckTable(2)
+
+			// Convert config to map
+			configMap := la.tableToMap(config)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(name),
+				engine.NewObjectValue(configMap),
+			}
+
+			_, err := la.providersBridge.ExecuteMethod(ctx, "configureMultiProvider", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersGetMulti method
+		L.SetField(module, "providersGetMulti", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(name)}
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "getMultiProvider", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersCreateMock method
+		L.SetField(module, "providersCreateMock", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+			responses := L.CheckTable(2)
+
+			// Convert responses to array
+			var responseArray []engine.ScriptValue
+			responses.ForEach(func(k, v lua.LValue) {
+				if str, ok := v.(lua.LString); ok {
+					responseArray = append(responseArray, engine.NewStringValue(string(str)))
+				}
+			})
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(name),
+				engine.NewArrayValue(responseArray),
+			}
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "createMockProvider", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersGenerateWith method
+		L.SetField(module, "providersGenerateWith", L.NewFunction(func(L *lua.LState) int {
+			providerName := L.CheckString(1)
+			prompt := L.CheckString(2)
+			options := L.OptTable(3, L.NewTable())
+
+			// Convert options to map
+			optionsMap := la.tableToMap(options)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(providerName),
+				engine.NewStringValue(prompt),
+				engine.NewObjectValue(optionsMap),
+			}
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "generateWithProvider", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersExportConfig method
+		L.SetField(module, "providersExportConfig", L.NewFunction(func(L *lua.LState) int {
+			ctx := context.Background()
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "exportProviderConfig", []engine.ScriptValue{})
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersImportConfig method
+		L.SetField(module, "providersImportConfig", L.NewFunction(func(L *lua.LState) int {
+			config := L.CheckTable(1)
+
+			// Convert config to map
+			configMap := la.tableToMap(config)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewObjectValue(configMap),
+			}
+
+			_, err := la.providersBridge.ExecuteMethod(ctx, "importProviderConfig", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersSetMetadata method
+		L.SetField(module, "providersSetMetadata", L.NewFunction(func(L *lua.LState) int {
+			providerName := L.CheckString(1)
+			metadata := L.CheckTable(2)
+
+			// Convert metadata to map
+			metadataMap := la.tableToMap(metadata)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(providerName),
+				engine.NewObjectValue(metadataMap),
+			}
+
+			_, err := la.providersBridge.ExecuteMethod(ctx, "setProviderMetadata", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersGetMetadata method
+		L.SetField(module, "providersGetMetadata", L.NewFunction(func(L *lua.LState) int {
+			providerName := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(providerName)}
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "getProviderMetadata", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// providersListByCapability method
+		L.SetField(module, "providersListByCapability", L.NewFunction(func(L *lua.LState) int {
+			capability := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(capability)}
+
+			result, err := la.providersBridge.ExecuteMethod(ctx, "listProvidersByCapability", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+	}
 }
 
-// addPoolMethods adds pool management methods
+// addPoolMethods adds pool management methods as flat methods
 func (la *LLMAdapter) addPoolMethods(L *lua.LState, module *lua.LTable) {
-	// Create pool namespace
-	pool := L.NewTable()
-
-	// createPool method
-	L.SetField(pool, "create", L.NewFunction(func(L *lua.LState) int {
+	// Pool management methods - flattened
+	// poolCreate method
+	L.SetField(module, "poolCreate", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 		providers := L.CheckTable(2)
 		strategy := L.CheckString(3)
@@ -315,8 +675,8 @@ func (la *LLMAdapter) addPoolMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// getPoolHealth method
-	L.SetField(pool, "getHealth", L.NewFunction(func(L *lua.LState) int {
+	// poolGetHealth method
+	L.SetField(module, "poolGetHealth", L.NewFunction(func(L *lua.LState) int {
 		poolName := L.CheckString(1)
 
 		ctx := context.Background()
@@ -342,8 +702,8 @@ func (la *LLMAdapter) addPoolMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// generateWithPool method
-	L.SetField(pool, "generate", L.NewFunction(func(L *lua.LState) int {
+	// poolGenerate method
+	L.SetField(module, "poolGenerate", L.NewFunction(func(L *lua.LState) int {
 		poolName := L.CheckString(1)
 		prompt := L.CheckString(2)
 		options := L.OptTable(3, L.NewTable())
@@ -379,7 +739,7 @@ func (la *LLMAdapter) addPoolMethods(L *lua.LState, module *lua.LTable) {
 	}))
 
 	// Pool metrics
-	L.SetField(pool, "getMetrics", L.NewFunction(func(L *lua.LState) int {
+	L.SetField(module, "poolGetMetrics", L.NewFunction(func(L *lua.LState) int {
 		poolName := L.CheckString(1)
 
 		ctx := context.Background()
@@ -405,17 +765,351 @@ func (la *LLMAdapter) addPoolMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// Add pool namespace to module
-	L.SetField(module, "pool", pool)
+	// Additional pool methods if pool bridge is available
+	if la.poolBridge != nil {
+		// poolGet method
+		L.SetField(module, "poolGet", L.NewFunction(func(L *lua.LState) int {
+			poolName := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(poolName)}
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "getPool", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// poolList method
+		L.SetField(module, "poolList", L.NewFunction(func(L *lua.LState) int {
+			ctx := context.Background()
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "listPools", []engine.ScriptValue{})
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// poolRemove method
+		L.SetField(module, "poolRemove", L.NewFunction(func(L *lua.LState) int {
+			poolName := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(poolName)}
+
+			_, err := la.poolBridge.ExecuteMethod(ctx, "removePool", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// poolGetProviderHealth method
+		L.SetField(module, "poolGetProviderHealth", L.NewFunction(func(L *lua.LState) int {
+			poolName := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(poolName)}
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "getProviderHealth", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// poolResetMetrics method
+		L.SetField(module, "poolResetMetrics", L.NewFunction(func(L *lua.LState) int {
+			poolName := L.CheckString(1)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{engine.NewStringValue(poolName)}
+
+			_, err := la.poolBridge.ExecuteMethod(ctx, "resetPoolMetrics", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// poolGenerateMessage method
+		L.SetField(module, "poolGenerateMessage", L.NewFunction(func(L *lua.LState) int {
+			poolName := L.CheckString(1)
+			messages := L.CheckTable(2)
+			options := L.OptTable(3, L.NewTable())
+
+			// Convert messages to array
+			var msgArray []engine.ScriptValue
+			messages.ForEach(func(k, v lua.LValue) {
+				if msgTable, ok := v.(*lua.LTable); ok {
+					msgMap := la.tableToMap(msgTable)
+					msgArray = append(msgArray, engine.NewObjectValue(msgMap))
+				}
+			})
+
+			// Convert options to map
+			optionsMap := la.tableToMap(options)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(poolName),
+				engine.NewArrayValue(msgArray),
+				engine.NewObjectValue(optionsMap),
+			}
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "generateMessageWithPool", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// poolStream method
+		L.SetField(module, "poolStream", L.NewFunction(func(L *lua.LState) int {
+			poolName := L.CheckString(1)
+			prompt := L.CheckString(2)
+			options := L.OptTable(3, L.NewTable())
+
+			// Convert options to map
+			optionsMap := la.tableToMap(options)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewStringValue(poolName),
+				engine.NewStringValue(prompt),
+				engine.NewObjectValue(optionsMap),
+			}
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "streamWithPool", args)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		// Object pooling methods
+		L.SetField(module, "poolGetResponse", L.NewFunction(func(L *lua.LState) int {
+			ctx := context.Background()
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "getResponseFromPool", []engine.ScriptValue{})
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		L.SetField(module, "poolReturnResponse", L.NewFunction(func(L *lua.LState) int {
+			response := L.CheckTable(1)
+
+			// Convert response to ScriptValue
+			responseMap := la.tableToMap(response)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewObjectValue(responseMap),
+			}
+
+			_, err := la.poolBridge.ExecuteMethod(ctx, "returnResponseToPool", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		L.SetField(module, "poolGetToken", L.NewFunction(func(L *lua.LState) int {
+			ctx := context.Background()
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "getTokenFromPool", []engine.ScriptValue{})
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		L.SetField(module, "poolReturnToken", L.NewFunction(func(L *lua.LState) int {
+			token := L.CheckTable(1)
+
+			// Convert token to ScriptValue
+			tokenMap := la.tableToMap(token)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewObjectValue(tokenMap),
+			}
+
+			_, err := la.poolBridge.ExecuteMethod(ctx, "returnTokenToPool", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		L.SetField(module, "poolGetChannel", L.NewFunction(func(L *lua.LState) int {
+			ctx := context.Background()
+
+			result, err := la.poolBridge.ExecuteMethod(ctx, "getChannelFromPool", []engine.ScriptValue{})
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			// Convert result to Lua
+			luaResult, err := la.BridgeAdapter.GetTypeConverter().FromLuaScriptValue(L, result)
+			if err != nil {
+				L.Push(lua.LNil)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(luaResult)
+			L.Push(lua.LNil)
+			return 2
+		}))
+
+		L.SetField(module, "poolReturnChannel", L.NewFunction(func(L *lua.LState) int {
+			channel := L.CheckTable(1)
+
+			// Convert channel to ScriptValue
+			channelMap := la.tableToMap(channel)
+
+			ctx := context.Background()
+			args := []engine.ScriptValue{
+				engine.NewObjectValue(channelMap),
+			}
+
+			_, err := la.poolBridge.ExecuteMethod(ctx, "returnChannelToPool", args)
+			if err != nil {
+				L.Push(lua.LFalse)
+				L.Push(lua.LString(err.Error()))
+				return 2
+			}
+
+			L.Push(lua.LTrue)
+			L.Push(lua.LNil)
+			return 2
+		}))
+	}
 }
 
-// addModelMethods adds model management methods
+// addModelMethods adds model management methods as flat methods
 func (la *LLMAdapter) addModelMethods(L *lua.LState, module *lua.LTable) {
-	// Create models namespace
-	models := L.NewTable()
-
-	// listModels method
-	L.SetField(models, "list", L.NewFunction(func(L *lua.LState) int {
+	// Model management methods - flattened
+	// modelsList method
+	L.SetField(module, "modelsList", L.NewFunction(func(L *lua.LState) int {
 		provider := L.OptString(1, "")
 
 		ctx := context.Background()
@@ -441,8 +1135,8 @@ func (la *LLMAdapter) addModelMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// getModelInfo method
-	L.SetField(models, "getInfo", L.NewFunction(func(L *lua.LState) int {
+	// modelsGetInfo method
+	L.SetField(module, "modelsGetInfo", L.NewFunction(func(L *lua.LState) int {
 		modelName := L.CheckString(1)
 
 		ctx := context.Background()
@@ -468,8 +1162,8 @@ func (la *LLMAdapter) addModelMethods(L *lua.LState, module *lua.LTable) {
 		return 2
 	}))
 
-	// checkCapabilities method
-	L.SetField(models, "checkCapabilities", L.NewFunction(func(L *lua.LState) int {
+	// modelsCheckCapabilities method
+	L.SetField(module, "modelsCheckCapabilities", L.NewFunction(func(L *lua.LState) int {
 		modelName := L.CheckString(1)
 		capability := L.CheckString(2)
 
@@ -498,9 +1192,6 @@ func (la *LLMAdapter) addModelMethods(L *lua.LState, module *lua.LTable) {
 		L.Push(lua.LNil)
 		return 2
 	}))
-
-	// Add models namespace to module
-	L.SetField(module, "models", models)
 }
 
 // addConvenienceMethods adds convenience methods to the module
@@ -928,10 +1619,40 @@ func (la *LLMAdapter) GetMethods() []string {
 
 	// Add LLM-specific methods if not already present
 	llmMethods := []string{
-		"generate", "generateMessage", "stream",
-		"createProvider", "getProvider", "listProviders",
-		"createPool", "getPoolHealth", "generateWithPool",
-		"listModels", "getModelInfo", "countTokens",
+		// Core LLM methods
+		"generate", "generateMessage", "stream", "countTokens",
+		// Provider methods (flattened)
+		"providersCreate", "providersGet", "providersList",
+		"providersGetTemplate", "providersCreateMulti",
+		// Pool methods (flattened)
+		"poolCreate", "poolGenerate", "poolGetHealth", "poolGetMetrics",
+		// Model methods (flattened)
+		"modelsList", "modelsGetInfo", "modelsCheckCapabilities",
+	}
+
+	// Add pool bridge methods if available
+	if la.poolBridge != nil {
+		llmMethods = append(llmMethods,
+			"poolGet", "poolList", "poolRemove",
+			"poolGetProviderHealth", "poolResetMetrics",
+			"poolGenerateMessage", "poolStream",
+			"poolGetResponse", "poolReturnResponse",
+			"poolGetToken", "poolReturnToken",
+			"poolGetChannel", "poolReturnChannel",
+		)
+	}
+
+	// Add providers bridge methods if available
+	if la.providersBridge != nil {
+		llmMethods = append(llmMethods,
+			"providersCreateFromEnvironment", "providersRemove",
+			"providersTemplatesList", "providersTemplatesValidate",
+			"providersConfigureMulti", "providersGetMulti",
+			"providersCreateMock", "providersGenerateWith",
+			"providersExportConfig", "providersImportConfig",
+			"providersSetMetadata", "providersGetMetadata",
+			"providersListByCapability",
+		)
 	}
 
 	methodMap := make(map[string]bool)

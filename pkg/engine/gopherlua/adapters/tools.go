@@ -15,13 +15,22 @@ import (
 
 // ToolsAdapter bridges go-llms tools functionality to Lua
 type ToolsAdapter struct {
-	bridge engine.Bridge
+	bridge         engine.Bridge
+	registryBridge engine.Bridge // Tool registry bridge for enhanced functionality
 }
 
 // NewToolsAdapter creates a new tools adapter
 func NewToolsAdapter(bridge engine.Bridge) *ToolsAdapter {
 	return &ToolsAdapter{
 		bridge: bridge,
+	}
+}
+
+// NewToolsAdapterWithRegistry creates a new tools adapter with registry bridge
+func NewToolsAdapterWithRegistry(bridge engine.Bridge, registryBridge engine.Bridge) *ToolsAdapter {
+	return &ToolsAdapter{
+		bridge:         bridge,
+		registryBridge: registryBridge,
 	}
 }
 
@@ -94,6 +103,25 @@ func (ta *ToolsAdapter) CreateLuaModule() lua.LGFunction {
 		// Builder pattern support
 		L.SetField(module, "createBuilder", L.NewFunction(ta.createToolBuilder))
 
+		// Registry bridge methods (if available)
+		if ta.registryBridge != nil {
+			// Tool discovery methods from registry
+			L.SetField(module, "getTool", L.NewFunction(ta.getTool))
+			L.SetField(module, "listToolsByPermission", L.NewFunction(ta.listToolsByPermission))
+			L.SetField(module, "listToolsByResourceUsage", L.NewFunction(ta.listToolsByResourceUsage))
+
+			// Tool documentation from registry
+			L.SetField(module, "getToolDocumentation", L.NewFunction(ta.getToolDocumentation))
+
+			// MCP export functionality
+			L.SetField(module, "exportToolToMCP", L.NewFunction(ta.exportToolToMCP))
+			L.SetField(module, "exportAllToolsToMCP", L.NewFunction(ta.exportAllToolsToMCP))
+
+			// Registry management
+			L.SetField(module, "clearRegistry", L.NewFunction(ta.clearRegistry))
+			L.SetField(module, "getRegistryStats", L.NewFunction(ta.getRegistryStats))
+		}
+
 		L.Push(module)
 		return 1
 	}
@@ -101,7 +129,7 @@ func (ta *ToolsAdapter) CreateLuaModule() lua.LGFunction {
 
 // GetMethods returns available adapter methods
 func (ta *ToolsAdapter) GetMethods() []string {
-	return []string{
+	methods := []string{
 		"listTools", "searchTools", "getToolInfo", "getToolSchema",
 		"getCategories", "listByCategory", "listByTags",
 		"executeTool", "executeAsync",
@@ -110,6 +138,17 @@ func (ta *ToolsAdapter) GetMethods() []string {
 		"getToolMetrics",
 		"createBuilder",
 	}
+
+	// Add registry methods if available
+	if ta.registryBridge != nil {
+		methods = append(methods,
+			"getTool", "listToolsByPermission", "listToolsByResourceUsage",
+			"getToolDocumentation", "exportToolToMCP", "exportAllToolsToMCP",
+			"clearRegistry", "getRegistryStats",
+		)
+	}
+
+	return methods
 }
 
 // RegisterAsModule registers the adapter as a module in the module system
@@ -637,4 +676,201 @@ func luaToScriptValue(lv lua.LValue) engine.ScriptValue {
 	default:
 		return engine.NewNilValue()
 	}
+}
+
+// Registry bridge methods
+
+// getTool gets complete tool information from registry
+func (ta *ToolsAdapter) getTool(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	toolName := L.CheckString(1)
+	args := []engine.ScriptValue{
+		engine.NewStringValue(toolName),
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "getTool", args)
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	L.Push(scriptValueToLua(L, result))
+	L.Push(lua.LNil)
+	return 2
+}
+
+// listToolsByPermission lists tools requiring specific permission
+func (ta *ToolsAdapter) listToolsByPermission(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	permission := L.CheckString(1)
+	args := []engine.ScriptValue{
+		engine.NewStringValue(permission),
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "listToolsByPermission", args)
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	// Convert array result to multiple return values
+	if arrayVal, ok := result.(engine.ArrayValue); ok {
+		return pushArrayAsMultipleValues(L, arrayVal)
+	}
+
+	L.Push(lua.LNil)
+	L.Push(lua.LString("unexpected result type"))
+	return 2
+}
+
+// listToolsByResourceUsage lists tools matching resource criteria
+func (ta *ToolsAdapter) listToolsByResourceUsage(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	criteria := L.CheckTable(1)
+	args := []engine.ScriptValue{
+		luaToScriptValue(criteria),
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "listToolsByResourceUsage", args)
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	// Convert array result to multiple return values
+	if arrayVal, ok := result.(engine.ArrayValue); ok {
+		return pushArrayAsMultipleValues(L, arrayVal)
+	}
+
+	L.Push(lua.LNil)
+	L.Push(lua.LString("unexpected result type"))
+	return 2
+}
+
+// getToolDocumentation gets comprehensive documentation for a tool
+func (ta *ToolsAdapter) getToolDocumentation(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	toolName := L.CheckString(1)
+	args := []engine.ScriptValue{
+		engine.NewStringValue(toolName),
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "getToolDocumentation", args)
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	L.Push(scriptValueToLua(L, result))
+	L.Push(lua.LNil)
+	return 2
+}
+
+// exportToolToMCP exports single tool to MCP format
+func (ta *ToolsAdapter) exportToolToMCP(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	toolName := L.CheckString(1)
+	args := []engine.ScriptValue{
+		engine.NewStringValue(toolName),
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "exportToolToMCP", args)
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	L.Push(scriptValueToLua(L, result))
+	L.Push(lua.LNil)
+	return 2
+}
+
+// exportAllToolsToMCP exports all tools to MCP catalog
+func (ta *ToolsAdapter) exportAllToolsToMCP(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "exportAllToolsToMCP", []engine.ScriptValue{})
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	L.Push(scriptValueToLua(L, result))
+	L.Push(lua.LNil)
+	return 2
+}
+
+// clearRegistry clears all tools from registry (testing only)
+func (ta *ToolsAdapter) clearRegistry(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "clearRegistry", []engine.ScriptValue{})
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	L.Push(scriptValueToLua(L, result))
+	L.Push(lua.LNil)
+	return 2
+}
+
+// getRegistryStats gets registry statistics and metrics
+func (ta *ToolsAdapter) getRegistryStats(L *lua.LState) int {
+	if ta.registryBridge == nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString("registry bridge not available"))
+		return 2
+	}
+
+	result, err := ta.registryBridge.ExecuteMethod(context.Background(), "getRegistryStats", []engine.ScriptValue{})
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	L.Push(scriptValueToLua(L, result))
+	L.Push(lua.LNil)
+	return 2
 }

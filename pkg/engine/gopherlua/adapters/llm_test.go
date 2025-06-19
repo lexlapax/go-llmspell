@@ -70,13 +70,16 @@ func TestLLMAdapter_Creation(t *testing.T) {
 		assert.NotEqual(t, lua.LNil, module.RawGetString("createAgent"))
 		assert.NotEqual(t, lua.LNil, module.RawGetString("Agent")) // Constructor alias
 
-		// Check namespaces exist
-		models := module.RawGetString("models")
-		assert.NotEqual(t, lua.LNil, models, "models namespace should exist")
-		if models.Type() == lua.LTTable {
-			modelsTable := models.(*lua.LTable)
-			assert.NotEqual(t, lua.LNil, modelsTable.RawGetString("list"), "models.list should exist")
-		}
+		// Check flattened methods exist (no namespaces)
+		assert.NotEqual(t, lua.LNil, module.RawGetString("modelsList"), "modelsList should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("modelsGetInfo"), "modelsGetInfo should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("poolCreate"), "poolCreate should exist")
+		assert.NotEqual(t, lua.LNil, module.RawGetString("providersCreate"), "providersCreate should exist")
+
+		// Check namespaces don't exist
+		assert.Equal(t, lua.LNil, module.RawGetString("models"), "models namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("pool"), "pool namespace should not exist")
+		assert.Equal(t, lua.LNil, module.RawGetString("providers"), "providers namespace should not exist")
 	})
 }
 
@@ -331,11 +334,12 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 		// Test listing models
 		err = L.DoString(`
 			local llm = require("llm")
-			-- First check if models namespace exists
-			assert(llm.models ~= nil, "models namespace should exist")
-			assert(type(llm.models.list) == "function", "models.list should be a function")
-			local models, err = llm.models.list()
-			assert(err == nil, "error calling models.list: " .. tostring(err))
+			-- Check that models namespace doesn't exist (flattened)
+			assert(llm.models == nil, "models namespace should not exist (flattened)")
+			-- Check that modelsList function exists instead
+			assert(type(llm.modelsList) == "function", "modelsList should be a function")
+			local models, err = llm.modelsList()
+			assert(err == nil, "error calling modelsList: " .. tostring(err))
 			assert(models ~= nil, "models should not be nil")
 			assert(type(models) == "table", "models should be a table, got: " .. type(models))
 			assert(#models == 2, "expected 2 models, got: " .. #models)
@@ -674,4 +678,415 @@ func convertResultToScriptValue(result interface{}) engine.ScriptValue {
 		// For other types, convert to string
 		return engine.NewStringValue(fmt.Sprintf("%v", v))
 	}
+}
+
+// Mock pool bridge for testing
+type mockPoolBridge struct {
+	id          string
+	initialized bool
+	methods     map[string]func(args []engine.ScriptValue) (engine.ScriptValue, error)
+}
+
+func (m *mockPoolBridge) GetID() string                                               { return m.id }
+func (m *mockPoolBridge) GetMetadata() engine.BridgeMetadata                          { return engine.BridgeMetadata{} }
+func (m *mockPoolBridge) Initialize(ctx context.Context) error                        { m.initialized = true; return nil }
+func (m *mockPoolBridge) Cleanup(ctx context.Context) error                           { m.initialized = false; return nil }
+func (m *mockPoolBridge) IsInitialized() bool                                         { return m.initialized }
+func (m *mockPoolBridge) RegisterWithEngine(e engine.ScriptEngine) error              { return nil }
+func (m *mockPoolBridge) Methods() []engine.MethodInfo                                { return nil }
+func (m *mockPoolBridge) ValidateMethod(name string, args []engine.ScriptValue) error { return nil }
+func (m *mockPoolBridge) TypeMappings() map[string]engine.TypeMapping                 { return nil }
+func (m *mockPoolBridge) RequiredPermissions() []engine.Permission                    { return nil }
+
+func (m *mockPoolBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+	if method, ok := m.methods[name]; ok {
+		return method(args)
+	}
+	return engine.NewErrorValue(fmt.Errorf("method not found: %s", name)), nil
+}
+
+func TestLLMAdapter_PoolEnhancement(t *testing.T) {
+	t.Run("pool_methods_with_bridge", func(t *testing.T) {
+		// Create mock LLM bridge
+		llmBridge := &mockLLMBridge{
+			id: "llm",
+			metadata: engine.BridgeMetadata{
+				Name: "LLM Bridge",
+			},
+		}
+
+		// Create mock pool bridge
+		poolBridge := &mockPoolBridge{
+			id:          "pool",
+			initialized: true,
+			methods: map[string]func(args []engine.ScriptValue) (engine.ScriptValue, error){
+				"createPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"name":     args[0],
+						"strategy": args[2],
+						"created":  engine.NewBoolValue(true),
+					}), nil
+				},
+				"getPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"name": args[0],
+						"providers": engine.NewArrayValue([]engine.ScriptValue{
+							engine.NewStringValue("openai"),
+							engine.NewStringValue("anthropic"),
+						}),
+						"strategy": engine.NewStringValue("round_robin"),
+					}), nil
+				},
+				"listPools": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name": engine.NewStringValue("main-pool"),
+						}),
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name": engine.NewStringValue("backup-pool"),
+						}),
+					}), nil
+				},
+				"getPoolMetrics": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"total_requests": engine.NewNumberValue(100),
+						"success_rate":   engine.NewNumberValue(0.95),
+					}), nil
+				},
+				"getProviderHealth": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"provider": engine.NewStringValue("openai"),
+							"health":   engine.NewStringValue("healthy"),
+						}),
+					}), nil
+				},
+			},
+		}
+
+		// Create adapter with pool bridge
+		adapter := NewLLMAdapter(llmBridge, nil, poolBridge)
+
+		// Should have pool methods
+		methods := adapter.GetMethods()
+		assert.Contains(t, methods, "poolCreate")
+		assert.Contains(t, methods, "poolGet")
+		assert.Contains(t, methods, "poolList")
+		assert.Contains(t, methods, "poolGetProviderHealth")
+		assert.Contains(t, methods, "poolGetResponse")
+		assert.Contains(t, methods, "poolReturnResponse")
+	})
+
+	t.Run("pool_methods_in_lua", func(t *testing.T) {
+		llmBridge := &mockLLMBridge{
+			id: "llm",
+			callFunc: func(method string, args ...interface{}) (interface{}, error) {
+				switch method {
+				case "createPool":
+					return map[string]interface{}{
+						"name":    "test-pool",
+						"created": true,
+					}, nil
+				case "getPoolMetrics":
+					return map[string]interface{}{
+						"requests": 50,
+						"errors":   2,
+					}, nil
+				}
+				return nil, fmt.Errorf("unknown method: %s", method)
+			},
+		}
+
+		poolBridge := &mockPoolBridge{
+			id:          "pool",
+			initialized: true,
+			methods: map[string]func(args []engine.ScriptValue) (engine.ScriptValue, error){
+				"getPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"name":     args[0],
+						"strategy": engine.NewStringValue("failover"),
+					}), nil
+				},
+				"listPools": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewArrayValue([]engine.ScriptValue{
+						engine.NewObjectValue(map[string]engine.ScriptValue{
+							"name": engine.NewStringValue("pool1"),
+						}),
+					}), nil
+				},
+				"removePool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewNilValue(), nil
+				},
+				"resetPoolMetrics": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewNilValue(), nil
+				},
+				"generateMessageWithPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"role":    engine.NewStringValue("assistant"),
+						"content": engine.NewStringValue("Hello from pool!"),
+					}), nil
+				},
+				"streamWithPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"stream_id": engine.NewStringValue("stream-123"),
+						"started":   engine.NewBoolValue(true),
+					}), nil
+				},
+			},
+		}
+
+		adapter := NewLLMAdapter(llmBridge, nil, poolBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "llm")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "llm")
+		require.NoError(t, err)
+
+		// Test flattened pool methods
+		err = L.DoString(`
+			local llm = require("llm")
+			
+			-- Test poolCreate (basic method)
+			local pool, err = llm.poolCreate("test-pool", {"openai", "anthropic"}, "round_robin")
+			assert(err == nil, "should not error")
+			assert(pool.name == "test-pool", "should create pool")
+			assert(pool.created == true, "should be created")
+			
+			-- Test poolGet (enhanced method)
+			local pool2, err = llm.poolGet("my-pool")
+			assert(err == nil, "should not error")
+			assert(pool2.name == "my-pool", "should get pool")
+			assert(pool2.strategy == "failover", "should have strategy")
+			
+			-- Test poolList
+			local pools, err = llm.poolList()
+			assert(err == nil, "should not error")
+			assert(#pools == 1, "should have one pool")
+			assert(pools[1].name == "pool1", "should have pool1")
+			
+			-- Test poolRemove
+			local success, err = llm.poolRemove("old-pool")
+			assert(err == nil, "should not error")
+			assert(success == true, "should remove successfully")
+			
+			-- Test poolGetMetrics (basic method)
+			local metrics, err = llm.poolGetMetrics("test-pool")
+			assert(err == nil, "should not error")
+			assert(metrics.requests == 50, "should have requests")
+			assert(metrics.errors == 2, "should have errors")
+			
+			-- Test poolResetMetrics
+			local success, err = llm.poolResetMetrics("test-pool")
+			assert(err == nil, "should not error")
+			assert(success == true, "should reset successfully")
+			
+			-- Test poolGenerateMessage
+			local msg, err = llm.poolGenerateMessage("test-pool", {{role="user", content="Hi"}})
+			assert(err == nil, "should not error")
+			assert(msg.content == "Hello from pool!", "should generate message")
+			
+			-- Test poolStream
+			local stream, err = llm.poolStream("test-pool", "Hello", {})
+			assert(err == nil, "should not error")
+			assert(stream.stream_id == "stream-123", "should have stream id")
+			assert(stream.started == true, "should be started")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("pool_object_pooling_methods", func(t *testing.T) {
+		llmBridge := &mockLLMBridge{id: "llm"}
+
+		poolBridge := &mockPoolBridge{
+			id:          "pool",
+			initialized: true,
+			methods: map[string]func(args []engine.ScriptValue) (engine.ScriptValue, error){
+				"getResponseFromPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"id":      engine.NewStringValue("resp-123"),
+						"content": engine.NewStringValue(""),
+					}), nil
+				},
+				"returnResponseToPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewNilValue(), nil
+				},
+				"getTokenFromPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"value": engine.NewStringValue("token-456"),
+						"used":  engine.NewBoolValue(false),
+					}), nil
+				},
+				"returnTokenToPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewNilValue(), nil
+				},
+				"getChannelFromPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewObjectValue(map[string]engine.ScriptValue{
+						"id":   engine.NewStringValue("chan-789"),
+						"open": engine.NewBoolValue(true),
+					}), nil
+				},
+				"returnChannelToPool": func(args []engine.ScriptValue) (engine.ScriptValue, error) {
+					return engine.NewNilValue(), nil
+				},
+			},
+		}
+
+		adapter := NewLLMAdapter(llmBridge, nil, poolBridge)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "llm")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "llm")
+		require.NoError(t, err)
+
+		// Test object pooling methods
+		err = L.DoString(`
+			local llm = require("llm")
+			
+			-- Test response pooling
+			local resp, err = llm.poolGetResponse()
+			assert(err == nil, "should not error")
+			assert(resp.id == "resp-123", "should get response")
+			
+			local success, err = llm.poolReturnResponse(resp)
+			assert(err == nil, "should not error")
+			assert(success == true, "should return response")
+			
+			-- Test token pooling
+			local token, err = llm.poolGetToken()
+			assert(err == nil, "should not error")
+			assert(token.value == "token-456", "should get token")
+			assert(token.used == false, "should not be used")
+			
+			local success, err = llm.poolReturnToken(token)
+			assert(err == nil, "should not error")
+			assert(success == true, "should return token")
+			
+			-- Test channel pooling
+			local chan, err = llm.poolGetChannel()
+			assert(err == nil, "should not error")
+			assert(chan.id == "chan-789", "should get channel")
+			assert(chan.open == true, "should be open")
+			
+			local success, err = llm.poolReturnChannel(chan)
+			assert(err == nil, "should not error")
+			assert(success == true, "should return channel")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("pool_methods_without_bridge", func(t *testing.T) {
+		// Create adapter without pool bridge
+		llmBridge := &mockLLMBridge{
+			id: "llm",
+			callFunc: func(method string, args ...interface{}) (interface{}, error) {
+				if method == "createPool" {
+					return map[string]interface{}{"created": true}, nil
+				}
+				return nil, fmt.Errorf("unknown method")
+			},
+		}
+
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "llm")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "llm")
+		require.NoError(t, err)
+
+		// Enhanced pool methods should not exist
+		err = L.DoString(`
+			local llm = require("llm")
+			
+			-- Basic pool methods should still work
+			local pool, err = llm.poolCreate("test", {"openai"}, "round_robin")
+			assert(err == nil, "poolCreate should work")
+			assert(pool.created == true)
+			
+			-- Enhanced pool methods should not exist
+			assert(llm.poolGet == nil, "poolGet should not exist")
+			assert(llm.poolList == nil, "poolList should not exist")
+			assert(llm.poolRemove == nil, "poolRemove should not exist")
+			assert(llm.poolGetProviderHealth == nil, "poolGetProviderHealth should not exist")
+			assert(llm.poolGetResponse == nil, "poolGetResponse should not exist")
+		`)
+		assert.NoError(t, err)
+	})
+
+	t.Run("namespace_flattening", func(t *testing.T) {
+		llmBridge := &mockLLMBridge{
+			id: "llm",
+			callFunc: func(method string, args ...interface{}) (interface{}, error) {
+				switch method {
+				case "createProvider":
+					return map[string]interface{}{"name": "test-provider"}, nil
+				case "listProviders":
+					return []map[string]interface{}{{"name": "provider1"}}, nil
+				case "listModels":
+					return []map[string]interface{}{{"name": "gpt-4"}}, nil
+				case "getModelInfo":
+					return map[string]interface{}{"name": "gpt-4", "context": 8192}, nil
+				}
+				return nil, fmt.Errorf("unknown method: %s", method)
+			},
+		}
+
+		adapter := NewLLMAdapter(llmBridge, nil, nil)
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register module
+		ms := gopherlua.NewModuleSystem()
+		err := adapter.RegisterAsModule(ms, "llm")
+		require.NoError(t, err)
+
+		err = ms.LoadModule(L, "llm")
+		require.NoError(t, err)
+
+		// Test that namespaces have been flattened
+		err = L.DoString(`
+			local llm = require("llm")
+			
+			-- Provider methods should be flattened
+			local provider, err = llm.providersCreate("openai", "my-provider", {})
+			assert(err == nil, "providersCreate should work")
+			assert(provider.name == "test-provider")
+			
+			local providers, err = llm.providersList()
+			assert(err == nil, "providersList should work")
+			assert(#providers == 1)
+			assert(providers[1].name == "provider1")
+			
+			-- Model methods should be flattened
+			local models, err = llm.modelsList()
+			assert(err == nil, "modelsList should work")
+			assert(#models == 1)
+			assert(models[1].name == "gpt-4")
+			
+			local info, err = llm.modelsGetInfo("gpt-4")
+			assert(err == nil, "modelsGetInfo should work")
+			assert(info.name == "gpt-4")
+			assert(info.context == 8192)
+			
+			-- Old namespaces should not exist
+			assert(llm.providers == nil, "providers namespace should not exist")
+			assert(llm.models == nil, "models namespace should not exist")
+			assert(llm.pool == nil, "pool namespace should not exist")
+		`)
+		assert.NoError(t, err)
+	})
 }
