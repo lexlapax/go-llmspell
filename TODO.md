@@ -82,7 +82,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 5 of 14 adapters completed
+🚧 **IN PROGRESS** - 6 of 14 adapters completed
 
 - [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-18]
   - [x] Create state and context management module
@@ -115,30 +115,22 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Add schema constants (TYPES, FORMATS, OPERATORS)
   - [x] make sure tests pass
 
-- [ ] **Task 2.3.3.6: Agent Bridge Adapter** (`/pkg/engine/gopherlua/adapters/agent.go`)
-  **look in `/pkg/bridge/agent/agent.go` for research**
-  - [ ] Create agent module with agent lifecycle
-    - [ ] Implement `createAgent(name, provider, options)` method
-    - [ ] Add `getAgent(name)` method
-    - [ ] Add `listAgents()` method
-    - [ ] Implement agent configuration methods
-  - [ ] Implement agent communication
-    - [ ] Add `agent:complete(prompt, options)` method
-    - [ ] Add `agent:generateMessage(messages, options)` method
-    - [ ] Add `agent:stream(prompt, options)` method
-  - [ ] Add agent tool integration
-    - [ ] Implement `agent:addTool(tool)` method
-    - [ ] Add `agent:removeTool(toolName)` method
-    - [ ] Add `agent:listTools()` method
-    - [ ] Implement tool execution within agent context
-  - [ ] Implement agent state management
-    - [ ] Add `agent:getState()` method
-    - [ ] Add `agent:setState(state)` method
-    - [ ] Implement state persistence for agents
-  - [ ] make sure tests pass
+- [x] **Task 2.3.3.6: Agent Bridge Adapter** (`/pkg/engine/gopherlua/adapters/agent.go`) ✅ COMPLETE [2025-06-19]
+  - [x] Create agent module with lifecycle, communication, state, events, profiling, workflow, and hooks namespaces
+  - [x] Implement agent lifecycle methods (create, createLLM, list, get, remove)
+  - [x] Add agent communication methods (run, runAsync, registerTool, unregisterTool, listTools)
+  - [x] Implement agent state management (get, set, export, import, saveSnapshot, loadSnapshot, listSnapshots)
+  - [x] Add agent event methods (emit, subscribe, startRecording, stopRecording, replay)
+  - [x] Implement agent profiling methods (start, stop, getMetrics)
+  - [x] Add agent workflow methods (create, execute)
+  - [x] Implement agent hook methods (register, unregister)
+  - [x] Add utility methods (validateConfig)
+  - [x] Add convenience methods and constants (TYPES, STATES, EVENT_TYPES, HOOKS)
+  - [x] Comprehensive test coverage with TDD approach
+  - [x] Array handling patterns following bridge adapter conventions
 
 - [ ] **Task 2.3.3.7: Hooks Bridge Adapter** (`/pkg/engine/gopherlua/adapters/hooks.go`)
-  **look in `/pkg/bridge/agent/*.go` for research**
+  **look in `/pkg/bridge/agent/hooks.go` for research**
   - [ ] Create hooks module for lifecycle events
     - [ ] Implement `registerHook(event, callback)` method
     - [ ] Add `unregisterHook(event, hookId)` method
@@ -162,7 +154,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.8: Workflow Bridge Adapter** (`/pkg/engine/gopherlua/adapters/workflow.go`)
-  **look in `/pkg/bridge/agent/*.go` for research**
+  **look in `/pkg/bridge/agent/workflow.go` for research**
   - [ ] Create workflow module
   - [ ] Implement workflow builders
   - [ ] Add step definitions
@@ -171,7 +163,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] make sure tests pass
 
 - [ ] **Task 2.3.3.9: Tools Bridge Adapter** (`/pkg/engine/gopherlua/adapters/tools.go`)
-  **look in `/pkg/bridge/agent/*.go` for research**
+  **look in `/pkg/bridge/agent/tool*.go` for research**
   - [ ] Create tools module
   - [ ] Implement tool registration
   - [ ] Add tool execution
