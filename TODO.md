@@ -82,9 +82,9 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-18]** - See TODO-DONE.md for complete details
 
 #### 2.3.3: Bridge Adapters
-🚧 **IN PROGRESS** - 3 of 14 adapters completed
+🚧 **IN PROGRESS** - 4 of 14 adapters completed
 
-- [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-19]
+- [x] **Task 2.3.3.3: State Bridge Adapter** (`/pkg/engine/gopherlua/adapters/state.go`) ✅ COMPLETE [2025-06-18]
   - [x] Create state and context management module
   - [x] Implement get/set operations
   - [x] Add transform functions (register, apply built-ins)
@@ -93,13 +93,16 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Enhanced state objects with convenience methods
   - [x] make sure tests pass
 
-- [ ] **Task 2.3.3.4: Events Bridge Adapter** (`/pkg/engine/gopherlua/adapters/events.go`)
-  - [ ] Create event module
-  - [ ] Implement event subscription
-  - [ ] Add event emission
-  - [ ] Implement filtering
-  - [ ] Add event correlation
-  - [ ] make sure tests pass
+- [x] **Task 2.3.3.4: Events Bridge Adapter** (`/pkg/engine/gopherlua/adapters/events.go`) ✅ COMPLETE [2025-06-18]
+  - [x] Create event module with namespaces (bus, filters, recording, replay, aggregation)
+  - [x] Implement event subscription and publication
+  - [x] Add event emission with pattern matching
+  - [x] Implement filtering (pattern, type, time range, composite)
+  - [x] Add event correlation and aggregation
+  - [x] Add recording and replay functionality
+  - [x] Add serialization/deserialization support
+  - [x] Implement subscription management
+  - [x] make sure tests pass
 
 - [ ] **Task 2.3.3.5: Structure Bridge Adapter** (`/pkg/engine/gopherlua/adapters/structured.go`)
   - [ ] Create structured output module
