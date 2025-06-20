@@ -1191,3 +1191,68 @@ The Lua Standard Library implementation is complete with all 18 tasks finished. 
 - **Performance Testing**: Benchmarks and stress tests validating production readiness
 
 The library is now ready for use in production Lua scripts with full async/coroutine support, comprehensive error handling, and seamless integration with all go-llms bridge functionality.
+
+## Phase 2.4: Advanced Features & Optimization
+
+### 2.4.1: Performance Optimization - IN PROGRESS
+
+#### ✅ **Task 2.4.1.1: Profiling Infrastructure** [COMPLETED - 2025-06-20]
+- ✅ Implementation (`/pkg/engine/gopherlua/profiling.go`)
+  - ✅ Add execution time tracking
+  - ✅ Implement memory profiling
+  - ✅ Create allocation tracking
+  - ✅ Add hot path identification
+  - ✅ Implement profiling API
+- ✅ Testing (`/pkg/engine/gopherlua/profiling_test.go`)
+  - ✅ Comprehensive test coverage for all profiling features
+  - ✅ Concurrent profiling tests
+  - ✅ Performance benchmarks
+
+#### ✅ **Task 2.4.1.2: Type Conversion Optimization** [COMPLETED - 2025-06-20]
+- ✅ Implementation (`/pkg/engine/gopherlua/converter_optimization.go`)
+  - ✅ Implement conversion caching
+  - ✅ Add fast paths for common types
+  - ✅ Optimize table traversal
+  - ✅ Reduce allocation in hot paths
+  - ✅ Add benchmarks for all conversions
+- ✅ Testing (`/pkg/engine/gopherlua/converter_optimization_test.go`)
+  - ✅ Comprehensive test coverage for optimizations
+  - ✅ Performance benchmarks showing improvements
+  - ✅ Memory efficiency tests
+
+#### ✅ **Task 2.4.1.3: State Pool Optimization** [COMPLETED - 2025-06-20]
+- ✅ Implementation (`/pkg/engine/gopherlua/pool_optimization.go`)
+  - ✅ Implement predictive scaling
+  - ✅ Optimize state reset process
+  - ✅ Add state pre-warming
+  - ✅ Implement memory pooling
+  - ✅ Create performance metrics
+- ✅ Testing (`/pkg/engine/gopherlua/pool_optimization_test.go`)
+  - ✅ Pool management tests
+  - ✅ Scaling algorithm tests
+  - ✅ Concurrent access tests
+  - ✅ Performance benchmarks
+
+#### ✅ **Task 2.4.1.4: Script Compilation Optimization** [COMPLETED - 2025-06-20]
+- ✅ Implementation (`/pkg/engine/gopherlua/compilation_optimization.go`)
+  - ✅ Enhanced chunk caching with metadata tracking
+  - ✅ Pattern-based source optimization (since gopher-lua doesn't expose AST)
+  - ✅ Simple dead code elimination for obvious patterns
+  - ✅ Constant folding for numeric and string operations
+  - ✅ Comment stripping and whitespace reduction
+  - ✅ Static analysis for unused variables and unreachable code
+  - ✅ Compilation metrics tracking
+- ✅ Testing (`/pkg/engine/gopherlua/compilation_optimization_test.go`)
+  - ✅ Test chunk caching with cache hits/misses
+  - ✅ Test all optimization flags and combinations
+  - ✅ Test static analysis warnings
+  - ✅ Test concurrent compilation
+  - ✅ Test large script optimization
+  - ✅ Performance benchmarks for compilation
+  - ✅ All tests passing with proper error handling
+
+**Implementation Notes**:
+- Since gopher-lua doesn't expose its AST, implemented pattern-based optimizations instead
+- Dead code elimination limited to safe patterns to avoid breaking valid code
+- Comprehensive metrics tracking for monitoring optimization effectiveness
+- Thread-safe implementation suitable for concurrent use

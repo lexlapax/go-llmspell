@@ -396,8 +396,8 @@ func TestOptimizedLStatePool_LoadProfiles(t *testing.T) {
 			pool, err := NewOptimizedLStatePool(factory, config)
 			require.NoError(t, err)
 			defer func() {
-		_ = pool.Shutdown(context.Background())
-	}()
+				_ = pool.Shutdown(context.Background())
+			}()
 
 			err = pool.ApplyLoadProfile(tt.profile)
 			require.NoError(t, err)
@@ -418,8 +418,8 @@ func TestOptimizedLStatePool_LoadProfiles(t *testing.T) {
 		pool, err := NewOptimizedLStatePool(factory, config)
 		require.NoError(t, err)
 		defer func() {
-		_ = pool.Shutdown(context.Background())
-	}()
+			_ = pool.Shutdown(context.Background())
+		}()
 
 		err = pool.ApplyLoadProfile("unknown")
 		assert.Error(t, err)
@@ -641,8 +641,8 @@ func TestOptimizedLStatePool_EdgeCases(t *testing.T) {
 		pool, err := NewOptimizedLStatePool(factory, config)
 		require.NoError(t, err)
 		defer func() {
-		_ = pool.Shutdown(context.Background())
-	}()
+			_ = pool.Shutdown(context.Background())
+		}()
 
 		// Should have defaults applied
 		assert.Greater(t, pool.LStatePool.config.MinSize, 0)
@@ -663,8 +663,8 @@ func TestOptimizedLStatePool_EdgeCases(t *testing.T) {
 		pool, err := NewOptimizedLStatePool(factory, config)
 		require.NoError(t, err)
 		defer func() {
-		_ = pool.Shutdown(context.Background())
-	}()
+			_ = pool.Shutdown(context.Background())
+		}()
 
 		// Try to return wrong size block
 		wrongBlock := make([]byte, 512)

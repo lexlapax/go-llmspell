@@ -445,4 +445,3 @@ func TestOptimizedConverter_TypeSpecificOptimizations(t *testing.T) {
 	// during state creation. For now, we'll skip it and focus on the
 	// core optimization features.
 }
-

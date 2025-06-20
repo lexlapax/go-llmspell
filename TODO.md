@@ -93,39 +93,34 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **PHASE COMPLETED [2025-06-20]** - All 18 tasks complete. See TODO-DONE.md for details.
 
 ### Phase 2.4: Advanced Features & Optimization
-
 #### 2.4.1: Performance Optimization
 - [x] **Task 2.4.1.1: Profiling Infrastructure** (`/pkg/engine/gopherlua/profiling.go`) ✅ **[COMPLETED - 2025-06-20]**
-  - [x] Add execution time tracking
-  - [x] Implement memory profiling
-  - [x] Create allocation tracking
-  - [x] Add hot path identification
-  - [x] Implement profiling API
-
 - [x] **Task 2.4.1.2: Type Conversion Optimization** (`/pkg/engine/gopherlua/converter_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
-  - [x] Implement conversion caching
-  - [x] Add fast paths for common types
-  - [x] Optimize table traversal
-  - [x] Reduce allocation in hot paths
-  - [x] Add benchmarks for all conversions
-
 - [x] **Task 2.4.1.3: State Pool Optimization** (`/pkg/engine/gopherlua/pool_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
-  - [x] Implement predictive scaling
-  - [x] Optimize state reset process
-  - [x] Add state pre-warming
-  - [x] Implement memory pooling
-  - [x] Create performance metrics
+- [x] **Task 2.4.1.4: Script Compilation Optimization** (`/pkg/engine/gopherlua/compilation_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
 
-- [ ] **Task 2.4.1.4: Script Compilation Optimization**
-  - [ ] Enhance chunk caching
-  - [ ] Add AST optimization
-  - [ ] Implement dead code elimination
-  - [ ] Add constant folding
-  - [ ] Create compilation benchmarks
 
 #### 2.4.2: Spell Runner command line (`/cmd/llmspell/main.go`)
-  - [ ] **Task 2.4.2.1: REPL Core** (`/cmd/llmspell/main.go`)
- 
+  - [ ] **Task 2.4.2.1: Research** research how to create a script runner that can run spells
+    - [ ] look at existing code
+    - [ ] figure out how to do script detection (lua, javascript)
+    - [ ] figure out how to load the right script engine bridge
+    - [ ] research what commands of commands do we need ..below are examples
+      - [ ] default/run script ./llmspell <scriptfile>
+      - [ ] help
+      - [ ] debug 
+      - [ ] validate (syntax validation)
+      - [ ] engines (show engines and versions implemeneted)
+      - [ ] security ( show default security profile and restrictions? )
+      - [ ] what else
+    - [ ] arg parsing engine with flags? 
+    - [ ] come up with implementation plan 
+      - [ ] core engine - should it go in `/pkg/cmdline/core`?
+      - [ ] arg parser - ? where in `/pkg/cmdline/args`? 
+      - [ ] `/cmd/llmspell/main.go` is just a main() with calls to `/pkg/cmdline`?
+  - [ ] **Task 2.4.2.2: Implement** implement
+  - [ ] **Task 2.4.2.3: Document** document
+
 
 #### 2.4.3: Development Tools
 - [ ] **Task 2.4.3.1: REPL Implementation** (`/cmd/llmspell-lua/main.go`)

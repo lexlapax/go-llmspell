@@ -240,7 +240,6 @@ func (oc *OptimizedConverter) fastPathFromLua(value lua.LValue) interface{} {
 	return nil
 }
 
-
 // Helper methods
 
 func (oc *OptimizedConverter) isCacheablePrimitive(value interface{}) bool {
@@ -354,7 +353,6 @@ func (oc *OptimizedConverter) setTableCache(ptr uintptr, value interface{}) {
 		oc.tableCache.size++
 	}
 }
-
 
 // GetCacheStats returns detailed cache statistics
 func (oc *OptimizedConverter) GetCacheStats() CacheStats {

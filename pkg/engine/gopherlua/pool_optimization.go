@@ -92,8 +92,8 @@ type OptimizedLStatePool struct {
 	memoryPoolMisses    int64
 
 	// Request tracking for prediction
-	requestTimes     []time.Time
-	requestTimesMu   sync.Mutex
+	requestTimes   []time.Time
+	requestTimesMu sync.Mutex
 }
 
 // NewOptimizedLStatePool creates an optimized state pool
