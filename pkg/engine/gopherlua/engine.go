@@ -49,6 +49,9 @@ type LuaEngine struct {
 
 	// Chunk caching
 	chunkCache *ChunkCache
+
+	// Performance profiling
+	profiler ProfilerInterface
 }
 
 // EngineMetrics tracks Lua engine performance
@@ -76,7 +79,22 @@ func NewLuaEngine() *LuaEngine {
 			TTL:             30 * time.Minute,
 			EnableDiskCache: false,
 		}),
+		profiler: NewProfiler(), // Initialize with default profiler
 	}
+}
+
+// SetProfiler sets the profiler for the engine
+func (e *LuaEngine) SetProfiler(profiler ProfilerInterface) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.profiler = profiler
+}
+
+// GetProfiler returns the current profiler
+func (e *LuaEngine) GetProfiler() ProfilerInterface {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.profiler
 }
 
 // Initialize initializes the Lua engine with the given configuration

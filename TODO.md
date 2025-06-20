@@ -95,26 +95,26 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ### Phase 2.4: Advanced Features & Optimization
 
 #### 2.4.1: Performance Optimization
-- [ ] **Task 2.4.1.1: Profiling Infrastructure** (`/pkg/engine/gopherlua/profiling.go`)
-  - [ ] Add execution time tracking
-  - [ ] Implement memory profiling
-  - [ ] Create allocation tracking
-  - [ ] Add hot path identification
-  - [ ] Implement profiling API
+- [x] **Task 2.4.1.1: Profiling Infrastructure** (`/pkg/engine/gopherlua/profiling.go`) ✅ **[COMPLETED - 2025-06-20]**
+  - [x] Add execution time tracking
+  - [x] Implement memory profiling
+  - [x] Create allocation tracking
+  - [x] Add hot path identification
+  - [x] Implement profiling API
 
-- [ ] **Task 2.4.1.2: Type Conversion Optimization**
-  - [ ] Implement conversion caching
-  - [ ] Add fast paths for common types
-  - [ ] Optimize table traversal
-  - [ ] Reduce allocation in hot paths
-  - [ ] Add benchmarks for all conversions
+- [x] **Task 2.4.1.2: Type Conversion Optimization** (`/pkg/engine/gopherlua/converter_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
+  - [x] Implement conversion caching
+  - [x] Add fast paths for common types
+  - [x] Optimize table traversal
+  - [x] Reduce allocation in hot paths
+  - [x] Add benchmarks for all conversions
 
-- [ ] **Task 2.4.1.3: State Pool Optimization**
-  - [ ] Implement predictive scaling
-  - [ ] Optimize state reset process
-  - [ ] Add state pre-warming
-  - [ ] Implement memory pooling
-  - [ ] Create performance metrics
+- [x] **Task 2.4.1.3: State Pool Optimization** (`/pkg/engine/gopherlua/pool_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
+  - [x] Implement predictive scaling
+  - [x] Optimize state reset process
+  - [x] Add state pre-warming
+  - [x] Implement memory pooling
+  - [x] Create performance metrics
 
 - [ ] **Task 2.4.1.4: Script Compilation Optimization**
   - [ ] Enhance chunk caching
@@ -123,85 +123,90 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Add constant folding
   - [ ] Create compilation benchmarks
 
-#### 2.4.2: Development Tools
-- [ ] **Task 2.4.2.1: REPL Implementation** (`/cmd/llmspell-lua/main.go`)
+#### 2.4.2: Spell Runner command line (`/cmd/llmspell/main.go`)
+  - [ ] **Task 2.4.2.1: REPL Core** (`/cmd/llmspell/main.go`)
+ 
+
+#### 2.4.3: Development Tools
+- [ ] **Task 2.4.3.1: REPL Implementation** (`/cmd/llmspell-lua/main.go`)
   - [ ] Create interactive Lua REPL
   - [ ] Add command history
   - [ ] Implement auto-completion
   - [ ] Add syntax highlighting
   - [ ] Create help system
 
-- [ ] **Task 2.4.2.2: Debugger Support** (`/pkg/engine/gopherlua/debug.go`)
+- [ ] **Task 2.4.3.2: Debugger Support** (`/pkg/engine/gopherlua/debug.go`)
   - [ ] Implement breakpoint support
   - [ ] Add step debugging
   - [ ] Create variable inspection
   - [ ] Implement stack trace visualization
   - [ ] Add watch expressions
 
-- [ ] **Task 2.4.2.3: Script Validator** (`/pkg/engine/gopherlua/validator.go`)
+- [ ] **Task 2.4.3.3: Script Validator** (`/pkg/engine/gopherlua/validator.go`)
   - [ ] Implement syntax validation
   - [ ] Add type checking where possible
   - [ ] Create linting rules
   - [ ] Implement security validation
   - [ ] Add performance warnings
 
-- [ ] **Task 2.4.2.4: Documentation Generator** (`/pkg/engine/gopherlua/docs.go`)
+- [ ] **Task 2.4.3.4: Documentation Generator** (`/pkg/engine/gopherlua/docs.go`)
   - [ ] Extract API from bridges
   - [ ] Generate Lua documentation
   - [ ] Create example extraction
   - [ ] Add type annotations
   - [ ] Generate completion data
 
-#### 2.4.3: Production Readiness
-- [ ] **Task 2.4.3.1: Comprehensive Testing**
+#### 2.4.4: Production Readiness
+- [ ] **Task 2.4.4.1: Comprehensive Testing**
   - [ ] Achieve 90%+ test coverage
   - [ ] Add integration test suite
   - [ ] Create stress tests
   - [ ] Implement chaos testing
   - [ ] Add regression test suite
 
-- [ ] **Task 2.4.3.2: Error Handling Enhancement**
+- [ ] **Task 2.4.4.2: Error Handling Enhancement**
   - [ ] Standardize error types
   - [ ] Add error categorization
   - [ ] Implement error recovery
   - [ ] Create error reporting
   - [ ] Add error metrics
 
-- [ ] **Task 2.4.3.3: Monitoring & Metrics**
+- [ ] **Task 2.4.4.3: Monitoring & Metrics**
   - [ ] Add Prometheus metrics
   - [ ] Implement health checks
   - [ ] Create performance dashboards
   - [ ] Add distributed tracing
   - [ ] Implement alerting rules
 
-- [ ] **Task 2.4.3.4: Security Hardening**
+- [ ] **Task 2.4.4.4: Security Hardening**
   - [ ] Conduct security audit
   - [ ] Add input validation
   - [ ] Implement rate limiting
   - [ ] Create security benchmarks
   - [ ] Add CVE scanning
 
-#### 2.4.4: Documentation & Examples
-- [ ] **Task 2.4.4.1: User Guide** (`/docs/user-guide/lua/`)
+#### 2.4.5: Documentation & Examples
+- [ ] **Task 2.4.5.1: User Guide** (`/docs/user-guide/lua/`)
   - [ ] Getting started with Lua spells
   - [ ] Complete API reference
   - [ ] Common patterns and idioms
   - [ ] Troubleshooting guide
   - [ ] Migration from pure Lua
 
-- [ ] **Task 2.4.4.2: Example Spells** (`/examples/lua/`)
+- [ ] **Task 2.4.5.2: Example Spells** (`/examples/lua/`)
   - [ ] Basic LLM interaction
   - [ ] Agent with tools
   - [ ] Complex workflows
   - [ ] Event-driven spells
   - [ ] Performance patterns
 
-- [ ] **Task 2.4.4.3: Developer Documentation**
+- [ ] **Task 2.4.5.3: Developer Documentation**
   - [ ] Architecture deep dive
   - [ ] Extension guide
   - [ ] Performance tuning
   - [ ] Security best practices
   - [ ] Contribution guide
+
 ---
 
 ## Phase 3: JavaScript Engine Implementation

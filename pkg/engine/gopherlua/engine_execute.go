@@ -127,6 +127,12 @@ func (ep *ExecutionPipeline) acquireState(execCtx *ExecutionContext) error {
 	}
 
 	execCtx.State = state
+
+	// Install profiler hooks if enabled
+	if ep.engine.profiler != nil && ep.engine.profiler.IsEnabled() {
+		ep.installProfilerHooks(execCtx.State)
+	}
+
 	return nil
 }
 
@@ -422,4 +428,72 @@ type ExecutionStats struct {
 	ErrorCount      int64
 	MemoryUsed      int64
 	PeakMemoryUsed  int64
+}
+
+// installProfilerHooks installs profiling hooks into the Lua state
+func (ep *ExecutionPipeline) installProfilerHooks(L *lua.LState) {
+	profiler := ep.engine.profiler
+
+	// Install Lua API for profiler control
+	InstallProfilerAPI(L, profiler)
+
+	// Install a wrapper for tracking function execution time
+	// This is done through the Lua API since GopherLua doesn't support debug hooks
+	wrapperCode := `
+		local _profiler_wrapped = {}
+		
+		function _profiler_wrap_function(name, func)
+			if _profiler_wrapped[func] then
+				return _profiler_wrapped[func]
+			end
+			
+			local wrapped = function(...)
+				profiler._recordCall(name)
+				local results = {pcall(func, ...)}
+				profiler._recordReturn(name)
+				
+				if results[1] then
+					-- Success, return all results except the status
+					return select(2, unpack(results))
+				else
+					-- Error, re-raise it
+					error(results[2])
+				end
+			end
+			
+			_profiler_wrapped[func] = wrapped
+			return wrapped
+		end
+		
+		-- Helper to wrap global functions
+		function _profiler_wrap_global(name)
+			local func = _G[name]
+			if type(func) == "function" then
+				_G[name] = _profiler_wrap_function(name, func)
+			end
+		end
+	`
+
+	if err := L.DoString(wrapperCode); err != nil {
+		// Ignore errors for now, profiling is optional
+		return
+	}
+
+	// Add internal profiler methods
+	profilerMt := L.GetGlobal("profiler")
+	if profilerMt.Type() == lua.LTTable {
+		L.SetField(profilerMt, "_recordCall", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+			// Use current time for simplicity
+			profiler.RecordFunctionCall(name, time.Now())
+			return 0
+		}))
+
+		L.SetField(profilerMt, "_recordReturn", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+			// Use current time for simplicity
+			profiler.RecordFunctionReturn(name, time.Now())
+			return 0
+		}))
+	}
 }
