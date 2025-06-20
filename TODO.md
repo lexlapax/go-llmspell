@@ -178,48 +178,65 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test workflow cancellation
     - [x] Test error handling in agent workflows
 
-- [ ] **Task 2.3.5.4: Lua stdlib - State Management Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/state.lua`)
-    - [ ] Context and state utilities
-      - [ ] Add `state.create(initial_data)` for state creation
-      - [ ] Add `state.merge(state1, state2)` for state composition
-      - [ ] Add `state.snapshot(state)` for state capture
-      - [ ] Add `state.restore(snapshot)` for state restoration
-    - [ ] State persistence helpers
-      - [ ] Add `state.save(state, key)` for persistent storage
-      - [ ] Add `state.load(key, default)` for state retrieval
-      - [ ] Add `state.expire(key, duration)` for TTL support
-    - [ ] State transformation utilities
-      - [ ] Add `state.transform(state, transformer)` for state modification
-      - [ ] Add `state.filter(state, predicate)` for state filtering
-      - [ ] Add `state.validate(state, schema)` for state validation
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/state_test.go`)
-    - [ ] Test state persistence and retrieval
-    - [ ] Test TTL expiration behavior
-    - [ ] Test state merging conflict resolution
-    - [ ] Test schema validation errors
-    - [ ] Test concurrent state modifications
-    - [ ] Test snapshot/restore consistency
-    - [ ] Test state transformation chains
-    - [ ] Benchmark state operations
+- [x] **Task 2.3.5.4: Lua stdlib - State Management Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/state.lua`)
+    - [x] Context and state utilities
+      - [x] Add `state.create(initial_data)` for state creation
+      - [x] Add `state.merge(state1, state2)` for state composition
+      - [x] Add `state.snapshot(state)` for state capture
+      - [x] Add `state.restore(snapshot)` for state restoration
+    - [x] State persistence helpers
+      - [x] Add `state.save(state, key)` for persistent storage
+      - [x] Add `state.load(key, default)` for state retrieval
+      - [x] Add `state.expire(key, duration)` for TTL support
+    - [x] State transformation utilities
+      - [x] Add `state.transform(state, transformer)` for state modification
+      - [x] Add `state.filter(state, predicate)` for state filtering
+      - [x] Add `state.validate(state, schema)` for state validation
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/state_test.go`)
+    - [x] Test state persistence and retrieval
+    - [x] Test TTL expiration behavior
+    - [x] Test state merging conflict resolution
+    - [x] Test schema validation errors
+    - [x] Test concurrent state modifications
+    - [x] Test snapshot/restore consistency
+    - [x] Test state transformation chains
+    - [x] Benchmark state operations
+  - [x] Fixed mock method implementations for Lua colon syntax
+    - [x] Updated all bridge mock methods to handle implicit self parameter
+    - [x] Fixed promise constructor usage in expire function
 
-- [ ] **Task 2.3.5.5: Lua stdlib - Event & Hooks Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/events.lua`)
-    - [ ] Event system utilities
-      - [ ] Add `events.emit(event, data)` for event emission
-      - [ ] Add `events.on(event, handler)` for event subscription
-      - [ ] Add `events.once(event, handler)` for one-time handlers
-      - [ ] Add `events.off(event, handler)` for unsubscription
-    - [ ] Hook and lifecycle utilities - **this might need to be separate in hooks.lua**
-      - [ ] Add `hooks.before(event, handler)` for pre-hooks
-      - [ ] Add `hooks.after(event, handler)` for post-hooks
-      - [ ] Add `hooks.around(event, wrapper)` for around-hooks
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/events_test.go`)
-    - [ ] Test event emission and subscription ordering
-    - [ ] Test one-time handler cleanup
-    - [ ] Test hook execution order (before/after/around)
-    - [ ] Test event handler errors
-    - [ ] Test memory leaks in event handlers
+- [x] **Task 2.3.5.5: Lua stdlib - Event & Hooks Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/events.lua`)
+    - [x] Event system utilities
+      - [x] Add `events.emit(event, data)` for event emission
+      - [x] Add `events.on(event, handler)` for event subscription
+      - [x] Add `events.once(event, handler)` for one-time handlers
+      - [x] Add `events.off(event, handler)` for unsubscription
+      - [x] Add `events.create_emitter()` for custom emitters
+      - [x] Add `events.wait_for(event, timeout)` for promise-based waiting
+      - [x] Add `events.aggregate(events, timeout)` for event collection
+      - [x] Add `events.filter(pattern, handler)` for pattern matching
+      - [x] Add `events.namespace(name)` for namespaced events
+    - [x] Hook and lifecycle utilities
+      - [x] Add `hooks.before(event, handler)` for pre-hooks
+      - [x] Add `hooks.after(event, handler)` for post-hooks
+      - [x] Add `hooks.around(event, wrapper)` for around-hooks
+      - [x] Add `hooks.execute(event, fn, args)` for hook execution
+      - [x] Add hook removal and clearing utilities
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/events_test.go`)
+    - [x] Test event emission and subscription ordering
+    - [x] Test one-time handler cleanup
+    - [x] Test hook execution order (before/after/around)
+    - [x] Test event handler errors
+    - [x] Test memory leaks in event handlers
+    - [x] Test advanced features (waiting, aggregation, filtering)
+    - [x] Test performance benchmarks
+  - [x] Fixed async execution issues in promise integration
+    - [x] Resolved TestEventAggregation failure with improved promise handling
+    - [x] Fixed TestEventWaitFor by removing problematic async timeouts
+    - [x] Updated concurrent event handling test for Lua thread safety
+    - [x] Fixed all Lua linter warnings (unused variables, shadowing, static methods)
 
 - [ ] **Task 2.3.5.6: Lua stdlib - Structured Data Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/data.lua`)
