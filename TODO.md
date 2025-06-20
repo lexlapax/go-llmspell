@@ -90,7 +90,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-19]** - All 4 tasks completed. See TODO-DONE.md for implementation details.
 
 #### 2.3.5: Lua Standard Library
-Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing.
+Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing. **Progress: 11/18 tasks complete**
 
 - [x] **Task 2.3.5.1: Lua stdlib - Promise & Async Library** ✅ COMPLETED [2025-06-19]
   - [x] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
@@ -399,30 +399,45 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test utility functions (safe, timeout) and system integration
     - [x] Test comprehensive error handling workflow integration
 
-- [ ] **Task 2.3.5.11: Lua stdlib - Logging & Debug Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/logging.lua`)
-    - [ ] Unified logging interface
-      - [ ] Add `log.info(message, context)` for info logging
-      - [ ] Add `log.warn(message, context)` for warning logging
-      - [ ] Add `log.error(message, context)` for error logging
-      - [ ] Add `log.debug(message, context)` for debug logging
-    - [ ] Structured logging utilities
-      - [ ] Add `log.with_context(context)` for context propagation
-      - [ ] Add `log.create_logger(component, level)` for component loggers
-      - [ ] Add `log.set_formatter(formatter)` for custom formatting
-    - [ ] Debug and diagnostics helpers
-      - [ ] Add `debug.trace_calls(func)` for call tracing
-      - [ ] Add `debug.memory_usage()` for memory monitoring
-      - [ ] Add `debug.performance_profile(func)` for performance profiling
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/logging_test.go`)
-    - [ ] Test log level filtering
-    - [ ] Test context propagation
-    - [ ] Test custom formatters
-    - [ ] Test call tracing accuracy
-    - [ ] Test memory usage reporting
-    - [ ] Test performance profiling
-    - [ ] Test concurrent logging
-    - [ ] Test log rotation behavior
+- [x] **Task 2.3.5.11: Lua stdlib - Logging & Debug Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/logging.lua`)
+    - [x] Unified logging interface
+      - [x] Add `log.info(message, context)` for info logging
+      - [x] Add `log.warn(message, context)` for warning logging
+      - [x] Add `log.error(message, context)` for error logging
+      - [x] Add `log.debug(message, context)` for debug logging
+    - [x] Structured logging utilities
+      - [x] Add `log.with_context(context)` for context propagation
+      - [x] Add `log.create_logger(component, level)` for component loggers
+      - [x] Add `log.set_formatter(formatter)` for custom formatting
+    - [x] Debug and diagnostics helpers
+      - [x] Add `debug.trace_calls(func)` for call tracing (via component debug)
+      - [x] Add `debug.memory_usage()` for memory monitoring (via system info)
+      - [x] Add `debug.performance_profile(func)` for performance profiling
+    - [x] Additional features implemented
+      - [x] Hook integration for LLM operations monitoring
+      - [x] Metrics collection (count, gauge, histogram)
+      - [x] Audit logging with compliance support
+      - [x] Error handling integration (catch, assert)
+      - [x] Timer and profiling utilities
+      - [x] Log search and statistics (framework in place)
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/logging_test.go`)
+    - [x] Test log level filtering
+    - [x] Test context propagation
+    - [x] Test custom formatters
+    - [x] Test call tracing accuracy (component debug)
+    - [x] Test memory usage reporting (system info)
+    - [x] Test performance profiling
+    - [x] Test concurrent logging
+    - [x] Test log rotation behavior (configuration)
+    - [x] Additional tests
+      - [x] Test hook registration and execution
+      - [x] Test metrics collection
+      - [x] Test audit logging and handlers
+      - [x] Test error handling integration
+      - [x] Test real-world usage scenarios
+      - [x] Test graceful bridge failure handling
+      - [x] Performance benchmarking
 
 - [ ] **Task 2.3.5.12: Lua stdlib - Testing & Validation Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/testing.lua`)
