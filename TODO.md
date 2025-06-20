@@ -238,30 +238,33 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Updated concurrent event handling test for Lua thread safety
     - [x] Fixed all Lua linter warnings (unused variables, shadowing, static methods)
 
-- [ ] **Task 2.3.5.6: Lua stdlib - Structured Data Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/data.lua`)
-    - [ ] JSON and data processing utilities
-      - [ ] Add `data.parse_json(text, schema)` for validated JSON parsing
-      - [ ] Add `data.to_json(object, format)` for pretty JSON serialization
-      - [ ] Add `data.extract_structured(text, schema)` for LLM output parsing
-      - [ ] Add `data.convert_format(data, from_format, to_format)` for format conversion
-    - [ ] Schema validation helpers
-      - [ ] Add `data.validate(data, schema)` for schema validation
-      - [ ] Add `data.infer_schema(data)` for schema generation
-      - [ ] Add `data.migrate_schema(data, old_schema, new_schema)` for migration
-    - [ ] Data transformation utilities
-      - [ ] Add `data.map(collection, mapper)` for data mapping
-      - [ ] Add `data.filter(collection, predicate)` for filtering
-      - [ ] Add `data.reduce(collection, reducer, initial)` for aggregation
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/data_test.go`)
-    - [ ] Test JSON parsing with invalid schemas
-    - [ ] Test LLM output extraction accuracy
-    - [ ] Test format conversion edge cases
-    - [ ] Test schema inference from complex data
-    - [ ] Test schema migration compatibility
-    - [ ] Test transformation performance
-    - [ ] Test concurrent data operations
-    - [ ] Test memory usage with large datasets
+- [x] **Task 2.3.5.6: Lua stdlib - Structured Data Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/data.lua`)
+    - [x] JSON and data processing utilities
+      - [x] Add `data.parse_json(text, schema)` for validated JSON parsing
+      - [x] Add `data.to_json(object, format)` for pretty JSON serialization
+      - [x] Add `data.extract_structured(text, schema)` for LLM output parsing
+      - [x] Add `data.convert_format(data, from_format, to_format)` for format conversion
+    - [x] Schema validation helpers
+      - [x] Add `data.validate(data, schema)` for schema validation
+      - [x] Add `data.infer_schema(data)` for schema generation
+      - [x] Add `data.migrate_schema(data, old_schema, new_schema)` for migration
+    - [x] Data transformation utilities
+      - [x] Add `data.map(collection, mapper)` for data mapping
+      - [x] Add `data.filter(collection, predicate)` for filtering
+      - [x] Add `data.reduce(collection, reducer, initial)` for aggregation
+      - [x] Add `data.clone(obj)` for deep cloning
+      - [x] Add `data.merge(obj1, obj2)` for deep merging
+      - [x] Add `data.get_path(obj, path)` and `data.set_path(obj, path, value)` for nested access
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/data_test.go`)
+    - [x] Test JSON parsing and formatting operations
+    - [x] Test schema validation and inference
+    - [x] Test data transformation operations (map, filter, reduce)
+    - [x] Test utility functions (clone, merge, path operations)
+    - [x] Test format conversion functionality
+    - [x] Test comprehensive error handling
+    - [x] Test complex data processing pipelines
+    - [x] Performance benchmarks for key operations
 
 - [ ] **Task 2.3.5.7: Lua stdlib - Tools & Registry Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/tools.lua`)
