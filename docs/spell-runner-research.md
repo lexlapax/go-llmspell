@@ -71,6 +71,11 @@ spell-name/
    llmspell config [get|set|list] [key] [value]
    ```
 
+4. **template** - Generate new spells
+   ```bash
+   llmspell new <spell-name> [--template basic|advanced|agent]
+   ```
+
 ## Library Recommendations
 
 ### CLI Framework: Kong (github.com/alecthomas/kong)
@@ -372,11 +377,32 @@ security:
 - Output formatters
 - Progress indicators
 
+## Implementation Dependencies
+
+**Priority 1 (Foundation):**
+1. Configuration with Koanf - Required by all components
+2. Error handling infrastructure - Standard error types and formatting
+3. Core runner with engine registry integration - Foundation for execution
+
+**Priority 2 (Core functionality):**
+4. Security & validation integration - Uses existing validator
+5. CLI structure with Kong - Depends on config, runner, security
+6. Debug command implementation - Advanced execution features
+
+**Priority 3 (Advanced features):**
+7. REPL implementation - Depends on engine registry and config
+8. Template & utilities - Convenience features for spell creation
+
+**Priority 4 (Final):**
+9. Testing & integration - Tests all components
+
 ## Next Steps
 
-1. Create basic runner package structure
-2. Implement spell loading and engine selection
-3. Set up CLI with urfave/cli/v2
-4. Implement core commands
-5. Add tests and documentation
-6. Iterate based on user feedback
+1. Start with configuration foundation (Koanf v2)
+2. Build error handling infrastructure
+3. Create core runner with engine registry integration
+4. Set up CLI with Kong framework
+5. Add security and validation integration
+6. Implement REPL and debug features
+7. Add comprehensive testing
+8. Iterate based on user feedback
