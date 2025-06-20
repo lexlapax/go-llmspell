@@ -266,29 +266,35 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test complex data processing pipelines
     - [x] Performance benchmarks for key operations
 
-- [ ] **Task 2.3.5.7: Lua stdlib - Tools & Registry Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/tools.lua`)
-    - [ ] Tool registration and management
-      - [ ] Add `tools.define(name, description, schema, func)` for tool creation
-      - [ ] Add `tools.register_library(library)` for tool library loading
-      - [ ] Add `tools.compose(tools)` for tool composition
-    - [ ] Tool execution utilities - **is there a tools.async_execute?**
-      - [ ] Add `tools.execute_safe(tool, params)` for safe execution
-      - [ ] Add `tools.pipeline(tools, data)` for tool pipelines
-      - [ ] Add `tools.parallel_execute(tools, params)` for concurrent execution
-    - [ ] Tool validation and testing
-      - [ ] Add `tools.validate_params(tool, params)` for parameter validation
-      - [ ] Add `tools.test_tool(tool, test_cases)` for tool testing
-      - [ ] Add `tools.benchmark_tool(tool, params)` for performance testing
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/tools_test.go`)
-    - [ ] Test tool registration and discovery
-    - [ ] Test parameter validation errors
-    - [ ] Test tool composition behavior
-    - [ ] Test pipeline execution order
-    - [ ] Test parallel execution limits
-    - [ ] Test tool error handling
-    - [ ] Test tool benchmarking accuracy
-    - [ ] Test memory leaks in tool chains
+- [x] **Task 2.3.5.7: Lua stdlib - Tools & Registry Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/tools.lua`)
+    - [x] Tool registration and management
+      - [x] Add `tools.define(name, description, schema, func)` for tool creation
+      - [x] Add `tools.register_library(library)` for tool library loading
+      - [x] Add `tools.compose(tools)` for tool composition
+    - [x] Tool execution utilities
+      - [x] Add `tools.execute_safe(tool, params)` for safe execution with error handling
+      - [x] Add `tools.pipeline(tools, data)` for tool pipelines
+      - [x] Add `tools.parallel_execute(tools, params)` for concurrent execution
+    - [x] Tool validation and testing
+      - [x] Add `tools.validate_params(tool, params)` for parameter validation
+      - [x] Add `tools.test_tool(tool, test_cases)` for tool testing
+      - [x] Add `tools.benchmark_tool(tool, params)` for performance testing
+    - [x] Tool discovery and information
+      - [x] Add `tools.list()` for tool listing
+      - [x] Add `tools.search(query)` for tool search
+      - [x] Add `tools.get_info(name)` for tool information
+      - [x] Add `tools.get_metrics(name)` for tool metrics
+      - [x] Add `tools.get_history(limit)` for execution history
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/tools_test.go`)
+    - [x] Test tool registration and discovery
+    - [x] Test parameter validation errors
+    - [x] Test tool composition behavior (pipeline, parallel, conditional)
+    - [x] Test pipeline execution order
+    - [x] Test parallel execution limits
+    - [x] Test tool error handling
+    - [x] Test tool benchmarking accuracy
+    - [x] Test comprehensive bridge integration with mocks
 
 - [ ] **Task 2.3.5.8: Lua stdlib - Observability & Monitoring Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/observability.lua`)
