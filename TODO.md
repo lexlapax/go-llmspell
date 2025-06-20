@@ -362,29 +362,42 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test multi-scheme authentication and error handling
     - [x] Test comprehensive integration with all auth bridges
 
-- [ ] **Task 2.3.5.10: Lua stdlib - Error Handling & Recovery Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/errors.lua`)
-    - [ ] Enhanced error handling
-      - [ ] Add `errors.try(func, catch_func, finally_func)` for try-catch-finally
-      - [ ] Add `errors.wrap(error, context)` for error wrapping
-      - [ ] Add `errors.chain(errors)` for error chaining
-    - [ ] Retry and recovery mechanisms
-      - [ ] Add `errors.retry(func, options)` for retry logic
-      - [ ] Add `errors.circuit_breaker(func, config)` for fault tolerance
-      - [ ] Add `errors.fallback(primary, fallback)` for fallback strategies
-    - [ ] Error categorization and reporting
-      - [ ] Add `errors.categorize(error)` for error classification
-      - [ ] Add `errors.report(error, context)` for error reporting
-      - [ ] Add `errors.aggregate(errors)` for error aggregation
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/errors_test.go`)
-    - [ ] Test try-catch-finally execution order
-    - [ ] Test error wrapping context preservation
-    - [ ] Test retry with backoff strategies
-    - [ ] Test circuit breaker state machine
-    - [ ] Test fallback chain behavior
-    - [ ] Test error categorization accuracy
-    - [ ] Test error aggregation patterns
-    - [ ] Test memory leaks in error chains
+- [x] **Task 2.3.5.10: Lua stdlib - Error Handling & Recovery Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/errors.lua`)
+    - [x] Enhanced error handling
+      - [x] Add `errors.try(func, catch_func, finally_func)` for try-catch-finally
+      - [x] Add `errors.wrap(error, context)` for error wrapping
+      - [x] Add `errors.chain(errors)` for error chaining
+      - [x] Add `errors.create(message, code, context)` for custom error creation
+    - [x] Retry and recovery mechanisms
+      - [x] Add `errors.retry(func, options)` for retry logic with exponential/linear backoff
+      - [x] Add `errors.circuit_breaker(func, config)` for fault tolerance
+      - [x] Add `errors.fallback(primary, fallback)` for fallback strategies
+      - [x] Add `errors.create_recovery_strategy(type, config)` for custom strategies
+    - [x] Error categorization and reporting
+      - [x] Add `errors.categorize(error)` for error classification
+      - [x] Add `errors.is_retryable(error)` and `errors.is_fatal(error)` for error inspection
+      - [x] Add `errors.aggregate(errors)` for error aggregation
+      - [x] Add `errors.log_error(type, metadata)` for error reporting
+    - [x] Serialization and context management
+      - [x] Add `errors.to_json(error)` and `errors.from_json(json)` for serialization
+      - [x] Add `errors.get_context(error)` and `errors.add_context(error, key, value)` for context
+      - [x] Add `errors.register_category(name, matcher)` for custom categories
+    - [x] Utility functions
+      - [x] Add `errors.safe(func, default)` for safe function wrapping
+      - [x] Add `errors.timeout(func, timeout_ms)` for timeout protection
+      - [x] Add `errors.subscribe_to_errors(types, handler)` for event handling
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/errors_test.go`)
+    - [x] Test try-catch-finally execution flow and error handling
+    - [x] Test error wrapping, chaining, and context preservation  
+    - [x] Test retry mechanisms with backoff strategies
+    - [x] Test circuit breaker creation and execution
+    - [x] Test fallback strategy implementation
+    - [x] Test error categorization and property inspection
+    - [x] Test error aggregation and serialization
+    - [x] Test event handling and subscription mechanisms
+    - [x] Test utility functions (safe, timeout) and system integration
+    - [x] Test comprehensive error handling workflow integration
 
 - [ ] **Task 2.3.5.11: Lua stdlib - Logging & Debug Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/logging.lua`)
