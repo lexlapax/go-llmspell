@@ -296,30 +296,40 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test tool benchmarking accuracy
     - [x] Test comprehensive bridge integration with mocks
 
-- [ ] **Task 2.3.5.8: Lua stdlib - Observability & Monitoring Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/observability.lua`)
-    - [ ] Metrics and monitoring utilities
-      - [ ] Add `metrics.counter(name, tags)` for counter metrics
-      - [ ] Add `metrics.gauge(name, value, tags)` for gauge metrics
-      - [ ] Add `metrics.timer(name, duration, tags)` for timing metrics
-      - [ ] Add `metrics.track(func, name)` for automatic function tracking
-    - [ ] Tracing and debugging helpers
-      - [ ] Add `trace.span(name, func)` for traced execution
-      - [ ] Add `trace.add_event(name, attributes)` for span events
-      - [ ] Add `trace.set_attribute(key, value)` for span attributes
-    - [ ] Guardrails and safety utilities
-      - [ ] Add `safety.check_content(content, rules)` for content validation
-      - [ ] Add `safety.rate_limit(key, limit, window)` for rate limiting
-      - [ ] Add `safety.circuit_breaker(name, config)` for fault tolerance
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/observability_test.go`)
-    - [ ] Test metric collection accuracy
-    - [ ] Test trace span propagation
-    - [ ] Test rate limiting behavior
-    - [ ] Test circuit breaker state transitions
-    - [ ] Test content validation rules
-    - [ ] Test metric aggregation
-    - [ ] Test performance overhead
-    - [ ] Test concurrent metric updates
+- [x] **Task 2.3.5.8: Lua stdlib - Observability & Monitoring Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/observability.lua`)
+    - [x] Metrics and monitoring utilities
+      - [x] Add `observability.counter(name, description, tags)` for counter metrics
+      - [x] Add `observability.gauge(name, description, tags)` for gauge metrics
+      - [x] Add `observability.timer(name, description, tags)` for timing metrics
+      - [x] Add `observability.ratio_counter(name, description, tags)` for ratio tracking
+      - [x] Add `observability.track(func, name, options)` for automatic function tracking
+    - [x] Tracing and debugging helpers
+      - [x] Add `observability.start_span(name, options)` for traced execution
+      - [x] Add `observability.trace(func, span_name, options)` for function tracing
+      - [x] Add span methods for events, attributes, status, and error recording
+    - [x] Structured logging utilities
+      - [x] Add `observability.logger(name, options)` for custom loggers
+      - [x] Add `observability.debug/info/warn/error(message, data)` for logging
+      - [x] Add contextual logging with logger.with_context()
+    - [x] Health monitoring and safety utilities
+      - [x] Add `observability.health_check(name, check_func, options)` for health checks
+      - [x] Add `observability.monitor_events(pattern, handler, options)` for event monitoring
+      - [x] Add `observability.guardrail(name, validation_func, options)` for safety validation
+    - [x] Performance monitoring
+      - [x] Add comprehensive function tracking with metrics and tracing integration
+      - [x] Add execution time measurement, error tracking, and metrics collection
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/observability_test.go`)
+    - [x] Test metric collection accuracy (counters, gauges, timers, ratios)
+    - [x] Test trace span propagation and lifecycle management
+    - [x] Test performance monitoring and function tracking
+    - [x] Test structured logging with custom loggers and context
+    - [x] Test health checks for healthy and unhealthy scenarios
+    - [x] Test event monitoring with pattern matching
+    - [x] Test guardrail validation (both bridge-based and local fallback)
+    - [x] Test error handling for all operations
+    - [x] Test comprehensive integration scenarios with all bridges
+    - [x] Test utility functions and system information retrieval
 
 - [ ] **Task 2.3.5.9: Lua stdlib - Authentication & Security Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/auth.lua`)
