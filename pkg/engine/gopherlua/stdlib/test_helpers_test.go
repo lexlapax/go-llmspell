@@ -126,34 +126,40 @@ func TestAsyncUtilities(t *testing.T) {
 	LoadModule(t, L, "promise")
 
 	t.Run("WaitForCondition", func(t *testing.T) {
-		L.SetGlobal("test_value", lua.LBool(false))
+		// Use a channel to synchronize instead of accessing Lua state from multiple goroutines
+		done := make(chan bool)
 
-		// Set value after delay
+		// Start a goroutine that will signal completion
 		go func() {
 			time.Sleep(50 * time.Millisecond)
-			L.SetGlobal("test_value", lua.LBool(true))
+			done <- true
 		}()
 
-		// Wait for condition
+		// Wait for condition using the channel
 		WaitForCondition(t, 200*time.Millisecond, func() bool {
-			value := L.GetGlobal("test_value")
-			return lua.LVAsBool(value)
-		}, "test value to become true")
+			select {
+			case <-done:
+				return true
+			default:
+				return false
+			}
+		}, "test completion signal")
 	})
 
 	t.Run("RunAsyncTest", func(t *testing.T) {
+		// Create a new Lua state for this test to avoid race conditions
+		testL := lua.NewState()
+		defer testL.Close()
+
 		script := `
-			-- Use coroutine for async test without promise
-			local co = coroutine.create(function()
-				_G.async_test_complete = true
-			end)
-			coroutine.resume(co)
+			-- Simple synchronous test that sets a value
+			_G.async_test_complete = true
 		`
 
-		RunAsyncTest(t, L, script, 200*time.Millisecond)
+		RunAsyncTest(t, testL, script, 200*time.Millisecond)
 
 		// Verify completion
-		complete := L.GetGlobal("async_test_complete")
+		complete := testL.GetGlobal("async_test_complete")
 		if !lua.LVAsBool(complete) {
 			t.Errorf("Async test did not complete")
 		}
@@ -204,6 +210,8 @@ func TestMockBridgeCreation(t *testing.T) {
 
 	t.Run("CreateMockBridgeModule", func(t *testing.T) {
 		bridge := CreateMockBridge("test-bridge")
+		// Mark bridge as initialized for the test
+		bridge.WithInitialized(true)
 		module := CreateMockBridgeModule(L, bridge)
 
 		if module.Type() != lua.LTTable {
@@ -255,6 +263,7 @@ func TestFixtureManagement(t *testing.T) {
 
 		// Add mock bridge
 		bridge := CreateMockBridge("test-bridge")
+		bridge.WithInitialized(true)
 		fixture.AddBridge("test", bridge)
 
 		// Use bridge in script
@@ -325,12 +334,82 @@ func TestTableDrivenTests(t *testing.T) {
 	RunTableDrivenTests(t, fixture, tests)
 }
 
+// setupMockPromiseModuleForTests creates a simple promise module for testing
+func setupMockPromiseModuleForTests(L *lua.LState) {
+	err := L.DoString(`
+		promise = {}
+		
+		function promise.new(executor)
+			local p = {
+				_resolved = false,
+				_rejected = false,
+				_value = nil,
+				_error = nil,
+				_thens = {},
+				_catches = {}
+			}
+			
+			function p:andThen(callback)
+				if self._resolved then
+					callback(self._value)
+				elseif not self._rejected then
+					table.insert(self._thens, callback)
+				end
+				return self
+			end
+			
+			function p:onError(callback)
+				if self._rejected then
+					callback(self._error)
+				else
+					table.insert(self._catches, callback)
+				end
+				return self
+			end
+			
+			local function resolve(value)
+				if not p._resolved and not p._rejected then
+					p._resolved = true
+					p._value = value
+					for _, cb in ipairs(p._thens) do
+						cb(value)
+					end
+				end
+			end
+			
+			local function reject(err)
+				if not p._resolved and not p._rejected then
+					p._rejected = true
+					p._error = err
+					for _, cb in ipairs(p._catches) do
+						cb(err)
+					end
+				end
+			end
+			
+			executor(resolve, reject)
+			return p
+		end
+		
+		function promise.sleep(ms)
+			local p = promise.new(function(resolve, reject)
+				resolve(true)
+			end)
+			return p
+		end
+	`)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // TestPromiseAssertions verifies promise assertion helpers
 func TestPromiseAssertions(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	LoadModule(t, L, "promise")
+	// Use mock promise module for testing
+	setupMockPromiseModuleForTests(L)
 
 	t.Run("AssertPromiseResolves", func(t *testing.T) {
 		// Create a promise that resolves

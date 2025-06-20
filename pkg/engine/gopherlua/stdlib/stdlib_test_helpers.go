@@ -317,10 +317,9 @@ func CreateMockBridgeModule(L *lua.LState, bridge *testutils.MockBridge) *lua.LT
 
 	// Add methods from the bridge
 	for _, method := range bridge.Methods() {
-		L.SetField(module, method.Name, L.NewFunction(func(L *lua.LState) int {
-			// Get method name from closure
-			methodName := method.Name
-
+		// Create a closure to capture the method name
+		methodName := method.Name
+		fn := L.NewFunction(func(L *lua.LState) int {
 			// Collect arguments
 			args := []engine.ScriptValue{}
 			nargs := L.GetTop()
@@ -350,7 +349,8 @@ func CreateMockBridgeModule(L *lua.LState, bridge *testutils.MockBridge) *lua.LT
 			// Convert result
 			L.Push(ScriptValueToLuaValue(L, result))
 			return 1
-		}))
+		})
+		L.SetField(module, methodName, fn)
 	}
 
 	return module
@@ -501,9 +501,14 @@ func ScriptValueToLuaValue(L *lua.LState, sv engine.ScriptValue) lua.LValue {
 		return lua.LNil
 	}
 
+	// Try to use the String() method if available
+	if stringer, ok := sv.(fmt.Stringer); ok {
+		return lua.LString(stringer.String())
+	}
+
 	// Use reflection to handle different types
 	v := reflect.ValueOf(sv)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Ptr && !v.IsNil() {
 		v = v.Elem()
 	}
 

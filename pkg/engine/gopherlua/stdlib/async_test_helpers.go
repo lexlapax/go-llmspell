@@ -583,7 +583,7 @@ func CaptureMemorySnapshot(L *lua.LState) *MemorySnapshot {
 	if memUsage.Type() == lua.LTNumber {
 		luaMemKB = float64(memUsage.(lua.LNumber))
 	}
-	
+
 	// If memory is 0, it might be because the state is fresh
 	// Force some allocation to get a non-zero value
 	if luaMemKB == 0 {

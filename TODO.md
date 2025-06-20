@@ -90,7 +90,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-19]** - All 4 tasks completed. See TODO-DONE.md for implementation details.
 
 #### 2.3.5: Lua Standard Library
-Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing. **Progress: 15/18 tasks complete**
+Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing. **Progress: 17/18 tasks complete**
 
 - [x] **Task 2.3.5.1: Lua stdlib - Promise & Async Library** ✅ COMPLETED [2025-06-19]
   - [x] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
@@ -556,16 +556,16 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Concurrent operation validators
     - [x] Memory leak detectors
 
-- [ ] **Task 2.3.5.17: Lua stdlib - Integration Testing**
-  - [ ] Cross-module tests (`/pkg/engine/gopherlua/stdlib/integration_test.go`)
-    - [ ] Test Promise + LLM async operations
-    - [ ] Test Agent + State + Events coordination
-    - [ ] Test Workflow + Tools integration
-    - [ ] Test Error handling across modules
-    - [ ] Test module loading dependencies
-    - [ ] Test sandbox security with all modules
-    - [ ] Test resource cleanup across modules
-    - [ ] Test performance with all modules loaded
+- [x] **Task 2.3.5.17: Lua stdlib - Integration Testing** ✅ COMPLETED [2025-06-20]
+  - [x] Cross-module tests (`/pkg/engine/gopherlua/stdlib/integration_test.go`)
+    - [x] Test Promise + LLM async operations
+    - [x] Test Agent + State + Events coordination
+    - [x] Test Workflow + Tools integration
+    - [x] Test Error handling across modules
+    - [x] Test module loading dependencies
+    - [x] Test sandbox security with all modules
+    - [x] Test resource cleanup across modules
+    - [x] Test performance with all modules loaded
 
 - [ ] **Task 2.3.5.18: Performance Testing**
   - [ ] Benchmark suite (`/pkg/engine/gopherlua/stdlib/benchmark_test.go`)
