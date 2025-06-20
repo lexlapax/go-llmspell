@@ -90,7 +90,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-19]** - All 4 tasks completed. See TODO-DONE.md for implementation details.
 
 #### 2.3.5: Lua Standard Library
-Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing. **Progress: 12/18 tasks complete**
+Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing. **Progress: 13/18 tasks complete**
 
 - [x] **Task 2.3.5.1: Lua stdlib - Promise & Async Library** ✅ COMPLETED [2025-06-19]
   - [x] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
@@ -511,29 +511,29 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test edge cases and invalid inputs
     - [x] Test integration scenarios
 
-- [ ] **Task 2.3.5.14: Lua stdlib - Spell Framework Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/spell.lua`)
-    - [ ] Spell lifecycle and framework
-      - [ ] Add `spell.init(config)` for spell initialization
-      - [ ] Add `spell.params(name, default, type)` for parameter handling
-      - [ ] Add `spell.output(data, format)` for result output
-    - [ ] Spell composition and reuse
-      - [ ] Add `spell.include(spell_path)` for spell inclusion
-      - [ ] Add `spell.compose(spells)` for spell composition
-      - [ ] Add `spell.library(name, functions)` for library creation
-    - [ ] Spell execution context
-      - [ ] Add `spell.context()` for execution context access
-      - [ ] Add `spell.config(key, default)` for configuration access
-      - [ ] Add `spell.cache(key, value, ttl)` for caching
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/spell_test.go`)
-    - [ ] Test spell initialization
-    - [ ] Test parameter validation
-    - [ ] Test spell composition
-    - [ ] Test context isolation
-    - [ ] Test cache TTL behavior
-    - [ ] Test output formatting
-    - [ ] Test library loading
-    - [ ] Test spell error handling
+- [x] **Task 2.3.5.14: Lua stdlib - Spell Framework Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/spell.lua`)
+    - [x] Spell lifecycle and framework
+      - [x] Add `spell.init(config)` for spell initialization
+      - [x] Add `spell.params(name, default, type)` for parameter handling
+      - [x] Add `spell.output(data, format)` for result output
+    - [x] Spell composition and reuse
+      - [x] Add `spell.include(spell_path)` for spell inclusion
+      - [x] Add `spell.compose(spells)` for spell composition
+      - [x] Add `spell.library(name, functions)` for library creation
+    - [x] Spell execution context
+      - [x] Add `spell.context()` for execution context access
+      - [x] Add `spell.config(key, default)` for configuration access
+      - [x] Add `spell.cache(key, value, ttl)` for caching
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/spell_test.go`)
+    - [x] Test spell initialization
+    - [x] Test parameter validation
+    - [x] Test spell composition
+    - [x] Test context isolation
+    - [x] Test cache TTL behavior
+    - [x] Test output formatting
+    - [x] Test library loading
+    - [x] Test spell error handling
 
 - [ ] **Task 2.3.5.15: Lua stdlib - Documentation & Examples** (`/pkg/engine/gopherlua/stdlib/`)
   - [ ] Comprehensive documentation
