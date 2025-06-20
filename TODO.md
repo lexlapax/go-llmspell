@@ -90,7 +90,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ✅ **COMPLETED [2025-06-19]** - All 4 tasks completed. See TODO-DONE.md for implementation details.
 
 #### 2.3.5: Lua Standard Library
-Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing. **Progress: 11/18 tasks complete**
+Based on comprehensive research of all bridge adapters, these feature-oriented modules provide script-friendly APIs for complex operations. Each module requires comprehensive Go-based testing. **Progress: 12/18 tasks complete**
 
 - [x] **Task 2.3.5.1: Lua stdlib - Promise & Async Library** ✅ COMPLETED [2025-06-19]
   - [x] Implementation (`/pkg/engine/gopherlua/stdlib/promise.lua`)
@@ -439,30 +439,30 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
       - [x] Test graceful bridge failure handling
       - [x] Performance benchmarking
 
-- [ ] **Task 2.3.5.12: Lua stdlib - Testing & Validation Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/testing.lua`)
-    - [ ] Test framework and assertions
-      - [ ] Add `test.describe(name, tests)` for test grouping
-      - [ ] Add `test.it(name, test_func)` for individual tests
-      - [ ] Add `test.assert_equals(actual, expected)` for assertions
-      - [ ] Add `test.assert_error(func, expected_error)` for error testing
-    - [ ] Mocking and stubbing utilities
-      - [ ] Add `test.mock(object, method, replacement)` for mocking
-      - [ ] Add `test.stub(func, return_value)` for stubbing
-      - [ ] Add `test.spy(func)` for function spying
-    - [ ] Performance and load testing
-      - [ ] Add `test.benchmark(func, iterations)` for benchmarking
-      - [ ] Add `test.load_test(func, config)` for load testing
-      - [ ] Add `test.memory_test(func)` for memory testing
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/testing_test.go`)
-    - [ ] Test assertion functionality
-    - [ ] Test mock behavior
-    - [ ] Test spy call tracking
-    - [ ] Test benchmark accuracy
-    - [ ] Test load test execution
-    - [ ] Test memory leak detection
-    - [ ] Test nested test groups
-    - [ ] Test async test support
+- [x] **Task 2.3.5.12: Lua stdlib - Testing & Validation Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/testing.lua`)
+    - [x] Test framework and assertions
+      - [x] Add `testing.describe(name, tests)` for test grouping
+      - [x] Add `testing.it(name, test_func)` for individual tests
+      - [x] Add comprehensive assertion library (30+ assertion methods)
+      - [x] Add `testing.assert.error(func, expected_error)` for error testing
+    - [x] Mocking and stubbing utilities
+      - [x] Add `testing.mock.func(name)` and `testing.mock.create(name)` for mocking
+      - [x] Add `testing.stub(func, return_value)` for stubbing
+      - [x] Add `testing.spy(func)` for function spying with call tracking
+    - [x] Performance and load testing
+      - [x] Add `testing.benchmark(func, iterations)` for benchmarking
+      - [x] Add `testing.load_test(func, config)` for load testing
+      - [x] Add `testing.memory_test(func)` for memory testing
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/testing_test.go`)
+    - [x] Test assertion functionality (all 30+ assertion types)
+    - [x] Test mock behavior and control methods
+    - [x] Test spy call tracking with metatable approach
+    - [x] Test benchmark accuracy and statistics
+    - [x] Test load test execution and metrics
+    - [x] Test memory test functionality
+    - [x] Test nested test groups and suite organization
+    - [x] Test skip/only test functionality
 
 - [ ] **Task 2.3.5.13: Lua stdlib - Core Utilities Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/core.lua`)
