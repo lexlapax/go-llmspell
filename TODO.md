@@ -331,29 +331,36 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test comprehensive integration scenarios with all bridges
     - [x] Test utility functions and system information retrieval
 
-- [ ] **Task 2.3.5.9: Lua stdlib - Authentication & Security Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/auth.lua`)
-    - [ ] Authentication utilities
-      - [ ] Add `auth.login(credentials, scheme)` for authentication
-      - [ ] Add `auth.refresh_token(refresh_token)` for token refresh
-      - [ ] Add `auth.validate_session(session)` for session validation
-    - [ ] OAuth and token management
-      - [ ] Add `auth.oauth_flow(provider, config)` for OAuth flows
-      - [ ] Add `auth.jwt_decode(token, verify)` for JWT handling
-      - [ ] Add `auth.secure_store(key, value)` for secure storage
-    - [ ] Permission and access control
-      - [ ] Add `auth.check_permission(user, resource, action)` for access control
-      - [ ] Add `auth.create_policy(rules)` for policy creation
-      - [ ] Add `auth.audit_log(action, context)` for audit logging
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/auth_test.go`)
-    - [ ] Test authentication schemes
-    - [ ] Test token refresh logic
-    - [ ] Test session validation
-    - [ ] Test OAuth flow states
-    - [ ] Test JWT verification
-    - [ ] Test permission checks
-    - [ ] Test secure storage encryption
-    - [ ] Test audit logging completeness
+- [x] **Task 2.3.5.9: Lua stdlib - Authentication & Security Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/auth.lua`)
+    - [x] Authentication utilities
+      - [x] Add `auth.create_config(type, credentials)` for auth configuration
+      - [x] Add `auth.from_env(provider)` for environment-based auth
+      - [x] Add `auth.refresh_oauth2_token(config, refresh_token)` for token refresh
+      - [x] Add `auth.validate_session(session_id)` for session validation
+    - [x] OAuth and token management
+      - [x] Add `auth.create_oauth2_config()` for OAuth2 flows
+      - [x] Add `auth.parse_jwt_claims(token)` for JWT handling
+      - [x] Add `auth.serialize_credentials()` for secure storage
+      - [x] Add `auth.auto_refresh_token()` for automatic token refresh
+    - [x] Permission and access control
+      - [x] Add `auth.check_permission(permission, context)` for access control
+      - [x] Add `auth.create_security_policy(name, rules)` for policy creation
+      - [x] Add `auth.evaluate_policy(policy_name, context)` for policy evaluation
+      - [x] Add `auth.log_event(event_type, metadata)` for audit logging
+    - [x] Session management and multi-scheme authentication
+      - [x] Add `auth.create_session(auth_config, session_id)` for sessions
+      - [x] Add `auth.register_scheme(endpoint, scheme)` for multi-scheme support
+      - [x] Add `auth.cache_credentials(key, auth_config, ttl)` for credential caching
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/auth_test.go`)
+    - [x] Test authentication configuration and schemes
+    - [x] Test OAuth2 token operations and JWT parsing
+    - [x] Test session creation and validation
+    - [x] Test security policy creation and evaluation (role-based, time-based, IP whitelist)
+    - [x] Test credential serialization and caching
+    - [x] Test audit logging and event handling
+    - [x] Test multi-scheme authentication and error handling
+    - [x] Test comprehensive integration with all auth bridges
 
 - [ ] **Task 2.3.5.10: Lua stdlib - Error Handling & Recovery Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/errors.lua`)
