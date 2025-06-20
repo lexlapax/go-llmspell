@@ -1256,3 +1256,23 @@ The library is now ready for use in production Lua scripts with full async/corou
 - Dead code elimination limited to safe patterns to avoid breaking valid code
 - Comprehensive metrics tracking for monitoring optimization effectiveness
 - Thread-safe implementation suitable for concurrent use
+
+#### 2.4.2: Spell Runner command line
+- [x] **Task 2.4.2.1: Research how to create a script runner that can run spells** **[COMPLETED - 2025-06-20]**
+  - Created comprehensive research document at `/docs/spell-runner-research.md`
+  - Researched CLI libraries: Kong (recommended), urfave/cli, Cobra
+  - Researched config management: Koanf v2 (recommended), Viper
+  - Researched REPL libraries: chzyer/readline (recommended), reeflective/readline
+  - Analyzed spell format and structure from examples
+  - Created detailed implementation plan with phases and package structure
+
+#### 2.4.3: Development Tools
+- [x] **Task 2.4.3.2: Script Validator** (`/pkg/engine/gopherlua/validator.go`) **[COMPLETED - 2025-06-20]**
+  - Implemented comprehensive script validation with syntax, security, and performance checks
+  - Created ValidatorConfig for flexible configuration
+  - Added linting rules for code style and best practices
+  - Implemented security validation with forbidden patterns and global variable checks
+  - Added performance warnings for nested loops, string concatenation, and repeated lookups
+  - Created metrics calculation for complexity analysis
+  - Comprehensive test suite with 100% coverage of major features
+  - Performance benchmarks showing good validation speed

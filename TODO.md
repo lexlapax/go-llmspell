@@ -94,57 +94,105 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### Phase 2.4: Advanced Features & Optimization
 #### 2.4.1: Performance Optimization
-- [x] **Task 2.4.1.1: Profiling Infrastructure** (`/pkg/engine/gopherlua/profiling.go`) ✅ **[COMPLETED - 2025-06-20]**
-- [x] **Task 2.4.1.2: Type Conversion Optimization** (`/pkg/engine/gopherlua/converter_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
-- [x] **Task 2.4.1.3: State Pool Optimization** (`/pkg/engine/gopherlua/pool_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
-- [x] **Task 2.4.1.4: Script Compilation Optimization** (`/pkg/engine/gopherlua/compilation_optimization.go`) ✅ **[COMPLETED - 2025-06-20]**
-
 
 #### 2.4.2: Spell Runner command line (`/cmd/llmspell/main.go`)
-  - [ ] **Task 2.4.2.1: Research** research how to create a script runner that can run spells
-    - [ ] look at existing code
-    - [ ] figure out how to do script detection (lua, javascript)
-    - [ ] figure out how to load the right script engine bridge
-    - [ ] research what commands of commands do we need ..below are examples
-      - [ ] default/run script ./llmspell <scriptfile>
-      - [ ] help
-      - [ ] debug 
-      - [ ] validate (syntax validation)
-      - [ ] engines (show engines and versions implemeneted)
-      - [ ] security ( show default security profile and restrictions? )
-      - [ ] what else
-    - [ ] arg parsing engine with flags? 
-    - [ ] come up with implementation plan 
-      - [ ] core engine - should it go in `/pkg/cmdline/core`?
-      - [ ] arg parser - ? where in `/pkg/cmdline/args`? 
-      - [ ] `/cmd/llmspell/main.go` is just a main() with calls to `/pkg/cmdline`?
-  - [ ] **Task 2.4.2.2: Implement** implement
-  - [ ] **Task 2.4.2.3: Document** document
+  - [x] **Task 2.4.2.1: Research** research how to create a script runner that can run spells **[COMPLETED - 2025-06-20]**
+    - [x] look at existing code
+    - [x] figure out how to do script detection (lua, javascript) - file extension based
+    - [x] figure out how to load the right script engine bridge - via registry
+    - [x] research what commands of commands do we need
+    - [x] arg parsing engine with flags - Kong recommended
+    - [x] come up with implementation plan - see `/docs/spell-runner-research.md`
+  
+  - [ ] **Task 2.4.2.2: Core Implementation**
+    - [ ] **2.4.2.2.1: Core Runner Package** (`/pkg/runner/`)
+      - [ ] Create `/pkg/runner/runner.go` with Runner interface
+      - [ ] Create `/pkg/runner/spell_loader.go` to parse spell.yaml files
+      - [ ] Create `/pkg/runner/engine_selector.go` for engine detection
+      - [ ] Create `/pkg/runner/executor.go` for script execution
+      - [ ] Add parameter passing mechanism to scripts
+      - [ ] Write comprehensive tests for runner package
+    
+    - [ ] **2.4.2.2.2: CLI Structure with Kong** (`/cmd/llmspell/`)
+      - [ ] Set up Kong dependency (`go get github.com/alecthomas/kong`)
+      - [ ] Create `/cmd/llmspell/main.go` with Kong CLI struct
+      - [ ] Create `/cmd/llmspell/commands/` directory
+      - [ ] Implement `/cmd/llmspell/commands/run.go` (default command)
+      - [ ] Implement `/cmd/llmspell/commands/validate.go`
+      - [ ] Implement `/cmd/llmspell/commands/engines.go`
+      - [ ] Implement `/cmd/llmspell/commands/version.go`
+      - [ ] create `/cmd/llmspell/commands/repl.go` which uses `/pkg/repl` see tasks 2.4.2.2.4
+      - [ ] Add global flags (--debug, --config, --quiet, --verbose)
+      - [ ] Set up Kong help formatting and error handling
+    
+    - [ ] **2.4.2.2.3: Configuration with Koanf** (`/pkg/config/`)
+      - [ ] Set up Koanf v2 dependencies
+      - [ ] Create `/pkg/config/config.go` with Config struct
+      - [ ] Create `/pkg/config/loader.go` for loading configs
+      - [ ] Implement default configuration values
+      - [ ] Add config file support (~/.llmspell/config.yaml)
+      - [ ] Add environment variable support (LLMSPELL_*)
+      - [ ] Add command-line flag integration
+      - [ ] Implement config validation
+      - [ ] Add Watch() support for config reloading
+      - [ ] Create `/cmd/llmspell/commands/config.go` command
+    
+    - [ ] **2.4.2.2.4: REPL Implementation** (`/pkg/repl/`)
+      - [ ] Set up readline dependency (`go get github.com/chzyer/readline`)
+      - [ ] Create `/pkg/repl/repl.go` with REPL interface
+      - [ ] Create `/pkg/repl/base_repl.go` with common functionality
+      - [ ] Implement `/pkg/repl/lua_repl.go` with Lua-specific features
+      - [ ] Implement `/pkg/repl/completer.go` for auto-completion
+      - [ ] Add REPL commands (.help, .exit, .clear, .load, .save)
+      - [ ] Add history persistence (~/.llmspell_history)
+      - [ ] Add syntax highlighting support
+      - [ ] implement `/cmd/llmspell/commands/repl.go` command
+      - [ ] Write tests for REPL functionality
+    
+    - [ ] **2.4.2.2.5: Security & Validation**
+      - [ ] Create `/pkg/security/profiles.go` for security profiles
+      - [ ] Implement sandbox, development, and production profiles
+      - [ ] Create `/pkg/validator/validator.go` interface
+      - [ ] use `/pkg/engine/gopherlua/validator.go`
+      - [ ] Add spell.yaml schema validation
+      - [ ] Create `/cmd/llmspell/commands/security.go` command
+      - [ ] Add security checks to runner
+    
+    - [ ] **2.4.2.2.6: Testing & Integration**
+      - [ ] Create integration test suite
+      - [ ] Add example spells for testing
+      - [ ] Test all commands with various inputs
+      - [ ] Test configuration layering
+      - [ ] Test REPL functionality
+      - [ ] Add benchmarks for performance
+      - [ ] Ensure cross-platform compatibility
+  
+  - [ ] **Task 2.4.2.3: Documentation**
+    - [ ] Create `/docs/cli-usage.md` with command reference
+    - [ ] Create `/docs/configuration.md` with config guide
+    - [ ] Create `/docs/repl-guide.md` for REPL usage
+    - [ ] Update main README.md with CLI examples
+    - [ ] Add inline help text for all commands
+    - [ ] Create man page generation
+    - [ ] Add shell completion scripts
 
 
 #### 2.4.3: Development Tools
-- [ ] **Task 2.4.3.1: REPL Implementation** (`/cmd/llmspell-lua/main.go`)
-  - [ ] Create interactive Lua REPL
-  - [ ] Add command history
-  - [ ] Implement auto-completion
-  - [ ] Add syntax highlighting
-  - [ ] Create help system
-
-- [ ] **Task 2.4.3.2: Debugger Support** (`/pkg/engine/gopherlua/debug.go`)
+- [ ] **Task 2.4.3.1: Debugger Support** (`/pkg/engine/gopherlua/debug.go`)
   - [ ] Implement breakpoint support
   - [ ] Add step debugging
   - [ ] Create variable inspection
   - [ ] Implement stack trace visualization
   - [ ] Add watch expressions
 
-- [ ] **Task 2.4.3.3: Script Validator** (`/pkg/engine/gopherlua/validator.go`)
-  - [ ] Implement syntax validation
-  - [ ] Add type checking where possible
-  - [ ] Create linting rules
-  - [ ] Implement security validation
-  - [ ] Add performance warnings
+- [x] **Task 2.4.3.2: Script Validator** (`/pkg/engine/gopherlua/validator.go`) **[COMPLETED - 2025-06-20]**
+  - [x] Implement syntax validation
+  - [x] Add type checking where possible (limited by Lua's dynamic nature)
+  - [x] Create linting rules
+  - [x] Implement security validation
+  - [x] Add performance warnings
 
-- [ ] **Task 2.4.3.4: Documentation Generator** (`/pkg/engine/gopherlua/docs.go`)
+- [ ] **Task 2.4.3.3: Documentation Generator** (`/pkg/engine/gopherlua/docs.go`)
   - [ ] Extract API from bridges
   - [ ] Generate Lua documentation
   - [ ] Create example extraction
