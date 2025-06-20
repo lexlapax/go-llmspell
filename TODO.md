@@ -464,33 +464,52 @@ Based on comprehensive research of all bridge adapters, these feature-oriented m
     - [x] Test nested test groups and suite organization
     - [x] Test skip/only test functionality
 
-- [ ] **Task 2.3.5.13: Lua stdlib - Core Utilities Library**
-  - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/core.lua`)
-    - [ ] String and text utilities
-      - [ ] Add `string.template(template, variables)` for string templating
-      - [ ] Add `string.slugify(text)` for URL-safe strings
-      - [ ] Add `string.truncate(text, length)` for text truncation
-    - [ ] Collection and data utilities
-      - [ ] Add `table.merge(t1, t2)` for table merging
-      - [ ] Add `table.deep_copy(table)` for deep copying
-      - [ ] Add `table.keys(table)` and `table.values(table)` for extraction
-    - [ ] UUID, hashing, and crypto utilities
-      - [ ] Add `crypto.uuid()` for UUID generation
-      - [ ] Add `crypto.hash(data, algorithm)` for hashing
-      - [ ] Add `crypto.random_string(length)` for random strings
-    - [ ] Time and date utilities
-      - [ ] Add `time.now()` for current timestamp
-      - [ ] Add `time.format(timestamp, format)` for time formatting
-      - [ ] Add `time.duration(start, end)` for duration calculation
-  - [ ] Testing (`/pkg/engine/gopherlua/stdlib/core_test.go`)
-    - [ ] Test string templating edge cases
-    - [ ] Test table deep copy with cycles
-    - [ ] Test UUID uniqueness
-    - [ ] Test hash algorithm support
-    - [ ] Test time formatting locales
-    - [ ] Test duration calculations
-    - [ ] Test random string entropy
-    - [ ] Test concurrent utility usage
+- [x] **Task 2.3.5.13: Lua stdlib - Core Utilities Library** ✅ COMPLETED [2025-06-20]
+  - [x] Implementation (`/pkg/engine/gopherlua/stdlib/core.lua`)
+    - [x] String and text utilities
+      - [x] Add `string.template(template, variables)` for string templating
+      - [x] Add `string.slugify(text)` for URL-safe strings
+      - [x] Add `string.truncate(text, length)` for text truncation
+      - [x] Add `string.split(str, delimiter)` for string splitting
+      - [x] Add `string.trim(str)` for whitespace removal
+      - [x] Add `string.capitalize(str)` for capitalization
+      - [x] Add `string.camelcase(str)` and `string.snakecase(str)` for case conversion
+    - [x] Collection and data utilities
+      - [x] Add `table.merge(t1, t2)` for table merging
+      - [x] Add `table.deep_copy(table)` for deep copying with circular reference handling
+      - [x] Add `table.keys(table)` and `table.values(table)` for extraction
+      - [x] Add `table.slice(tbl, start, end)` for array operations
+      - [x] Add `table.reverse(tbl)` and `table.shuffle(tbl)` for array manipulation
+      - [x] Add `table.contains(tbl, value)` and `table.is_empty(tbl)` for checks
+    - [x] UUID, hashing, and crypto utilities
+      - [x] Add `crypto.uuid()` for UUID generation
+      - [x] Add `crypto.hash(data, algorithm)` for hashing (requires bridge)
+      - [x] Add `crypto.random_string(length)` for random strings
+      - [x] Add `crypto.base64_encode/decode()` for base64 operations (requires bridge)
+    - [x] Time and date utilities
+      - [x] Add `os.now()` for current timestamp
+      - [x] Add `os.format(timestamp, format)` for time formatting
+      - [x] Add `os.duration(start, end)` for duration calculation
+      - [x] Add `os.add_time(timestamp, duration)` for time arithmetic
+      - [x] Add `os.humanize_duration(seconds)` for human-readable durations
+      - [x] Add `os.parse_time(time_str, format)` for time parsing
+    - [x] Miscellaneous utilities
+      - [x] Add `core.is_callable(value)`, `core.is_array(value)`, `core.is_object(value)` for type checking
+      - [x] Add `core.debounce(func, delay)`, `core.throttle(func, delay)`, `core.memoize(func)` for function utilities
+      - [x] Add `core.try(func, catch_func)` and `core.safe_call(func, ...)` for error handling
+  - [x] Testing (`/pkg/engine/gopherlua/stdlib/core_test.go`)
+    - [x] Test string templating edge cases
+    - [x] Test table deep copy with cycles and metatables
+    - [x] Test UUID uniqueness and format validation
+    - [x] Test hash algorithm support (bridge implementation required)
+    - [x] Test time formatting and duration calculation
+    - [x] Test crypto utilities error handling
+    - [x] Test type checking utilities
+    - [x] Test function utilities (debounce, throttle, memoize)
+    - [x] Test error handling utilities
+    - [x] Test concurrent utility usage
+    - [x] Test edge cases and invalid inputs
+    - [x] Test integration scenarios
 
 - [ ] **Task 2.3.5.14: Lua stdlib - Spell Framework Library**
   - [ ] Implementation (`/pkg/engine/gopherlua/stdlib/spell.lua`)
