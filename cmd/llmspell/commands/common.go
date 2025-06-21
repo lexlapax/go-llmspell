@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/lexlapax/go-llmspell/pkg/config"
 )
@@ -184,4 +185,13 @@ func (t *TableWriter) Render() {
 		}
 		_, _ = fmt.Fprintln(t.out)
 	}
+}
+
+// getDefaultConfigPath returns the default config file path
+func getDefaultConfigPath() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "llmspell", "config.yaml")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "llmspell", "config.yaml")
 }
