@@ -390,21 +390,21 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [x] Add spell validation templates
       - [x] Write tests for template generation
   
-  - [ ] **Phase 7: Integration Tests** *[Priority 4 - Quality Assurance]*
-    - [ ] Task 3.2.9.1: Create test infrastructure
-      - [ ] Create `/tests/integration/` directory
-      - [ ] Set up test framework
-      - [ ] Create example spells for testing
-    - [ ] Task 3.2.9.2: Implement comprehensive tests
-      - [ ] Test all commands with various inputs
-      - [ ] Test configuration layering
-      - [ ] Test REPL functionality
-      - [ ] Test security profile enforcement
-      - [ ] Test error handling and recovery
-    - [ ] Task 3.2.9.3: Performance and compatibility
-      - [ ] Add benchmarks for performance
-      - [ ] Test signal handling and graceful shutdown
-      - [ ] Ensure cross-platform compatibility
+  - [x] **Phase 7: Integration Tests** *[Priority 4 - Quality Assurance]* **[COMPLETED - 2025-06-21]**
+    - [x] Task 3.2.9.1: Create test infrastructure **[COMPLETED - 2025-06-21]**
+      - [x] Create `/tests/integration/` directory
+      - [x] Set up test framework with helpers
+      - [x] Create example spells for testing
+    - [x] Task 3.2.9.2: Implement comprehensive tests **[COMPLETED - 2025-06-21]**
+      - [x] Test all commands with various inputs (run, validate, new, repl, config, security, engines, version, debug)
+      - [x] Test configuration layering with environment variables and files
+      - [x] Test REPL functionality including history, commands, and syntax highlighting
+      - [x] Test security profile enforcement for sandbox, development, and production
+      - [x] Test error handling and recovery with graceful error messages
+    - [x] Task 3.2.9.3: Performance and compatibility **[COMPLETED - 2025-06-21]**
+      - [x] Add benchmarks for performance (startup time, execution overhead)
+      - [x] Test signal handling and graceful shutdown (Ctrl+C handling)
+      - [x] Ensure cross-platform compatibility (path handling, unicode support)
 
 - [ ] **Task 3.3: Documentation**
   - [ ] Create `/docs/cli-usage.md` with command reference
