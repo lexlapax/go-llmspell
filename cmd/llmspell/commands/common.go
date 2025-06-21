@@ -99,6 +99,23 @@ func (b *BaseCommand) Errorf(format string, args ...interface{}) {
 	_, _ = fmt.Fprintf(err, format, args...)
 }
 
+// Info prints an info message
+func (b *BaseCommand) Info(ctx context.Context, format string, args ...interface{}) {
+	b.Printf(format+"\n", args...)
+}
+
+// Debug prints a debug message if debug mode is enabled
+func (b *BaseCommand) Debug(ctx context.Context, format string, args ...interface{}) {
+	if IsDebug(ctx) {
+		b.Printf("[DEBUG] "+format+"\n", args...)
+	}
+}
+
+// Error prints an error message
+func (b *BaseCommand) Error(ctx context.Context, format string, args ...interface{}) {
+	b.Errorf("[ERROR] "+format+"\n", args...)
+}
+
 // Errorln prints error line to stderr
 func (b *BaseCommand) Errorln(args ...interface{}) {
 	err := b.Err
@@ -106,13 +123,6 @@ func (b *BaseCommand) Errorln(args ...interface{}) {
 		err = os.Stderr
 	}
 	_, _ = fmt.Fprintln(err, args...)
-}
-
-// Debug prints debug message if debug mode is enabled
-func (b *BaseCommand) Debug(ctx context.Context, format string, args ...interface{}) {
-	if IsDebug(ctx) {
-		b.Printf("[DEBUG] "+format+"\n", args...)
-	}
 }
 
 // Verbose prints verbose message if verbose mode is enabled

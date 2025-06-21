@@ -380,15 +380,15 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [x] Write comprehensive tests
       - [x] Create debug examples
   
-  - [ ] **Phase 6: Template Package** *[Priority 4 - Developer Experience]*
-    - [ ] Task 3.2.8.1: Create template package
-      - [ ] Create `/pkg/template/generator.go`
-      - [ ] Implement spell scaffolding
-      - [ ] Add example templates (basic, advanced, agent-based)
-    - [ ] Task 3.2.8.2: Integrate with CLI
-      - [ ] Add `llmspell new <name>` command
-      - [ ] Add spell validation templates
-      - [ ] Write tests for template generation
+  - [x] **Phase 6: Template Package** *[Priority 4 - Developer Experience]* **[COMPLETED - 2025-06-21]**
+    - [x] Task 3.2.8.1: Create template package **[COMPLETED - 2025-06-21]**
+      - [x] Create `/pkg/template/generator.go`
+      - [x] Implement spell scaffolding
+      - [x] Add example templates (basic, advanced, agent-based, workflow, interactive)
+    - [x] Task 3.2.8.2: Integrate with CLI **[COMPLETED - 2025-06-21]**
+      - [x] Add `llmspell new <name>` command
+      - [x] Add spell validation templates
+      - [x] Write tests for template generation
   
   - [ ] **Phase 7: Integration Tests** *[Priority 4 - Quality Assurance]*
     - [ ] Task 3.2.9.1: Create test infrastructure
