@@ -145,10 +145,25 @@ func main() {
 
 // loadConfig loads configuration from file or defaults
 func loadConfig(configPath string) *config.Config {
-	// For now, just return a basic config
-	return &config.Config{
-		Debug: false,
+	// Set up loader options
+	options := config.LoaderOptions{
+		ConfigFile:     configPath,
+		EnvPrefix:      "LLMSPELL",
+		EnvDelimiter:   "_",
+		ValidateOnLoad: true,
 	}
+
+	// Use the config loader
+	loader := config.NewLoader(options)
+
+	// Load configuration
+	cfg, err := loader.LoadConfig()
+	if err != nil {
+		// Return default config on error
+		return config.GetDefaultConfig()
+	}
+
+	return cfg
 }
 
 // formatVersion formats version information

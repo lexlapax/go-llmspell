@@ -15,7 +15,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - ✅ Phase 1: Engine and Bridge Foundation [COMPLETED - 2025-06-17]
   - 38+ bridges across 13 categories with comprehensive test coverage
   - Pure bridge architecture: zero business logic duplication
-- 🚧 Phase 2: Lua Engine Implementation - IN PROGRESS
+- ✅ Phase 2: Lua Engine Implementation [COMPLETED - 2025-06-20]
   - ✅ Phase 2.1: Research and Planning [COMPLETED - 2025-06-17]
   - ✅ Phase 2.2: Core Engine Components [COMPLETED - 2025-06-18]
   - ✅ Phase 2.3: Bridge Integration Layer [COMPLETED - 2025-06-20]
@@ -27,10 +27,26 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - ✅ 2.3.3: Bridge Adapters [COMPLETED - 2025-06-19]
     - ✅ 2.3.4: Async/Coroutine Support [COMPLETED - 2025-06-19]
     - ✅ 2.3.5: Lua Standard Library [COMPLETED - 2025-06-20]
-  - 🚧 Phase 2.4: Advanced Features & Optimization - NOT STARTED
-- 🚧 Phase 3: JavaScript Engine Implementation - NOT STARTED
-- 🚧 Phase 4: Tengo Engine Implementation - NOT STARTED
-- 🚧 Phase 5: Integration and Examples - NOT STARTED
+  - ✅ Phase 2.4: Advanced Features & Optimization (Partial) [COMPLETED - 2025-06-20]
+    - ✅ 2.4.3.1: Debugger Support (100% coverage)
+    - ✅ 2.4.3.2: Script Validator (100% coverage)
+- 🚧 Phase 3: Spell Runner CLI [IN PROGRESS - 2025-06-21]
+  - ✅ 3.1: Research and Planning [COMPLETED - 2025-06-20]
+  - ✅ 3.2.1: Configuration Foundation [COMPLETED - 2025-06-20]
+  - ✅ 3.2.2: Error Handling Infrastructure [COMPLETED - 2025-06-21]
+  - ✅ 3.2.3: Core Runner Package [COMPLETED - 2025-06-21]
+  - ✅ 3.2.4: Security & Validation Integration [COMPLETED - 2025-06-21]
+  - ✅ 3.2.5: CLI Structure with Kong [COMPLETED - 2025-06-21]
+  - ✅ Phase 1: Fix Runner Package Tests [COMPLETED - 2025-06-21]
+  - ✅ Phase 2: Wire Up Full Executor [COMPLETED - 2025-06-21]
+  - ✅ Phase 3: Complete Command Implementations [COMPLETED - 2025-06-21]
+  - 🚧 Phase 4: Implement REPL [NOT STARTED]
+  - 🚧 Phase 5: Implement Debug Command [NOT STARTED]
+  - 🚧 Phase 6: Template Package [NOT STARTED]
+  - 🚧 Phase 7: Integration Tests [NOT STARTED]
+- 🚧 Phase 4: JavaScript Engine Implementation - NOT STARTED
+- 🚧 Phase 5: Tengo Engine Implementation - NOT STARTED
+- 🚧 Phase 6: Integration and Examples - NOT STARTED
 
 ---
 ## DEFERRED TASKS from different Phases - For Revisit 
@@ -303,29 +319,29 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [x] Test script execution through CLI
       - [x] Verify engine registration works
   
-  - [ ] **Phase 3: Complete Command Implementations** *[Priority 2 - Core Features]*
-    - [ ] Task 3.2.5.3.1: Implement Run Command
-      - [ ] Get engine registry from context
-      - [ ] Execute scripts with real engines
-      - [ ] Handle parameters and timeouts
-      - [ ] Show progress indicators
-      - [ ] Test with actual Lua scripts
-    - [ ] Task 3.2.5.3.2: Implement Validate Command
-      - [ ] Validate spell.yaml files
-      - [ ] Check script syntax via engine
-      - [ ] Validate security constraints
-    - [ ] Task 3.2.5.3.3: Implement Engines Command
-      - [ ] List registered engines from registry
-      - [ ] Show engine capabilities
-      - [ ] Display version info
-    - [ ] Task 3.2.5.3.4: Implement Config Command
-      - [ ] Read/write config files with Koanf
-      - [ ] Support get/set operations
-      - [ ] Handle layered configuration
-    - [ ] Task 3.2.5.3.5: Implement Security Command
-      - [ ] Show actual security profiles
-      - [ ] Display permissions
-      - [ ] Validate profile configurations
+  - [x] **Phase 3: Complete Command Implementations** *[Priority 2 - Core Features]* **[COMPLETED - 2025-06-21]**
+    - [x] Task 3.2.5.3.1: Implement Run Command **[COMPLETED - 2025-06-21]**
+      - [x] Get engine registry from context
+      - [x] Execute scripts with real engines
+      - [x] Handle parameters and timeouts
+      - [x] Show progress indicators
+      - [x] Test with actual Lua scripts
+    - [x] Task 3.2.5.3.2: Implement Validate Command **[COMPLETED - 2025-06-21]**
+      - [x] Validate spell.yaml files
+      - [x] Check script syntax via engine
+      - [x] Validate security constraints
+    - [x] Task 3.2.5.3.3: Implement Engines Command **[COMPLETED - 2025-06-21]**
+      - [x] List registered engines from registry
+      - [x] Show engine capabilities
+      - [x] Display version info
+    - [x] Task 3.2.5.3.4: Implement Config Command **[COMPLETED - 2025-06-21]**
+      - [x] Read/write config files with Koanf
+      - [x] Support get/set operations
+      - [x] Handle layered configuration
+    - [x] Task 3.2.5.3.5: Implement Security Command **[COMPLETED - 2025-06-21]**
+      - [x] Show actual security profiles
+      - [x] Display permissions
+      - [x] Validate profile configurations
   
   - [ ] **Phase 4: Implement REPL** *[Priority 3 - Interactive Mode]*
     - [ ] Task 3.2.6.1: Create REPL package structure

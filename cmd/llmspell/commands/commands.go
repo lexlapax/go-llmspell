@@ -5,11 +5,12 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/lexlapax/go-llmspell/pkg/config"
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
@@ -160,12 +161,43 @@ func (c *ValidateCmd) Run(ctx context.Context) error {
 		return errors.Wrap(err, errors.CategoryValidation, "unable to determine script engine")
 	}
 
-	// For now, just check if we can get engine info
+	// Check if engine is available
 	if _, err := engineRegistry.GetEngineInfo(engineName); err != nil {
 		return errors.Wrap(err, errors.CategoryEngine, "engine not available")
 	}
 
+	// Read the script file
+	scriptContent, err := os.ReadFile(c.Path)
+	if err != nil {
+		return errors.Wrap(err, errors.CategoryIO, "failed to read script file")
+	}
+
+	// Get the engine to validate the script
+	config := engine.EngineConfig{
+		DebugMode: IsDebug(ctx),
+	}
+	scriptEngine, err := engineRegistry.GetEngine(engineName, config)
+	if err != nil {
+		return errors.Wrap(err, errors.CategoryEngine, "failed to get engine")
+	}
+
+	// Validate the script
+	if validator, ok := scriptEngine.(interface {
+		Validate(script string) error
+	}); ok {
+		if err := validator.Validate(string(scriptContent)); err != nil {
+			return errors.Wrap(err, errors.CategoryValidation, "script validation failed")
+		}
+	}
+
 	c.Printf("✓ Script file is valid (%s engine)\n", engineName)
+
+	// Additional validation info if verbose
+	if IsVerbose(ctx) {
+		c.Printf("  Path: %s\n", c.Path)
+		c.Printf("  Engine: %s\n", engineName)
+		c.Printf("  Size: %d bytes\n", len(scriptContent))
+	}
 
 	return nil
 }
@@ -205,8 +237,51 @@ func (c *EnginesCmd) Run(ctx context.Context) error {
 		c.Printf("  - %s", info.Name)
 		if c.Details {
 			c.Printf(" v%s (%s)", info.Version, info.Description)
+			c.Println()
+
+			// Show supported features
+			if len(info.Features) > 0 {
+				c.Printf("    Features: ")
+				for i, feature := range info.Features {
+					if i > 0 {
+						c.Printf(", ")
+					}
+					c.Printf("%s", feature)
+				}
+				c.Println()
+			}
+
+			// Show file extensions
+			if len(info.FileExtensions) > 0 {
+				c.Printf("    Extensions: ")
+				for i, ext := range info.FileExtensions {
+					if i > 0 {
+						c.Printf(", ")
+					}
+					c.Printf("%s", ext)
+				}
+				c.Println()
+			}
+		} else {
+			c.Println()
 		}
-		c.Println()
+	}
+
+	// Show stats if available and verbose
+	if IsVerbose(ctx) && c.Details {
+		stats := engineRegistry.GetStats()
+		if len(stats) > 0 {
+			c.Println("\nEngine Statistics:")
+			for name, stat := range stats {
+				c.Printf("  %s:\n", name)
+				c.Printf("    Executions: %d (Success: %d, Errors: %d)\n",
+					stat.SuccessCount+stat.ErrorCount, stat.SuccessCount, stat.ErrorCount)
+				if stat.TotalExecTime > 0 && stat.SuccessCount > 0 {
+					avgTime := stat.TotalExecTime / time.Duration(stat.SuccessCount)
+					c.Printf("    Avg execution time: %v\n", avgTime)
+				}
+			}
+		}
 	}
 
 	return nil
@@ -254,9 +329,36 @@ func (c *ConfigCmd) Run(ctx context.Context) error {
 	switch c.Action {
 	case "show":
 		c.Println("Configuration:")
-		c.Printf("  default_engine: lua\n")
-		c.Printf("  security_profile: %s\n", GetProfile(ctx))
+		c.Printf("  config_path: %s\n", getDefaultConfigPath())
 		c.Printf("  debug: %v\n", cfg.Debug)
+		c.Printf("  security_profile: %s\n", GetProfile(ctx))
+
+		// Show engine settings
+		c.Println("  engine:")
+		c.Printf("    default: %s\n", cfg.Engine.Default)
+		if cfg.Engine.MemoryLimit > 0 {
+			c.Printf("    memory_limit: %d bytes\n", cfg.Engine.MemoryLimit)
+		}
+		if cfg.Engine.TimeoutLimit > 0 {
+			c.Printf("    timeout_limit: %v\n", cfg.Engine.TimeoutLimit)
+		}
+
+		// Show security settings
+		c.Println("  security:")
+		c.Printf("    profile: %s\n", cfg.Security.Profile)
+		if cfg.Security.FileSystemMode != "" {
+			c.Printf("    filesystem_mode: %s\n", cfg.Security.FileSystemMode)
+		}
+
+		// Show runner settings if verbose
+		if IsVerbose(ctx) {
+			c.Println("  runner:")
+			c.Printf("    default_timeout: %v\n", cfg.Runner.DefaultTimeout)
+			if cfg.Runner.MaxParallelSpells > 0 {
+				c.Printf("    max_parallel_spells: %d\n", cfg.Runner.MaxParallelSpells)
+			}
+		}
+
 		return nil
 
 	case "path":
@@ -267,21 +369,46 @@ func (c *ConfigCmd) Run(ctx context.Context) error {
 		if c.Key == "" {
 			return errors.New(errors.CategoryUsage, "key required for get action")
 		}
-		// For now, just handle known keys
-		var value string
-		switch c.Key {
-		case "debug":
-			value = fmt.Sprintf("%v", cfg.Debug)
-		case "default_engine":
-			value = "lua"
-		default:
-			value = "<not set>"
+
+		// Use the config loader to get the actual value
+		options := config.LoaderOptions{
+			EnvPrefix:    "LLMSPELL",
+			EnvDelimiter: "_",
 		}
-		c.Println(value)
+		loader := config.NewLoader(options)
+
+		// Load config to get access to values
+		_, err := loader.LoadConfig()
+		if err != nil {
+			return errors.Wrap(err, errors.CategoryConfig, "failed to load config")
+		}
+
+		// Use the loader to get the raw value by key
+		value := loader.GetRaw(c.Key)
+
+		if value == nil {
+			c.Println("<not set>")
+		} else {
+			c.Printf("%v\n", value)
+		}
+
 		return nil
 
 	case "set":
-		return errors.New(errors.CategoryUsage, "set action not implemented - edit config file directly")
+		if c.Key == "" {
+			return errors.New(errors.CategoryUsage, "key required for set action")
+		}
+		if c.Value == "" {
+			return errors.New(errors.CategoryUsage, "value required for set action")
+		}
+
+		// For safety, we'll still recommend editing the config file
+		c.Printf("To set '%s' to '%s', edit the config file at:\n", c.Key, c.Value)
+		c.Printf("  %s\n", getDefaultConfigPath())
+		c.Println("\nExample:")
+		c.Printf("  %s: %s\n", c.Key, c.Value)
+
+		return nil
 
 	default:
 		return errors.Newf(errors.CategoryUsage, "unknown action: %s", c.Action)
