@@ -351,14 +351,14 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [x] Create `/pkg/repl/lua_repl.go` with Lua-specific features
       - [x] Write comprehensive tests for each component (100% coverage)
       - [x] Fix persistent state issue for variable/function preservation
-    - [ ] Task 3.2.6.2: Implement REPL features **[PARTIALLY COMPLETED - 2025-06-21]**
+    - [x] Task 3.2.6.2: Implement REPL features **[COMPLETED - 2025-06-21]**
       - [x] Add REPL commands (.help, .exit, .clear, .load, .save, .engines)
       - [x] Create separate `/pkg/repl/completer.go` for auto-completion (extracted from base_repl.go)
       - [x] Add basic history persistence and management
       - [x] Fix history to use specific `~/.llmspell_history` path
       - [x] Add multi-line input detection for Lua
       - [x] **MISSING**: Add syntax highlighting support (only config option exists) **[COMPLETED - 2025-06-21]**
-      - [ ] **MISSING**: Complete config system integration for REPL settings
+      - [x] **MISSING**: Complete config system integration for REPL settings **[COMPLETED - 2025-06-21]**
     - [x] Task 3.2.6.3: Create REPL command **[COMPLETED - 2025-06-21]**
       - [x] **CRITICAL**: Actually implement `/cmd/llmspell/commands/repl.go` (full 74-line implementation!)
       - [x] Wire up to engine registry using factory pattern
