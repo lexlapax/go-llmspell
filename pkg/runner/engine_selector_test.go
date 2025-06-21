@@ -23,6 +23,8 @@ func TestEngineSelector(t *testing.T) {
 
 	t.Run("select_by_extension", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
 		
@@ -70,6 +72,8 @@ func TestEngineSelector(t *testing.T) {
 
 	t.Run("select_for_spell", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
 		
@@ -155,6 +159,8 @@ func TestEngineSelector(t *testing.T) {
 
 	t.Run("select_with_options", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
 		
@@ -191,6 +197,8 @@ func TestEngineSelector(t *testing.T) {
 
 	t.Run("validate_engine_availability", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
 		
@@ -202,7 +210,7 @@ func TestEngineSelector(t *testing.T) {
 		_ = registry.Register(luaFactory)
 		
 		// Validate existing engine
-		err := selector.ValidateEngineAvailability("lua")
+		err = selector.ValidateEngineAvailability("lua")
 		assert.NoError(t, err)
 		
 		// Validate non-existent engine
@@ -213,6 +221,8 @@ func TestEngineSelector(t *testing.T) {
 
 	t.Run("get_supported_extensions", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
 		
@@ -238,6 +248,8 @@ func TestEngineSelector(t *testing.T) {
 
 	t.Run("get_engine_for_extension", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
 		
@@ -282,6 +294,8 @@ func TestExtractExtension(t *testing.T) {
 func TestEngineSelectorPriority(t *testing.T) {
 	t.Run("priority_order", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
 		
@@ -292,7 +306,7 @@ func TestEngineSelectorPriority(t *testing.T) {
 				name:           name,
 				fileExtensions: []string{name[:2]}, // lu, ja, te
 			}
-			err := registry.Register(factory)
+			err = registry.Register(factory)
 			require.NoError(t, err)
 		}
 		

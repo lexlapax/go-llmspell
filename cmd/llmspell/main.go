@@ -1,95 +1,195 @@
-// ABOUTME: Main entry point for the llmspell CLI - placeholder for multi-engine implementation
-// ABOUTME: Will provide commands to run spells in Lua, JavaScript, and Tengo engines
+// ABOUTME: Main entry point for the llmspell CLI using Kong for command parsing.
+// ABOUTME: Provides spell execution, validation, REPL, and management commands.
 
 package main
 
 import (
-	"fmt"
+	"context"
 	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+
+	"github.com/alecthomas/kong"
+	"github.com/lexlapax/go-llmspell/cmd/llmspell/commands"
+	"github.com/lexlapax/go-llmspell/pkg/config"
+	"github.com/lexlapax/go-llmspell/pkg/errors"
+	"github.com/lexlapax/go-llmspell/pkg/runner"
+	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
+// Version information set during build
+var (
+	version   = "dev"
+	buildDate = ""
+	gitCommit = ""
+)
+
+// CLI represents the command-line interface structure
+type CLI struct {
+	// Global flags
+	DebugMode  bool   `help:"Enable debug mode" env:"LLMSPELL_DEBUG" name:"debug"`
+	ConfigFile string `help:"Config file path" type:"path" env:"LLMSPELL_CONFIG" name:"config"`
+	Quiet      bool   `help:"Suppress non-error output" short:"q"`
+	Verbose    bool   `help:"Enable verbose output" short:"v"`
+	Profile    string `help:"Security profile to use" default:"sandbox" enum:"sandbox,development,production"`
+
+	// Commands
+	Run      commands.RunCmd      `cmd:"" help:"Execute a spell script"`
+	Validate commands.ValidateCmd `cmd:"" help:"Validate a spell or script"`
+	Engines  commands.EnginesCmd  `cmd:"" help:"List available script engines"`
+	Version  commands.VersionCmd  `cmd:"" help:"Show version information"`
+	Config   commands.ConfigCmd   `cmd:"" help:"Manage configuration"`
+	Security commands.SecurityCmd `cmd:"" help:"Manage security profiles"`
+	REPL     commands.REPLCmd     `cmd:"" help:"Start interactive REPL"`
+	Debug    commands.DebugCmd    `cmd:"" help:"Debug a spell script"`
+}
+
+// osExit allows testing of exit behavior
+var osExit = os.Exit
+
 func main() {
-	fmt.Println("🧙 go-llmspell v0.3.3 - Multi-Engine Spell Caster")
-	fmt.Println("================================================")
-	fmt.Println()
-	fmt.Println("⚠️  This is a placeholder for the multi-engine implementation.")
-	fmt.Println()
-	fmt.Println("📋 What this CLI will do:")
-	fmt.Println("   • Execute spells written in Lua, JavaScript, or Tengo")
-	fmt.Println("   • Support multiple LLM providers through go-llms v0.3.3")
-	fmt.Println("   • Provide agent orchestration and workflow capabilities")
-	fmt.Println("   • Enable tool usage and function calling")
-	fmt.Println("   • Support streaming responses and async operations")
-	fmt.Println("   • Manage distributed execution and agent handoffs")
-	fmt.Println()
-	fmt.Println("🔧 Planned Commands:")
-	fmt.Println("   llmspell run <spell-path>           - Execute a spell file")
-	fmt.Println("   llmspell new <template> <name>      - Create new spell from template")
-	fmt.Println("   llmspell validate <spell-path>      - Validate spell syntax")
-	fmt.Println("   llmspell list-engines               - Show available script engines")
-	fmt.Println("   llmspell list-providers             - Show available LLM providers")
-	fmt.Println("   llmspell list-tools                 - Show available tools")
-	fmt.Println("   llmspell list-agents                - Show registered agents")
-	fmt.Println("   llmspell config                     - Manage configuration")
-	fmt.Println("   llmspell server                     - Start spell server mode")
-	fmt.Println("   llmspell version                    - Show version information")
-	fmt.Println()
-	fmt.Println("🚧 Current Status:")
-	fmt.Println("   The multi-engine architecture is being implemented.")
-	fmt.Println("   Core interfaces and bridges are being developed.")
-	fmt.Println()
-	fmt.Println("📚 For more information:")
-	fmt.Println("   See docs/MIGRATION_PLAN_V0.3.3.md for architecture details")
-	fmt.Println("   Check TODO.md for implementation progress")
-	fmt.Println()
+	// Set up signal handling
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Exit with status 0 since this is just a placeholder
-	os.Exit(0)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		cancel()
+	}()
+
+	// Parse CLI
+	cli := &CLI{}
+	parser, err := kong.New(cli,
+		kong.Name("llmspell"),
+		kong.Description("Scriptable LLM interactions via Lua, JavaScript, and Tengo"),
+		kong.UsageOnError(),
+		kong.ConfigureHelp(kong.HelpOptions{
+			Compact: true,
+			Summary: true,
+		}),
+		kong.Vars{
+			"version": formatVersion(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	kongCtx, err := parser.Parse(os.Args[1:])
+	if err != nil {
+		parser.FatalIfErrorf(err)
+		osExit(1)
+		return
+	}
+
+	// Load configuration
+	cfg := loadConfig(cli.ConfigFile)
+
+	// Apply CLI flags to config
+	if cli.DebugMode {
+		cfg.Debug = true
+	}
+
+	// Create base engine registry
+	registry := engine.NewRegistry()
+	
+	// Register Lua engine
+	luaEngine := gopherlua.NewLuaEngine()
+	if err := registry.RegisterEngine("lua", luaEngine); err != nil {
+		parser.Fatalf("failed to register Lua engine: %v", err)
+		osExit(1)
+		return
+	}
+	
+	// Initialize registry
+	if err := registry.Initialize(); err != nil {
+		parser.Fatalf("failed to initialize engine registry: %v", err)
+		osExit(1)
+		return
+	}
+	
+	// Create engine registry manager for runner
+	engineRegistry := runner.NewEngineRegistryManager(registry)
+	
+	// TODO: Register JavaScript and Tengo engines when implemented
+
+	// Create command context
+	cmdCtx := createCommandContext(ctx, cfg, cli, engineRegistry)
+
+	// Set up error handler
+	errorHandler := setupErrorHandler(cfg)
+
+	// Execute command
+	kongCtx.BindTo(cmdCtx, (*context.Context)(nil))
+	if err := kongCtx.Run(); err != nil {
+		errorHandler.Handle(err)
+		osExit(1)
+		return
+	}
 }
 
-// Future functions to be implemented:
-
-// runSpell will execute a spell file using the appropriate engine
-//
-//nolint:unused // Will be implemented when spell execution is added
-func runSpell(spellPath string, args []string) {
-	// TODO: Implement multi-engine spell execution
+// loadConfig loads configuration from file or defaults
+func loadConfig(configPath string) *config.Config {
+	// For now, just return a basic config
+	return &config.Config{
+		Debug: false,
+	}
 }
 
-// validateSpell will check spell syntax without executing
-//
-//nolint:unused // Will be implemented when spell validation is added
-func validateSpell(spellPath string) {
-	// TODO: Implement spell validation
+// defaultConfigPath returns the default config file path
+func defaultConfigPath() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "llmspell", "config.yaml")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "llmspell", "config.yaml")
 }
 
-// listEngines will show available script engines
-//
-//nolint:unused // Will be implemented when engine listing is added
-func listEngines() {
-	// TODO: Query engine registry
+// expandPath expands ~ to home directory
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, path[2:])
+	}
+	return path
 }
 
-// listProviders will show available LLM providers
-//
-//nolint:unused // Will be implemented when provider listing is added
-func listProviders() {
-	// TODO: Query LLM bridge for providers
+// fileExists checks if a file exists
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
-// startServer will run in server mode for distributed execution
-//
-//nolint:unused // Will be implemented when server mode is added
-func startServer(config ServerConfig) {
-	// TODO: Implement server mode
+// formatVersion formats version information
+func formatVersion() string {
+	v := version
+	if gitCommit != "" {
+		v += " (" + gitCommit[:7] + ")"
+	}
+	if buildDate != "" {
+		v += " built " + buildDate
+	}
+	return v
 }
 
-// ServerConfig holds server configuration
-//
-//nolint:unused // Will be used when server mode is implemented
-type ServerConfig struct {
-	Port      int
-	EnableTLS bool
-	CertFile  string
-	KeyFile   string
+// createCommandContext creates context for command execution
+func createCommandContext(ctx context.Context, cfg *config.Config, cli *CLI, engineRegistry *runner.EngineRegistryManager) context.Context {
+	ctx = context.WithValue(ctx, commands.ConfigKey, cfg)
+	ctx = context.WithValue(ctx, commands.DebugKey, cli.DebugMode)
+	ctx = context.WithValue(ctx, commands.VerboseKey, cli.Verbose)
+	ctx = context.WithValue(ctx, commands.ProfileKey, cli.Profile)
+	ctx = context.WithValue(ctx, commands.EngineRegistryKey, engineRegistry)
+	return ctx
+}
+
+// setupErrorHandler sets up error handling
+func setupErrorHandler(cfg *config.Config) *errors.ErrorHandler {
+	// Initialize global error handler
+	errors.InitializeErrorHandler(cfg.Debug, true)
+	return errors.GetErrorHandler()
 }

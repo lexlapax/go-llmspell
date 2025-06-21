@@ -82,6 +82,8 @@ func TestRunnerConfig(t *testing.T) {
 		assert.False(t, config.EnableDebug)
 		assert.NotNil(t, config.EngineConfigs)
 		assert.NotNil(t, config.SecurityProfiles)
+		assert.Equal(t, "lua", config.DefaultEngine)
+		assert.Equal(t, "sandbox", config.DefaultSecurityProfile)
 	})
 
 	t.Run("config_validation", func(t *testing.T) {
@@ -186,6 +188,7 @@ func TestProgress(t *testing.T) {
 			Percentage:  25,
 			CurrentStep: 1,
 			TotalSteps:  4,
+			StartTime:   time.Now(),
 		}
 
 		assert.Equal(t, "initialization", p.Stage)
@@ -193,6 +196,7 @@ func TestProgress(t *testing.T) {
 		assert.Equal(t, 25, p.Percentage)
 		assert.Equal(t, 1, p.CurrentStep)
 		assert.Equal(t, 4, p.TotalSteps)
+		assert.False(t, p.StartTime.IsZero())
 	})
 }
 
@@ -263,6 +267,8 @@ func TestExecutionResult(t *testing.T) {
 		assert.Equal(t, "test result", result.Value)
 		assert.Equal(t, "lua", result.Engine)
 		assert.NotNil(t, result.Metadata)
+		assert.True(t, result.IsSuccess())
+		assert.False(t, result.IsError())
 	})
 
 	t.Run("error_result", func(t *testing.T) {
@@ -277,7 +283,56 @@ func TestExecutionResult(t *testing.T) {
 		assert.Error(t, result.Error)
 		assert.Nil(t, result.Value)
 		assert.Equal(t, "javascript", result.Engine)
+		assert.False(t, result.IsSuccess())
+		assert.True(t, result.IsError())
 	})
+}
+
+func TestSpellMetadataValidation(t *testing.T) {
+	t.Run("valid_spell", func(t *testing.T) {
+		spell := &SpellMetadata{
+			Name:       "test-spell",
+			Version:    "1.0.0",
+			Engine:     "lua",
+			EntryPoint: "main.lua",
+		}
+
+		err := spell.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid_spell_missing_name", func(t *testing.T) {
+		spell := &SpellMetadata{
+			Name:       "",
+			Version:    "1.0.0",
+			Engine:     "lua",
+			EntryPoint: "main.lua",
+		}
+
+		err := spell.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "name is required")
+	})
+}
+
+func TestSpellLoaderParameterHandling(t *testing.T) {
+	loader := NewSpellLoader()
+
+	spell := &SpellMetadata{
+		Parameters: []SpellParameter{
+			{Name: "param1", Type: "string", Default: "default1"},
+			{Name: "param2", Type: "number", Default: 42},
+		},
+	}
+
+	// Apply defaults
+	params := map[string]interface{}{
+		"param1": "custom",
+	}
+
+	result := loader.ApplyDefaults(spell, params)
+	assert.Equal(t, "custom", result["param1"])
+	assert.Equal(t, 42, result["param2"])
 }
 
 // Integration test placeholder
@@ -331,6 +386,7 @@ func TestRunnerLifecycle(t *testing.T) {
 	})
 }
 
+
 // Benchmark tests
 func BenchmarkRunnerExecution(b *testing.B) {
 	runner := &testRunner{
@@ -356,3 +412,4 @@ func BenchmarkMetricsCalculation(b *testing.B) {
 		_ = metrics.SuccessRate()
 	}
 }
+

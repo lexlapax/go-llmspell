@@ -40,22 +40,72 @@ func (f *mockEngineFactory) GetDefaultConfig() engine.EngineConfig {
 	return engine.EngineConfig{}
 }
 
-// Mock engine for testing - implements the simpler interface expected by registry
+// Mock engine for testing - implements the full ScriptEngine interface
 type mockEngine struct {
 	name string
 }
 
 func (e *mockEngine) Initialize(config engine.EngineConfig) error { return nil }
-func (e *mockEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
-	return "mock result", nil
+func (e *mockEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (engine.ScriptValue, error) {
+	return engine.NewStringValue("mock result"), nil
 }
-func (e *mockEngine) ExecuteFile(ctx context.Context, filepath string, params map[string]interface{}) (interface{}, error) {
-	return "mock file result", nil
-}
-func (e *mockEngine) GetMetrics() *engine.EngineMetrics {
-	return &engine.EngineMetrics{}
+func (e *mockEngine) ExecuteFile(ctx context.Context, filepath string, params map[string]interface{}) (engine.ScriptValue, error) {
+	return engine.NewStringValue("mock file result"), nil
 }
 func (e *mockEngine) Shutdown() error { return nil }
+
+// Bridge management
+func (e *mockEngine) RegisterBridge(bridge engine.Bridge) error { return nil }
+func (e *mockEngine) UnregisterBridge(name string) error { return nil }
+func (e *mockEngine) GetBridge(name string) (engine.Bridge, error) { return nil, nil }
+func (e *mockEngine) ListBridges() []string { return []string{} }
+
+// Type system
+func (e *mockEngine) ToNative(scriptValue engine.ScriptValue) (interface{}, error) { return nil, nil }
+func (e *mockEngine) FromNative(goValue interface{}) (engine.ScriptValue, error) { return nil, nil }
+
+// Metadata
+func (e *mockEngine) Name() string { return e.name }
+func (e *mockEngine) Version() string { return "1.0.0" }
+func (e *mockEngine) FileExtensions() []string { return []string{".mock"} }
+func (e *mockEngine) Features() []engine.EngineFeature { return []engine.EngineFeature{} }
+
+// Resource management
+func (e *mockEngine) SetMemoryLimit(bytes int64) error { return nil }
+func (e *mockEngine) SetTimeout(duration time.Duration) error { return nil }
+func (e *mockEngine) SetResourceLimits(limits engine.ResourceLimits) error { return nil }
+func (e *mockEngine) GetMetrics() engine.EngineMetrics {
+	return engine.EngineMetrics{}
+}
+
+// Script state management
+func (e *mockEngine) CreateContext(options engine.ContextOptions) (engine.ScriptContext, error) {
+	return nil, nil
+}
+func (e *mockEngine) DestroyContext(ctx engine.ScriptContext) error { return nil }
+func (e *mockEngine) ExecuteScript(ctx context.Context, script string, options engine.ExecutionOptions) (*engine.ExecutionResult, error) {
+	return &engine.ExecutionResult{}, nil
+}
+
+// Event bus
+func (e *mockEngine) GetEventBus() engine.EventBus { return nil }
+
+// Type conversion registry
+func (e *mockEngine) RegisterTypeConverter(fromType, toType string, converter engine.TypeConverterFunc) error {
+	return nil
+}
+func (e *mockEngine) GetTypeRegistry() engine.TypeRegistry { return nil }
+
+// Profiling
+func (e *mockEngine) EnableProfiling(config engine.ProfilingConfig) error { return nil }
+func (e *mockEngine) DisableProfiling() error { return nil }
+func (e *mockEngine) GetProfilingReport() (*engine.ProfilingReport, error) { return nil, nil }
+
+// API export
+func (e *mockEngine) ExportAPI(format engine.ExportFormat) ([]byte, error) { return nil, nil }
+func (e *mockEngine) GenerateClientLibrary(language string, options engine.ClientLibraryOptions) ([]byte, error) {
+	return nil, nil
+}
 
 func TestEngineRegistryManager(t *testing.T) {
 	t.Run("new_manager", func(t *testing.T) {
@@ -76,6 +126,8 @@ func TestEngineRegistryManager(t *testing.T) {
 
 	t.Run("register_engines", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
 		// Register test engines
@@ -92,7 +144,7 @@ func TestEngineRegistryManager(t *testing.T) {
 			},
 		}
 		
-		err := manager.RegisterEngines(factories)
+		err = manager.RegisterEngines(factories)
 		assert.NoError(t, err)
 		
 		// Verify engines are registered
@@ -110,6 +162,8 @@ func TestEngineRegistryManager(t *testing.T) {
 
 	t.Run("get_engine", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
 		// Register a test engine
@@ -117,7 +171,7 @@ func TestEngineRegistryManager(t *testing.T) {
 			name:    "lua",
 			version: "1.0.0",
 		}
-		err := registry.Register(factory)
+		err = registry.Register(factory)
 		require.NoError(t, err)
 		
 		// Get the engine
@@ -128,6 +182,8 @@ func TestEngineRegistryManager(t *testing.T) {
 
 	t.Run("get_nonexistent_engine", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
 		eng, err := manager.GetEngine("nonexistent", engine.EngineConfig{})
@@ -138,6 +194,8 @@ func TestEngineRegistryManager(t *testing.T) {
 
 	t.Run("find_engine_by_extension", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
 		// Register test engines
@@ -172,13 +230,15 @@ func TestEngineRegistryManager(t *testing.T) {
 
 	t.Run("execute_script", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
 		// Register test engine
 		factory := &mockEngineFactory{
 			name: "lua",
 		}
-		err := registry.Register(factory)
+		err = registry.Register(factory)
 		require.NoError(t, err)
 		
 		// Execute script
@@ -187,11 +247,16 @@ func TestEngineRegistryManager(t *testing.T) {
 		result, err := manager.ExecuteScript(ctx, "lua", "test script", params)
 		
 		assert.NoError(t, err)
-		assert.Equal(t, "mock result", result)
+		// Result is a ScriptValue, need to check its string value
+		sv, ok := result.(engine.ScriptValue)
+		assert.True(t, ok, "result should be a ScriptValue")
+		assert.Equal(t, "mock result", sv.String())
 	})
 
 	t.Run("execute_file", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
 		// Register test engine
@@ -199,7 +264,7 @@ func TestEngineRegistryManager(t *testing.T) {
 			name:           "lua",
 			fileExtensions: []string{"lua"},
 		}
-		err := registry.Register(factory)
+		err = registry.Register(factory)
 		require.NoError(t, err)
 		
 		// Execute file
@@ -208,11 +273,16 @@ func TestEngineRegistryManager(t *testing.T) {
 		result, err := manager.ExecuteFile(ctx, "test.lua", params)
 		
 		assert.NoError(t, err)
-		assert.Equal(t, "mock file result", result)
+		// Result is a ScriptValue, need to check its string value
+		sv, ok := result.(engine.ScriptValue)
+		assert.True(t, ok, "result should be a ScriptValue")
+		assert.Equal(t, "mock file result", sv.String())
 	})
 
 	t.Run("get_engine_info", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
 		// Register test engine
@@ -225,7 +295,7 @@ func TestEngineRegistryManager(t *testing.T) {
 				engine.FeatureDebugging,
 			},
 		}
-		err := registry.Register(factory)
+		err = registry.Register(factory)
 		require.NoError(t, err)
 		
 		// Get engine info
@@ -236,7 +306,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		assert.Equal(t, "5.4.0", info.Version)
 		assert.Equal(t, "Lua scripting engine", info.Description)
 		assert.Contains(t, info.Features, engine.FeatureAsync)
-		assert.Contains(t, info.Features, engine.FeatureDebug)
+		assert.Contains(t, info.Features, engine.FeatureDebugging)
 	})
 
 	t.Run("get_stats", func(t *testing.T) {
@@ -260,14 +330,17 @@ func TestEngineRegistryManager(t *testing.T) {
 		stats := manager.GetStats()
 		assert.NotNil(t, stats)
 		assert.Contains(t, stats, "lua")
-		assert.Equal(t, int64(1), stats["lua"].SuccessCount)
+		// SuccessCount is 2: 1 for GetEngine and 1 for ExecuteScript
+		assert.Equal(t, int64(2), stats["lua"].SuccessCount)
 	})
 
 	t.Run("shutdown", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
+		err := registry.Initialize()
+		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		
-		err := manager.Shutdown()
+		err = manager.Shutdown()
 		assert.NoError(t, err)
 	})
 }
@@ -318,6 +391,7 @@ func TestEngineConfigBuilder(t *testing.T) {
 // Benchmark tests
 func BenchmarkEngineRegistryManager_GetEngine(b *testing.B) {
 	registry := engine.NewRegistry(engine.RegistryConfig{})
+	_ = registry.Initialize()
 	manager := NewEngineRegistryManager(registry)
 	
 	factory := &mockEngineFactory{name: "lua"}
@@ -331,6 +405,7 @@ func BenchmarkEngineRegistryManager_GetEngine(b *testing.B) {
 
 func BenchmarkEngineRegistryManager_FindByExtension(b *testing.B) {
 	registry := engine.NewRegistry(engine.RegistryConfig{})
+	_ = registry.Initialize()
 	manager := NewEngineRegistryManager(registry)
 	
 	factory := &mockEngineFactory{

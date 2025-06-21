@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
 // ScriptExecutor implements the Runner interface for executing scripts
@@ -383,12 +381,3 @@ func (e *ScriptExecutor) updateMetrics(engineName string, duration time.Duration
 	}
 }
 
-// IsSuccess returns true if the execution was successful
-func (r *ExecutionResult) IsSuccess() bool {
-	return r.Error == nil
-}
-
-// IsError returns true if the execution resulted in an error
-func (r *ExecutionResult) IsError() bool {
-	return r.Error != nil
-}

@@ -25,7 +25,12 @@ func NewEngineRegistryManager(registry *engine.Registry) *EngineRegistryManager 
 
 // Initialize initializes the registry
 func (m *EngineRegistryManager) Initialize() error {
-	return m.registry.Initialize()
+	// If already initialized, that's OK
+	err := m.registry.Initialize()
+	if err != nil && err.Error() == "registry already initialized" {
+		return nil
+	}
+	return err
 }
 
 // RegisterEngines registers multiple engine factories

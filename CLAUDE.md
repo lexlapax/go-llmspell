@@ -4,8 +4,33 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-🚧 **Active**: Phase 3.2.3 - Core Runner Package  
-✅ **Completed**: Phase 1 (Engine & Bridge), Phase 2 (Lua Engine), Tasks 3.2.1-3.2.2
+🚧 **Phase 3.2: Core CLI Implementation ACTIVE - NEEDS FIXES**
+
+**⚠️ Critical Issues Found (2025-06-21):**
+- Runner package has skipped tests (.skip files)
+- Using SimpleExecutor instead of full executor
+- CLI commands are stubs returning "not implemented"
+- No actual engine integration - scripts don't execute
+
+**Completed Tasks:**
+- ✅ Task 3.2.1: Configuration Foundation [COMPLETED - 2025-06-20]
+- ✅ Task 3.2.2: Error Handling Infrastructure [COMPLETED - 2025-06-21]
+- ✅ Task 3.2.3: Core Runner Package [PARTIALLY COMPLETE - needs fixes]
+- ✅ Task 3.2.4: Security & Validation Integration [COMPLETED - 2025-06-21]
+- ✅ Task 3.2.5: CLI Structure with Kong [STRUCTURE ONLY - needs implementation]
+
+**Current Priority:**
+- 🔴 Task 3.2.5.1: Fix Runner Package Tests
+- 🔴 Task 3.2.5.2: Wire Up Full Executor Implementation
+- Next: Task 3.2.6: REPL Implementation
+
+**Completed Milestones**:
+- ✅ Phase 1: Engine & Bridge Foundation (38+ bridges)
+- ✅ Phase 2: Complete Lua Engine Implementation
+  - Full Lua engine with async/coroutine support
+  - Comprehensive Lua stdlib (18 modules) with complete test coverage
+  - Development Tools: Debugger & Script Validator with 100% coverage
+- ✅ Phase 3.1: Spell Runner Research & Planning
 
 ## Architecture
 

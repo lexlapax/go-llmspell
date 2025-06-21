@@ -1,259 +1,303 @@
-// ABOUTME: Test suite for the llmspell CLI - placeholder for multi-engine implementation
-// ABOUTME: Will test command parsing, spell execution, engine selection, and error handling
+// ABOUTME: Tests for the llmspell CLI main entry point and Kong setup.
+// ABOUTME: Verifies CLI structure, command parsing, and flag handling.
 
 package main
 
 import (
 	"bytes"
-	"io"
 	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/alecthomas/kong"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestMainPlaceholder verifies the placeholder behavior
-func TestMainPlaceholder(t *testing.T) {
-	// Capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+func TestCLI(t *testing.T) {
+	t.Run("parse_run_command", func(t *testing.T) {
+		// Create temp script file
+		tmpDir := t.TempDir()
+		scriptFile := filepath.Join(tmpDir, "test.lua")
+		err := os.WriteFile(scriptFile, []byte("print('test')"), 0644)
+		require.NoError(t, err)
 
-	// Create a channel to signal completion
-	done := make(chan bool)
-	var output string
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
 
-	go func() {
-		buf := new(bytes.Buffer)
-		_, _ = io.Copy(buf, r)
-		output = buf.String()
-		done <- true
-	}()
+		_, err = parser.Parse([]string{"run", scriptFile})
+		require.NoError(t, err)
 
-	// Since main() calls os.Exit(0), we can't call it directly in tests
-	// Instead, we'll test that the placeholder would print the expected output
-	expectedOutputs := []string{
-		"🧙 go-llmspell v0.3.3 - Multi-Engine Spell Caster",
-		"⚠️  This is a placeholder for the multi-engine implementation",
-		"📋 What this CLI will do:",
-		"🔧 Planned Commands:",
-		"🚧 Current Status:",
-		"📚 For more information:",
-	}
+		assert.Equal(t, scriptFile, cli.Run.Script)
+	})
 
-	// Close the writer
-	_ = w.Close()
-	os.Stdout = oldStdout
+	t.Run("parse_validate_command", func(t *testing.T) {
+		// Create temp spell file
+		tmpDir := t.TempDir()
+		spellFile := filepath.Join(tmpDir, "spell.yaml")
+		err := os.WriteFile(spellFile, []byte("name: test"), 0644)
+		require.NoError(t, err)
 
-	// Wait for reading to complete
-	<-done
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
 
-	// For now, just verify we can compile and the test runs
-	// When main() is properly implemented, we'll test the actual output
-	for _, expected := range expectedOutputs {
-		_ = expected // Placeholder assertion
-		_ = output   // Will be used when we test actual output
-	}
+		_, err = parser.Parse([]string{"validate", spellFile})
+		require.NoError(t, err)
+
+		assert.Equal(t, spellFile, cli.Validate.Path)
+	})
+
+	t.Run("parse_global_flags", func(t *testing.T) {
+		// Create temp script file
+		tmpDir := t.TempDir()
+		scriptFile := filepath.Join(tmpDir, "test.lua")
+		err := os.WriteFile(scriptFile, []byte("print('test')"), 0644)
+		require.NoError(t, err)
+
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err = parser.Parse([]string{"--debug", "--config", "custom.yaml", "run", scriptFile})
+		require.NoError(t, err)
+
+		assert.True(t, cli.DebugMode)
+		// Kong converts relative paths to absolute
+		assert.Contains(t, cli.ConfigFile, "custom.yaml")
+	})
+
+	t.Run("parse_engines_command", func(t *testing.T) {
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err := parser.Parse([]string{"engines", "--details"})
+		require.NoError(t, err)
+
+		assert.True(t, cli.Engines.Details)
+	})
+
+	t.Run("parse_version_command", func(t *testing.T) {
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err := parser.Parse([]string{"version"})
+		require.NoError(t, err)
+		// Version command has no specific fields to check
+	})
+
+	t.Run("parse_repl_command", func(t *testing.T) {
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err := parser.Parse([]string{"repl", "--engine", "javascript"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "javascript", cli.REPL.Engine)
+	})
+
+	t.Run("parse_config_command", func(t *testing.T) {
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err := parser.Parse([]string{"config", "show"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "show", cli.Config.Action)
+	})
+
+	t.Run("parse_security_command", func(t *testing.T) {
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err := parser.Parse([]string{"security", "list"})
+		require.NoError(t, err)
+
+		assert.Equal(t, "list", cli.Security.Action)
+	})
+
+	t.Run("parse_debug_command", func(t *testing.T) {
+		// Create temp script file
+		tmpDir := t.TempDir()
+		scriptFile := filepath.Join(tmpDir, "test.lua")
+		err := os.WriteFile(scriptFile, []byte("print('test')"), 0644)
+		require.NoError(t, err)
+
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err = parser.Parse([]string{"debug", scriptFile, "--breakpoints", "10"})
+		require.NoError(t, err)
+
+		assert.Equal(t, scriptFile, cli.Debug.Script)
+		assert.Contains(t, cli.Debug.Breakpoints, 10)
+	})
 }
 
-// Future test functions to be implemented:
+func TestCLIHelp(t *testing.T) {
+	t.Run("help_output", func(t *testing.T) {
+		cli := &CLI{}
 
-// TestRunCommand will test the 'run' command functionality
-func TestRunCommand(t *testing.T) {
-	t.Skip("To be implemented with multi-engine spell execution")
+		var buf bytes.Buffer
+		parser := mustNewParserWithOutput(t, cli, &buf)
 
-	tests := []struct {
-		name        string
-		spellPath   string
-		engineType  string
-		args        []string
-		wantErr     bool
-		errContains string
-	}{
-		{
-			name:       "lua spell execution",
-			spellPath:  "test.lua",
-			engineType: "lua",
-			args:       []string{"param1=value1"},
-			wantErr:    false,
-		},
-		{
-			name:       "javascript spell execution",
-			spellPath:  "test.js",
-			engineType: "javascript",
-			args:       []string{"param1=value1"},
-			wantErr:    false,
-		},
-		{
-			name:       "tengo spell execution",
-			spellPath:  "test.tengo",
-			engineType: "tengo",
-			args:       []string{"param1=value1"},
-			wantErr:    false,
-		},
-		{
-			name:        "unknown engine type",
-			spellPath:   "test.unknown",
-			wantErr:     true,
-			errContains: "unsupported file extension",
-		},
-		{
-			name:        "non-existent file",
-			spellPath:   "non-existent.lua",
-			wantErr:     true,
-			errContains: "file not found",
-		},
-	}
+		_, err := parser.Parse([]string{"--help"})
+		// Help causes an expected error
+		assert.Error(t, err)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// TODO: Implement test when runSpell is implemented
-		})
-	}
+		output := buf.String()
+		assert.Contains(t, output, "Usage:")
+		assert.Contains(t, output, "run")
+		assert.Contains(t, output, "validate")
+		assert.Contains(t, output, "engines")
+	})
+
+	t.Run("command_help", func(t *testing.T) {
+		cli := &CLI{}
+
+		var buf bytes.Buffer
+		parser := mustNewParserWithOutput(t, cli, &buf)
+
+		_, err := parser.Parse([]string{"run", "--help"})
+		assert.Error(t, err) // Help causes expected error
+
+		output := buf.String()
+		assert.Contains(t, output, "run <script>")
+		assert.Contains(t, output, "Execute a spell script")
+	})
 }
 
-// TestValidateCommand will test spell validation
-func TestValidateCommand(t *testing.T) {
-	t.Skip("To be implemented with spell validation")
+func TestGlobalFlags(t *testing.T) {
+	t.Run("verbosity_flags", func(t *testing.T) {
+		// Create temp script file
+		tmpDir := t.TempDir()
+		scriptFile := filepath.Join(tmpDir, "test.lua")
+		err := os.WriteFile(scriptFile, []byte("print('test')"), 0644)
+		require.NoError(t, err)
+
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		// Test quiet
+		_, err = parser.Parse([]string{"--quiet", "run", scriptFile})
+		require.NoError(t, err)
+		assert.True(t, cli.Quiet)
+		assert.False(t, cli.Verbose)
+
+		// Test verbose
+		cli = &CLI{}
+		parser = mustNewParser(t, cli)
+
+		_, err = parser.Parse([]string{"--verbose", "run", scriptFile})
+		require.NoError(t, err)
+		assert.True(t, cli.Verbose)
+		assert.False(t, cli.Quiet)
+	})
+
+	t.Run("profile_flag", func(t *testing.T) {
+		// Create temp script file
+		tmpDir := t.TempDir()
+		scriptFile := filepath.Join(tmpDir, "test.lua")
+		err := os.WriteFile(scriptFile, []byte("print('test')"), 0644)
+		require.NoError(t, err)
+
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err = parser.Parse([]string{"--profile", "development", "run", scriptFile})
+		require.NoError(t, err)
+
+		assert.Equal(t, "development", cli.Profile)
+	})
 }
 
-// TestListCommands will test various list commands
-func TestListCommands(t *testing.T) {
-	t.Skip("To be implemented with registry queries")
+func TestConfigFile(t *testing.T) {
+	t.Run("config_file_location", func(t *testing.T) {
+		// Test default config location
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
 
-	tests := []struct {
-		name     string
-		command  string
-		expected []string
-	}{
-		{
-			name:     "list engines",
-			command:  "list-engines",
-			expected: []string{"lua", "javascript", "tengo"},
-		},
-		{
-			name:     "list providers",
-			command:  "list-providers",
-			expected: []string{"openai", "anthropic", "gemini"},
-		},
-		{
-			name:     "list tools",
-			command:  "list-tools",
-			expected: []string{"file_read", "file_write", "web_fetch"},
-		},
-		{
-			name:     "list agents",
-			command:  "list-agents",
-			expected: []string{"researcher", "coder", "reviewer"},
-		},
-	}
+		expectedDefault := filepath.Join(home, ".config", "llmspell", "config.yaml")
+		assert.Equal(t, expectedDefault, defaultConfigPath())
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// TODO: Implement test when list commands are implemented
-		})
-	}
+		// Test XDG_CONFIG_HOME
+		oldXDG := os.Getenv("XDG_CONFIG_HOME")
+		defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
+
+		os.Setenv("XDG_CONFIG_HOME", "/custom/config")
+		expectedXDG := filepath.Join("/custom/config", "llmspell", "config.yaml")
+		assert.Equal(t, expectedXDG, defaultConfigPath())
+	})
 }
 
-// TestServerMode will test server functionality
-func TestServerMode(t *testing.T) {
-	t.Skip("To be implemented with server mode")
+func TestVersionInfo(t *testing.T) {
+	t.Run("version_vars", func(t *testing.T) {
+		// These are set during build
+		assert.NotEmpty(t, version)
 
-	tests := []struct {
-		name   string
-		config ServerConfig
-		verify func(t *testing.T, addr string)
-	}{
-		{
-			name: "basic server",
-			config: ServerConfig{
-				Port:      8080,
-				EnableTLS: false,
-			},
-			verify: func(t *testing.T, addr string) {
-				// TODO: Test HTTP endpoints
-			},
-		},
-		{
-			name: "TLS server",
-			config: ServerConfig{
-				Port:      8443,
-				EnableTLS: true,
-				CertFile:  "test.crt",
-				KeyFile:   "test.key",
-			},
-			verify: func(t *testing.T, addr string) {
-				// TODO: Test HTTPS endpoints
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// TODO: Implement test when server mode is implemented
-		})
-	}
+		versionInfo := formatVersion()
+		assert.Contains(t, versionInfo, version)
+		if gitCommit != "" && len(gitCommit) >= 7 {
+			assert.Contains(t, versionInfo, gitCommit[:7])
+		}
+		if buildDate != "" {
+			assert.Contains(t, versionInfo, buildDate)
+		}
+	})
 }
 
-// TestEngineSelection will test automatic engine selection based on file extension
-func TestEngineSelection(t *testing.T) {
-	t.Skip("To be implemented with engine registry")
+func TestHelpers(t *testing.T) {
+	t.Run("expand_path", func(t *testing.T) {
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
 
-	tests := []struct {
-		filename       string
-		expectedEngine string
-	}{
-		{"script.lua", "lua"},
-		{"script.js", "javascript"},
-		{"script.javascript", "javascript"},
-		{"script.tengo", "tengo"},
-		{"script.unknown", ""},
-	}
+		// Test tilde expansion
+		expanded := expandPath("~/test")
+		assert.Equal(t, filepath.Join(home, "test"), expanded)
 
-	for _, tt := range tests {
-		t.Run(tt.filename, func(t *testing.T) {
-			// TODO: Test engine selection logic
-		})
-	}
+		// Test absolute path
+		expanded = expandPath("/absolute/path")
+		assert.Equal(t, "/absolute/path", expanded)
+
+		// Test relative path
+		expanded = expandPath("relative/path")
+		assert.Equal(t, "relative/path", expanded)
+	})
+
+	t.Run("file_exists", func(t *testing.T) {
+		// Create temp file
+		tmpDir := t.TempDir()
+		tmpFile := filepath.Join(tmpDir, "test.txt")
+		err := os.WriteFile(tmpFile, []byte("test"), 0644)
+		require.NoError(t, err)
+
+		assert.True(t, fileExists(tmpFile))
+		assert.False(t, fileExists(filepath.Join(tmpDir, "nonexistent.txt")))
+	})
 }
 
-// TestSpellParameters will test parameter parsing and passing
-func TestSpellParameters(t *testing.T) {
-	t.Skip("To be implemented with spell execution")
+// Helper functions for testing
+func mustNewParser(t *testing.T, cli *CLI) *kong.Kong {
+	parser, err := kong.New(cli)
+	require.NoError(t, err)
+	return parser
+}
 
-	tests := []struct {
-		name     string
-		args     []string
-		expected map[string]interface{}
-	}{
-		{
-			name: "simple parameters",
-			args: []string{"key1=value1", "key2=value2"},
-			expected: map[string]interface{}{
-				"key1": "value1",
-				"key2": "value2",
-			},
-		},
-		{
-			name: "typed parameters",
-			args: []string{"str=hello", "num=42", "bool=true"},
-			expected: map[string]interface{}{
-				"str":  "hello",
-				"num":  42,
-				"bool": true,
-			},
-		},
-		{
-			name: "complex values",
-			args: []string{"url=https://example.com?param=value", "json={\"key\":\"value\"}"},
-			expected: map[string]interface{}{
-				"url":  "https://example.com?param=value",
-				"json": map[string]interface{}{"key": "value"},
-			},
-		},
-	}
+func mustNewParserWithOutput(t *testing.T, cli *CLI, w *bytes.Buffer) *kong.Kong {
+	parser, err := kong.New(cli,
+		kong.Writers(w, w),
+		kong.Exit(func(int) {}),
+	)
+	require.NoError(t, err)
+	return parser
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// TODO: Test parameter parsing
-		})
+// Benchmark CLI parsing
+func BenchmarkCLIParsing(b *testing.B) {
+	cli := &CLI{}
+	parser, _ := kong.New(cli)
+	args := []string{"--debug", "--config", "test.yaml", "run", "script.lua", "-p", "key=value"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = parser.Parse(args)
 	}
 }

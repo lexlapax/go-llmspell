@@ -221,70 +221,169 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] Add progress indicators for long-running operations
     - [x] Write comprehensive tests for runner package
   
-  - [ ] **3.2.4: Security & Validation Integration** (`/pkg/security/`) *[Priority 2 - Core functionality]*
-    - [ ] Create `/pkg/security/profiles.go` for security profiles
-    - [ ] Implement sandbox, development, and production profiles
-    - [ ] Create `/pkg/validator/interface.go` wrapper for engine validators
-    - [ ] Integrate existing `/pkg/engine/gopherlua/validator.go`
-    - [ ] Add spell.yaml schema validation
-    - [ ] Add security profile validation to runner
-    - [ ] Write comprehensive tests for security package
+  - [x] **3.2.4: Security & Validation Integration** (`/pkg/security/`) *[Priority 2 - Core functionality]* **[COMPLETED - 2025-06-21]**
+    - [x] Create `/pkg/security/profiles.go` for security profiles
+    - [x] Implement sandbox, development, and production profiles
+    - [x] Create `/pkg/validator/interface.go` wrapper for engine validators
+    - [x] Integrate existing `/pkg/engine/gopherlua/validator.go`
+    - [x] Add spell.yaml schema validation
+    - [x] Add security profile validation to runner
+    - [x] Write comprehensive tests for security package
   
-  - [ ] **3.2.5: CLI Structure with Kong** (`/cmd/llmspell/`) *[Priority 2 - Depends on config, runner, security]*
-    - [ ] Set up Kong dependency (`go get github.com/alecthomas/kong`)
-    - [ ] Create `/cmd/llmspell/main.go` with Kong CLI struct
-    - [ ] Create `/cmd/llmspell/commands/` directory
-    - [ ] Implement `/cmd/llmspell/commands/run.go` (default command)
-    - [ ] Implement `/cmd/llmspell/commands/validate.go` (uses validator)
-    - [ ] Implement `/cmd/llmspell/commands/engines.go` (lists available engines)
-    - [ ] Implement `/cmd/llmspell/commands/version.go` with build info
-    - [ ] Implement `/cmd/llmspell/commands/config.go` (config management)
-    - [ ] Implement `/cmd/llmspell/commands/security.go` (security profiles)
-    - [ ] Add global flags (--debug, --config, --quiet, --verbose, --profile)
-    - [ ] Set up Kong help formatting and error handling
-    - [ ] Add version management and build info integration
+  - [x] **3.2.5: CLI Structure with Kong** (`/cmd/llmspell/`) *[Priority 2 - Depends on config, runner, security]* **[COMPLETED - 2025-06-21]**
+    - [x] Set up Kong dependency (`go get github.com/alecthomas/kong`)
+    - [x] Create `/cmd/llmspell/main.go` with Kong CLI struct
+    - [x] Create `/cmd/llmspell/commands/` directory
+    - [x] Implement `/cmd/llmspell/commands/run.go` (default command)
+    - [x] Implement `/cmd/llmspell/commands/validate.go` (uses validator)
+    - [x] Implement `/cmd/llmspell/commands/engines.go` (lists available engines)
+    - [x] Implement `/cmd/llmspell/commands/version.go` with build info
+    - [x] Implement `/cmd/llmspell/commands/config.go` (config management)
+    - [x] Implement `/cmd/llmspell/commands/security.go` (security profiles)
+    - [x] Add global flags (--debug, --config, --quiet, --verbose, --profile)
+    - [x] Set up Kong help formatting and error handling
+    - [x] Add version management and build info integration
   
-  - [ ] **3.2.6: REPL Implementation** (`/pkg/repl/`) *[Priority 2 - Depends on engine registry and config]*
-    - [ ] Set up readline dependency (`go get github.com/chzyer/readline`)
-    - [ ] Create `/pkg/repl/repl.go` with REPL interface
-    - [ ] Create `/pkg/repl/base_repl.go` with common functionality
-    - [ ] Implement `/pkg/repl/lua_repl.go` with Lua-specific features
-    - [ ] Implement `/pkg/repl/completer.go` for auto-completion
-    - [ ] Add REPL commands (.help, .exit, .clear, .load, .save, .engines)
-    - [ ] Add history persistence (~/.llmspell_history)
-    - [ ] Add syntax highlighting support
-    - [ ] Integrate with config system for REPL settings
-    - [ ] Implement `/cmd/llmspell/commands/repl.go` command
-    - [ ] Write comprehensive tests for REPL functionality
+  ## **3.2 FIX IMPLEMENTATION PHASES** *[Updated 2025-06-21]*
+  
+  ### Current State Assessment:
+  - ✅ `/pkg/config/` - Complete with tests
+  - ✅ `/pkg/errors/` - Complete with tests  
+  - ⚠️  `/pkg/runner/` - Using SimpleExecutor, tests skipped
+  - ✅ `/pkg/security/` - Complete with tests
+  - ✅ `/pkg/validator/` - Complete with tests
+  - ⚠️  `/cmd/llmspell/` - Commands are stubs
+  - ❌ `/pkg/repl/` - Not created
+  - ❌ `/pkg/template/` - Not created
+  - ❌ LuaEngineFactory - Missing, blocks engine registration
+  
+  ### Critical Issues to Fix:
+  - Runner has 3 skipped test files (.skip)
+  - Using SimpleExecutor instead of ScriptExecutor
+  - No engine factory for LuaEngine
+  - Commands don't execute scripts
+  - No engine registry integration
+  
+  - [x] **Phase 1: Fix Runner Package Tests** *[Priority 0 - Immediate]* **[COMPLETED - 2025-06-21]**
+    - [x] Task 3.2.5.1.1: Enable skipped test files
+      - [x] Rename `engine_registry_test.go.skip` → `engine_registry_test.go`
+      - [x] Rename `engine_selector_test.go.skip` → `engine_selector_test.go`
+      - [x] Rename `executor_test.go.skip` → `executor_test.go`
+    - [x] Task 3.2.5.1.2: Fix test compilation issues
+      - [x] Update test files to work with current interfaces
+      - [x] Mock engine.Registry properly
+      - [x] Fix any API mismatches
+    - [x] Task 3.2.5.1.3: Clean up backup files
+      - [x] Remove `pkg/runner/executor_simple.go.bak`
+      - [x] Remove `cmd/llmspell/commands/simple.go.bak`
+    - [x] Task 3.2.5.1.4: Ensure all tests pass
+      - [x] Run `go test -v ./pkg/runner/...`
+      - [x] Fix any failing tests
+    - [x] Task 3.2.5.1.5: Consolidate test files
+      - [x] Merge `runner_impl_test.go` into `runner_test.go`
+      - [x] Ensure one test file per Go file pattern
+      - [x] Remove duplicate test functions
+  
+  - [ ] **Phase 2: Wire Up Full Executor** *[Priority 1 - Foundation]*
+    - [ ] Task 3.2.5.2.1: Create LuaEngineFactory
+      - [ ] Create `/pkg/engine/gopherlua/engine_factory.go`
+      - [ ] Implement EngineFactory interface
+      - [ ] Implement all required methods (Name, Version, Create, etc.)
+      - [ ] Create tests in `engine_factory_test.go`
+    - [ ] Task 3.2.5.2.2: Fix main.go engine registration
+      - [ ] Create registry with DefaultRegistryConfig()
+      - [ ] Register LuaEngineFactory (not LuaEngine instance)
+      - [ ] Initialize registry properly
+      - [ ] Bind registry to Kong context
+    - [ ] Task 3.2.5.2.3: Update runner to use real executor
+      - [ ] Switch from SimpleExecutor to ScriptExecutor
+      - [ ] Wire up EngineRegistryManager
+      - [ ] Update executor creation in commands
+    - [ ] Task 3.2.5.2.4: Create basic integration test
+      - [ ] Test script execution through CLI
+      - [ ] Verify engine registration works
+  
+  - [ ] **Phase 3: Complete Command Implementations** *[Priority 2 - Core Features]*
+    - [ ] Task 3.2.5.3.1: Implement Run Command
+      - [ ] Get engine registry from context
+      - [ ] Execute scripts with real engines
+      - [ ] Handle parameters and timeouts
+      - [ ] Show progress indicators
+      - [ ] Test with actual Lua scripts
+    - [ ] Task 3.2.5.3.2: Implement Validate Command
+      - [ ] Validate spell.yaml files
+      - [ ] Check script syntax via engine
+      - [ ] Validate security constraints
+    - [ ] Task 3.2.5.3.3: Implement Engines Command
+      - [ ] List registered engines from registry
+      - [ ] Show engine capabilities
+      - [ ] Display version info
+    - [ ] Task 3.2.5.3.4: Implement Config Command
+      - [ ] Read/write config files with Koanf
+      - [ ] Support get/set operations
+      - [ ] Handle layered configuration
+    - [ ] Task 3.2.5.3.5: Implement Security Command
+      - [ ] Show actual security profiles
+      - [ ] Display permissions
+      - [ ] Validate profile configurations
+  
+  - [ ] **Phase 4: Implement REPL** *[Priority 3 - Interactive Mode]*
+    - [ ] Task 3.2.6.1: Create REPL package structure
+      - [ ] Set up readline dependency (`go get github.com/chzyer/readline`)
+      - [ ] Create `/pkg/repl/repl.go` with REPL interface
+      - [ ] Create `/pkg/repl/base_repl.go` with common functionality
+      - [ ] Create `/pkg/repl/lua_repl.go` with Lua-specific features
+      - [ ] Write tests for each component
+    - [ ] Task 3.2.6.2: Implement REPL features
+      - [ ] Add REPL commands (.help, .exit, .clear, .load, .save, .engines)
+      - [ ] Implement `/pkg/repl/completer.go` for auto-completion
+      - [ ] Add history persistence (~/.llmspell_history)
+      - [ ] Add syntax highlighting support
+      - [ ] Integrate with config system for REPL settings
+    - [ ] Task 3.2.6.3: Create REPL command
+      - [ ] Implement `/cmd/llmspell/commands/repl.go`
+      - [ ] Wire up to engine registry
+      - [ ] Test interactive execution
  
-   - [ ] **3.2.7: Debug Command Implementation** (`/cmd/llmspell/commands/debug.go`) *[Priority 3 - Advanced execution]*
-    - [ ] Create debug command infrastructure
-    - [ ] Add breakpoint support integration for `/pkg/engine/gopherlua/debug.go` 
-    - [ ] Add step-by-step execution mode
-    - [ ] Add variable inspection and state dumping
-    - [ ] Add execution tracing and call stacks
-    - [ ] Add performance profiling integration
-    - [ ] Write comprehensive tests for debug command
+  - [ ] **Phase 5: Implement Debug Command** *[Priority 3 - Advanced Features]*
+    - [ ] Task 3.2.7.1: Create debug command infrastructure
+      - [ ] Create `/cmd/llmspell/commands/debug.go`
+      - [ ] Integrate with existing `/pkg/engine/gopherlua/debug.go`
+    - [ ] Task 3.2.7.2: Implement debugging features
+      - [ ] Add breakpoint support
+      - [ ] Add step-by-step execution mode
+      - [ ] Add variable inspection and state dumping
+      - [ ] Add execution tracing and call stacks
+      - [ ] Add performance profiling integration
+    - [ ] Task 3.2.7.3: Test debug functionality
+      - [ ] Write comprehensive tests
+      - [ ] Create debug examples
   
-   - [ ] **3.2.8: Template & Utilities** (`/pkg/template/`) *[Priority 3 - Convenience features]*
-    - [ ] Create `/pkg/template/generator.go` for spell template generation
-    - [ ] Add new spell scaffolding (`llmspell new <name>`)
-    - [ ] Add spell validation templates
-    - [ ] Add example spell templates (basic, advanced, agent-based)
-    - [ ] Integrate template generation with CLI
-    - [ ] Write tests for template generation
+  - [ ] **Phase 6: Template Package** *[Priority 4 - Developer Experience]*
+    - [ ] Task 3.2.8.1: Create template package
+      - [ ] Create `/pkg/template/generator.go`
+      - [ ] Implement spell scaffolding
+      - [ ] Add example templates (basic, advanced, agent-based)
+    - [ ] Task 3.2.8.2: Integrate with CLI
+      - [ ] Add `llmspell new <name>` command
+      - [ ] Add spell validation templates
+      - [ ] Write tests for template generation
   
-  - [ ] **3.2.9: Testing & Integration** (`/tests/integration/`) *[Priority 4 - Tests everything]*
-    - [ ] Create integration test suite
-    - [ ] Add example spells for testing (basic, complex, error cases)
-    - [ ] Test all commands with various inputs
-    - [ ] Test configuration layering (defaults → file → env → flags)
-    - [ ] Test REPL functionality across engines
-    - [ ] Test security profile enforcement
-    - [ ] Test error handling and recovery
-    - [ ] Add benchmarks for performance
-    - [ ] Test signal handling and graceful shutdown
-    - [ ] Ensure cross-platform compatibility (Linux, macOS, Windows)
+  - [ ] **Phase 7: Integration Tests** *[Priority 4 - Quality Assurance]*
+    - [ ] Task 3.2.9.1: Create test infrastructure
+      - [ ] Create `/test/integration/` directory
+      - [ ] Set up test framework
+      - [ ] Create example spells for testing
+    - [ ] Task 3.2.9.2: Implement comprehensive tests
+      - [ ] Test all commands with various inputs
+      - [ ] Test configuration layering
+      - [ ] Test REPL functionality
+      - [ ] Test security profile enforcement
+      - [ ] Test error handling and recovery
+    - [ ] Task 3.2.9.3: Performance and compatibility
+      - [ ] Add benchmarks for performance
+      - [ ] Test signal handling and graceful shutdown
+      - [ ] Ensure cross-platform compatibility
 
 - [ ] **Task 3.3: Documentation**
   - [ ] Create `/docs/cli-usage.md` with command reference
