@@ -13,3 +13,4 @@ package commands
 // - security.go: SecurityCmd for managing security profiles
 // - repl.go: REPLCmd for interactive REPL
 // - debug.go: DebugCmd for debugging scripts
+// - new.go: NewCmd for creating new spells from templates

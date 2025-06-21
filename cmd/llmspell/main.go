@@ -44,6 +44,7 @@ type CLI struct {
 	Security commands.SecurityCmd `cmd:"" help:"Manage security profiles"`
 	REPL     commands.REPLCmd     `cmd:"" help:"Start interactive REPL"`
 	Debug    commands.DebugCmd    `cmd:"" help:"Debug a spell script"`
+	New      commands.NewCmd      `cmd:"" help:"Create a new spell from a template"`
 }
 
 // osExit allows testing of exit behavior
