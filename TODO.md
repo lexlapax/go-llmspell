@@ -199,14 +199,15 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] Add Watch() support for config reloading
     - [x] Write comprehensive tests for config package
   
-  - [ ] **3.2.2: Error Handling Infrastructure** (`/pkg/errors/`) *[Priority 1 - Required by all components]*
-    - [ ] Create `/pkg/errors/errors.go` with standard error types
-    - [ ] Define CLI exit codes and error categories
-    - [ ] Implement user-friendly error formatting
-    - [ ] Add error context and suggestion system
-    - [ ] Create debug mode error reporting
-    - [ ] Add error metrics and tracking
-    - [ ] Write comprehensive tests for error handling
+  - [x] **3.2.2: Error Handling Infrastructure** (`/pkg/errors/`) *[Priority 1 - Required by all components]* **[COMPLETED - 2025-06-21]**
+    - [x] Create `/pkg/errors/errors.go` with standard error types
+    - [x] Define CLI exit codes and error categories
+    - [x] Implement user-friendly error formatting (`formatter.go`)
+    - [x] Add error context and suggestion system
+    - [x] Create debug mode error reporting
+    - [x] Add error metrics and tracking (`metrics.go`)
+    - [x] Write comprehensive tests for error handling
+    - [x] Add integration with configuration system (`integration.go`)
   
   - [ ] **3.2.3: Core Runner Package** (`/pkg/runner/`) *[Priority 1 - Foundation for execution]*
     - [ ] Create `/pkg/runner/runner.go` with Runner interface
@@ -273,7 +274,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Integrate template generation with CLI
     - [ ] Write tests for template generation
   
-  - [ ] **3.2.9: Testing & Integration** (`/test/integration/`) *[Priority 4 - Tests everything]*
+  - [ ] **3.2.9: Testing & Integration** (`/tests/integration/`) *[Priority 4 - Tests everything]*
     - [ ] Create integration test suite
     - [ ] Add example spells for testing (basic, complex, error cases)
     - [ ] Test all commands with various inputs
