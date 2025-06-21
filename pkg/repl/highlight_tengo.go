@@ -5,8 +5,6 @@ package repl
 
 // highlightTengo applies Tengo-specific syntax highlighting
 func (h *SyntaxHighlighter) highlightTengo(input string) string {
-	result := input
-
 	// Tengo keywords
 	tengoKeywords := []string{
 		"break", "continue", "else", "for", "func", "if", "return",
@@ -22,15 +20,6 @@ func (h *SyntaxHighlighter) highlightTengo(input string) string {
 		"type_name", "format", "range", "printf", "sprintf", "print",
 	}
 
-	// Apply highlighting patterns in order: strings and comments first
-	result = h.highlightStrings(result)
-	result = h.highlightComments(result, "//")
-	result = h.highlightKeywordsCarefully(result, tengoKeywords, ColorKeyword)
-	result = h.highlightKeywordsCarefully(result, tengoBuiltins, ColorBuiltin)
-	result = h.highlightNumbersCarefully(result)
-	// Skip operators and brackets for now to avoid conflicts
-	// result = h.highlightOperatorsCarefully(result)
-	// result = h.highlightBracketsCarefully(result)
-
-	return result
+	// Use tokenization approach for proper highlighting
+	return highlightWithTokens(input, tengoKeywords, tengoBuiltins, "//")
 }

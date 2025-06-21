@@ -5,8 +5,6 @@ package repl
 
 // highlightJavaScript applies JavaScript-specific syntax highlighting
 func (h *SyntaxHighlighter) highlightJavaScript(input string) string {
-	result := input
-
 	// JavaScript keywords
 	jsKeywords := []string{
 		"break", "case", "catch", "class", "const", "continue", "debugger",
@@ -25,15 +23,6 @@ func (h *SyntaxHighlighter) highlightJavaScript(input string) string {
 		"setTimeout", "setInterval", "clearTimeout", "clearInterval",
 	}
 
-	// Apply highlighting patterns in order: strings and comments first
-	result = h.highlightStrings(result)
-	result = h.highlightComments(result, "//")
-	result = h.highlightKeywordsCarefully(result, jsKeywords, ColorKeyword)
-	result = h.highlightKeywordsCarefully(result, jsBuiltins, ColorBuiltin)
-	result = h.highlightNumbersCarefully(result)
-	// Skip operators and brackets for now to avoid conflicts
-	// result = h.highlightOperatorsCarefully(result)
-	// result = h.highlightBracketsCarefully(result)
-
-	return result
+	// Use tokenization approach for proper highlighting
+	return highlightWithTokens(input, jsKeywords, jsBuiltins, "//")
 }

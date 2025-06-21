@@ -1,5 +1,5 @@
 // ABOUTME: Tests for base syntax highlighting infrastructure including color constants and utility methods.
-// ABOUTME: Covers string highlighting, comment detection, and ANSI sequence handling.
+// ABOUTME: Covers tokenization-based highlighting and ANSI color stripping.
 
 package repl
 
@@ -26,113 +26,6 @@ func TestSyntaxHighlighter_Highlight_UnknownEngine(t *testing.T) {
 	input := "function test() print('hello') end"
 	result := highlighter.Highlight(input)
 	assert.Equal(t, input, result) // Should return unchanged
-}
-
-func TestSyntaxHighlighter_HighlightStrings_EdgeCases(t *testing.T) {
-	highlighter := NewSyntaxHighlighter("lua")
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "escaped quotes in double quotes",
-			input:    `"hello \"world\""`,
-			expected: ColorString + `"hello \"world\""` + ColorReset,
-		},
-		{
-			name:     "escaped quotes in single quotes",
-			input:    `'hello \'world\''`,
-			expected: ColorString + `'hello \'world\''` + ColorReset,
-		},
-		{
-			name:     "mixed quotes",
-			input:    `"double" and 'single'`,
-			expected: ColorString + `"double"` + ColorReset + ` and ` + ColorString + `'single'` + ColorReset,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := highlighter.highlightStrings(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestSyntaxHighlighter_HighlightComments_InsideStrings(t *testing.T) {
-	highlighter := NewSyntaxHighlighter("lua")
-
-	// Comments inside strings should not be highlighted
-	input := `print("This -- is not a comment")`
-	result := highlighter.highlightComments(input, "--")
-
-	// Should not contain comment highlighting
-	assert.NotContains(t, result, ColorComment)
-	assert.Equal(t, input, result) // Should be unchanged
-}
-
-func TestSyntaxHighlighter_IsInsideString(t *testing.T) {
-	highlighter := NewSyntaxHighlighter("lua")
-
-	tests := []struct {
-		text     string
-		expected bool
-	}{
-		{`"unclosed string`, true},
-		{`'unclosed string`, true},
-		{`"closed string"`, false},
-		{`'closed string'`, false},
-		{`"string with \" escape"`, false},
-		{`'string with \' escape'`, false},
-		{`"first" "second`, true},
-		{`"first" 'second`, true},
-		{``, false},
-		{`no quotes`, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.text, func(t *testing.T) {
-			result := highlighter.isInsideString(tt.text)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestSyntaxHighlighter_HighlightNumbers_EdgeCases(t *testing.T) {
-	highlighter := NewSyntaxHighlighter("lua")
-
-	tests := []struct {
-		name     string
-		input    string
-		contains []string
-	}{
-		{
-			name:     "integers",
-			input:    "x = 123",
-			contains: []string{ColorNumber + "123" + ColorReset},
-		},
-		{
-			name:     "floats",
-			input:    "y = 45.67",
-			contains: []string{ColorNumber + "45.67" + ColorReset},
-		},
-		{
-			name:     "numbers in identifiers should not be highlighted",
-			input:    "var123 = test456",
-			contains: []string{}, // Should not highlight parts of identifiers
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := highlighter.highlightNumbers(tt.input)
-			for _, expected := range tt.contains {
-				assert.Contains(t, result, expected)
-			}
-		})
-	}
 }
 
 func TestStripColors(t *testing.T) {
@@ -167,6 +60,136 @@ func TestStripColors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := StripColors(tt.input)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestTokenization(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		keywords      []string
+		builtins      []string
+		commentPrefix string
+		expectedTypes []string
+	}{
+		{
+			name:          "basic tokenization",
+			input:         `print("hello")`,
+			keywords:      []string{},
+			builtins:      []string{"print"},
+			commentPrefix: "--",
+			expectedTypes: []string{TokenTypeBuiltin, TokenTypeDefault, TokenTypeString, TokenTypeDefault},
+		},
+		{
+			name:          "keywords and numbers",
+			input:         "if x > 42.5 then",
+			keywords:      []string{"if", "then"},
+			builtins:      []string{},
+			commentPrefix: "--",
+			expectedTypes: []string{TokenTypeKeyword, TokenTypeDefault, TokenTypeDefault, TokenTypeDefault, TokenTypeDefault, TokenTypeDefault, TokenTypeNumber, TokenTypeDefault, TokenTypeKeyword},
+		},
+		{
+			name:          "comments",
+			input:         "x = 1 -- comment",
+			keywords:      []string{},
+			builtins:      []string{},
+			commentPrefix: "--",
+			expectedTypes: []string{TokenTypeDefault, TokenTypeDefault, TokenTypeDefault, TokenTypeDefault, TokenTypeNumber, TokenTypeDefault, TokenTypeComment},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tokens := Tokenize(tt.input, tt.keywords, tt.builtins, tt.commentPrefix)
+			var actualTypes []string
+			for _, token := range tokens {
+				actualTypes = append(actualTypes, token.Type)
+			}
+			assert.Equal(t, tt.expectedTypes, actualTypes)
+		})
+	}
+}
+
+func TestHighlightWithTokens(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		keywords []string
+		builtins []string
+		contains []string
+	}{
+		{
+			name:     "highlight keywords",
+			input:    "if true then",
+			keywords: []string{"if", "true", "then"},
+			builtins: []string{},
+			contains: []string{
+				ColorKeyword + "if" + ColorReset,
+				ColorKeyword + "true" + ColorReset,
+				ColorKeyword + "then" + ColorReset,
+			},
+		},
+		{
+			name:     "highlight strings",
+			input:    `print("hello world")`,
+			keywords: []string{},
+			builtins: []string{"print"},
+			contains: []string{
+				ColorBuiltin + "print" + ColorReset,
+				ColorString + `"hello world"` + ColorReset,
+			},
+		},
+		{
+			name:     "highlight numbers",
+			input:    "x = 42.5",
+			keywords: []string{},
+			builtins: []string{},
+			contains: []string{
+				ColorNumber + "42.5" + ColorReset,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := highlightWithTokens(tt.input, tt.keywords, tt.builtins, "--")
+			for _, expected := range tt.contains {
+				assert.Contains(t, result, expected)
+			}
+		})
+	}
+}
+
+func TestHighlightWithCategories(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		keywords   []string
+		categories []BuiltinCategory
+		contains   []string
+	}{
+		{
+			name:     "different builtin categories",
+			input:    "table.insert(arr, print(x))",
+			keywords: []string{},
+			categories: []BuiltinCategory{
+				{Words: []string{"print"}, Color: ColorBuiltin},
+				{Words: []string{"table"}, Color: ColorFunction},
+			},
+			contains: []string{
+				ColorFunction + "table" + ColorReset,
+				ColorBuiltin + "print" + ColorReset,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := highlightWithCategories(tt.input, tt.keywords, tt.categories, "--")
+			for _, expected := range tt.contains {
+				assert.Contains(t, result, expected)
+			}
 		})
 	}
 }

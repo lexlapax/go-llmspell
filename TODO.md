@@ -357,7 +357,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [x] Add basic history persistence and management
       - [x] Fix history to use specific `~/.llmspell_history` path
       - [x] Add multi-line input detection for Lua
-      - [ ] **MISSING**: Add syntax highlighting support (only config option exists)
+      - [x] **MISSING**: Add syntax highlighting support (only config option exists) **[COMPLETED - 2025-06-21]**
       - [ ] **MISSING**: Complete config system integration for REPL settings
     - [x] Task 3.2.6.3: Create REPL command **[COMPLETED - 2025-06-21]**
       - [x] **CRITICAL**: Actually implement `/cmd/llmspell/commands/repl.go` (full 74-line implementation!)

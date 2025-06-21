@@ -11,7 +11,7 @@ GOLINT=golangci-lint
 
 # Lua parameters
 LUACHECK=luacheck
-STYLUA=$(HOME)/.cargo/bin/stylua
+STYLUA=`which stylua`
 LUA_FILES=pkg/engine/gopherlua/stdlib/*.lua examples/**/*.lua
 
 # Binary names

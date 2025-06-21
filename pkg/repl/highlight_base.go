@@ -49,159 +49,360 @@ func (h *SyntaxHighlighter) Highlight(input string) string {
 	}
 }
 
-// highlightStrings highlights string literals (both single and double quotes)
-func (h *SyntaxHighlighter) highlightStrings(input string) string {
-	// Double-quoted strings
-	doubleQuoteRe := regexp.MustCompile(`"([^"\\]|\\.)*"`)
-	result := doubleQuoteRe.ReplaceAllStringFunc(input, func(match string) string {
-		return ColorString + match + ColorReset
-	})
-
-	// Single-quoted strings
-	singleQuoteRe := regexp.MustCompile(`'([^'\\]|\\.)*'`)
-	result = singleQuoteRe.ReplaceAllStringFunc(result, func(match string) string {
-		return ColorString + match + ColorReset
-	})
-
-	return result
+// Token represents a piece of text with its type
+type Token struct {
+	Type  string
+	Value string
+	Start int
+	End   int
 }
 
-// highlightComments highlights comments with the specified comment prefix
-func (h *SyntaxHighlighter) highlightComments(input string, commentPrefix string) string {
-	lines := strings.Split(input, "\n")
-	var result []string
+const (
+	TokenTypeString  = "string"
+	TokenTypeComment = "comment"
+	TokenTypeKeyword = "keyword"
+	TokenTypeBuiltin = "builtin"
+	TokenTypeNumber  = "number"
+	TokenTypeDefault = "default"
+)
 
-	for _, line := range lines {
-		if idx := strings.Index(line, commentPrefix); idx != -1 {
-			// Check if comment is inside a string
-			beforeComment := line[:idx]
-			if h.isInsideString(beforeComment) {
-				result = append(result, line)
-				continue
+// BuiltinCategory represents different categories of built-in identifiers
+type BuiltinCategory struct {
+	Words []string
+	Color string
+}
+
+// Tokenize breaks the input into tokens (exported for testing)
+func Tokenize(input string, keywords []string, builtins []string, commentPrefix string) []Token {
+	tokens := []Token{}
+	runes := []rune(input)
+	i := 0
+
+	for i < len(runes) {
+		// Check for strings
+		if i < len(runes) && (runes[i] == '"' || runes[i] == '\'') {
+			quote := runes[i]
+			start := i
+			i++
+			for i < len(runes) && (runes[i] != quote || (i > 0 && runes[i-1] == '\\')) {
+				if runes[i] == '\\' && i+1 < len(runes) {
+					i++ // Skip escaped character
+				}
+				i++
 			}
-
-			// Highlight the comment part
-			highlighted := line[:idx] + ColorComment + line[idx:] + ColorReset
-			result = append(result, highlighted)
-		} else {
-			result = append(result, line)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-// highlightNumbers highlights numeric literals
-func (h *SyntaxHighlighter) highlightNumbers(input string) string {
-	// Match integers and floating point numbers
-	numberRe := regexp.MustCompile(`\b\d+(\.\d+)?\b`)
-	return numberRe.ReplaceAllStringFunc(input, func(match string) string {
-		return ColorNumber + match + ColorReset
-	})
-}
-
-// isInsideString checks if a position in the text is inside a string literal
-func (h *SyntaxHighlighter) isInsideString(text string) bool {
-	inSingleQuote := false
-	inDoubleQuote := false
-	escaped := false
-
-	for _, char := range text {
-		if escaped {
-			escaped = false
+			if i < len(runes) {
+				i++ // Include closing quote
+			}
+			tokens = append(tokens, Token{
+				Type:  TokenTypeString,
+				Value: string(runes[start:i]),
+				Start: start,
+				End:   i,
+			})
 			continue
 		}
 
-		switch char {
-		case '\\':
-			escaped = true
-		case '\'':
-			if !inDoubleQuote {
-				inSingleQuote = !inSingleQuote
-			}
-		case '"':
-			if !inSingleQuote {
-				inDoubleQuote = !inDoubleQuote
+		// Check for comments
+		if commentPrefix != "" && i+len(commentPrefix) <= len(runes) {
+			if string(runes[i:i+len(commentPrefix)]) == commentPrefix {
+				start := i
+				for i < len(runes) && runes[i] != '\n' {
+					i++
+				}
+				tokens = append(tokens, Token{
+					Type:  TokenTypeComment,
+					Value: string(runes[start:i]),
+					Start: start,
+					End:   i,
+				})
+				continue
 			}
 		}
-	}
 
-	return inSingleQuote || inDoubleQuote
-}
-
-// highlightKeywordsCarefully highlights keywords while avoiding ANSI escape sequences
-func (h *SyntaxHighlighter) highlightKeywordsCarefully(input string, keywords []string, color string) string {
-	result := input
-	for _, keyword := range keywords {
-		// Use word boundaries and negative lookbehind/ahead to avoid ANSI sequences
-		pattern := `\b` + regexp.QuoteMeta(keyword) + `\b`
-		re := regexp.MustCompile(pattern)
-
-		// Find all matches and check each one
-		matches := re.FindAllStringIndex(result, -1)
-		for i := len(matches) - 1; i >= 0; i-- { // Process in reverse to maintain positions
-			start, end := matches[i][0], matches[i][1]
-			match := result[start:end]
-
-			// Check if this match is inside an ANSI escape sequence (already highlighted content)
-			if h.isInsideANSISequence(result, start) {
-				continue // Don't highlight if inside ANSI sequence
+		// Check for numbers first (before word boundaries)
+		if runes[i] >= '0' && runes[i] <= '9' {
+			start := i
+			// Match integer part
+			for i < len(runes) && runes[i] >= '0' && runes[i] <= '9' {
+				i++
 			}
-
-			// Replace this specific match
-			highlighted := color + match + ColorReset
-			result = result[:start] + highlighted + result[end:]
+			// Check for decimal part
+			if i < len(runes) && runes[i] == '.' && i+1 < len(runes) && runes[i+1] >= '0' && runes[i+1] <= '9' {
+				i++ // consume dot
+				for i < len(runes) && runes[i] >= '0' && runes[i] <= '9' {
+					i++
+				}
+			}
+			tokens = append(tokens, Token{
+				Type:  TokenTypeNumber,
+				Value: string(runes[start:i]),
+				Start: start,
+				End:   i,
+			})
+			continue
 		}
-	}
-	return result
-}
 
-// highlightNumbersCarefully highlights numbers while avoiding ANSI escape sequences
-func (h *SyntaxHighlighter) highlightNumbersCarefully(input string) string {
-	numberRe := regexp.MustCompile(`\b\d+(\.\d+)?\b`)
-	return numberRe.ReplaceAllStringFunc(input, func(match string) string {
-		matchPos := strings.Index(input, match)
-		if h.isInsideANSISequence(input, matchPos) {
-			return match
-		}
-		return ColorNumber + match + ColorReset
-	})
-}
+		// Check for word boundaries
+		if isWordChar(runes[i]) {
+			start := i
+			for i < len(runes) && isWordChar(runes[i]) {
+				i++
+			}
+			word := string(runes[start:i])
 
-// isInsideANSISequence checks if a position is inside an ANSI-highlighted content
-func (h *SyntaxHighlighter) isInsideANSISequence(text string, pos int) bool {
-	// Look backwards from pos to find the most recent color start
-	colorStart := -1
-	colorEnd := -1
-
-	// Find the most recent color sequence before our position
-	for i := range pos {
-		if i+1 < len(text) && text[i] == '\033' && text[i+1] == '[' {
-			// Found ANSI escape start
-			for j := i + 2; j < len(text); j++ {
-				if text[j] == 'm' {
-					if colorStart == -1 || i > colorStart {
-						colorStart = i
-						// Look for the corresponding reset sequence
-						for k := j + 1; k < len(text); k++ {
-							if k+3 < len(text) && text[k:k+4] == "\033[0m" {
-								colorEnd = k + 4
-								break
-							}
-						}
-					}
+			// Check if it's a keyword or builtin
+			tokenType := TokenTypeDefault
+			for _, kw := range keywords {
+				if word == kw {
+					tokenType = TokenTypeKeyword
 					break
 				}
 			}
+			if tokenType == TokenTypeDefault {
+				for _, bi := range builtins {
+					if word == bi {
+						tokenType = TokenTypeBuiltin
+						break
+					}
+				}
+			}
+
+			// Check if it's a number
+			if tokenType == TokenTypeDefault && isNumber(word) {
+				tokenType = TokenTypeNumber
+			}
+
+			tokens = append(tokens, Token{
+				Type:  tokenType,
+				Value: word,
+				Start: start,
+				End:   i,
+			})
+			continue
+		}
+
+		// Default: single character token
+		tokens = append(tokens, Token{
+			Type:  TokenTypeDefault,
+			Value: string(runes[i]),
+			Start: i,
+			End:   i + 1,
+		})
+		i++
+	}
+
+	return tokens
+}
+
+func isWordChar(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_'
+}
+
+func isNumber(s string) bool {
+	matched, _ := regexp.MatchString(`^\d+(\.\d+)?$`, s)
+	return matched
+}
+
+// highlightWithTokens applies highlighting using tokenization
+func highlightWithTokens(input string, keywords []string, builtins []string, commentPrefix string) string {
+	tokens := Tokenize(input, keywords, builtins, commentPrefix)
+
+	var result strings.Builder
+	for _, token := range tokens {
+		switch token.Type {
+		case TokenTypeString:
+			result.WriteString(ColorString + token.Value + ColorReset)
+		case TokenTypeComment:
+			result.WriteString(ColorComment + token.Value + ColorReset)
+		case TokenTypeKeyword:
+			result.WriteString(ColorKeyword + token.Value + ColorReset)
+		case TokenTypeBuiltin:
+			result.WriteString(ColorBuiltin + token.Value + ColorReset)
+		case TokenTypeNumber:
+			result.WriteString(ColorNumber + token.Value + ColorReset)
+		default:
+			result.WriteString(token.Value)
 		}
 	}
 
-	// Check if our position is between a color start and color end
-	if colorStart != -1 && colorEnd != -1 {
-		return pos > colorStart && pos < colorEnd
+	return result.String()
+}
+
+// ExtendedToken includes metadata for additional information
+type ExtendedToken struct {
+	Token
+	Metadata interface{}
+}
+
+// tokenizeWithCategories breaks the input into tokens with category support
+func tokenizeWithCategories(input string, keywords []string, builtinCategories []BuiltinCategory, commentPrefix string) []ExtendedToken {
+	tokens := []ExtendedToken{}
+	runes := []rune(input)
+	i := 0
+
+	for i < len(runes) {
+		// Check for strings
+		if i < len(runes) && (runes[i] == '"' || runes[i] == '\'') {
+			quote := runes[i]
+			start := i
+			i++
+			for i < len(runes) && (runes[i] != quote || (i > 0 && runes[i-1] == '\\')) {
+				if runes[i] == '\\' && i+1 < len(runes) {
+					i++ // Skip escaped character
+				}
+				i++
+			}
+			if i < len(runes) {
+				i++ // Include closing quote
+			}
+			tokens = append(tokens, ExtendedToken{
+				Token: Token{
+					Type:  TokenTypeString,
+					Value: string(runes[start:i]),
+					Start: start,
+					End:   i,
+				},
+			})
+			continue
+		}
+
+		// Check for comments
+		if commentPrefix != "" && i+len(commentPrefix) <= len(runes) {
+			if string(runes[i:i+len(commentPrefix)]) == commentPrefix {
+				start := i
+				for i < len(runes) && runes[i] != '\n' {
+					i++
+				}
+				tokens = append(tokens, ExtendedToken{
+					Token: Token{
+						Type:  TokenTypeComment,
+						Value: string(runes[start:i]),
+						Start: start,
+						End:   i,
+					},
+				})
+				continue
+			}
+		}
+
+		// Check for numbers first (before word boundaries)
+		if runes[i] >= '0' && runes[i] <= '9' {
+			start := i
+			// Match integer part
+			for i < len(runes) && runes[i] >= '0' && runes[i] <= '9' {
+				i++
+			}
+			// Check for decimal part
+			if i < len(runes) && runes[i] == '.' && i+1 < len(runes) && runes[i+1] >= '0' && runes[i+1] <= '9' {
+				i++ // consume dot
+				for i < len(runes) && runes[i] >= '0' && runes[i] <= '9' {
+					i++
+				}
+			}
+			tokens = append(tokens, ExtendedToken{
+				Token: Token{
+					Type:  TokenTypeNumber,
+					Value: string(runes[start:i]),
+					Start: start,
+					End:   i,
+				},
+			})
+			continue
+		}
+
+		// Check for word boundaries
+		if isWordChar(runes[i]) {
+			start := i
+			for i < len(runes) && isWordChar(runes[i]) {
+				i++
+			}
+			word := string(runes[start:i])
+
+			// Check if it's a keyword
+			tokenType := TokenTypeDefault
+			var metadata interface{}
+
+			for _, kw := range keywords {
+				if word == kw {
+					tokenType = TokenTypeKeyword
+					break
+				}
+			}
+
+			// Check builtin categories
+			if tokenType == TokenTypeDefault {
+				for _, category := range builtinCategories {
+					for _, bi := range category.Words {
+						if word == bi {
+							tokenType = "builtin"
+							metadata = category.Color
+							break
+						}
+					}
+					if tokenType == "builtin" {
+						break
+					}
+				}
+			}
+
+			// Check if it's a number
+			if tokenType == TokenTypeDefault && isNumber(word) {
+				tokenType = TokenTypeNumber
+			}
+
+			tokens = append(tokens, ExtendedToken{
+				Token: Token{
+					Type:  tokenType,
+					Value: word,
+					Start: start,
+					End:   i,
+				},
+				Metadata: metadata,
+			})
+			continue
+		}
+
+		// Default: single character token
+		tokens = append(tokens, ExtendedToken{
+			Token: Token{
+				Type:  TokenTypeDefault,
+				Value: string(runes[i]),
+				Start: i,
+				End:   i + 1,
+			},
+		})
+		i++
 	}
 
-	return false
+	return tokens
+}
+
+// highlightWithCategories applies highlighting using tokenization with different builtin categories
+func highlightWithCategories(input string, keywords []string, builtinCategories []BuiltinCategory, commentPrefix string) string {
+	tokens := tokenizeWithCategories(input, keywords, builtinCategories, commentPrefix)
+
+	var result strings.Builder
+	for _, token := range tokens {
+		switch token.Type {
+		case TokenTypeString:
+			result.WriteString(ColorString + token.Value + ColorReset)
+		case TokenTypeComment:
+			result.WriteString(ColorComment + token.Value + ColorReset)
+		case TokenTypeKeyword:
+			result.WriteString(ColorKeyword + token.Value + ColorReset)
+		case TokenTypeNumber:
+			result.WriteString(ColorNumber + token.Value + ColorReset)
+		default:
+			// Check if it's a categorized builtin
+			if color, ok := token.Metadata.(string); ok && token.Type == "builtin" {
+				result.WriteString(color + token.Value + ColorReset)
+			} else {
+				result.WriteString(token.Value)
+			}
+		}
+	}
+
+	return result.String()
 }
 
 // StripColors removes ANSI color codes from text
