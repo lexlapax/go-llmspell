@@ -366,19 +366,19 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [x] Use central `pkg/errors` package for consistency
       - [x] Fix all linting issues (errcheck, staticcheck)
  
-  - [ ] **Phase 5: Implement Debug Command** *[Priority 3 - Advanced Features]*
-    - [ ] Task 3.2.7.1: Create debug command infrastructure
-      - [ ] Create `/cmd/llmspell/commands/debug.go`
-      - [ ] Integrate with existing `/pkg/engine/gopherlua/debug.go`
-    - [ ] Task 3.2.7.2: Implement debugging features
-      - [ ] Add breakpoint support
-      - [ ] Add step-by-step execution mode
-      - [ ] Add variable inspection and state dumping
-      - [ ] Add execution tracing and call stacks
-      - [ ] Add performance profiling integration
-    - [ ] Task 3.2.7.3: Test debug functionality
-      - [ ] Write comprehensive tests
-      - [ ] Create debug examples
+  - [x] **Phase 5: Implement Debug Command** *[Priority 3 - Advanced Features]* **[COMPLETED - 2025-06-21]**
+    - [x] Task 3.2.7.1: Create debug command infrastructure **[COMPLETED - 2025-06-21]**
+      - [x] Create `/cmd/llmspell/commands/debug.go`
+      - [x] Integrate with existing `/pkg/engine/gopherlua/debug.go`
+    - [x] Task 3.2.7.2: Implement debugging features **[COMPLETED - 2025-06-21]**
+      - [x] Add breakpoint support
+      - [x] Add step-by-step execution mode
+      - [x] Add variable inspection and state dumping
+      - [x] Add execution tracing and call stacks
+      - [x] Add performance profiling integration
+    - [x] Task 3.2.7.3: Test debug functionality **[COMPLETED - 2025-06-21]**
+      - [x] Write comprehensive tests
+      - [x] Create debug examples
   
   - [ ] **Phase 6: Template Package** *[Priority 4 - Developer Experience]*
     - [ ] Task 3.2.8.1: Create template package
