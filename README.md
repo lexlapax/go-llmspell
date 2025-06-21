@@ -38,52 +38,34 @@ log.info("Story created!")
 
 ## 🏗️ Project Status (June 2025)
 
-- ✅ **Phase 1** - Engine and Bridge Foundation [COMPLETED]
+- ✅ **Phase 1** - Engine and Bridge Foundation [COMPLETED - 2025-06-17]
   - 38+ bridges across 13 categories
   - Pure bridge architecture with zero business logic duplication
   - Complete ScriptValue type system for cross-engine compatibility
-- 🚧 **Phase 2** - Lua Engine Implementation [IN PROGRESS]
-  - ✅ Core engine components with GopherLua integration [2025-06-18]
-  - ✅ Async/coroutine support with promises and channels [2025-06-19]
-  - ✅ ScriptValue type system fully integrated [2025-06-19]
-    - Complete type safety across all bridges
-    - Migration guide and comprehensive documentation
-    - Performance benchmarks showing minimal overhead
-  - ✅ Bridge adapters (all 24 tasks completed - comprehensive namespace flattening)
-  - ✅ Async/Coroutine foundation (all 4 tasks completed)
-  - 🚧 Lua standard library (starting implementation)
-- 🔲 **Phase 3** - JavaScript Engine (planned)
-- 🔲 **Phase 4** - Tengo Engine (planned)
-- ✅ **Phase 1.4** - v0.3.5 Feature Integration complete
-  - Foundation updates with event system and documentation generation
-  - State bridge enhancements with schema validation and persistence
-  - Utility bridge upgrades (v2.0) with structured output parsing
-  - LLM bridge advanced features (schema validation, metadata, streaming)
-  - Schema bridge full implementation with versioning and validation
-  - Agent bridge v2.0 with state serialization and performance profiling
-  - Event bridge v2.0 with complete event system capabilities
-  - Tools bridge v2.1 with enhanced execution analytics
-  - Workflow bridge v2.0 with serialization and script steps
-  - Engine Integration with event bus, type registry, profiling, and API export
-- ✅ **Phase 1.5** - Additional Original Bridges complete [2025-06-16]
-  - Observability bridges: Tracing, Guardrails, Metrics
-  - Provider bridges: Provider System, Provider Pool  
-  - Tools Registry bridge: Discovery, filtering, MCP export
-  - Complete go-llms v0.3.5 bridge ecosystem achieved
-- ✅ **Phase 2.1** - Lua Engine Research and Design complete [2025-06-17]
-  - Comprehensive research of GopherLua integration patterns
-  - Complete architecture design documented
-  - Implementation blueprint ready for Phase 2.2
-- ✅ **Phase 2.2** - Core Engine Components complete [2025-06-18]
-  - LState Pool with adaptive scaling and health monitoring
-  - Type Converter with full Go ↔ Lua conversion support
-  - Security Sandbox with multi-level library restrictions
-  - LuaEngine implementation with ScriptEngine interface
-  - Bridge registration system with lifecycle management
-  - Execution pipeline with chunk caching
-  - 100+ comprehensive tests with full coverage
-- 🚧 **Phase 2.3** - Bridge Integration Layer in progress
-- 🔮 **Coming Soon** - JavaScript and Tengo engines
+
+- ✅ **Phase 2** - Lua Engine Implementation [COMPLETED - 2025-06-20]
+  - ✅ Complete Lua engine with GopherLua integration
+  - ✅ Async/coroutine support with promises and channels
+  - ✅ Comprehensive Lua standard library (18 modules)
+  - ✅ Bridge integration layer with namespace flattening
+  - ✅ Development tools: Debugger & Script Validator (100% coverage)
+  - ✅ Performance optimization and profiling infrastructure
+
+- ✅ **Phase 3** - Spell Runner CLI [COMPLETED - 2025-06-21]
+  - ✅ Complete command-line interface with 11 commands
+  - ✅ Interactive REPL with syntax highlighting and history
+  - ✅ Template system for spell generation (5 template types)
+  - ✅ Three-tier security profiles (sandbox, development, production)
+  - ✅ Comprehensive documentation suite and shell completion
+  - ✅ Integration tests and cross-platform compatibility
+
+- 🔄 **Phase 4** - JavaScript Engine Implementation [READY TO START]
+  - Research goja integration and ES6+ support design
+  - Implement complete JavaScript engine with async/await
+  - Create JavaScript standard library bridging go-llms
+
+- 🔲 **Phase 5** - Tengo Engine Implementation [PLANNED]
+- 🔲 **Phase 6** - Integration and Examples [PLANNED]
 
 ## 🛠️ Quick Start
 
@@ -114,6 +96,65 @@ cp .env.example .env
 # Provider comparison
 ./bin/llmspell run examples/provider-compare --param prompt="Explain AI"
 ```
+
+## 🎯 CLI Usage
+
+The `llmspell` CLI provides comprehensive spell execution and management capabilities:
+
+### Common Commands
+```bash
+# Execute spells
+llmspell run script.lua --param input=data.txt
+llmspell run agent.js --engine javascript --timeout 5m
+
+# Interactive development
+llmspell repl                    # Start Lua REPL
+llmspell repl --engine lua       # Explicit engine selection
+
+# Create new spells
+llmspell new my-agent --type agent --author "Gold Space"
+llmspell new workflow-spell --type workflow
+llmspell new --list              # Show available templates
+
+# Validation and debugging
+llmspell validate script.lua --security --profile sandbox
+llmspell debug complex-spell.lua # Interactive debugger
+
+# Configuration management
+llmspell config view             # Show current config
+llmspell config set engine.default javascript
+llmspell config init             # Create default config
+```
+
+### Advanced Features
+```bash
+# Security profiles
+llmspell run spell.lua --profile sandbox    # Restricted execution
+llmspell security list                      # View all profiles
+llmspell security compare sandbox production
+
+# Engine management
+llmspell engines list            # Show available engines
+llmspell engines info lua        # Engine capabilities
+llmspell engines detect script.unknown
+
+# Development tools
+llmspell run dev.lua --watch --verbose      # Auto-reload on changes
+llmspell run script.lua --dry-run          # Preview execution
+```
+
+### Shell Integration
+```bash
+# Enable tab completion
+source <(llmspell completion bash)
+llmspell completion zsh > ~/.zsh/completions/_llmspell
+
+# Generate documentation
+llmspell man > llmspell.1        # Generate man page
+llmspell man --all --install     # Install all man pages
+```
+
+For complete CLI documentation, see: [CLI Usage Guide](docs/cli-usage.md)
 
 ## 🏛️ Architecture
 

@@ -13,7 +13,6 @@ import (
 type VersionCmd struct {
 	BaseCommand
 	Short       bool   `short:"s" help:"Show short version only"`
-	Verbose     bool   `short:"v" help:"Show verbose version information"`
 	BuildInfo   bool   `help:"Show build information"`
 	Format      string `enum:"text,json" default:"text" help:"Output format"`
 	Deps        bool   `help:"Show dependencies"`
@@ -40,7 +39,7 @@ func (c *VersionCmd) Run(ctx context.Context) error {
 
 	c.Printf("llmspell version %s\n", Version)
 
-	if c.Verbose || c.BuildInfo {
+	if IsVerbose(ctx) || c.BuildInfo {
 		c.Println("")
 		c.Println("version:", Version)
 		c.Println("go version:", runtime.Version())

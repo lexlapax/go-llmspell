@@ -12,8 +12,8 @@ import (
 // SecurityCmd manages security profiles
 type SecurityCmd struct {
 	BaseCommand
-	Action  string `arg:"" help:"Action to perform (list, show, validate)" enum:"list,show,validate" default:"list"`
-	Profile string `arg:"" optional:"" help:"Profile name (for show/validate)"`
+	Action  string `arg:"" help:"Action to perform: list (show all profiles), show (display profile details), validate (check profile validity)" enum:"list,show,validate" default:"list"`
+	Profile string `arg:"" optional:"" help:"Security profile name (sandbox, development, production)"`
 }
 
 // Run executes the command

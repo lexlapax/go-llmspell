@@ -13,9 +13,9 @@ import (
 // ConfigCmd manages configuration
 type ConfigCmd struct {
 	BaseCommand
-	Action string `arg:"" help:"Action to perform (show, get, set, path)" enum:"show,get,set,path" default:"show"`
-	Key    string `arg:"" optional:"" help:"Configuration key (for get/set)"`
-	Value  string `arg:"" optional:"" help:"Value to set (for set)"`
+	Action string `arg:"" help:"Action to perform: show (display all), get (retrieve value), set (update value), path (show config file location)" enum:"show,get,set,path" default:"show"`
+	Key    string `arg:"" optional:"" help:"Configuration key (e.g., engine.default, repl.prompt)"`
+	Value  string `arg:"" optional:"" help:"Value to set (required for 'set' action)"`
 }
 
 // Run executes the command

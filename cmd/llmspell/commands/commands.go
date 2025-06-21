@@ -14,3 +14,4 @@ package commands
 // - repl.go: REPLCmd for interactive REPL
 // - debug.go: DebugCmd for debugging scripts
 // - new.go: NewCmd for creating new spells from templates
+// - completion.go: CompletionCmd for generating shell completions

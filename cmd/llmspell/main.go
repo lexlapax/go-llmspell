@@ -36,15 +36,17 @@ type CLI struct {
 	Profile    string `help:"Security profile to use" default:"sandbox" enum:"sandbox,development,production"`
 
 	// Commands
-	Run      commands.RunCmd      `cmd:"" help:"Execute a spell script"`
-	Validate commands.ValidateCmd `cmd:"" help:"Validate a spell or script"`
-	Engines  commands.EnginesCmd  `cmd:"" help:"List available script engines"`
-	Version  commands.VersionCmd  `cmd:"" help:"Show version information"`
-	Config   commands.ConfigCmd   `cmd:"" help:"Manage configuration"`
-	Security commands.SecurityCmd `cmd:"" help:"Manage security profiles"`
-	REPL     commands.REPLCmd     `cmd:"" help:"Start interactive REPL"`
-	Debug    commands.DebugCmd    `cmd:"" help:"Debug a spell script"`
-	New      commands.NewCmd      `cmd:"" help:"Create a new spell from a template"`
+	Run        commands.RunCmd        `cmd:"" help:"Execute a spell script"`
+	Validate   commands.ValidateCmd   `cmd:"" help:"Validate a spell or script"`
+	Engines    commands.EnginesCmd    `cmd:"" help:"List available script engines"`
+	Version    commands.VersionCmd    `cmd:"" help:"Show version information"`
+	Config     commands.ConfigCmd     `cmd:"" help:"Manage configuration"`
+	Security   commands.SecurityCmd   `cmd:"" help:"Manage security profiles"`
+	REPL       commands.REPLCmd       `cmd:"" help:"Start interactive REPL"`
+	Debug      commands.DebugCmd      `cmd:"" help:"Debug a spell script"`
+	New        commands.NewCmd        `cmd:"" help:"Create a new spell from a template"`
+	Completion commands.CompletionCmd `cmd:"" help:"Generate shell completion script"`
+	Man        commands.ManCmd        `cmd:"" help:"Generate man pages"`
 }
 
 // osExit allows testing of exit behavior
@@ -66,7 +68,14 @@ func main() {
 	cli := &CLI{}
 	parser, err := kong.New(cli,
 		kong.Name("llmspell"),
-		kong.Description("Scriptable LLM interactions via Lua, JavaScript, and Tengo"),
+		kong.Description("Scriptable LLM interactions via Lua, JavaScript, and Tengo\n\n"+
+			"Examples:\n"+
+			"  llmspell run hello.lua                    # Run a spell script\n"+
+			"  llmspell repl                             # Start interactive REPL\n"+
+			"  llmspell new myspell --type agent         # Create new spell from template\n"+
+			"  llmspell validate script.lua              # Validate script syntax\n"+
+			"  llmspell completion bash                  # Generate shell completions\n\n"+
+			"For more help on a command, use: llmspell <command> --help"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
