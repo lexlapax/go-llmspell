@@ -1,5 +1,5 @@
-// ABOUTME: LLMSpell-specific man page generation.
-// ABOUTME: Creates man pages for the llmspell command and its subcommands.
+// ABOUTME: LLMSpell-specific man page definitions and generators.
+// ABOUTME: Provides man page content for the main llmspell command and all subcommands.
 
 package docs
 

@@ -47,6 +47,7 @@ type CLI struct {
 	New        commands.NewCmd        `cmd:"" help:"Create a new spell from a template"`
 	Completion commands.CompletionCmd `cmd:"" help:"Generate shell completion script"`
 	Man        commands.ManCmd        `cmd:"" help:"Generate man pages"`
+	GenDocs    commands.GenDocsCmd    `cmd:"" help:"Generate Lua API documentation"`
 }
 
 // osExit allows testing of exit behavior

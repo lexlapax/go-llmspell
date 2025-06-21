@@ -118,12 +118,21 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Add performance warnings (complexity, nesting depth)
   - [x] Add comprehensive test coverage (100% coverage achieved)
 
-- [ ] **Task 2.4.3.3: Documentation Generator** (`/pkg/docs/gopherlua.go`)
-  - [ ] Extract API from bridges
-  - [ ] Generate Lua documentation
-  - [ ] Create example extraction
-  - [ ] Add type annotations
-  - [ ] Generate completion data
+- [x] **Task 2.4.3.3: Documentation Generator** **[COMPLETED - 2025-06-21]**
+  - [x] Extract API from bridges
+  - [x] Generate Lua documentation
+  - [x] Create example extraction
+  - [x] Add type annotations
+  - [x] Generate completion data
+  - [x] Reorganized architecture for multi-language support
+    - [x] Created `/pkg/docs/gendocs.go` with DocGenerator interface
+    - [x] Renamed `gopherlua.go` to `gendocs_lua.go` for consistency
+    - [x] Created command wrapper `/cmd/llmspell/commands/gendocs.go`
+    - [x] Added working `gen-docs` CLI command
+  - [x] Created comprehensive test suite with 100% coverage
+    - [x] Created `/pkg/docs/gendocs_test.go` with full test coverage
+    - [x] Fixed all lint errors
+  - [x] Renamed `llmspell.go` to `manpage_llmspell.go` for consistency
 
 #### 2.4.4: Production Readiness
 - [ ] **Task 2.4.4.1: Comprehensive Testing**
@@ -159,7 +168,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] scan all code for godoc documentation 
   - [ ] add godoc documentation in each code file
 
-- [ ] **Task 2.4.5.2: User Guide** (`/docs/user-guide/lua/`)
+- [ ] **Task 2.4.5.2: User Guide** (`/docs/user-guide/`)
   - [ ] Getting started with Lua spells
   - [ ] Complete API reference
   - [ ] Common patterns and idioms
