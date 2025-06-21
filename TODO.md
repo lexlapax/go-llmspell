@@ -209,17 +209,17 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] Write comprehensive tests for error handling
     - [x] Add integration with configuration system (`integration.go`)
   
-  - [ ] **3.2.3: Core Runner Package** (`/pkg/runner/`) *[Priority 1 - Foundation for execution]*
-    - [ ] Create `/pkg/runner/runner.go` with Runner interface
-    - [ ] Create `/pkg/runner/spell_loader.go` to parse spell.yaml files
-    - [ ] **CRITICAL**: Add `/pkg/runner/engine_registry.go` for engine registry integration
-    - [ ] Create `/pkg/runner/engine_selector.go` for engine detection
-    - [ ] Create `/pkg/runner/executor.go` for script execution
-    - [ ] Add parameter passing mechanism to scripts
-    - [ ] Add signal handling (Ctrl+C, graceful shutdown)
-    - [ ] Integrate with config system for runner settings
-    - [ ] Add progress indicators for long-running operations
-    - [ ] Write comprehensive tests for runner package
+  - [x] **3.2.3: Core Runner Package** (`/pkg/runner/`) *[Priority 1 - Foundation for execution]* **[COMPLETED - 2025-06-21]**
+    - [x] Create `/pkg/runner/runner.go` with Runner interface
+    - [x] Create `/pkg/runner/spell_loader.go` to parse spell.yaml files
+    - [x] **CRITICAL**: Add `/pkg/runner/engine_registry.go` for engine registry integration
+    - [x] Create `/pkg/runner/engine_selector.go` for engine detection
+    - [x] Create `/pkg/runner/executor.go` for script execution (simplified version)
+    - [x] Add parameter passing mechanism to scripts
+    - [x] Add signal handling (Ctrl+C, graceful shutdown) in executor
+    - [x] Integrate with config system for runner settings
+    - [x] Add progress indicators for long-running operations
+    - [x] Write comprehensive tests for runner package
   
   - [ ] **3.2.4: Security & Validation Integration** (`/pkg/security/`) *[Priority 2 - Core functionality]*
     - [ ] Create `/pkg/security/profiles.go` for security profiles

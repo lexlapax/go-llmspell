@@ -4,28 +4,8 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 
 ## Current Status
 
-🚧 **Phase 3.2: Core CLI Implementation ACTIVE**
-- ✅ Task 3.2.1: Configuration Foundation [COMPLETED - 2025-06-20]
-  - Koanf v2 integration with layered config (defaults → file → env → flags)
-  - Thread-safe implementation with mutex protection
-  - Fixed all race conditions in tests
-  - Comprehensive test coverage, lint-clean
-- ✅ Task 3.2.2: Error Handling Infrastructure [COMPLETED - 2025-06-21]
-  - Standard error types with categories and exit codes
-  - User-friendly error formatting with color support
-  - Error context and suggestion system
-  - Debug mode error reporting with stack traces
-  - Error metrics and tracking for monitoring
-  - Integration with configuration system
-- Next: Task 3.2.3: Core Runner Package
-
-**Completed Milestones**:
-- ✅ Phase 1: Engine & Bridge Foundation (38+ bridges)
-- ✅ Phase 2: Complete Lua Engine Implementation
-  - Full Lua engine with async/coroutine support
-  - Comprehensive Lua stdlib (18 modules) with complete test coverage
-  - Development Tools: Debugger & Script Validator with 100% coverage
-- ✅ Phase 3.1: Spell Runner Research & Planning
+🚧 **Active**: Phase 3.2.3 - Core Runner Package  
+✅ **Completed**: Phase 1 (Engine & Bridge), Phase 2 (Lua Engine), Tasks 3.2.1-3.2.2
 
 ## Architecture
 
@@ -47,7 +27,7 @@ go-llmspell: **Scriptable LLM interactions** via Lua, JavaScript, and Tengo. Bri
 3. **Bridge-first** - Wrap go-llms, never reimplement  
 4. **Research go-llms** - Check git submodule first
 5. **Run `make all`** - Complete dev cycle
-6. **Update TODO.md** - Mark tasks with timestamps
+6. **Use and Update TODO.md** - Mark done tasks with timestamps, use to track project progression
 
 ## Commands
 
@@ -59,16 +39,7 @@ make lint  # Check code quality
 
 ## Phase 3 Focus: Spell Runner CLI
 
-**Priority Order** (from TODO.md):
-1. **3.2.1**: Configuration Foundation (`/pkg/config/`) - Koanf v2, YAML, env vars
-2. **3.2.2**: Error Handling Infrastructure (`/pkg/errors/`) - CLI exit codes, formatting
-3. **3.2.3**: Core Runner Package (`/pkg/runner/`) - Engine registry, spell loading
-4. **3.2.4**: Security & Validation Integration (`/pkg/security/`) - Profiles, validation
-5. **3.2.5**: CLI Structure with Kong (`/cmd/llmspell/`) - Commands, flags, help
-6. **3.2.6**: Debug Command Implementation - Integrate existing debugger
-7. **3.2.7**: REPL Implementation (`/pkg/repl/`) - Interactive shell
-8. **3.2.8**: Template & Utilities (`/pkg/template/`) - Spell scaffolding
-9. **3.2.9**: Testing & Integration (`/test/integration/`) - End-to-end tests
+See TODO.md for detailed task list (3.2.1 through 3.2.9)
 
 ## Key Reminders
 
