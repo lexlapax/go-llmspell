@@ -187,17 +187,17 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 - [ ] **Task 3.2: Core Implementation** *(Reordered by dependencies)*
   
-  - [ ] **3.2.1: Configuration Foundation** (`/pkg/config/`) *[Priority 1 - Required by all components]*
-    - [ ] Set up Koanf v2 dependencies (`go get github.com/knadh/koanf/v2`)
-    - [ ] Create `/pkg/config/config.go` with Config struct
-    - [ ] Create `/pkg/config/loader.go` for loading configs
-    - [ ] Implement default configuration values
-    - [ ] Add config file support (~/.llmspell/config.yaml)
-    - [ ] Add environment variable support (LLMSPELL_*)
-    - [ ] Add command-line flag integration with Kong
-    - [ ] Implement config validation and schema
-    - [ ] Add Watch() support for config reloading
-    - [ ] Write comprehensive tests for config package
+  - [x] **3.2.1: Configuration Foundation** (`/pkg/config/`) *[Priority 1 - Required by all components]* **[COMPLETED - 2025-06-20]**
+    - [x] Set up Koanf v2 dependencies (`go get github.com/knadh/koanf/v2`)
+    - [x] Create `/pkg/config/config.go` with Config struct
+    - [x] Create `/pkg/config/loader.go` for loading configs
+    - [x] Implement default configuration values
+    - [x] Add config file support (~/.llmspell/config.yaml)
+    - [x] Add environment variable support (LLMSPELL_*)
+    - [x] Add command-line flag integration with Kong
+    - [x] Implement config validation and schema
+    - [x] Add Watch() support for config reloading
+    - [x] Write comprehensive tests for config package
   
   - [ ] **3.2.2: Error Handling Infrastructure** (`/pkg/errors/`) *[Priority 1 - Required by all components]*
     - [ ] Create `/pkg/errors/errors.go` with standard error types
@@ -243,16 +243,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Set up Kong help formatting and error handling
     - [ ] Add version management and build info integration
   
-  - [ ] **3.2.6: Debug Command Implementation** (`/cmd/llmspell/commands/debug.go`) *[Priority 2 - Advanced execution]*
-    - [ ] Create debug command infrastructure
-    - [ ] Add breakpoint support integration `/pkg/engine/gopherlua/debug.go` 
-    - [ ] Add step-by-step execution mode
-    - [ ] Add variable inspection and state dumping
-    - [ ] Add execution tracing and call stacks
-    - [ ] Add performance profiling integration
-    - [ ] Write comprehensive tests for debug command
-  
-  - [ ] **3.2.7: REPL Implementation** (`/pkg/repl/`) *[Priority 3 - Depends on engine registry and config]*
+  - [ ] **3.2.6: REPL Implementation** (`/pkg/repl/`) *[Priority 2 - Depends on engine registry and config]*
     - [ ] Set up readline dependency (`go get github.com/chzyer/readline`)
     - [ ] Create `/pkg/repl/repl.go` with REPL interface
     - [ ] Create `/pkg/repl/base_repl.go` with common functionality
@@ -264,8 +255,17 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Integrate with config system for REPL settings
     - [ ] Implement `/cmd/llmspell/commands/repl.go` command
     - [ ] Write comprehensive tests for REPL functionality
+ 
+   - [ ] **3.2.7: Debug Command Implementation** (`/cmd/llmspell/commands/debug.go`) *[Priority 3 - Advanced execution]*
+    - [ ] Create debug command infrastructure
+    - [ ] Add breakpoint support integration for `/pkg/engine/gopherlua/debug.go` 
+    - [ ] Add step-by-step execution mode
+    - [ ] Add variable inspection and state dumping
+    - [ ] Add execution tracing and call stacks
+    - [ ] Add performance profiling integration
+    - [ ] Write comprehensive tests for debug command
   
-  - [ ] **3.2.8: Template & Utilities** (`/pkg/template/`) *[Priority 3 - Convenience features]*
+   - [ ] **3.2.8: Template & Utilities** (`/pkg/template/`) *[Priority 3 - Convenience features]*
     - [ ] Create `/pkg/template/generator.go` for spell template generation
     - [ ] Add new spell scaffolding (`llmspell new <name>`)
     - [ ] Add spell validation templates
