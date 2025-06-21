@@ -4,6 +4,7 @@ go 1.24.3
 
 require (
 	github.com/alecthomas/kong v1.11.0
+	github.com/chzyer/readline v1.5.1
 	github.com/google/uuid v1.6.0
 	github.com/knadh/koanf/parsers/yaml v1.0.0
 	github.com/knadh/koanf/providers/env v1.1.0
@@ -19,7 +20,6 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
-	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

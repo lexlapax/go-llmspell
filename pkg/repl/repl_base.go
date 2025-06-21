@@ -19,11 +19,12 @@ import (
 
 // BaseREPL provides common REPL functionality that can be extended by engine-specific implementations
 type BaseREPL struct {
-	config   REPLConfig
-	history  []string
-	readline *readline.Instance
-	mu       sync.RWMutex
-	closed   bool
+	config      REPLConfig
+	history     []string
+	readline    *readline.Instance
+	highlighter *SyntaxHighlighter
+	mu          sync.RWMutex
+	closed      bool
 }
 
 // NewBaseREPL creates a new base REPL instance
@@ -44,8 +45,9 @@ func NewBaseREPL(config REPLConfig) (*BaseREPL, error) {
 	}
 
 	repl := &BaseREPL{
-		config:  config,
-		history: make([]string, 0, config.HistorySize),
+		config:      config,
+		history:     make([]string, 0, config.HistorySize),
+		highlighter: NewSyntaxHighlighter(config.Engine),
 	}
 
 	// Load history if file specified
@@ -118,6 +120,15 @@ func (r *BaseREPL) Start(ctx context.Context) error {
 			input = r.readMultilineInput(input)
 		}
 
+		// Show highlighted input if syntax highlighting is enabled
+		if r.config.SyntaxHighlight && input != "" {
+			highlighted := r.highlightInput(input)
+			if highlighted != input {
+				// Show the highlighted version on a new line
+				_, _ = fmt.Fprintf(r.config.Output, "\033[1A\033[K%s%s\n", r.config.Prompt, highlighted)
+			}
+		}
+
 		// Add to history
 		r.AddHistory(input)
 
@@ -157,6 +168,14 @@ func (r *BaseREPL) Evaluate(ctx context.Context, input string) (string, error) {
 func (r *BaseREPL) Complete(input string) []string {
 	completer := NewCompleter(r)
 	return completer.GetCompletions(input)
+}
+
+// highlightInput applies syntax highlighting to input if enabled
+func (r *BaseREPL) highlightInput(input string) string {
+	if !r.config.SyntaxHighlight || r.highlighter == nil {
+		return input
+	}
+	return r.highlighter.Highlight(input)
 }
 
 // AddHistory adds a line to the command history
