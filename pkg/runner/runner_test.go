@@ -386,7 +386,6 @@ func TestRunnerLifecycle(t *testing.T) {
 	})
 }
 
-
 // Benchmark tests
 func BenchmarkRunnerExecution(b *testing.B) {
 	runner := &testRunner{
@@ -412,4 +411,3 @@ func BenchmarkMetricsCalculation(b *testing.B) {
 		_ = metrics.SuccessRate()
 	}
 }
-

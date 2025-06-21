@@ -7,17 +7,16 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"strings"
 	"syscall"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/lexlapax/go-llmspell/cmd/llmspell/commands"
 	"github.com/lexlapax/go-llmspell/pkg/config"
-	"github.com/lexlapax/go-llmspell/pkg/errors"
-	"github.com/lexlapax/go-llmspell/pkg/runner"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/errors"
+	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
 
 // Version information set during build
@@ -95,27 +94,38 @@ func main() {
 		cfg.Debug = true
 	}
 
-	// Create base engine registry
-	registry := engine.NewRegistry()
-	
-	// Register Lua engine
-	luaEngine := gopherlua.NewLuaEngine()
-	if err := registry.RegisterEngine("lua", luaEngine); err != nil {
-		parser.Fatalf("failed to register Lua engine: %v", err)
-		osExit(1)
-		return
+	// Create engine registry with default configuration
+	registryConfig := engine.RegistryConfig{
+		MaxEngines:        10,
+		DefaultTimeout:    30 * time.Second,
+		HealthCheckPeriod: 60 * time.Second,
+		PoolingEnabled:    true,
+		MaxPoolSize:       5,
+		IdleTimeout:       10 * time.Minute,
+		MetricsEnabled:    true,
+		LoggingEnabled:    cli.Verbose,
+		TracingEnabled:    cli.DebugMode,
 	}
-	
-	// Initialize registry
+	registry := engine.NewRegistry(registryConfig)
+
+	// Initialize registry first
 	if err := registry.Initialize(); err != nil {
 		parser.Fatalf("failed to initialize engine registry: %v", err)
 		osExit(1)
 		return
 	}
-	
+
+	// Register Lua engine factory
+	luaFactory := gopherlua.NewLuaEngineFactory()
+	if err := registry.Register(luaFactory); err != nil {
+		parser.Fatalf("failed to register Lua engine: %v", err)
+		osExit(1)
+		return
+	}
+
 	// Create engine registry manager for runner
 	engineRegistry := runner.NewEngineRegistryManager(registry)
-	
+
 	// TODO: Register JavaScript and Tengo engines when implemented
 
 	// Create command context
@@ -139,30 +149,6 @@ func loadConfig(configPath string) *config.Config {
 	return &config.Config{
 		Debug: false,
 	}
-}
-
-// defaultConfigPath returns the default config file path
-func defaultConfigPath() string {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "llmspell", "config.yaml")
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "llmspell", "config.yaml")
-}
-
-// expandPath expands ~ to home directory
-func expandPath(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		home, _ := os.UserHomeDir()
-		return filepath.Join(home, path[2:])
-	}
-	return path
-}
-
-// fileExists checks if a file exists
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 // formatVersion formats version information

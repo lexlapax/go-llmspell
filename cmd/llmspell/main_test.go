@@ -209,25 +209,6 @@ func TestGlobalFlags(t *testing.T) {
 	})
 }
 
-func TestConfigFile(t *testing.T) {
-	t.Run("config_file_location", func(t *testing.T) {
-		// Test default config location
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
-
-		expectedDefault := filepath.Join(home, ".config", "llmspell", "config.yaml")
-		assert.Equal(t, expectedDefault, defaultConfigPath())
-
-		// Test XDG_CONFIG_HOME
-		oldXDG := os.Getenv("XDG_CONFIG_HOME")
-		defer os.Setenv("XDG_CONFIG_HOME", oldXDG)
-
-		os.Setenv("XDG_CONFIG_HOME", "/custom/config")
-		expectedXDG := filepath.Join("/custom/config", "llmspell", "config.yaml")
-		assert.Equal(t, expectedXDG, defaultConfigPath())
-	})
-}
-
 func TestVersionInfo(t *testing.T) {
 	t.Run("version_vars", func(t *testing.T) {
 		// These are set during build
@@ -241,36 +222,6 @@ func TestVersionInfo(t *testing.T) {
 		if buildDate != "" {
 			assert.Contains(t, versionInfo, buildDate)
 		}
-	})
-}
-
-func TestHelpers(t *testing.T) {
-	t.Run("expand_path", func(t *testing.T) {
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
-
-		// Test tilde expansion
-		expanded := expandPath("~/test")
-		assert.Equal(t, filepath.Join(home, "test"), expanded)
-
-		// Test absolute path
-		expanded = expandPath("/absolute/path")
-		assert.Equal(t, "/absolute/path", expanded)
-
-		// Test relative path
-		expanded = expandPath("relative/path")
-		assert.Equal(t, "relative/path", expanded)
-	})
-
-	t.Run("file_exists", func(t *testing.T) {
-		// Create temp file
-		tmpDir := t.TempDir()
-		tmpFile := filepath.Join(tmpDir, "test.txt")
-		err := os.WriteFile(tmpFile, []byte("test"), 0644)
-		require.NoError(t, err)
-
-		assert.True(t, fileExists(tmpFile))
-		assert.False(t, fileExists(filepath.Join(tmpDir, "nonexistent.txt")))
 	})
 }
 

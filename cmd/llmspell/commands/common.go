@@ -16,10 +16,10 @@ import (
 type contextKey string
 
 const (
-	ConfigKey  contextKey = "config"
-	DebugKey   contextKey = "debug"
-	VerboseKey contextKey = "verbose"
-	ProfileKey contextKey = "profile"
+	ConfigKey         contextKey = "config"
+	DebugKey          contextKey = "debug"
+	VerboseKey        contextKey = "verbose"
+	ProfileKey        contextKey = "profile"
 	EngineRegistryKey contextKey = "engineRegistry"
 )
 
@@ -77,7 +77,7 @@ func (b *BaseCommand) Printf(format string, args ...interface{}) {
 	if out == nil {
 		out = os.Stdout
 	}
-	fmt.Fprintf(out, format, args...)
+	_, _ = fmt.Fprintf(out, format, args...)
 }
 
 // Println prints a line to stdout
@@ -86,7 +86,7 @@ func (b *BaseCommand) Println(args ...interface{}) {
 	if out == nil {
 		out = os.Stdout
 	}
-	fmt.Fprintln(out, args...)
+	_, _ = fmt.Fprintln(out, args...)
 }
 
 // Errorf prints formatted error to stderr
@@ -95,7 +95,7 @@ func (b *BaseCommand) Errorf(format string, args ...interface{}) {
 	if err == nil {
 		err = os.Stderr
 	}
-	fmt.Fprintf(err, format, args...)
+	_, _ = fmt.Fprintf(err, format, args...)
 }
 
 // Errorln prints error line to stderr
@@ -104,7 +104,7 @@ func (b *BaseCommand) Errorln(args ...interface{}) {
 	if err == nil {
 		err = os.Stderr
 	}
-	fmt.Fprintln(err, args...)
+	_, _ = fmt.Fprintln(err, args...)
 }
 
 // Debug prints debug message if debug mode is enabled
@@ -163,25 +163,25 @@ func (t *TableWriter) Render() {
 
 	// Print headers
 	for i, h := range t.headers {
-		fmt.Fprintf(t.out, "%-*s", widths[i]+2, h)
+		_, _ = fmt.Fprintf(t.out, "%-*s", widths[i]+2, h)
 	}
-	fmt.Fprintln(t.out)
+	_, _ = fmt.Fprintln(t.out)
 
 	// Print separator
 	for i := range t.headers {
 		for j := 0; j < widths[i]+2; j++ {
-			fmt.Fprint(t.out, "-")
+			_, _ = fmt.Fprint(t.out, "-")
 		}
 	}
-	fmt.Fprintln(t.out)
+	_, _ = fmt.Fprintln(t.out)
 
 	// Print rows
 	for _, row := range t.rows {
 		for i, v := range row {
 			if i < len(widths) {
-				fmt.Fprintf(t.out, "%-*s", widths[i]+2, v)
+				_, _ = fmt.Fprintf(t.out, "%-*s", widths[i]+2, v)
 			}
 		}
-		fmt.Fprintln(t.out)
+		_, _ = fmt.Fprintln(t.out)
 	}
 }

@@ -16,7 +16,7 @@ func TestEngineSelector(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		assert.NotNil(t, selector)
 		assert.Equal(t, manager, selector.manager)
 	})
@@ -27,20 +27,20 @@ func TestEngineSelector(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register test engines
 		luaFactory := &mockEngineFactory{
 			name:           "lua",
 			fileExtensions: []string{"lua"},
 		}
 		jsFactory := &mockEngineFactory{
-			name:           "javascript", 
+			name:           "javascript",
 			fileExtensions: []string{"js", "mjs"},
 		}
-		
+
 		_ = registry.Register(luaFactory)
 		_ = registry.Register(jsFactory)
-		
+
 		tests := []struct {
 			filepath string
 			expected string
@@ -51,11 +51,11 @@ func TestEngineSelector(t *testing.T) {
 			{"script.js", "javascript", false},
 			{"module.mjs", "javascript", false},
 			{"SCRIPT.LUA", "lua", false}, // Case insensitive
-			{"script.py", "", true},       // No Python engine
-			{"script", "", true},          // No extension
-			{"", "", true},                // Empty path
+			{"script.py", "", true},      // No Python engine
+			{"script", "", true},         // No extension
+			{"", "", true},               // Empty path
 		}
-		
+
 		for _, tt := range tests {
 			t.Run(tt.filepath, func(t *testing.T) {
 				engine, err := selector.SelectByExtension(tt.filepath)
@@ -76,7 +76,7 @@ func TestEngineSelector(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register test engines
 		luaFactory := &mockEngineFactory{
 			name:           "lua",
@@ -86,10 +86,10 @@ func TestEngineSelector(t *testing.T) {
 			name:           "javascript",
 			fileExtensions: []string{"js"},
 		}
-		
+
 		_ = registry.Register(luaFactory)
 		_ = registry.Register(jsFactory)
-		
+
 		tests := []struct {
 			name     string
 			metadata *SpellMetadata
@@ -142,7 +142,7 @@ func TestEngineSelector(t *testing.T) {
 				wantErr:  true,
 			},
 		}
-		
+
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				engine, err := selector.SelectForSpell(tt.metadata)
@@ -163,7 +163,7 @@ func TestEngineSelector(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register test engine
 		luaFactory := &mockEngineFactory{
 			name: "lua",
@@ -171,10 +171,10 @@ func TestEngineSelector(t *testing.T) {
 		jsFactory := &mockEngineFactory{
 			name: "javascript",
 		}
-		
+
 		_ = registry.Register(luaFactory)
 		_ = registry.Register(jsFactory)
-		
+
 		// Options override spell metadata
 		metadata := &SpellMetadata{
 			Name:   "test",
@@ -183,11 +183,11 @@ func TestEngineSelector(t *testing.T) {
 		options := &RunnerOptions{
 			Engine: "javascript",
 		}
-		
+
 		engine, err := selector.SelectWithOptions(metadata, options)
 		assert.NoError(t, err)
 		assert.Equal(t, "javascript", engine)
-		
+
 		// No override in options
 		options.Engine = ""
 		engine, err = selector.SelectWithOptions(metadata, options)
@@ -201,18 +201,18 @@ func TestEngineSelector(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register test engine
 		luaFactory := &mockEngineFactory{
 			name:     "lua",
 			features: []engine.EngineFeature{engine.FeatureAsync},
 		}
 		_ = registry.Register(luaFactory)
-		
+
 		// Validate existing engine
 		err = selector.ValidateEngineAvailability("lua")
 		assert.NoError(t, err)
-		
+
 		// Validate non-existent engine
 		err = selector.ValidateEngineAvailability("python")
 		assert.Error(t, err)
@@ -225,7 +225,7 @@ func TestEngineSelector(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register test engines
 		luaFactory := &mockEngineFactory{
 			name:           "lua",
@@ -235,10 +235,10 @@ func TestEngineSelector(t *testing.T) {
 			name:           "javascript",
 			fileExtensions: []string{"js", "mjs"},
 		}
-		
+
 		_ = registry.Register(luaFactory)
 		_ = registry.Register(jsFactory)
-		
+
 		extensions := selector.GetSupportedExtensions()
 		assert.Len(t, extensions, 3)
 		assert.Contains(t, extensions, "lua")
@@ -252,14 +252,14 @@ func TestEngineSelector(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register test engines
 		jsFactory := &mockEngineFactory{
 			name:           "javascript",
 			fileExtensions: []string{"js", "mjs"},
 		}
 		_ = registry.Register(jsFactory)
-		
+
 		// Build extension map
 		extMap := selector.GetEngineExtensionMap()
 		assert.Len(t, extMap, 2)
@@ -282,7 +282,7 @@ func TestExtractExtension(t *testing.T) {
 		{".hidden", "hidden"},
 		{"path/.hidden.js", "js"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.filepath, func(t *testing.T) {
 			ext := extractExtension(tt.filepath)
@@ -298,7 +298,7 @@ func TestEngineSelectorPriority(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register all engines
 		engines := []string{"lua", "javascript", "tengo"}
 		for _, name := range engines {
@@ -309,26 +309,26 @@ func TestEngineSelectorPriority(t *testing.T) {
 			err = registry.Register(factory)
 			require.NoError(t, err)
 		}
-		
+
 		// Test priority: options > metadata.Engine > extension
 		metadata := &SpellMetadata{
 			Name:       "test",
 			Engine:     "lua",
 			EntryPoint: "script.ja", // Would select javascript
 		}
-		
+
 		// 1. Options override everything
 		options := &RunnerOptions{Engine: "tengo"}
 		engine, err := selector.SelectWithOptions(metadata, options)
 		assert.NoError(t, err)
 		assert.Equal(t, "tengo", engine)
-		
+
 		// 2. Metadata engine overrides extension
 		options.Engine = ""
 		engine, err = selector.SelectWithOptions(metadata, options)
 		assert.NoError(t, err)
 		assert.Equal(t, "lua", engine)
-		
+
 		// 3. Extension used when no explicit engine
 		metadata.Engine = ""
 		engine, err = selector.SelectWithOptions(metadata, options)
@@ -342,14 +342,14 @@ func BenchmarkEngineSelector_SelectByExtension(b *testing.B) {
 	registry := engine.NewRegistry(engine.RegistryConfig{})
 	manager := NewEngineRegistryManager(registry)
 	selector := NewEngineSelector(manager)
-	
+
 	// Register test engine
 	factory := &mockEngineFactory{
 		name:           "lua",
 		fileExtensions: []string{"lua"},
 	}
 	_ = registry.Register(factory)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = selector.SelectByExtension("script.lua")
@@ -358,7 +358,7 @@ func BenchmarkEngineSelector_SelectByExtension(b *testing.B) {
 
 func BenchmarkExtractExtension(b *testing.B) {
 	testPath := "/path/to/deeply/nested/script.lua"
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = extractExtension(testPath)
@@ -371,17 +371,17 @@ func TestEngineSelection_Integration(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		
+
 		manager := NewEngineRegistryManager(registry)
 		selector := NewEngineSelector(manager)
-		
+
 		// Register engines
 		engines := map[string][]string{
 			"lua":        {"lua"},
 			"javascript": {"js", "mjs"},
 			"tengo":      {"tengo"},
 		}
-		
+
 		for name, exts := range engines {
 			factory := &mockEngineFactory{
 				name:           name,
@@ -391,7 +391,7 @@ func TestEngineSelection_Integration(t *testing.T) {
 			err := registry.Register(factory)
 			require.NoError(t, err)
 		}
-		
+
 		// Test various selection scenarios
 		scenarios := []struct {
 			name     string
@@ -431,12 +431,12 @@ func TestEngineSelection_Integration(t *testing.T) {
 				expected: "javascript",
 			},
 		}
-		
+
 		for _, sc := range scenarios {
 			t.Run(sc.name, func(t *testing.T) {
 				var engine string
 				var err error
-				
+
 				if sc.metadata != nil && sc.options != nil {
 					engine, err = selector.SelectWithOptions(sc.metadata, sc.options)
 				} else if sc.metadata != nil {
@@ -444,7 +444,7 @@ func TestEngineSelection_Integration(t *testing.T) {
 				} else {
 					engine, err = selector.SelectByExtension(sc.file)
 				}
-				
+
 				assert.NoError(t, err)
 				assert.Equal(t, sc.expected, engine)
 			})

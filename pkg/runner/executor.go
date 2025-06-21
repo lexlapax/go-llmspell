@@ -16,12 +16,12 @@ type ScriptExecutor struct {
 	engineManager *EngineRegistryManager
 	selector      *EngineSelector
 	loader        *SpellLoader
-	
+
 	// Execution control
 	semaphore chan struct{} // Limits concurrent executions
 	wg        sync.WaitGroup
 	mu        sync.RWMutex
-	
+
 	// Metrics tracking
 	metrics          *RunnerMetrics
 	metricsLock      sync.RWMutex
@@ -48,16 +48,16 @@ func NewScriptExecutor(config *RunnerConfig, engineManager *EngineRegistryManage
 func (e *ScriptExecutor) Initialize(ctx context.Context) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	
+
 	if e.shutdownComplete {
 		return fmt.Errorf("executor has been shut down")
 	}
-	
+
 	// Initialize engine manager
 	if err := e.engineManager.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize engine manager: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -67,12 +67,12 @@ func (e *ScriptExecutor) Execute(ctx context.Context, script string, params map[
 		Parameters: params,
 		Engine:     e.config.DefaultEngine,
 	}
-	
+
 	result, err := e.ExecuteWithOptions(ctx, script, options)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return result.Value, result.Error
 }
 
@@ -83,19 +83,19 @@ func (e *ScriptExecutor) ExecuteFile(ctx context.Context, filepath string, param
 	if err != nil {
 		return nil, fmt.Errorf("failed to select engine: %w", err)
 	}
-	
+
 	options := &RunnerOptions{
 		Parameters: params,
 		Engine:     engineName,
 	}
-	
+
 	// Use engine registry to execute file
 	result, err := e.engineManager.ExecuteFile(ctx, filepath, options.Parameters)
 	if err != nil {
 		e.updateMetrics(engineName, 0, err)
 		return nil, err
 	}
-	
+
 	e.updateMetrics(engineName, time.Since(time.Now()), nil)
 	return result, nil
 }
@@ -109,7 +109,7 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 		return nil, fmt.Errorf("executor is shutting down")
 	}
 	e.mu.RUnlock()
-	
+
 	// Acquire semaphore for concurrency control
 	select {
 	case e.semaphore <- struct{}{}:
@@ -117,17 +117,17 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
-	
+
 	// Track execution
 	e.wg.Add(1)
 	defer e.wg.Done()
-	
+
 	startTime := time.Now()
 	result := &ExecutionResult{
 		StartTime: startTime,
 		Metadata:  make(map[string]interface{}),
 	}
-	
+
 	// Report progress
 	if options.ProgressHandler != nil {
 		options.ProgressHandler(Progress{
@@ -139,13 +139,13 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 			StartTime:   startTime,
 		})
 	}
-	
+
 	// Determine engine
 	engineName := options.Engine
 	if engineName == "" {
 		engineName = e.config.DefaultEngine
 	}
-	
+
 	// Build engine config
 	var engineConfig map[string]interface{}
 	if e.config.EngineConfigs != nil {
@@ -153,7 +153,7 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 	}
 	config := BuildEngineConfig(e.config, engineConfig)
 	config = ApplyOptionsToConfig(config, options)
-	
+
 	// Get engine
 	engine, err := e.engineManager.GetEngine(engineName, config)
 	if err != nil {
@@ -163,9 +163,9 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 		e.updateMetrics(engineName, result.Duration, result.Error)
 		return result, result.Error
 	}
-	
+
 	result.Engine = engineName
-	
+
 	// Report progress
 	if options.ProgressHandler != nil {
 		options.ProgressHandler(Progress{
@@ -177,7 +177,7 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 			StartTime:   startTime,
 		})
 	}
-	
+
 	// Execute script
 	execCtx := ctx
 	if options.Timeout > 0 {
@@ -185,15 +185,15 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 		execCtx, cancel = context.WithTimeout(ctx, options.Timeout)
 		defer cancel()
 	}
-	
+
 	value, err := engine.Execute(execCtx, script, options.Parameters)
-	
+
 	// Complete result
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(startTime)
 	result.Value = value
 	result.Error = err
-	
+
 	// Report progress
 	if options.ProgressHandler != nil {
 		options.ProgressHandler(Progress{
@@ -205,10 +205,10 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 			StartTime:   startTime,
 		})
 	}
-	
+
 	// Update metrics
 	e.updateMetrics(engineName, result.Duration, err)
-	
+
 	// Final progress
 	if options.ProgressHandler != nil {
 		options.ProgressHandler(Progress{
@@ -220,7 +220,7 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 			StartTime:   startTime,
 		})
 	}
-	
+
 	return result, nil
 }
 
@@ -228,38 +228,38 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 func (e *ScriptExecutor) ExecuteSpell(ctx context.Context, spell *SpellMetadata, params map[string]interface{}) (*ExecutionResult, error) {
 	// Apply parameter defaults
 	params = e.loader.ApplyDefaults(spell, params)
-	
+
 	// Validate parameters
 	if err := e.loader.ValidateParameters(spell, params); err != nil {
 		return nil, fmt.Errorf("parameter validation failed: %w", err)
 	}
-	
+
 	// Determine engine
 	engineName, err := e.selector.SelectForSpell(spell)
 	if err != nil {
 		return nil, fmt.Errorf("failed to select engine: %w", err)
 	}
-	
+
 	// Resolve entry point
 	entryPoint := e.loader.ResolveEntryPoint(spell)
-	
+
 	// Create options
 	options := &RunnerOptions{
 		Parameters:      params,
 		Engine:          engineName,
 		SecurityProfile: spell.SecurityProfile,
 	}
-	
+
 	// Execute the entry point file
 	result, err := e.ExecuteWithOptions(ctx, entryPoint, options)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Add spell metadata to result
 	result.Metadata["spell_name"] = spell.Name
 	result.Metadata["spell_version"] = spell.Version
-	
+
 	return result, nil
 }
 
@@ -279,14 +279,14 @@ func (e *ScriptExecutor) Shutdown() error {
 	}
 	e.shutdownComplete = true
 	e.mu.Unlock()
-	
+
 	// Wait for all executions to complete
 	done := make(chan struct{})
 	go func() {
 		e.wg.Wait()
 		close(done)
 	}()
-	
+
 	// Wait with timeout
 	select {
 	case <-done:
@@ -294,12 +294,12 @@ func (e *ScriptExecutor) Shutdown() error {
 	case <-time.After(30 * time.Second):
 		return fmt.Errorf("shutdown timeout: some executions did not complete")
 	}
-	
+
 	// Shutdown engine manager
 	if err := e.engineManager.Shutdown(); err != nil {
 		return fmt.Errorf("failed to shutdown engine manager: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -307,7 +307,7 @@ func (e *ScriptExecutor) Shutdown() error {
 func (e *ScriptExecutor) GetMetrics() *RunnerMetrics {
 	e.metricsLock.RLock()
 	defer e.metricsLock.RUnlock()
-	
+
 	// Create a copy to avoid race conditions
 	metrics := &RunnerMetrics{
 		ScriptsExecuted:   e.metrics.ScriptsExecuted,
@@ -318,7 +318,7 @@ func (e *ScriptExecutor) GetMetrics() *RunnerMetrics {
 		LastExecutionTime: e.metrics.LastExecutionTime,
 		EngineMetrics:     make(map[string]*EngineMetric),
 	}
-	
+
 	// Copy engine metrics
 	for name, em := range e.metrics.EngineMetrics {
 		metrics.EngineMetrics[name] = &EngineMetric{
@@ -327,11 +327,11 @@ func (e *ScriptExecutor) GetMetrics() *RunnerMetrics {
 			ErrorCount:     em.ErrorCount,
 		}
 	}
-	
+
 	// Get latest stats from engine registry
 	registryStats := e.engineManager.GetStats()
 	engineMetrics := CreateEngineMetrics(registryStats)
-	
+
 	// Merge with our metrics
 	for name, em := range engineMetrics {
 		if existing, ok := metrics.EngineMetrics[name]; ok {
@@ -342,7 +342,7 @@ func (e *ScriptExecutor) GetMetrics() *RunnerMetrics {
 			metrics.EngineMetrics[name] = em
 		}
 	}
-	
+
 	return metrics
 }
 
@@ -350,28 +350,28 @@ func (e *ScriptExecutor) GetMetrics() *RunnerMetrics {
 func (e *ScriptExecutor) updateMetrics(engineName string, duration time.Duration, err error) {
 	e.metricsLock.Lock()
 	defer e.metricsLock.Unlock()
-	
+
 	e.metrics.ScriptsExecuted++
 	e.metrics.TotalDuration += duration
 	e.metrics.LastExecutionTime = time.Now()
-	
+
 	if err == nil {
 		e.metrics.SuccessCount++
 	} else {
 		e.metrics.ErrorCount++
 	}
-	
+
 	// Update average duration
 	if e.metrics.ScriptsExecuted > 0 {
 		e.metrics.AverageDuration = e.metrics.TotalDuration / time.Duration(e.metrics.ScriptsExecuted)
 	}
-	
+
 	// Update engine-specific metrics
 	if engineName != "" {
 		if _, ok := e.metrics.EngineMetrics[engineName]; !ok {
 			e.metrics.EngineMetrics[engineName] = &EngineMetric{}
 		}
-		
+
 		em := e.metrics.EngineMetrics[engineName]
 		em.ExecutionCount++
 		em.TotalDuration += duration
@@ -380,4 +380,3 @@ func (e *ScriptExecutor) updateMetrics(engineName string, duration time.Duration
 		}
 	}
 }
-

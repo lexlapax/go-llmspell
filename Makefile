@@ -59,10 +59,11 @@ test-unit:
 # Run integration tests
 test-integration:
 	@echo "Running integration tests..."
-	@if [ -d "./test/integration" ]; then \
-		$(GOTEST) $(TEST_FLAGS) -tags=integration ./test/integration/...; \
+	@if [ -d "./tests/integration" ]; then \
+		$(GOTEST) $(TEST_FLAGS) -tags=integration ./tests/integration/...; \
+		echo "✅ Integration tests complete"; \
 	else \
-		echo "⚠️  No integration tests found in ./test/integration/"; \
+		echo "⚠️  No integration tests found in ./tests/integration/"; \
 	fi
 
 # Run all tests (unit + integration)

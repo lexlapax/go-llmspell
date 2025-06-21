@@ -88,8 +88,13 @@ func (f *Formatter) Format(err error) string {
 		b.WriteString(formatted)
 	} else if IsSpellError(err) {
 		// Check if it's a SpellError
-		spellErr, _ := err.(*SpellError)
-		f.formatSpellError(&b, spellErr)
+		spellErr, ok := err.(*SpellError)
+		if !ok || spellErr == nil {
+			// Fallback to generic error formatting
+			f.formatGenericError(&b, err)
+		} else {
+			f.formatSpellError(&b, spellErr)
+		}
 	} else {
 		// Format as generic error
 		f.formatGenericError(&b, err)
@@ -109,6 +114,11 @@ func (f *Formatter) Print(err error) {
 
 // formatSpellError formats a SpellError
 func (f *Formatter) formatSpellError(b *strings.Builder, err *SpellError) {
+	if err == nil {
+		b.WriteString("Error: <nil>\n")
+		return
+	}
+
 	// Timestamp if enabled
 	if f.options.ShowTimestamp {
 		b.WriteString(f.gray(fmt.Sprintf("[%s] ", time.Now().Format("15:04:05"))))

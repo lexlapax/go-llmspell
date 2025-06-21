@@ -284,24 +284,24 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [x] Ensure one test file per Go file pattern
       - [x] Remove duplicate test functions
   
-  - [ ] **Phase 2: Wire Up Full Executor** *[Priority 1 - Foundation]*
-    - [ ] Task 3.2.5.2.1: Create LuaEngineFactory
-      - [ ] Create `/pkg/engine/gopherlua/engine_factory.go`
-      - [ ] Implement EngineFactory interface
-      - [ ] Implement all required methods (Name, Version, Create, etc.)
-      - [ ] Create tests in `engine_factory_test.go`
-    - [ ] Task 3.2.5.2.2: Fix main.go engine registration
-      - [ ] Create registry with DefaultRegistryConfig()
-      - [ ] Register LuaEngineFactory (not LuaEngine instance)
-      - [ ] Initialize registry properly
-      - [ ] Bind registry to Kong context
-    - [ ] Task 3.2.5.2.3: Update runner to use real executor
-      - [ ] Switch from SimpleExecutor to ScriptExecutor
-      - [ ] Wire up EngineRegistryManager
-      - [ ] Update executor creation in commands
-    - [ ] Task 3.2.5.2.4: Create basic integration test
-      - [ ] Test script execution through CLI
-      - [ ] Verify engine registration works
+  - [x] **Phase 2: Wire Up Full Executor** *[Priority 1 - Foundation]* **[COMPLETED - 2025-06-21]**
+    - [x] Task 3.2.5.2.1: Create LuaEngineFactory **[COMPLETED - 2025-06-21]**
+      - [x] Create `/pkg/engine/gopherlua/engine_factory.go`
+      - [x] Implement EngineFactory interface
+      - [x] Implement all required methods (Name, Version, Create, etc.)
+      - [x] Create tests in `engine_factory_test.go`
+    - [x] Task 3.2.5.2.2: Fix main.go engine registration **[COMPLETED - 2025-06-21]**
+      - [x] Create registry with DefaultRegistryConfig()
+      - [x] Register LuaEngineFactory (not LuaEngine instance)
+      - [x] Initialize registry properly
+      - [x] Bind registry to Kong context
+    - [x] Task 3.2.5.2.3: Update runner to use real executor **[COMPLETED - 2025-06-21]**
+      - [x] Switch from SimpleExecutor to ScriptExecutor
+      - [x] Wire up EngineRegistryManager
+      - [x] Update executor creation in commands
+    - [x] Task 3.2.5.2.4: Create basic integration test **[COMPLETED - 2025-06-21]**
+      - [x] Test script execution through CLI
+      - [x] Verify engine registration works
   
   - [ ] **Phase 3: Complete Command Implementations** *[Priority 2 - Core Features]*
     - [ ] Task 3.2.5.3.1: Implement Run Command
@@ -371,7 +371,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   
   - [ ] **Phase 7: Integration Tests** *[Priority 4 - Quality Assurance]*
     - [ ] Task 3.2.9.1: Create test infrastructure
-      - [ ] Create `/test/integration/` directory
+      - [ ] Create `/tests/integration/` directory
       - [ ] Set up test framework
       - [ ] Create example spells for testing
     - [ ] Task 3.2.9.2: Implement comprehensive tests

@@ -96,7 +96,7 @@ func NewErrorMetrics() *ErrorMetrics {
 
 // RecordError records an error in metrics
 func (m *ErrorMetrics) RecordError(err error) {
-	if err == nil {
+	if err == nil || m == nil {
 		return
 	}
 
@@ -112,13 +112,18 @@ func (m *ErrorMetrics) RecordError(err error) {
 		spellErr = Wrap(err, CategoryUnknown, err.Error())
 	}
 
+	// Ensure we have a valid SpellError
+	if spellErr == nil {
+		return
+	}
+
 	// Record by category
 	m.mu.RLock()
 	counter, exists := m.categoryCounters[spellErr.Category]
 	rateTracker := m.errorRates[spellErr.Category]
 	m.mu.RUnlock()
 
-	if exists {
+	if exists && counter != nil {
 		atomic.AddInt64(counter, 1)
 	}
 

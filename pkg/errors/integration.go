@@ -44,15 +44,19 @@ func GetErrorHandler() *ErrorHandler {
 
 // Handle processes an error, recording metrics and formatting for display
 func (h *ErrorHandler) Handle(err error) {
-	if err == nil {
+	if err == nil || h == nil {
 		return
 	}
 
 	// Record in metrics
-	h.metrics.RecordError(err)
+	if h.metrics != nil {
+		h.metrics.RecordError(err)
+	}
 
 	// Format and print
-	h.formatter.Print(err)
+	if h.formatter != nil {
+		h.formatter.Print(err)
+	}
 }
 
 // HandleWithExit handles an error and exits with appropriate code
