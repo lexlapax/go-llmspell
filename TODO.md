@@ -143,7 +143,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Achieve 90%+ test coverage
   - [ ] Add integration test suite
   - [ ] Create stress tests
-  - [ ] Implement chaos testing
+  - [ ] Implement chaos testing 
   - [ ] Add regression test suite
 
 - [ ] **Task 2.4.4.2: Error Handling Enhancement**
@@ -153,38 +153,27 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Create error reporting
   - [ ] Add error metrics
 
-- [ ] **Task 2.4.4.3: Monitoring & Metrics**
-  - [ ] Add Prometheus metrics
-  - [ ] Implement health checks
-  - [ ] Create performance dashboards
-  - [ ] Add distributed tracing
-  - [ ] Implement alerting rules
-
-- [ ] **Task 2.4.4.4: Security Hardening**
-  - [ ] Conduct security audit
-  - [ ] Add input validation
-  - [ ] Implement rate limiting
-  - [ ] Create security benchmarks
-  - [ ] Add CVE scanning
-
 #### 2.4.5: Documentation & Examples
 - [x] **Task 2.4.5.1: CODE documentation** **[COMPLETED - 2025-06-22]**
 
-- [ ] **Task 2.4.5.2: User Guide** (`/docs/user-guide/`)
-  - [ ] Getting started with Lua spells
-  - [ ] Complete API reference
-  - [ ] Common patterns and idioms
-  - [ ] Troubleshooting guide
-  - [ ] Migration from pure Lua
+- [x] **Task 2.4.5.2: User Guide** (`/docs/user-guide/`) **[COMPLETED - 2025-06-22]**
+  - [x] Getting started with Lua spells (`lua-spells.md`) **[COMPLETED - 2025-06-22]**
+  - [x] Complete API reference (`api-reference.md`) **[COMPLETED - 2025-06-22]**
+  - [x] Common patterns and idioms (`common-patterns.md`) **[COMPLETED - 2025-06-22]**
+  - [x] Troubleshooting guide (`troubleshooting.md`) **[COMPLETED - 2025-06-22]**
+  - [x] Migration from pure Lua (`migration-from-pure-lua.md`) **[COMPLETED - 2025-06-22]**
 
-- [ ] **Task 2.4.5.2: Example Spells** (`/examples/lua/`)
-  - [ ] Basic LLM interaction
-  - [ ] Agent with tools
-  - [ ] Complex workflows
-  - [ ] Event-driven spells
-  - [ ] Performance patterns
+- [x] **Task 2.4.5.2: Example Spells** (`/examples/spells/lua/`) **[COMPLETED - 2025-06-22]**
+  - [x] Basic LLM interaction (`01-basic-llm.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Calling builtin tools by themselves (`02-tools-usage.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Agent without tools (plain llm) (`03-agent-plain.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Agent with tools (`04-agent-with-tools.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Agent with tools, one of which is an agent wrapped as a tool (`05-agent-as-tool.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Complex workflows (`06-complex-workflows.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Event-driven spells (`07-event-driven.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Performance patterns (`08-performance-patterns.lua`) **[COMPLETED - 2025-06-22]**
 
-- [ ] **Task 2.4.5.3: Developer Documentation**
+- [ ] **Task 2.4.5.3: Developer Documentation** (`/docs/technical/`)
   - [ ] Architecture deep dive
   - [ ] Extension guide
   - [ ] Performance tuning
@@ -273,7 +262,6 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Add import controls
 
 ---
-
 ## Phase 6: Integration and Examples
 
 ### 6.1 Example Spells
@@ -302,6 +290,23 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ---
 
+
+## Phase 7: More Production Readiness
+- [ ] **Task 7.1: Monitoring & Metrics** **DEFERRED from  2.4.4.3**
+  - [ ] Add Prometheus metrics
+  - [ ] Implement health checks
+  - [ ] Create performance dashboards
+  - [ ] Add distributed tracing
+  - [ ] Implement alerting rules
+
+- [ ] **Task 7.2: Security Hardening** **DEFERRED from 2.4.4.4**
+  - [ ] Conduct security audit
+  - [ ] Add input validation
+  - [ ] Implement rate limiting
+  - [ ] Create security benchmarks
+  - [ ] Add CVE scanning
+
+---
 ## Documentation
 
 ### API Documentation
