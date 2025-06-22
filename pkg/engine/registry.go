@@ -30,22 +30,22 @@ type EngineFactory interface {
 
 	// Name returns the unique name of this engine (e.g., "lua", "javascript").
 	Name() string
-	
+
 	// Version returns the version of the engine implementation.
 	Version() string
-	
+
 	// Description returns a human-readable description of the engine.
 	Description() string
-	
+
 	// FileExtensions returns the file extensions this engine supports (e.g., [".lua"]).
 	FileExtensions() []string
-	
+
 	// Features returns the list of features supported by this engine.
 	Features() []EngineFeature
 
 	// ValidateConfig validates an engine configuration before use.
 	ValidateConfig(config EngineConfig) error
-	
+
 	// GetDefaultConfig returns the default configuration for this engine.
 	GetDefaultConfig() EngineConfig
 }

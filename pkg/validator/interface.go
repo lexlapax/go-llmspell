@@ -21,11 +21,11 @@ type Validator interface {
 	// ValidateScript validates a script string with an optional filename.
 	// It returns validation results including errors, warnings, and metrics.
 	ValidateScript(script string, filename string) (*ValidationResult, error)
-	
+
 	// ValidateFile validates a script file by reading it from disk.
 	// It returns validation results for the file contents.
 	ValidateFile(filename string) (*ValidationResult, error)
-	
+
 	// GetConfig returns the validator's configuration.
 	// This includes feature toggles, limits, and security settings.
 	GetConfig() *ValidationConfig

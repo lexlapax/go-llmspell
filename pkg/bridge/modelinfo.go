@@ -393,7 +393,6 @@ func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
 	return engine.NewObjectValue(fields)
 }
 
-
 // convertCapabilitiesToScriptValue converts domain.Capabilities to ScriptValue.
 // Creates nested object structure representing model capabilities across
 // different modalities (text, image, audio, video, file) and features.

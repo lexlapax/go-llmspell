@@ -24,7 +24,7 @@ type VersionCmd struct {
 // Version info - will be set during build
 var (
 	// Version is the semantic version number
-	Version   = "dev"
+	Version = "dev"
 	// BuildDate is the build timestamp
 	BuildDate = ""
 	// GitCommit is the git commit hash

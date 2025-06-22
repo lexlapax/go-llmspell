@@ -16,15 +16,15 @@ type ScriptValueType int
 // ScriptValue type constants define the possible types a script value can have.
 const (
 	TypeNil      ScriptValueType = iota // Nil/null/undefined value
-	TypeBool                             // Boolean value
-	TypeNumber                           // Numeric value (float64)
-	TypeString                           // String value
-	TypeArray                            // Array/list value
-	TypeObject                           // Object/map/table value
-	TypeFunction                         // Function/callable value
-	TypeError                            // Error value
-	TypeChannel                          // Channel for communication
-	TypeCustom                           // Custom/user-defined type
+	TypeBool                            // Boolean value
+	TypeNumber                          // Numeric value (float64)
+	TypeString                          // String value
+	TypeArray                           // Array/list value
+	TypeObject                          // Object/map/table value
+	TypeFunction                        // Function/callable value
+	TypeError                           // Error value
+	TypeChannel                         // Channel for communication
+	TypeCustom                          // Custom/user-defined type
 )
 
 // String returns the string representation of the type.

@@ -22,13 +22,13 @@ type contextKey string
 // Context keys for command execution
 const (
 	// ConfigKey stores the application configuration
-	ConfigKey         contextKey = "config"
+	ConfigKey contextKey = "config"
 	// DebugKey stores the debug mode flag
-	DebugKey          contextKey = "debug"
+	DebugKey contextKey = "debug"
 	// VerboseKey stores the verbose output flag
-	VerboseKey        contextKey = "verbose"
+	VerboseKey contextKey = "verbose"
 	// ProfileKey stores the security profile name
-	ProfileKey        contextKey = "profile"
+	ProfileKey contextKey = "profile"
 	// EngineRegistryKey stores the engine registry instance
 	EngineRegistryKey contextKey = "engineRegistry"
 )

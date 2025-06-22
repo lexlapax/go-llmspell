@@ -25,10 +25,10 @@ type BaseTypeConverter struct {
 type TypeAdapter interface {
 	// ToNative converts from an engine-specific type to a Go native type.
 	ToNative(v interface{}) (interface{}, error)
-	
+
 	// FromNative converts from a Go native type to an engine-specific type.
 	FromNative(v interface{}) (interface{}, error)
-	
+
 	// SupportsType returns true if this adapter can handle the given type name.
 	SupportsType(typeName string) bool
 }

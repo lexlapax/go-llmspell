@@ -287,6 +287,7 @@ func TestAsyncRuntime_PromiseIntegration(t *testing.T) {
 
 	if promise == nil {
 		t.Fatalf("CreatePromise returned nil promise")
+		return
 	}
 
 	// Promise should have methods
@@ -315,6 +316,7 @@ func TestAsyncRuntime_AsyncExecutionContext(t *testing.T) {
 
 	if execCtx == nil {
 		t.Fatalf("CreateExecutionContext returned nil context")
+		return
 	}
 
 	// Execution context should have required fields

@@ -42,48 +42,48 @@ type ScriptEngine interface {
 	// Initialize prepares the engine for use with the given configuration.
 	// This must be called before any script execution.
 	Initialize(config EngineConfig) error
-	
+
 	// Execute runs a script string with optional parameters and returns the result.
 	// The params map is made available to the script as global variables.
 	Execute(ctx context.Context, script string, params map[string]interface{}) (ScriptValue, error)
-	
+
 	// ExecuteFile loads and executes a script from a file path.
 	// The params map is made available to the script as global variables.
 	ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (ScriptValue, error)
-	
+
 	// Shutdown cleanly shuts down the engine and releases all resources.
 	// After calling Shutdown, the engine cannot be used again.
 	Shutdown() error
 
 	// RegisterBridge registers a bridge with the engine, making its methods available to scripts.
 	RegisterBridge(bridge Bridge) error
-	
+
 	// UnregisterBridge removes a previously registered bridge by name.
 	UnregisterBridge(name string) error
-	
+
 	// GetBridge retrieves a registered bridge by name.
 	GetBridge(name string) (Bridge, error)
-	
+
 	// ListBridges returns the names of all registered bridges.
 	ListBridges() []string
 
 	// ToNative converts a script value to a native Go value.
 	// This is used when retrieving values from scripts.
 	ToNative(scriptValue ScriptValue) (interface{}, error)
-	
+
 	// FromNative converts a native Go value to a script value.
 	// This is used when passing values to scripts.
 	FromNative(goValue interface{}) (ScriptValue, error)
 
 	// Name returns the name of the scripting engine (e.g., "lua", "javascript", "tengo").
 	Name() string
-	
+
 	// Version returns the version of the scripting engine implementation.
 	Version() string
-	
+
 	// FileExtensions returns the file extensions this engine supports (e.g., [".lua"]).
 	FileExtensions() []string
-	
+
 	// Features returns the list of features supported by this engine.
 	Features() []EngineFeature
 

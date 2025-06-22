@@ -25,7 +25,7 @@ import (
 // Version information set during build
 var (
 	// version is the semantic version of the build
-	version   = "dev"
+	version = "dev"
 	// buildDate is the ISO8601 date of the build
 	buildDate = ""
 	// gitCommit is the git commit hash of the build
