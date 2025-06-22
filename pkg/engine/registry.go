@@ -12,6 +12,7 @@ import (
 )
 
 // Registry manages multiple script engines and provides factory functionality.
+// It supports engine pooling, health checks, and metrics collection.
 type Registry struct {
 	mu          sync.RWMutex
 	engines     map[string]EngineFactory
@@ -22,19 +23,30 @@ type Registry struct {
 }
 
 // EngineFactory creates new instances of a script engine.
+// Implement this interface to add support for a new script engine.
 type EngineFactory interface {
-	// Create a new engine instance
+	// Create creates a new engine instance with the given configuration.
 	Create(config EngineConfig) (ScriptEngine, error)
 
-	// Engine metadata
+	// Name returns the unique name of this engine (e.g., "lua", "javascript").
 	Name() string
+	
+	// Version returns the version of the engine implementation.
 	Version() string
+	
+	// Description returns a human-readable description of the engine.
 	Description() string
+	
+	// FileExtensions returns the file extensions this engine supports (e.g., [".lua"]).
 	FileExtensions() []string
+	
+	// Features returns the list of features supported by this engine.
 	Features() []EngineFeature
 
-	// Validation
+	// ValidateConfig validates an engine configuration before use.
 	ValidateConfig(config EngineConfig) error
+	
+	// GetDefaultConfig returns the default configuration for this engine.
 	GetDefaultConfig() EngineConfig
 }
 
@@ -112,11 +124,13 @@ var globalRegistry = &Registry{
 }
 
 // GetRegistry returns the global engine registry.
+// The global registry is a singleton instance used throughout the application.
 func GetRegistry() *Registry {
 	return globalRegistry
 }
 
 // NewRegistry creates a new engine registry with the given configuration.
+// Use this to create an isolated registry for testing or specific use cases.
 func NewRegistry(config RegistryConfig) *Registry {
 	return &Registry{
 		engines:   make(map[string]EngineFactory),
@@ -127,6 +141,8 @@ func NewRegistry(config RegistryConfig) *Registry {
 }
 
 // Initialize initializes the registry with default configuration.
+// This must be called before using the registry. It sets up default values
+// and starts background routines like health checking if enabled.
 func (r *Registry) Initialize() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -163,6 +179,8 @@ func (r *Registry) Initialize() error {
 }
 
 // Register registers a new engine factory.
+// The factory's name must be unique. Registration fails if the engine
+// is disallowed or if the maximum number of engines has been reached.
 func (r *Registry) Register(factory EngineFactory) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

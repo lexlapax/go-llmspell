@@ -12,7 +12,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ChunkCacheConfig configures the chunk cache behavior
+// ChunkCacheConfig configures the chunk cache behavior.
+// It controls cache size, expiration, and optional disk persistence.
 type ChunkCacheConfig struct {
 	// MaxSize is the maximum number of cached chunks
 	MaxSize int
@@ -27,7 +28,9 @@ type ChunkCacheConfig struct {
 	DiskCacheDir string
 }
 
-// ChunkCache caches compiled Lua chunks for performance
+// ChunkCache caches compiled Lua chunks for performance.
+// It implements an LRU cache with TTL expiration and optional disk persistence
+// to avoid recompiling frequently used scripts.
 type ChunkCache struct {
 	config ChunkCacheConfig
 	cache  map[string]*cacheEntry

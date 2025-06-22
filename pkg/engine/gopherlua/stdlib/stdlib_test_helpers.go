@@ -1,6 +1,10 @@
 // ABOUTME: Test infrastructure helpers for go-llmspell Lua standard library testing
 // ABOUTME: Provides utilities for module loading, table comparison, async testing, error assertions, and mock bridges
 
+// Package stdlib provides the Lua standard library implementations for go-llmspell.
+// This file contains comprehensive test helpers for testing Lua modules, including
+// utilities for module loading, Lua value comparison, async testing, error handling,
+// mock bridge creation, and test fixture management.
 package stdlib
 
 import (
@@ -22,7 +26,18 @@ import (
 // Lua Module Loading Helpers
 // ============================================================================
 
-// LoadModule loads a Lua module and sets it as a global variable
+// LoadModule loads a Lua module from a file and sets it as a global variable.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to load the module into
+//   - moduleName: Name of the module (without .lua extension)
+//
+// Returns:
+//   - lua.LValue: The loaded module value
+//
+// The function looks for a file named moduleName.lua in the current directory
+// and fails the test if loading fails.
 func LoadModule(t *testing.T, L *lua.LState, moduleName string) lua.LValue {
 	t.Helper()
 
@@ -38,7 +53,17 @@ func LoadModule(t *testing.T, L *lua.LState, moduleName string) lua.LValue {
 	return module
 }
 
-// LoadMultipleModules loads multiple Lua modules in sequence
+// LoadMultipleModules loads multiple Lua modules in sequence.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to load modules into
+//   - moduleNames: Variable number of module names to load
+//
+// Returns:
+//   - map[string]lua.LValue: Map of module names to their loaded values
+//
+// Each module is loaded using LoadModule and stored in the returned map.
 func LoadMultipleModules(t *testing.T, L *lua.LState, moduleNames ...string) map[string]lua.LValue {
 	t.Helper()
 
@@ -50,7 +75,15 @@ func LoadMultipleModules(t *testing.T, L *lua.LState, moduleNames ...string) map
 	return modules
 }
 
-// RequireModule loads a module using Lua's require mechanism
+// RequireModule loads a module using Lua's require mechanism.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to load the module into
+//   - moduleName: Name of the module to require
+//
+// The module is loaded using Lua's require() function and set as a global
+// variable with the same name. Fails the test if require fails.
 func RequireModule(t *testing.T, L *lua.LState, moduleName string) {
 	t.Helper()
 
@@ -64,7 +97,19 @@ func RequireModule(t *testing.T, L *lua.LState, moduleName string) {
 	}
 }
 
-// LoadModuleWithBridges loads a module along with mock bridges
+// LoadModuleWithBridges loads a module along with mock bridges.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to load into
+//   - moduleName: Name of the module to load
+//   - bridges: Map of bridge names to mock bridge instances
+//
+// Returns:
+//   - lua.LValue: The loaded module value
+//
+// Sets up a global 'bridge' table containing the mock bridges before loading
+// the module, allowing the module to access the bridges during initialization.
 func LoadModuleWithBridges(t *testing.T, L *lua.LState, moduleName string, bridges map[string]*testutils.MockBridge) lua.LValue {
 	t.Helper()
 
@@ -84,7 +129,19 @@ func LoadModuleWithBridges(t *testing.T, L *lua.LState, moduleName string, bridg
 // Lua Table Comparison Utilities
 // ============================================================================
 
-// CompareLuaTables compares two Lua tables for equality
+// CompareLuaTables compares two Lua tables for deep equality.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state containing the tables
+//   - expected: The expected table value
+//   - actual: The actual table value to compare
+//
+// Returns:
+//   - bool: true if tables are equal, false otherwise
+//
+// Performs deep comparison of table contents, checking that all keys and values
+// match. Reports differences via t.Errorf but doesn't fail the test directly.
 func CompareLuaTables(t *testing.T, L *lua.LState, expected, actual lua.LValue) bool {
 	t.Helper()
 
@@ -127,7 +184,19 @@ func CompareLuaTables(t *testing.T, L *lua.LState, expected, actual lua.LValue) 
 	return equal
 }
 
-// CompareLuaValues compares two Lua values for equality
+// CompareLuaValues compares two Lua values for equality.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state containing the values
+//   - expected: The expected value
+//   - actual: The actual value to compare
+//
+// Returns:
+//   - bool: true if values are equal, false otherwise
+//
+// Handles all Lua types including nil, bool, number, string, table, and function.
+// For tables, performs deep comparison. Functions are compared by reference.
 func CompareLuaValues(t *testing.T, L *lua.LState, expected, actual lua.LValue) bool {
 	t.Helper()
 
@@ -156,7 +225,14 @@ func CompareLuaValues(t *testing.T, L *lua.LState, expected, actual lua.LValue) 
 	}
 }
 
-// AssertTableHasKey verifies a table has a specific key
+// AssertTableHasKey verifies a table has a specific key.
+//
+// Parameters:
+//   - t: The testing context
+//   - table: The Lua table to check
+//   - key: The key to look for
+//
+// Fails the test with an error if the key is not present in the table.
 func AssertTableHasKey(t *testing.T, table *lua.LTable, key string) {
 	t.Helper()
 
@@ -165,7 +241,14 @@ func AssertTableHasKey(t *testing.T, table *lua.LTable, key string) {
 	}
 }
 
-// AssertTableHasKeys verifies a table has all specified keys
+// AssertTableHasKeys verifies a table has all specified keys.
+//
+// Parameters:
+//   - t: The testing context
+//   - table: The Lua table to check
+//   - keys: Variable number of keys to check for
+//
+// Calls AssertTableHasKey for each key, failing if any are missing.
 func AssertTableHasKeys(t *testing.T, table *lua.LTable, keys ...string) {
 	t.Helper()
 
@@ -174,7 +257,15 @@ func AssertTableHasKeys(t *testing.T, table *lua.LTable, keys ...string) {
 	}
 }
 
-// GetTableKeys returns all keys from a Lua table
+// GetTableKeys returns all keys from a Lua table as strings.
+//
+// Parameters:
+//   - table: The Lua table to extract keys from
+//
+// Returns:
+//   - []string: Slice containing all keys converted to strings
+//
+// The order of keys in the returned slice is not guaranteed.
 func GetTableKeys(table *lua.LTable) []string {
 	keys := []string{}
 	table.ForEach(func(key, _ lua.LValue) {
@@ -187,7 +278,16 @@ func GetTableKeys(table *lua.LTable) []string {
 // Async Test Utilities
 // ============================================================================
 
-// WaitForCondition waits for a condition to be true with timeout
+// WaitForCondition waits for a condition to become true within a timeout.
+//
+// Parameters:
+//   - t: The testing context
+//   - timeout: Maximum time to wait
+//   - check: Function that returns true when condition is met
+//   - message: Description of what we're waiting for
+//
+// Polls the check function every 10ms. Fails the test with a timeout error
+// if the condition doesn't become true within the specified duration.
 func WaitForCondition(t *testing.T, timeout time.Duration, check func() bool, message string) {
 	t.Helper()
 
@@ -205,7 +305,16 @@ func WaitForCondition(t *testing.T, timeout time.Duration, check func() bool, me
 	}
 }
 
-// RunAsyncTest runs a test with async operations and proper cleanup
+// RunAsyncTest runs a Lua script with async operations and timeout handling.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run the script in
+//   - script: The Lua script to execute
+//   - timeout: Maximum time allowed for execution
+//
+// Executes the script in a goroutine and waits for completion or timeout.
+// Fails the test if the script errors or doesn't complete within timeout.
 func RunAsyncTest(t *testing.T, L *lua.LState, script string, timeout time.Duration) {
 	t.Helper()
 
@@ -226,7 +335,17 @@ func RunAsyncTest(t *testing.T, L *lua.LState, script string, timeout time.Durat
 	}
 }
 
-// WaitForLuaValue waits for a Lua global to have a specific value
+// WaitForLuaValue waits for a Lua global variable to have a specific value.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state containing the global
+//   - globalName: Name of the global variable to monitor
+//   - expectedValue: The expected value
+//   - timeout: Maximum time to wait
+//
+// Uses WaitForCondition to poll the global variable until it matches the
+// expected value or the timeout expires.
 func WaitForLuaValue(t *testing.T, L *lua.LState, globalName string, expectedValue lua.LValue, timeout time.Duration) {
 	t.Helper()
 
@@ -240,7 +359,16 @@ func WaitForLuaValue(t *testing.T, L *lua.LState, globalName string, expectedVal
 // Error Assertion Helpers
 // ============================================================================
 
-// AssertLuaError verifies that a Lua script produces an expected error
+// AssertLuaError verifies that a Lua script produces an expected error.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run the script in
+//   - script: The Lua script expected to error
+//   - expectedError: Substring that should appear in the error message
+//
+// Fails the test if the script doesn't error or if the error doesn't contain
+// the expected substring.
 func AssertLuaError(t *testing.T, L *lua.LState, script string, expectedError string) {
 	t.Helper()
 
@@ -255,7 +383,14 @@ func AssertLuaError(t *testing.T, L *lua.LState, script string, expectedError st
 	}
 }
 
-// AssertNoLuaError verifies that a Lua script runs without error
+// AssertNoLuaError verifies that a Lua script runs without error.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run the script in
+//   - script: The Lua script to execute
+//
+// Fails the test if the script produces any error.
 func AssertNoLuaError(t *testing.T, L *lua.LState, script string) {
 	t.Helper()
 
@@ -264,7 +399,16 @@ func AssertNoLuaError(t *testing.T, L *lua.LState, script string) {
 	}
 }
 
-// AssertLuaErrorMatch verifies error with regex pattern
+// AssertLuaErrorMatch verifies that a Lua script error matches a pattern.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run the script in
+//   - script: The Lua script expected to error
+//   - pattern: Pattern that should match the error message (currently substring match)
+//
+// Similar to AssertLuaError but intended for pattern matching (currently
+// implements simple substring matching).
 func AssertLuaErrorMatch(t *testing.T, L *lua.LState, script string, pattern string) {
 	t.Helper()
 
@@ -280,7 +424,16 @@ func AssertLuaErrorMatch(t *testing.T, L *lua.LState, script string, pattern str
 	}
 }
 
-// CaptureError runs a Lua script and returns the error (if any)
+// CaptureError runs a Lua script and returns the error if any.
+//
+// Parameters:
+//   - L: The Lua state to run the script in
+//   - script: The Lua script to execute
+//
+// Returns:
+//   - error: The error from script execution, or nil if successful
+//
+// Unlike assertion functions, this simply returns the error without failing tests.
 func CaptureError(L *lua.LState, script string) error {
 	return L.DoString(script)
 }
@@ -289,7 +442,16 @@ func CaptureError(L *lua.LState, script string) error {
 // Mock Bridge Creation Utilities
 // ============================================================================
 
-// CreateMockBridge creates a mock bridge with standard configuration
+// CreateMockBridge creates a mock bridge with standard configuration.
+//
+// Parameters:
+//   - id: Identifier for the mock bridge
+//
+// Returns:
+//   - *testutils.MockBridge: A mock bridge with an "execute" method pre-configured
+//
+// The bridge includes a standard "execute" method that takes an operation string
+// and returns "executed: <operation>".
 func CreateMockBridge(id string) *testutils.MockBridge {
 	bridge := testutils.NewMockBridge(id)
 
@@ -311,7 +473,17 @@ func CreateMockBridge(id string) *testutils.MockBridge {
 	return bridge
 }
 
-// CreateMockBridgeModule creates a Lua table that acts as a bridge module
+// CreateMockBridgeModule creates a Lua table that acts as a bridge module.
+//
+// Parameters:
+//   - L: The Lua state to create the module in
+//   - bridge: The mock bridge to wrap
+//
+// Returns:
+//   - *lua.LTable: A Lua table with methods corresponding to the bridge methods
+//
+// The created module handles both dot and colon syntax for method calls,
+// automatically converting between Lua values and script values.
 func CreateMockBridgeModule(L *lua.LState, bridge *testutils.MockBridge) *lua.LTable {
 	module := L.NewTable()
 
@@ -356,7 +528,16 @@ func CreateMockBridgeModule(L *lua.LState, bridge *testutils.MockBridge) *lua.LT
 	return module
 }
 
-// CreateMockBridgeWithHandlers creates a mock bridge with custom handlers
+// CreateMockBridgeWithHandlers creates a mock bridge with custom method handlers.
+//
+// Parameters:
+//   - id: Identifier for the mock bridge
+//   - handlers: Map of method names to their handler functions
+//
+// Returns:
+//   - *testutils.MockBridge: A mock bridge configured with the provided handlers
+//
+// Each handler is registered as a method with a generic description and "any" return type.
 func CreateMockBridgeWithHandlers(id string, handlers map[string]testutils.MethodHandler) *testutils.MockBridge {
 	bridge := testutils.NewMockBridge(id)
 
@@ -375,7 +556,9 @@ func CreateMockBridgeWithHandlers(id string, handlers map[string]testutils.Metho
 // Test Fixture Management
 // ============================================================================
 
-// TestFixture represents a test environment with Lua state and modules
+// TestFixture represents a test environment with Lua state, loaded modules,
+// mock bridges, and cleanup functions. It provides a convenient way to manage
+// test resources and ensure proper cleanup.
 type TestFixture struct {
 	T       *testing.T
 	L       *lua.LState
@@ -385,7 +568,15 @@ type TestFixture struct {
 	mu      sync.Mutex
 }
 
-// NewTestFixture creates a new test fixture
+// NewTestFixture creates a new test fixture with initialized Lua state.
+//
+// Parameters:
+//   - t: The testing context
+//
+// Returns:
+//   - *TestFixture: A new fixture ready for use
+//
+// The fixture should be closed using Close() to ensure proper cleanup.
 func NewTestFixture(t *testing.T) *TestFixture {
 	return &TestFixture{
 		T:       t,
@@ -396,7 +587,15 @@ func NewTestFixture(t *testing.T) *TestFixture {
 	}
 }
 
-// LoadModule loads a module into the fixture
+// LoadModule loads a Lua module into the fixture.
+//
+// Parameters:
+//   - name: Name of the module to load
+//
+// Returns:
+//   - lua.LValue: The loaded module value
+//
+// The module is stored in the fixture's Modules map for later access.
 func (f *TestFixture) LoadModule(name string) lua.LValue {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -406,7 +605,13 @@ func (f *TestFixture) LoadModule(name string) lua.LValue {
 	return module
 }
 
-// AddBridge adds a mock bridge to the fixture
+// AddBridge adds a mock bridge to the fixture.
+//
+// Parameters:
+//   - name: Name to register the bridge under
+//   - bridge: The mock bridge instance
+//
+// The bridge is made available in Lua via the global 'bridge' table.
 func (f *TestFixture) AddBridge(name string, bridge *testutils.MockBridge) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -424,7 +629,12 @@ func (f *TestFixture) AddBridge(name string, bridge *testutils.MockBridge) {
 	f.L.SetField(bridgeTable.(*lua.LTable), name, bridgeModule)
 }
 
-// AddCleanup adds a cleanup function to be called on Close
+// AddCleanup adds a cleanup function to be called when the fixture is closed.
+//
+// Parameters:
+//   - fn: Function to call during cleanup
+//
+// Cleanup functions are called in reverse order (LIFO) when Close() is called.
 func (f *TestFixture) AddCleanup(fn func()) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -432,29 +642,53 @@ func (f *TestFixture) AddCleanup(fn func()) {
 	f.Cleanup = append(f.Cleanup, fn)
 }
 
-// RunScript executes a Lua script in the fixture
+// RunScript executes a Lua script in the fixture.
+//
+// Parameters:
+//   - script: The Lua script to execute
+//
+// Returns:
+//   - error: Any error from script execution
 func (f *TestFixture) RunScript(script string) error {
 	return f.L.DoString(script)
 }
 
-// MustRunScript executes a Lua script and fails the test on error
+// MustRunScript executes a Lua script and fails the test on error.
+//
+// Parameters:
+//   - script: The Lua script to execute
+//
+// This is a convenience method that calls RunScript and uses t.Fatalf on error.
 func (f *TestFixture) MustRunScript(script string) {
 	if err := f.RunScript(script); err != nil {
 		f.T.Fatalf("Script execution failed: %v", err)
 	}
 }
 
-// GetGlobal gets a global value from the Lua state
+// GetGlobal gets a global value from the Lua state.
+//
+// Parameters:
+//   - name: Name of the global variable
+//
+// Returns:
+//   - lua.LValue: The value of the global variable
 func (f *TestFixture) GetGlobal(name string) lua.LValue {
 	return f.L.GetGlobal(name)
 }
 
-// SetGlobal sets a global value in the Lua state
+// SetGlobal sets a global value in the Lua state.
+//
+// Parameters:
+//   - name: Name of the global variable
+//   - value: Value to set
 func (f *TestFixture) SetGlobal(name string, value lua.LValue) {
 	f.L.SetGlobal(name, value)
 }
 
-// Close cleans up the fixture
+// Close cleans up the fixture by running cleanup functions and closing the Lua state.
+//
+// Cleanup functions are run in reverse order of registration (LIFO).
+// This method should be called using defer after creating the fixture.
 func (f *TestFixture) Close() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -472,7 +706,16 @@ func (f *TestFixture) Close() {
 // Conversion Utilities
 // ============================================================================
 
-// LuaValueToScriptValue converts a Lua value to a ScriptValue
+// LuaValueToScriptValue converts a Lua value to an engine.ScriptValue.
+//
+// Parameters:
+//   - lv: The Lua value to convert
+//
+// Returns:
+//   - engine.ScriptValue: The converted value
+//
+// Handles nil, bool, number, string, and table types. Tables are converted
+// to object values with type metadata.
 func LuaValueToScriptValue(lv lua.LValue) engine.ScriptValue {
 	switch lv.Type() {
 	case lua.LTNil:
@@ -495,7 +738,17 @@ func LuaValueToScriptValue(lv lua.LValue) engine.ScriptValue {
 	}
 }
 
-// ScriptValueToLuaValue converts a ScriptValue to a Lua value
+// ScriptValueToLuaValue converts an engine.ScriptValue to a Lua value.
+//
+// Parameters:
+//   - L: The Lua state (needed for creating Lua values)
+//   - sv: The script value to convert
+//
+// Returns:
+//   - lua.LValue: The converted Lua value
+//
+// Uses reflection to handle various types, falling back to string representation
+// for complex types.
 func ScriptValueToLuaValue(L *lua.LState, sv engine.ScriptValue) lua.LValue {
 	if sv == nil {
 		return lua.LNil
@@ -533,7 +786,15 @@ func ScriptValueToLuaValue(L *lua.LState, sv engine.ScriptValue) lua.LValue {
 // Test Helpers for Common Patterns
 // ============================================================================
 
-// TestModuleStructure verifies a module has expected structure
+// TestModuleStructure verifies a module has the expected function exports.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state containing the module
+//   - moduleName: Name of the module global variable
+//   - expectedFunctions: List of function names that should exist in the module
+//
+// Fails the test if the module is not a table or if any expected function is missing.
 func TestModuleStructure(t *testing.T, L *lua.LState, moduleName string, expectedFunctions []string) {
 	t.Helper()
 
@@ -552,7 +813,15 @@ func TestModuleStructure(t *testing.T, L *lua.LState, moduleName string, expecte
 	}
 }
 
-// RunTableDrivenTests runs a set of table-driven tests
+// RunTableDrivenTests runs a set of table-driven tests using a test fixture.
+//
+// Parameters:
+//   - t: The testing context
+//   - fixture: The test fixture to run tests in
+//   - tests: Array of test cases with Name, Script, Check function, and Error fields
+//
+// Each test is run as a subtest. If Error is specified, the test expects the script
+// to fail with an error containing that string. Otherwise, Check is called to verify results.
 func RunTableDrivenTests(t *testing.T, fixture *TestFixture, tests []struct {
 	Name   string
 	Script string
@@ -580,7 +849,14 @@ func RunTableDrivenTests(t *testing.T, fixture *TestFixture, tests []struct {
 	}
 }
 
-// AssertLuaStackClean verifies the Lua stack is clean (no leaked values)
+// AssertLuaStackClean verifies the Lua stack is clean with no leaked values.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to check
+//
+// Fails the test if any values remain on the stack, logging details about
+// each leaked value to help with debugging.
 func AssertLuaStackClean(t *testing.T, L *lua.LState) {
 	t.Helper()
 

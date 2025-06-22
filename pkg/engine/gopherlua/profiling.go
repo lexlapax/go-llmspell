@@ -15,7 +15,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ProfilerInterface defines the profiling API
+// ProfilerInterface defines the profiling API.
+// It provides comprehensive profiling capabilities for execution time,
+// memory usage, and hot path analysis with minimal overhead.
 type ProfilerInterface interface {
 	Enable()
 	Disable()

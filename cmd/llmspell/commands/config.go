@@ -10,7 +10,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 )
 
-// ConfigCmd manages configuration
+// ConfigCmd manages configuration.
+// It provides commands to show, get, set configuration values,
+// and display the configuration file path.
 type ConfigCmd struct {
 	BaseCommand
 	Action string `arg:"" help:"Action to perform: show (display all), get (retrieve value), set (update value), path (show config file location)" enum:"show,get,set,path" default:"show"`
@@ -18,7 +20,9 @@ type ConfigCmd struct {
 	Value  string `arg:"" optional:"" help:"Value to set (required for 'set' action)"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It performs the requested configuration action: show all values,
+// get a specific value, set a value, or show the config file path.
 func (c *ConfigCmd) Run(ctx context.Context) error {
 	cfg := GetConfig(ctx)
 

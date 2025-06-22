@@ -14,7 +14,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// ExecutionContext holds context for a single script execution
+// ExecutionContext holds context for a single script execution.
+// It manages all the state needed for secure, monitored script execution
+// including resource limits, timing, and parameter injection.
 type ExecutionContext struct {
 	// Input
 	Script string

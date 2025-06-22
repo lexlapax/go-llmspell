@@ -14,7 +14,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// OptimizedConverterConfig provides configuration for the optimized converter
+// OptimizedConverterConfig provides configuration for the optimized converter.
+// It allows fine-tuning of various performance optimizations including
+// caching, fast paths, and allocation reduction strategies.
 type OptimizedConverterConfig struct {
 	CacheSize           int
 	EnableCaching       bool
@@ -24,7 +26,9 @@ type OptimizedConverterConfig struct {
 	EnableTypeHints     bool
 }
 
-// OptimizedConverter extends LuaTypeConverter with performance optimizations
+// OptimizedConverter extends LuaTypeConverter with performance optimizations.
+// It implements caching strategies, fast paths for common conversions,
+// and allocation reduction techniques for high-frequency operations.
 type OptimizedConverter struct {
 	*LuaTypeConverter
 

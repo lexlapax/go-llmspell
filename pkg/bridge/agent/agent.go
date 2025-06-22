@@ -1,6 +1,11 @@
 // ABOUTME: Agent bridge provides access to go-llms agent functionality for script engines
 // ABOUTME: Wraps agent creation, configuration, tool registration, and execution without reimplementation
 
+// Package agent provides the agent bridge for go-llmspell.
+// It wraps go-llms agent functionality including agent creation, configuration,
+// tool registration, workflow management, event handling, state serialization,
+// event replay, and performance profiling. The bridge enables scripts to create
+// and orchestrate AI agents without reimplementing core agent logic.
 package agent
 
 import (
@@ -19,6 +24,7 @@ import (
 	"github.com/lexlapax/go-llms/pkg/util/profiling"
 )
 
+// min returns the minimum of two integers.
 // Helper function for minimum of two integers
 func min(a, b int) int {
 	if a < b {
@@ -27,7 +33,10 @@ func min(a, b int) int {
 	return b
 }
 
-// AgentBridge provides script access to go-llms agent functionality
+// AgentBridge provides script access to go-llms agent functionality.
+// It manages agent lifecycle, tool registration, event handling, state management,
+// performance profiling, and workflow orchestration. The bridge maintains a registry
+// of agents and provides comprehensive monitoring and debugging capabilities.
 type AgentBridge struct {
 	mu            sync.RWMutex
 	initialized   bool
@@ -38,7 +47,9 @@ type AgentBridge struct {
 	profiler      *profiling.Profiler   // Performance profiling
 }
 
-// NewAgentBridge creates a new agent bridge
+// NewAgentBridge creates a new agent bridge.
+// It initializes with in-memory event storage, event replayer, and performance
+// profiler. The bridge starts uninitialized and must be initialized before use.
 func NewAgentBridge() *AgentBridge {
 	storage := events.NewMemoryStorage()
 	return &AgentBridge{
@@ -49,12 +60,15 @@ func NewAgentBridge() *AgentBridge {
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// Always returns "agent" for this bridge.
 func (b *AgentBridge) GetID() string {
 	return "agent"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides information about the bridge including name, version,
+// description, author, and license for documentation and discovery.
 func (b *AgentBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "agent",
@@ -65,7 +79,9 @@ func (b *AgentBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// Currently performs minimal initialization. Can be extended to
+// set up default agents or connect to external agent services.
 func (b *AgentBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -78,7 +94,9 @@ func (b *AgentBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup cleans up bridge resources
+// Cleanup cleans up bridge resources.
+// Calls cleanup on all registered agents and removes them from the registry.
+// Continues cleanup even if individual agents fail to clean up properly.
 func (b *AgentBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -96,19 +114,24 @@ func (b *AgentBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if the bridge is initialized
+// IsInitialized checks if the bridge is initialized.
+// Thread-safe check of initialization status.
 func (b *AgentBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for proper integration.
 func (b *AgentBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// Defines a comprehensive API for agent management including creation,
+// execution, state management, event handling, profiling, and workflow
+// orchestration. Includes both primary methods and aliases for compatibility.
 func (b *AgentBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{
@@ -553,7 +576,9 @@ func (b *AgentBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// Maps go-llms agent types to script types for proper type conversion
+// during method execution. Covers agents, tools, state, config, and events.
 func (b *AgentBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"Agent": {
@@ -615,7 +640,9 @@ func (b *AgentBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// Checks that the bridge is initialized and validates parameter counts
+// based on method definitions. Returns error for unknown methods.
 func (b *AgentBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !b.IsInitialized() {
 		return fmt.Errorf("bridge not initialized")
@@ -643,7 +670,10 @@ func (b *AgentBridge) ValidateMethod(name string, args []engine.ScriptValue) err
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// Routes method calls to appropriate implementations, handling agent creation,
+// execution, state management, event handling, profiling, and more. Returns
+// script-compatible values and errors wrapped in ScriptValue types.
 func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := b.ValidateMethod(name, args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -1510,7 +1540,9 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Defines that scripts need network access for agent operations and
+// memory access for state management and execution.
 func (b *AgentBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -1530,7 +1562,9 @@ func (b *AgentBridge) RequiredPermissions() []engine.Permission {
 
 // Helper methods for agent management
 
-// getAgent retrieves an agent by ID
+// getAgent retrieves an agent by ID.
+// Internal helper that returns error if agent not found.
+// Caller must hold appropriate lock.
 func (b *AgentBridge) getAgent(id string) (bridge.BaseAgent, error) {
 	agent, exists := b.agents[id]
 	if !exists {
@@ -1539,7 +1573,9 @@ func (b *AgentBridge) getAgent(id string) (bridge.BaseAgent, error) {
 	return agent, nil
 }
 
-// removeAgentInternal removes an agent from the bridge
+// removeAgentInternal removes an agent from the bridge.
+// Calls cleanup on the agent before removing from registry.
+// Returns error if agent not found or cleanup fails.
 func (b *AgentBridge) removeAgentInternal(id string) error {
 	agent, exists := b.agents[id]
 	if !exists {

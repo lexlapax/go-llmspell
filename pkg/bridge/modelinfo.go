@@ -17,26 +17,32 @@ import (
 	"github.com/lexlapax/go-llms/pkg/util/llmutil/modelinfo/domain"
 )
 
-// ModelInfoBridge provides access to LLM model information via go-llms ModelRegistry
+// ModelInfoBridge provides access to LLM model information via go-llms ModelRegistry.
+// It wraps go-llms model discovery and registry functionality, exposing model
+// metadata, capabilities, and pricing information to script engines.
 type ModelInfoBridge struct {
 	mu          sync.RWMutex
 	registries  map[string]llmdomain.ModelRegistry
 	initialized bool
 }
 
-// NewModelInfoBridge creates a new model info bridge
+// NewModelInfoBridge creates a new model info bridge.
+// The bridge starts uninitialized with an empty registry map.
 func NewModelInfoBridge() *ModelInfoBridge {
 	return &ModelInfoBridge{
 		registries: make(map[string]llmdomain.ModelRegistry),
 	}
 }
 
-// GetID returns the bridge ID
+// GetID returns the bridge ID.
+// Always returns "modelinfo" for this bridge.
 func (b *ModelInfoBridge) GetID() string {
 	return "modelinfo"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides information about the bridge including name, version,
+// and description for documentation and discovery.
 func (b *ModelInfoBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Model Info Bridge",
@@ -46,7 +52,9 @@ func (b *ModelInfoBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// Currently performs minimal initialization. Can be extended to
+// pre-load model registries or connect to external services.
 func (b *ModelInfoBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -59,7 +67,9 @@ func (b *ModelInfoBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs cleanup
+// Cleanup performs cleanup.
+// Marks the bridge as uninitialized. Registries are preserved
+// and can be used after re-initialization.
 func (b *ModelInfoBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -68,19 +78,23 @@ func (b *ModelInfoBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if the bridge is initialized
+// IsInitialized checks if the bridge is initialized.
+// Thread-safe check of initialization status.
 func (b *ModelInfoBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for proper integration.
 func (b *ModelInfoBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// Defines the script-accessible API for model information including
+// registry management and model queries.
 func (b *ModelInfoBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{
@@ -124,7 +138,9 @@ func (b *ModelInfoBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// Maps go-llms types to script types for proper type conversion
+// during method execution.
 func (b *ModelInfoBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"ModelRegistry": {
@@ -138,13 +154,17 @@ func (b *ModelInfoBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// Currently delegates validation to the engine based on Methods() metadata.
+// Can be extended for custom validation logic.
 func (b *ModelInfoBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Defines that scripts need read access to model information
+// for security sandboxing.
 func (b *ModelInfoBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -156,7 +176,9 @@ func (b *ModelInfoBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// RegisterModelRegistry registers a model registry
+// RegisterModelRegistry registers a model registry.
+// Associates a named registry with the bridge for later queries.
+// Thread-safe for concurrent registry additions.
 func (b *ModelInfoBridge) RegisterModelRegistry(name string, registry llmdomain.ModelRegistry) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -165,7 +187,9 @@ func (b *ModelInfoBridge) RegisterModelRegistry(name string, registry llmdomain.
 	return nil
 }
 
-// ListRegistries returns all registered registry names
+// ListRegistries returns all registered registry names.
+// Returns a copy of registry names to prevent external modification.
+// Thread-safe for concurrent access.
 func (b *ModelInfoBridge) ListRegistries() []string {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -177,7 +201,8 @@ func (b *ModelInfoBridge) ListRegistries() []string {
 	return names
 }
 
-// GetRegistry returns a specific registry
+// GetRegistry returns a specific registry.
+// Returns nil if registry not found. Thread-safe for concurrent access.
 func (b *ModelInfoBridge) GetRegistry(name string) llmdomain.ModelRegistry {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -185,7 +210,9 @@ func (b *ModelInfoBridge) GetRegistry(name string) llmdomain.ModelRegistry {
 	return b.registries[name]
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// Handles all script-callable methods including model inventory fetching,
+// registry management, and model queries. Returns script-compatible values.
 func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -330,7 +357,8 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 	}
 }
 
-// Helper function to convert models to ScriptValue
+// convertModelsToScriptValue converts an array of domain.Model to ScriptValue.
+// Transforms go-llms model structs into script-compatible array format.
 func convertModelsToScriptValue(models []domain.Model) engine.ScriptValue {
 	values := make([]engine.ScriptValue, len(models))
 	for i, m := range models {
@@ -339,7 +367,9 @@ func convertModelsToScriptValue(models []domain.Model) engine.ScriptValue {
 	return engine.NewArrayValue(values)
 }
 
-// Helper function to convert a single model to ScriptValue
+// convertModelToScriptValue converts a single domain.Model to ScriptValue.
+// Creates a comprehensive object representation including all model metadata,
+// pricing information, and capability flags.
 func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
 	pricingFields := map[string]engine.ScriptValue{
 		"inputPer1kTokens":  engine.NewNumberValue(m.Pricing.InputPer1kTokens),
@@ -363,9 +393,10 @@ func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
 	return engine.NewObjectValue(fields)
 }
 
-// Helper function to convert a single model to script format
 
-// Helper function to convert capabilities to ScriptValue
+// convertCapabilitiesToScriptValue converts domain.Capabilities to ScriptValue.
+// Creates nested object structure representing model capabilities across
+// different modalities (text, image, audio, video, file) and features.
 func convertCapabilitiesToScriptValue(c domain.Capabilities) engine.ScriptValue {
 	textFields := map[string]engine.ScriptValue{
 		"read":  engine.NewBoolValue(c.Text.Read),

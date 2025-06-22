@@ -14,7 +14,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/docs"
 )
 
-// GenDocsCmd generates API documentation for script languages
+// GenDocsCmd generates API documentation for script languages.
+// It extracts API documentation from the codebase and generates
+// formatted documentation in various output formats.
 type GenDocsCmd struct {
 	BaseCommand
 	Output   string `short:"o" default:"docs/api" help:"Output directory for documentation"`
@@ -23,7 +25,9 @@ type GenDocsCmd struct {
 	Version  string `short:"V" default:"1.0.0" help:"Documentation version"`
 }
 
-// Run executes the documentation generation
+// Run executes the documentation generation.
+// It processes the specified languages and formats,
+// generating comprehensive API documentation.
 func (cmd *GenDocsCmd) Run(ctx *kong.Context) error {
 	// Create output directory
 	if err := os.MkdirAll(cmd.Output, 0755); err != nil {
@@ -132,14 +136,18 @@ func (cmd *GenDocsCmd) Run(ctx *kong.Context) error {
 	return nil
 }
 
-// GetBridgeManagerFromContext retrieves the bridge manager from context
+// GetBridgeManagerFromContext retrieves the bridge manager from context.
+// Currently returns a mock implementation until proper
+// bridge manager integration is complete.
 func GetBridgeManagerFromContext(ctx *kong.Context) docs.BridgeManager {
 	// TODO: Implement actual bridge manager retrieval from Kong context
 	// For now, return a mock implementation
 	return &mockBridgeManager{bridges: make(map[string]interface{})}
 }
 
-// mockBridgeManager is a temporary implementation
+// mockBridgeManager is a temporary implementation.
+// It provides a placeholder for bridge manager functionality
+// during documentation generation.
 type mockBridgeManager struct {
 	bridges map[string]interface{}
 }
@@ -156,7 +164,8 @@ func (m *mockBridgeManager) GetBridge(id string) interface{} {
 	return m.bridges[id]
 }
 
-// containsString checks if a string slice contains a value
+// containsString checks if a string slice contains a value.
+// Helper function for checking presence in string slices.
 func containsString(slice []string, value string) bool {
 	for _, v := range slice {
 		if v == value {
@@ -166,7 +175,8 @@ func containsString(slice []string, value string) bool {
 	return false
 }
 
-// toTitle converts a string to title case
+// toTitle converts a string to title case.
+// Simple implementation for ASCII strings.
 func toTitle(s string) string {
 	if s == "" {
 		return ""

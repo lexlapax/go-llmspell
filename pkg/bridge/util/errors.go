@@ -19,6 +19,8 @@ import (
 )
 
 // UtilErrorsBridge provides script access to go-llms error serialization utilities.
+// It manages error creation, serialization, recovery strategies, aggregation,
+// categorization, and error event emission for comprehensive error handling.
 type UtilErrorsBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -31,10 +33,12 @@ type UtilErrorsBridge struct {
 	aggregator      errors.ErrorAggregator   // For error aggregation
 }
 
-// ErrorHandler defines a custom error handler function
+// ErrorHandler defines a custom error handler function.
+// It processes an error and returns a potentially modified error.
 type ErrorHandler func(error) error
 
-// ErrorCategory defines error categorization metadata
+// ErrorCategory defines error categorization metadata.
+// It specifies properties like retryability and fatality for error types.
 type ErrorCategory struct {
 	Name        string
 	Description string
@@ -44,6 +48,7 @@ type ErrorCategory struct {
 }
 
 // NewUtilErrorsBridge creates a new error utilities bridge.
+// It initializes empty registries for error handlers and categories.
 func NewUtilErrorsBridge() *UtilErrorsBridge {
 	return &UtilErrorsBridge{
 		errorHandlers:   make(map[string]ErrorHandler),
@@ -52,6 +57,7 @@ func NewUtilErrorsBridge() *UtilErrorsBridge {
 }
 
 // NewUtilErrorsBridgeWithEventEmitter creates a new error utilities bridge with event emitter.
+// It enables error event emission for monitoring and debugging.
 func NewUtilErrorsBridgeWithEventEmitter(eventEmitter agentDomain.EventEmitter) *UtilErrorsBridge {
 	return &UtilErrorsBridge{
 		eventEmitter:    eventEmitter,
@@ -61,11 +67,14 @@ func NewUtilErrorsBridgeWithEventEmitter(eventEmitter agentDomain.EventEmitter) 
 }
 
 // GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (b *UtilErrorsBridge) GetID() string {
 	return "util_errors"
 }
 
 // GetMetadata returns bridge metadata.
+// It provides information about the error utilities bridge including
+// version, description, and supported error handling features.
 func (b *UtilErrorsBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "util_errors",
@@ -77,6 +86,7 @@ func (b *UtilErrorsBridge) GetMetadata() engine.BridgeMetadata {
 }
 
 // Initialize initializes the bridge.
+// It sets up the event bus, error aggregator, and default error categories.
 func (b *UtilErrorsBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -103,6 +113,7 @@ func (b *UtilErrorsBridge) Initialize(ctx context.Context) error {
 }
 
 // Cleanup cleans up bridge resources.
+// It releases resources and marks the bridge as uninitialized.
 func (b *UtilErrorsBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -112,6 +123,7 @@ func (b *UtilErrorsBridge) Cleanup(ctx context.Context) error {
 }
 
 // IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *UtilErrorsBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -119,11 +131,14 @@ func (b *UtilErrorsBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access error utilities through this bridge.
 func (b *UtilErrorsBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
 // Methods returns the methods exposed by this bridge.
+// It provides metadata about all error-related methods available to scripts,
+// including creation, serialization, recovery, aggregation, and categorization.
 func (b *UtilErrorsBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Error creation and wrapping
@@ -376,6 +391,8 @@ func (b *UtilErrorsBridge) Methods() []engine.MethodInfo {
 }
 
 // TypeMappings returns type conversion mappings.
+// It defines how Go error types are mapped to script types
+// for errors, strategies, aggregators, categories, and builders.
 func (b *UtilErrorsBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"SerializableError": {
@@ -402,12 +419,15 @@ func (b *UtilErrorsBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
+// It delegates validation to the engine based on Methods() metadata.
 func (b *UtilErrorsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
 // RequiredPermissions returns required permissions.
+// It specifies permissions for error data management
+// and error event emission.
 func (b *UtilErrorsBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -425,7 +445,9 @@ func (b *UtilErrorsBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate error handling operations.
 func (b *UtilErrorsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -482,6 +504,8 @@ func (b *UtilErrorsBridge) ExecuteMethod(ctx context.Context, name string, args 
 
 // Method implementations
 
+// createError creates a serializable error with optional metadata.
+// It returns a new error that can be serialized and transmitted.
 func (b *UtilErrorsBridge) createError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("createError requires message parameter")
@@ -507,6 +531,8 @@ func (b *UtilErrorsBridge) createError(ctx context.Context, args []engine.Script
 	return engine.NewCustomValue("error", err), nil
 }
 
+// wrapError wraps an existing error with additional context and metadata.
+// It preserves the original error while adding new information.
 func (b *UtilErrorsBridge) wrapError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("wrapError requires error and message parameters")
@@ -543,6 +569,8 @@ func (b *UtilErrorsBridge) wrapError(ctx context.Context, args []engine.ScriptVa
 	return engine.NewCustomValue("error", wrapped), nil
 }
 
+// createErrorWithCode creates an error with a specific error code.
+// It enables standardized error codes for programmatic handling.
 func (b *UtilErrorsBridge) createErrorWithCode(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("createErrorWithCode requires code and message parameters")
@@ -573,6 +601,8 @@ func (b *UtilErrorsBridge) createErrorWithCode(ctx context.Context, args []engin
 	return engine.NewCustomValue("error", err), nil
 }
 
+// errorToJSON serializes an error to JSON format.
+// It converts error objects to JSON for storage or transmission.
 func (b *UtilErrorsBridge) errorToJSON(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("errorToJSON requires error parameter")
@@ -606,6 +636,8 @@ func (b *UtilErrorsBridge) errorToJSON(ctx context.Context, args []engine.Script
 	return engine.NewStringValue(string(data)), nil
 }
 
+// errorFromJSON deserializes an error from JSON format.
+// It reconstructs error objects from JSON representation.
 func (b *UtilErrorsBridge) errorFromJSON(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("errorFromJSON requires json parameter")
@@ -624,6 +656,8 @@ func (b *UtilErrorsBridge) errorFromJSON(ctx context.Context, args []engine.Scri
 	return engine.NewCustomValue("error", serr), nil
 }
 
+// createExponentialBackoffStrategy creates an exponential backoff recovery strategy.
+// It provides increasing delays between retry attempts.
 func (b *UtilErrorsBridge) createExponentialBackoffStrategy(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("createExponentialBackoffStrategy requires baseDelay, maxDelay, and maxRetries")
@@ -653,6 +687,8 @@ func (b *UtilErrorsBridge) createExponentialBackoffStrategy(ctx context.Context,
 	return engine.NewCustomValue("RecoveryStrategy", strategy), nil
 }
 
+// createLinearBackoffStrategy creates a linear backoff recovery strategy.
+// It provides fixed delays between retry attempts.
 func (b *UtilErrorsBridge) createLinearBackoffStrategy(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("createLinearBackoffStrategy requires delay and maxRetries")
@@ -676,6 +712,8 @@ func (b *UtilErrorsBridge) createLinearBackoffStrategy(ctx context.Context, args
 	return engine.NewCustomValue("RecoveryStrategy", strategy), nil
 }
 
+// categorizeError determines the category of an error.
+// It analyzes error type and content to assign a category.
 func (b *UtilErrorsBridge) categorizeError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("categorizeError requires error parameter")
@@ -696,6 +734,8 @@ func (b *UtilErrorsBridge) categorizeError(ctx context.Context, args []engine.Sc
 	return engine.NewStringValue(category), nil
 }
 
+// registerErrorCategory registers a custom error category.
+// It defines new error categories with specific properties.
 func (b *UtilErrorsBridge) registerErrorCategory(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("registerErrorCategory requires name and config")
@@ -726,6 +766,8 @@ func (b *UtilErrorsBridge) registerErrorCategory(ctx context.Context, args []eng
 	return engine.NewNilValue(), nil
 }
 
+// getErrorCategories returns all registered error categories.
+// It provides a map of category names to their configurations.
 func (b *UtilErrorsBridge) getErrorCategories(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	// Return copy of categories
 	categories := make(map[string]engine.ScriptValue)
@@ -740,12 +782,16 @@ func (b *UtilErrorsBridge) getErrorCategories(ctx context.Context, args []engine
 	return engine.NewObjectValue(categories), nil
 }
 
+// createErrorAggregator creates a new error aggregator.
+// It collects multiple errors for batch processing.
 func (b *UtilErrorsBridge) createErrorAggregator(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	// Create new aggregator
 	aggregator := errors.NewErrorAggregator()
 	return engine.NewCustomValue("ErrorAggregator", aggregator), nil
 }
 
+// addError adds an error to an aggregator.
+// It accumulates errors for later processing.
 func (b *UtilErrorsBridge) addError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("addError requires aggregator and error")
@@ -775,6 +821,8 @@ func (b *UtilErrorsBridge) addError(ctx context.Context, args []engine.ScriptVal
 	return engine.NewNilValue(), nil
 }
 
+// aggregateErrors creates an aggregated error from multiple errors.
+// It combines multiple errors into a single error with optional message.
 func (b *UtilErrorsBridge) aggregateErrors(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("aggregateErrors requires errors array")
@@ -817,6 +865,8 @@ func (b *UtilErrorsBridge) aggregateErrors(ctx context.Context, args []engine.Sc
 	return engine.NewNilValue(), nil
 }
 
+// emitErrorEvent emits an error event for monitoring.
+// It publishes error information to the event system.
 func (b *UtilErrorsBridge) emitErrorEvent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("emitErrorEvent requires error parameter")
@@ -860,6 +910,8 @@ func (b *UtilErrorsBridge) emitErrorEvent(ctx context.Context, args []engine.Scr
 	return engine.NewNilValue(), nil
 }
 
+// isRetryableError checks if an error is retryable.
+// It determines if the error can be recovered through retry.
 func (b *UtilErrorsBridge) isRetryableError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("isRetryableError requires error parameter")
@@ -879,6 +931,8 @@ func (b *UtilErrorsBridge) isRetryableError(ctx context.Context, args []engine.S
 	return engine.NewBoolValue(errors.IsRetryableError(err)), nil
 }
 
+// isFatalError checks if an error is fatal.
+// It determines if the error represents an unrecoverable condition.
 func (b *UtilErrorsBridge) isFatalError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("isFatalError requires error parameter")
@@ -898,6 +952,8 @@ func (b *UtilErrorsBridge) isFatalError(ctx context.Context, args []engine.Scrip
 	return engine.NewBoolValue(errors.IsFatalError(err)), nil
 }
 
+// enrichError enriches an error with additional context.
+// It adds contextual information to existing errors.
 func (b *UtilErrorsBridge) enrichError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("enrichError requires error and context")
@@ -931,6 +987,8 @@ func (b *UtilErrorsBridge) enrichError(ctx context.Context, args []engine.Script
 	return engine.NewCustomValue("error", wrapped.WithContextMap(context)), nil
 }
 
+// getErrorContext extracts context from an error.
+// It retrieves all contextual information attached to the error.
 func (b *UtilErrorsBridge) getErrorContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getErrorContext requires error parameter")
@@ -986,6 +1044,8 @@ func (b *UtilErrorsBridge) getErrorContext(ctx context.Context, args []engine.Sc
 	return engine.NewObjectValue(context), nil
 }
 
+// createErrorBuilder creates an error builder for fluent construction.
+// It provides a builder pattern for complex error creation.
 func (b *UtilErrorsBridge) createErrorBuilder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	// Create new error builder
 	builder := &ErrorBuilder{
@@ -994,6 +1054,8 @@ func (b *UtilErrorsBridge) createErrorBuilder(ctx context.Context, args []engine
 	return engine.NewCustomValue("ErrorBuilder", builder), nil
 }
 
+// buildError builds an error from a builder.
+// It finalizes the error construction process.
 func (b *UtilErrorsBridge) buildError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("buildError requires builder parameter")
@@ -1012,7 +1074,8 @@ func (b *UtilErrorsBridge) buildError(ctx context.Context, args []engine.ScriptV
 	return engine.NewCustomValue("error", builder.err), nil
 }
 
-// setupDefaultCategories sets up default error categories
+// setupDefaultCategories sets up default error categories.
+// It defines standard categories like network, validation, auth, etc.
 func (b *UtilErrorsBridge) setupDefaultCategories() {
 	b.errorCategories["network"] = ErrorCategory{
 		Name:        "network",
@@ -1057,7 +1120,8 @@ func (b *UtilErrorsBridge) setupDefaultCategories() {
 	}
 }
 
-// categorizeErrorInternal categorizes an error based on its type and content
+// categorizeErrorInternal categorizes an error based on its type and content.
+// It examines error codes and messages to determine the appropriate category.
 func (b *UtilErrorsBridge) categorizeErrorInternal(err error) string {
 	if err == nil {
 		return "unknown"
@@ -1109,6 +1173,9 @@ func (b *UtilErrorsBridge) categorizeErrorInternal(err error) string {
 }
 
 // Helper functions
+
+// getStringFromMap safely retrieves a string value from a map.
+// It returns the default value if the key doesn't exist or isn't a string.
 func getStringFromMap(m map[string]interface{}, key, defaultValue string) string {
 	if val, ok := m[key].(string); ok {
 		return val
@@ -1116,6 +1183,8 @@ func getStringFromMap(m map[string]interface{}, key, defaultValue string) string
 	return defaultValue
 }
 
+// getBoolFromMap safely retrieves a boolean value from a map.
+// It returns the default value if the key doesn't exist or isn't a boolean.
 func getBoolFromMap(m map[string]interface{}, key string, defaultValue bool) bool {
 	if val, ok := m[key].(bool); ok {
 		return val
@@ -1123,6 +1192,8 @@ func getBoolFromMap(m map[string]interface{}, key string, defaultValue bool) boo
 	return defaultValue
 }
 
+// containsAny checks if a string contains any of the given substrings.
+// It returns true if at least one substring is found.
 func containsAny(s string, substrs ...string) bool {
 	for _, substr := range substrs {
 		if contains(s, substr) {
@@ -1132,10 +1203,14 @@ func containsAny(s string, substrs ...string) bool {
 	return false
 }
 
+// contains checks if a string contains a substring.
+// It handles edge cases like empty strings.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexString(s, substr) >= 0)
 }
 
+// indexString finds the index of a substring in a string.
+// It returns -1 if the substring is not found.
 func indexString(s, substr string) int {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {
@@ -1145,12 +1220,14 @@ func indexString(s, substr string) int {
 	return -1
 }
 
-// ErrorBuilder provides fluent error construction
+// ErrorBuilder provides fluent error construction.
+// It allows building errors step by step with a builder pattern.
 type ErrorBuilder struct {
 	err *errors.BaseError
 }
 
-// Helper function to convert numeric types to float64
+// toFloat64 converts numeric types to float64.
+// It handles int, int32, int64, float32, and float64 types.
 func toFloat64(v interface{}) float64 {
 	switch val := v.(type) {
 	case int:

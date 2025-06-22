@@ -3,7 +3,9 @@
 
 package repl
 
-// highlightJavaScript applies JavaScript-specific syntax highlighting
+// highlightJavaScript applies JavaScript-specific syntax highlighting.
+// It recognizes ES6+ keywords, built-in objects, global functions,
+// and single-line comments starting with //.
 func (h *SyntaxHighlighter) highlightJavaScript(input string) string {
 	// JavaScript keywords
 	jsKeywords := []string{

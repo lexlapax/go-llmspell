@@ -5,7 +5,9 @@ package template
 
 import "fmt"
 
-// getBasicScriptContent returns the basic script content based on engine
+// getBasicScriptContent returns the basic script content based on engine.
+// It generates a simple LLM interaction script in the appropriate language
+// (Lua, JavaScript, or Tengo) for basic prompt completion.
 func (g *Generator) getBasicScriptContent() string {
 	return `{{if eq .Engine "lua"}}-- {{.Name}}
 -- {{.Description}}
@@ -95,7 +97,9 @@ return response
 {{end}}`
 }
 
-// getAdvancedScriptContent returns the advanced script content
+// getAdvancedScriptContent returns the advanced script content based on engine.
+// It generates a sophisticated LLM interaction script with state management,
+// hooks, file I/O, and multiple operation modes (chat, analyze, summarize).
 func (g *Generator) getAdvancedScriptContent() string {
 	return `{{if eq .Engine "lua"}}-- {{.Name}}
 -- {{.Description}}
@@ -412,7 +416,9 @@ return result
 {{end}}`
 }
 
-// getUtilsScriptContent returns utility functions
+// getUtilsScriptContent returns utility functions for the library module.
+// It provides common file I/O and string manipulation functions
+// in the appropriate language syntax (Lua, JavaScript, or Tengo).
 func (g *Generator) getUtilsScriptContent() string {
 	return `{{if eq .Engine "lua"}}-- Utility functions
 
@@ -521,7 +527,9 @@ export {
 {{end}}`
 }
 
-// getPromptsScriptContent returns prompt templates
+// getPromptsScriptContent returns prompt templates for the library module.
+// It includes system prompts for different modes and functions to generate
+// analysis and summary prompts with proper formatting.
 func (g *Generator) getPromptsScriptContent() string {
 	return `{{if eq .Engine "lua"}}-- Prompt templates
 
@@ -632,6 +640,10 @@ export {
 }
 
 // Additional script content methods for agent, workflow, and interactive templates
+
+// getAgentScriptContent returns the agent-based script content.
+// It delegates to language-specific implementations that create autonomous
+// agents with tool usage capabilities for complex task completion.
 func (g *Generator) getAgentScriptContent() string {
 	return fmt.Sprintf(`{{if eq .Engine "lua"}}%s{{else if eq .Engine "javascript"}}%s{{else if eq .Engine "tengo"}}%s{{end}}`,
 		g.getLuaAgentScript(),
@@ -639,6 +651,9 @@ func (g *Generator) getAgentScriptContent() string {
 		g.getTengoAgentScript())
 }
 
+// getLuaAgentScript returns the Lua implementation of an agent-based spell.
+// It creates an autonomous agent that can use tools like calculator,
+// web search, and file reader to complete tasks iteratively.
 func (g *Generator) getLuaAgentScript() string {
 	return `-- {{.Name}} - Agent-based spell
 -- {{.Description}}
@@ -698,6 +713,9 @@ print(json.encode(result, {indent = true}))
 return result`
 }
 
+// getJavaScriptAgentScript returns the JavaScript implementation of an agent-based spell.
+// It creates an autonomous agent with async tool execution and
+// structured logging for task completion tracking.
 func (g *Generator) getJavaScriptAgentScript() string {
 	return `// {{.Name}} - Agent-based spell
 // {{.Description}}
@@ -756,6 +774,9 @@ console.log(JSON.stringify(result, null, 2));
 return result;`
 }
 
+// getTengoAgentScript returns the Tengo implementation of an agent-based spell.
+// It provides agent functionality with tool registration and execution
+// in Tengo's syntax for autonomous task completion.
 func (g *Generator) getTengoAgentScript() string {
 	return `// {{.Name}} - Agent-based spell
 // {{.Description}}
@@ -817,6 +838,10 @@ return result`
 }
 
 // Tool content generators
+
+// getCalculatorToolContent returns the calculator tool implementation.
+// It provides safe mathematical expression evaluation with basic
+// validation and error handling for all supported languages.
 func (g *Generator) getCalculatorToolContent() string {
 	return `{{if eq .Engine "lua"}}-- Calculator tool
 
@@ -923,6 +948,9 @@ export {
 {{end}}`
 }
 
+// getWebSearchToolContent returns the web search tool implementation.
+// It provides a mock web search interface that can be replaced with
+// actual API integration for production use.
 func (g *Generator) getWebSearchToolContent() string {
 	return `{{if eq .Engine "lua"}}-- Web search tool (mock implementation)
 
@@ -1063,6 +1091,9 @@ export {
 {{end}}`
 }
 
+// getFileReaderToolContent returns the file reader tool implementation.
+// It provides secure file reading capabilities with support for
+// different file types and encoding options.
 func (g *Generator) getFileReaderToolContent() string {
 	return `{{if eq .Engine "lua"}}-- File reader tool
 
@@ -1227,6 +1258,10 @@ export {
 }
 
 // Workflow template script generators
+
+// getWorkflowScriptContent returns the main workflow orchestration script.
+// It provides a framework for executing multi-step workflows with state
+// management, checkpoints, and error recovery across different workflow types.
 func (g *Generator) getWorkflowScriptContent() string {
 	return `{{if eq .Engine "lua"}}-- {{.Name}} - Workflow-based spell
 -- {{.Description}}
@@ -1448,6 +1483,10 @@ return result
 }
 
 // Workflow script generators
+
+// getProcessDocumentWorkflow returns the document processing workflow implementation.
+// It provides a multi-step workflow for extracting text, analyzing content,
+// generating summaries, and creating insights from documents.
 func (g *Generator) getProcessDocumentWorkflow() string {
 	return `{{if eq .Engine "lua"}}-- Process Document Workflow
 
@@ -1933,6 +1972,9 @@ export {
 {{end}}`
 }
 
+// getGenerateReportWorkflow returns the report generation workflow implementation.
+// It provides steps for data gathering, trend analysis, visualization generation,
+// and report compilation into a comprehensive document.
 func (g *Generator) getGenerateReportWorkflow() string {
 	return `{{if eq .Engine "lua"}}-- Generate Report Workflow
 
@@ -1985,6 +2027,9 @@ export {
 {{end}}`
 }
 
+// getAnalyzeDataWorkflow returns the data analysis workflow implementation.
+// It provides steps for loading data, cleaning and preprocessing,
+// performing statistical analysis, and generating conclusions.
 func (g *Generator) getAnalyzeDataWorkflow() string {
 	return `{{if eq .Engine "lua"}}-- Analyze Data Workflow
 
@@ -2038,6 +2083,10 @@ export {
 }
 
 // Interactive script content
+
+// getInteractiveScriptContent returns the interactive spell script.
+// It provides a terminal-based interface for real-time user interaction
+// with support for different modes (chat, quiz, assistant) and personalities.
 func (g *Generator) getInteractiveScriptContent() string {
 	return `{{if eq .Engine "lua"}}-- {{.Name}} - Interactive spell
 -- {{.Description}}

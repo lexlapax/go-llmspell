@@ -11,13 +11,17 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
 
-// EnginesCmd lists available script engines
+// EnginesCmd lists available script engines.
+// It displays registered engines with their capabilities,
+// features, and usage statistics.
 type EnginesCmd struct {
 	BaseCommand
 	Details bool `short:"d" help:"Show detailed engine information"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It queries the engine registry and displays information
+// about all available script engines.
 func (c *EnginesCmd) Run(ctx context.Context) error {
 	// Get engine registry from context
 	engineRegistryInterface := GetEngineRegistry(ctx)

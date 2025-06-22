@@ -13,7 +13,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 )
 
-// SpellTemplate represents a spell template
+// SpellTemplate represents a spell template.
+// It contains the template metadata and a collection of files
+// to be generated for the spell project.
 type SpellTemplate struct {
 	Name        string
 	Description string
@@ -21,7 +23,9 @@ type SpellTemplate struct {
 	Files       map[string]FileTemplate
 }
 
-// TemplateType represents the type of template
+// TemplateType represents the type of template.
+// Different template types provide different levels of complexity
+// and features for spell development.
 type TemplateType string
 
 const (
@@ -32,14 +36,18 @@ const (
 	TemplateTypeInteractive TemplateType = "interactive"
 )
 
-// FileTemplate represents a file to be generated
+// FileTemplate represents a file to be generated.
+// It can contain either static content or a Go template
+// that will be processed with generation options.
 type FileTemplate struct {
 	Path     string
 	Content  string
 	Template bool // If true, content is a Go template
 }
 
-// GeneratorOptions contains options for generating a spell
+// GeneratorOptions contains options for generating a spell.
+// These options are used to customize the generated spell project
+// with user-specific information and preferences.
 type GeneratorOptions struct {
 	Name        string       // Name of the spell
 	Type        TemplateType // Type of template to use
@@ -51,12 +59,16 @@ type GeneratorOptions struct {
 	Force       bool         // Overwrite existing files
 }
 
-// Generator generates spell scaffolding
+// Generator generates spell scaffolding.
+// It manages available templates and handles the generation
+// of complete spell projects from templates.
 type Generator struct {
 	templates map[TemplateType]*SpellTemplate
 }
 
-// NewGenerator creates a new template generator
+// NewGenerator creates a new template generator.
+// It initializes the generator with all built-in templates
+// ready for use.
 func NewGenerator() *Generator {
 	g := &Generator{
 		templates: make(map[TemplateType]*SpellTemplate),
@@ -65,7 +77,9 @@ func NewGenerator() *Generator {
 	return g
 }
 
-// Generate creates a new spell from a template
+// Generate creates a new spell from a template.
+// It validates options, creates the output directory structure,
+// and generates all files from the selected template.
 func (g *Generator) Generate(opts GeneratorOptions) error {
 	// Validate options
 	if err := g.validateOptions(opts); err != nil {
@@ -94,7 +108,9 @@ func (g *Generator) Generate(opts GeneratorOptions) error {
 	return nil
 }
 
-// ListTemplates returns available template types
+// ListTemplates returns available template types.
+// It provides information about all registered templates
+// for display to users.
 func (g *Generator) ListTemplates() []TemplateInfo {
 	var templates []TemplateInfo
 	for typ, tmpl := range g.templates {
@@ -107,14 +123,18 @@ func (g *Generator) ListTemplates() []TemplateInfo {
 	return templates
 }
 
-// TemplateInfo contains information about a template
+// TemplateInfo contains information about a template.
+// It's used to display available templates to users
+// when listing or selecting templates.
 type TemplateInfo struct {
 	Type        TemplateType
 	Name        string
 	Description string
 }
 
-// validateOptions validates generation options
+// validateOptions validates generation options.
+// It ensures required fields are present and validates
+// engine selection against supported engines.
 func (g *Generator) validateOptions(opts GeneratorOptions) error {
 	if opts.Name == "" {
 		return errors.New(errors.CategoryValidation, "spell name is required")
@@ -138,7 +158,9 @@ func (g *Generator) validateOptions(opts GeneratorOptions) error {
 	return nil
 }
 
-// createOutputDir creates the output directory
+// createOutputDir creates the output directory.
+// It checks for existing directories and handles the force
+// flag to allow overwriting when requested.
 func (g *Generator) createOutputDir(path string, force bool) error {
 	// Check if directory exists
 	if _, err := os.Stat(path); err == nil {
@@ -155,7 +177,9 @@ func (g *Generator) createOutputDir(path string, force bool) error {
 	return nil
 }
 
-// generateFile generates a single file
+// generateFile generates a single file.
+// It processes templates if needed, creates necessary directories,
+// and writes the file content to disk.
 func (g *Generator) generateFile(outputPath string, fileTmpl FileTemplate, opts GeneratorOptions) error {
 	// Calculate full file path
 	fullPath := filepath.Join(outputPath, fileTmpl.Path)
@@ -195,7 +219,9 @@ func (g *Generator) generateFile(outputPath string, fileTmpl FileTemplate, opts 
 	return nil
 }
 
-// substituteExtension substitutes script file extensions based on engine
+// substituteExtension substitutes script file extensions based on engine.
+// It replaces .script extensions with the appropriate extension
+// for the selected script engine.
 func (g *Generator) substituteExtension(path string, engine string) string {
 	if strings.HasSuffix(path, ".script") {
 		ext := g.getEngineExtension(engine)
@@ -204,7 +230,9 @@ func (g *Generator) substituteExtension(path string, engine string) string {
 	return path
 }
 
-// getEngineExtension returns the file extension for an engine
+// getEngineExtension returns the file extension for an engine.
+// It maps engine names to their corresponding file extensions
+// (.lua, .js, .tengo).
 func (g *Generator) getEngineExtension(engine string) string {
 	switch engine {
 	case "lua":
@@ -218,7 +246,9 @@ func (g *Generator) getEngineExtension(engine string) string {
 	}
 }
 
-// registerBuiltinTemplates registers the built-in templates
+// registerBuiltinTemplates registers the built-in templates.
+// It populates the template registry with all available
+// template types for spell generation.
 func (g *Generator) registerBuiltinTemplates() {
 	g.templates[TemplateTypeBasic] = g.createBasicTemplate()
 	g.templates[TemplateTypeAdvanced] = g.createAdvancedTemplate()

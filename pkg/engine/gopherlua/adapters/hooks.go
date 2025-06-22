@@ -12,12 +12,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// HooksAdapter specializes BridgeAdapter for hooks functionality
+// HooksAdapter specializes BridgeAdapter for hooks functionality.
+// It provides hook registration, priority ordering, lifecycle execution,
+// and management operations for extending LLM behavior at various points
+// in the processing pipeline.
 type HooksAdapter struct {
 	*gopherlua.BridgeAdapter
 }
 
-// NewHooksAdapter creates a new hooks adapter
+// NewHooksAdapter creates a new hooks adapter with the provided bridge.
+// The bridge parameter should be a hooks bridge from go-llms that provides
+// hook management functionality. Returns an adapter that can be registered
+// as a Lua module.
 func NewHooksAdapter(bridge engine.Bridge) *HooksAdapter {
 	// Create hooks adapter
 	adapter := &HooksAdapter{}
@@ -39,7 +45,10 @@ func (ha *HooksAdapter) ensureHooksMethods() {
 	// For now, this is a placeholder for future validation
 }
 
-// CreateLuaModule creates a Lua module with hooks-specific enhancements
+// CreateLuaModule creates a Lua module with hooks-specific enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all hook operations, constants, and convenience methods. The module
+// provides a complete hook management API for Lua scripts.
 func (ha *HooksAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table
@@ -286,7 +295,10 @@ func (ha *HooksAdapter) tableToScriptValue(L *lua.LState, table *lua.LTable) eng
 	return engine.NewObjectValue(result)
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (ha *HooksAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
@@ -311,7 +323,9 @@ func (ha *HooksAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string
 	return ms.Register(module)
 }
 
-// GetMethods returns the available methods
+// GetMethods returns the available methods as a map of method names to availability.
+// The returned map includes all hook-related operations such as registration,
+// enabling/disabling, and batch operations. Returns true for each available method.
 func (ha *HooksAdapter) GetMethods() map[string]bool {
 	methods := make(map[string]bool)
 

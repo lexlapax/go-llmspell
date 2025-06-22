@@ -1,6 +1,9 @@
 // ABOUTME: BridgeConverter handles conversion between Go bridge objects and Lua userdata
 // ABOUTME: Provides metatable generation, method wrapping, type safety checks, and bridge type registry
 
+// Package gopherlua provides a Lua engine implementation for go-llmspell.
+// This file implements conversion between Go bridge objects and Lua userdata,
+// enabling seamless integration of go-llms bridges with Lua scripts.
 package gopherlua
 
 import (
@@ -12,14 +15,16 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// BridgeConverter handles conversion of bridge objects to/from Lua
+// BridgeConverter handles conversion of bridge objects to/from Lua.
+// It manages the creation of Lua userdata with appropriate metatables,
+// method wrapping, and type safety for bridge integration.
 type BridgeConverter struct {
 	mu                 sync.RWMutex
 	registeredTypes    map[string]engine.Bridge
 	primitiveConverter *PrimitiveConverter
 }
 
-// NewBridgeConverter creates a new bridge converter
+// NewBridgeConverter creates a new bridge converter.
 func NewBridgeConverter() *BridgeConverter {
 	return &BridgeConverter{
 		registeredTypes:    make(map[string]engine.Bridge),
@@ -29,7 +34,7 @@ func NewBridgeConverter() *BridgeConverter {
 
 // Bridge to Lua conversion
 
-// BridgeToLua converts a Go bridge object to Lua userdata with metatable
+// BridgeToLua converts a Go bridge object to Lua userdata with metatable.
 func (bc *BridgeConverter) BridgeToLua(L *lua.LState, value interface{}) (lua.LValue, error) {
 	bridge, ok := value.(engine.Bridge)
 	if !ok {
@@ -47,7 +52,7 @@ func (bc *BridgeConverter) BridgeToLua(L *lua.LState, value interface{}) (lua.LV
 	return userdata, nil
 }
 
-// GenerateMetatable creates a metatable for a bridge object with its methods
+// GenerateMetatable creates a metatable for a bridge object with its methods.
 func (bc *BridgeConverter) GenerateMetatable(L *lua.LState, bridge engine.Bridge) *lua.LTable {
 	metatable := L.NewTable()
 
@@ -106,7 +111,7 @@ func (bc *BridgeConverter) GenerateMetatable(L *lua.LState, bridge engine.Bridge
 	return metatable
 }
 
-// WrapMethod wraps a bridge method for Lua calling
+// WrapMethod wraps a bridge method for Lua calling.
 func (bc *BridgeConverter) WrapMethod(L *lua.LState, bridge engine.Bridge, methodInfo engine.MethodInfo) lua.LValue {
 	return L.NewFunction(func(L *lua.LState) int {
 		// Skip the first argument if it's the userdata (self)
@@ -147,7 +152,7 @@ func (bc *BridgeConverter) WrapMethod(L *lua.LState, bridge engine.Bridge, metho
 	})
 }
 
-// ValidateMethodCall validates the arguments for a method call
+// ValidateMethodCall validates the arguments for a method call.
 func (bc *BridgeConverter) ValidateMethodCall(methodName string, args []lua.LValue, methodInfo engine.MethodInfo) error {
 	// Check argument count
 	requiredCount := 0
@@ -203,7 +208,7 @@ func (bc *BridgeConverter) validateLuaType(value lua.LValue, expectedType string
 
 // From Lua conversion
 
-// FromLua converts Lua userdata back to a Go bridge object
+// FromLua converts Lua userdata back to a Go bridge object.
 func (bc *BridgeConverter) FromLua(value lua.LValue) (interface{}, error) {
 	userdata, ok := value.(*lua.LUserData)
 	if !ok {
@@ -220,13 +225,13 @@ func (bc *BridgeConverter) FromLua(value lua.LValue) (interface{}, error) {
 
 // Type safety and validation
 
-// IsBridge checks if a value is a bridge object
+// IsBridge checks if a value is a bridge object.
 func (bc *BridgeConverter) IsBridge(value interface{}) bool {
 	_, ok := value.(engine.Bridge)
 	return ok
 }
 
-// ValidateBridge validates that a bridge object is valid
+// ValidateBridge validates that a bridge object is valid.
 func (bc *BridgeConverter) ValidateBridge(bridge interface{}) error {
 	if bridge == nil {
 		return fmt.Errorf("bridge cannot be nil")
@@ -244,7 +249,7 @@ func (bc *BridgeConverter) ValidateBridge(bridge interface{}) error {
 	return nil
 }
 
-// IsValidBridgeUserData checks if userdata contains a valid bridge
+// IsValidBridgeUserData checks if userdata contains a valid bridge.
 func (bc *BridgeConverter) IsValidBridgeUserData(userdata *lua.LUserData) bool {
 	if userdata == nil {
 		return false
@@ -256,7 +261,7 @@ func (bc *BridgeConverter) IsValidBridgeUserData(userdata *lua.LUserData) bool {
 
 // Bridge type registry
 
-// RegisterBridgeType registers a bridge type for later lookup
+// RegisterBridgeType registers a bridge type for later lookup.
 func (bc *BridgeConverter) RegisterBridgeType(typeName string, bridge engine.Bridge) error {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
@@ -269,7 +274,7 @@ func (bc *BridgeConverter) RegisterBridgeType(typeName string, bridge engine.Bri
 	return nil
 }
 
-// GetBridgeType retrieves a registered bridge type
+// GetBridgeType retrieves a registered bridge type.
 func (bc *BridgeConverter) GetBridgeType(typeName string) (engine.Bridge, bool) {
 	bc.mu.RLock()
 	defer bc.mu.RUnlock()
@@ -278,7 +283,7 @@ func (bc *BridgeConverter) GetBridgeType(typeName string) (engine.Bridge, bool) 
 	return bridge, exists
 }
 
-// ListBridgeTypes returns all registered bridge type names
+// ListBridgeTypes returns all registered bridge type names.
 func (bc *BridgeConverter) ListBridgeTypes() []string {
 	bc.mu.RLock()
 	defer bc.mu.RUnlock()
@@ -290,7 +295,7 @@ func (bc *BridgeConverter) ListBridgeTypes() []string {
 	return types
 }
 
-// UnregisterBridgeType removes a bridge type from the registry
+// UnregisterBridgeType removes a bridge type from the registry.
 func (bc *BridgeConverter) UnregisterBridgeType(typeName string) error {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
@@ -305,7 +310,7 @@ func (bc *BridgeConverter) UnregisterBridgeType(typeName string) error {
 
 // Helper methods for integration with existing type converter
 
-// ExtractBridgeFromValue attempts to extract a bridge from any value
+// ExtractBridgeFromValue attempts to extract a bridge from any value.
 func (bc *BridgeConverter) ExtractBridgeFromValue(value interface{}) (engine.Bridge, bool) {
 	// Direct bridge object
 	if bridge, ok := value.(engine.Bridge); ok {

@@ -1,6 +1,9 @@
 // ABOUTME: Agent bridge adapter that exposes go-llms agent functionality to Lua scripts
 // ABOUTME: Provides agent lifecycle, communication, state management, events, profiling, and workflow operations
 
+// Package adapters provides Lua-specific adapters for go-llms bridges.
+// It contains specialized adapter implementations that integrate bridges with the Lua engine,
+// handling type conversions and providing Lua-friendly APIs for agent, event, LLM, and other functionalities.
 package adapters
 
 import (
@@ -12,12 +15,16 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// AgentAdapter specializes BridgeAdapter for agent functionality
+// AgentAdapter specializes BridgeAdapter for agent functionality.
+// It provides Lua-specific adaptations for agent operations including lifecycle management,
+// communication, state handling, events, profiling, and workflow execution.
 type AgentAdapter struct {
 	*gopherlua.BridgeAdapter
 }
 
-// NewAgentAdapter creates a new agent adapter
+// NewAgentAdapter creates a new agent adapter.
+// It wraps an agent bridge to provide Lua-specific functionality and type conversions
+// for agent operations within the Lua scripting environment.
 func NewAgentAdapter(bridge engine.Bridge) *AgentAdapter {
 	// Create agent adapter
 	adapter := &AgentAdapter{}

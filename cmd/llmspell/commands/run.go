@@ -12,7 +12,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
 
-// RunCmd executes a spell script
+// RunCmd executes a spell script.
+// It handles script loading, engine selection, parameter passing,
+// and execution with configurable timeout.
 type RunCmd struct {
 	BaseCommand
 	Script     string            `arg:"" help:"Script file to execute" type:"existingfile"`
@@ -21,7 +23,9 @@ type RunCmd struct {
 	Timeout    int               `short:"t" help:"Execution timeout in seconds" default:"300"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It initializes the script executor, loads the script,
+// and executes it with the provided parameters and timeout.
 func (c *RunCmd) Run(ctx context.Context) error {
 	// Get engine registry from context
 	engineRegistryInterface := GetEngineRegistry(ctx)

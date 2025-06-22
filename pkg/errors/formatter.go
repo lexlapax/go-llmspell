@@ -12,7 +12,9 @@ import (
 	"time"
 )
 
-// FormatterOptions configures error formatting
+// FormatterOptions configures error formatting.
+// It controls which error details are displayed and how they're formatted
+// for different output scenarios (terminal, logs, debug).
 type FormatterOptions struct {
 	ShowStackTrace  bool
 	ShowContext     bool
@@ -25,7 +27,8 @@ type FormatterOptions struct {
 	DebugMode       bool
 }
 
-// DefaultFormatterOptions returns default formatter options
+// DefaultFormatterOptions returns default formatter options.
+// These defaults provide user-friendly output for terminal usage.
 func DefaultFormatterOptions() FormatterOptions {
 	return FormatterOptions{
 		ShowStackTrace:  false,
@@ -40,7 +43,8 @@ func DefaultFormatterOptions() FormatterOptions {
 	}
 }
 
-// DebugFormatterOptions returns formatter options for debug mode
+// DebugFormatterOptions returns formatter options for debug mode.
+// It enables all diagnostic information including stack traces and timestamps.
 func DebugFormatterOptions() FormatterOptions {
 	opts := DefaultFormatterOptions()
 	opts.ShowStackTrace = true
@@ -50,13 +54,16 @@ func DebugFormatterOptions() FormatterOptions {
 	return opts
 }
 
-// Formatter formats errors for display
+// Formatter formats errors for display.
+// It handles color output, indentation, and selective display
+// of error components based on configuration.
 type Formatter struct {
 	options FormatterOptions
 	writer  io.Writer
 }
 
-// NewFormatter creates a new error formatter
+// NewFormatter creates a new error formatter.
+// It automatically detects terminal capabilities and respects NO_COLOR environment variable.
 func NewFormatter(options FormatterOptions) *Formatter {
 	// Disable colors if not a terminal or explicitly disabled
 	if !isTerminal() || os.Getenv("NO_COLOR") != "" {
@@ -69,12 +76,15 @@ func NewFormatter(options FormatterOptions) *Formatter {
 	}
 }
 
-// SetWriter sets the output writer
+// SetWriter sets the output writer.
+// By default, errors are written to os.Stderr.
 func (f *Formatter) SetWriter(w io.Writer) {
 	f.writer = w
 }
 
-// Format formats an error for display
+// Format formats an error for display.
+// It detects error types (Chain, SpellError, generic) and applies
+// appropriate formatting based on the formatter's configuration.
 func (f *Formatter) Format(err error) string {
 	if err == nil {
 		return ""
@@ -103,7 +113,9 @@ func (f *Formatter) Format(err error) string {
 	return b.String()
 }
 
-// Print prints an error to the configured writer
+// Print prints an error to the configured writer.
+// It formats the error using Format() and writes to the writer
+// (default os.Stderr). Errors during writing are ignored.
 func (f *Formatter) Print(err error) {
 	if err == nil {
 		return
@@ -112,7 +124,9 @@ func (f *Formatter) Print(err error) {
 	_, _ = fmt.Fprint(f.writer, f.Format(err))
 }
 
-// formatSpellError formats a SpellError
+// formatSpellError formats a SpellError with all its components.
+// The output includes timestamp, category header, message, context,
+// suggestions, stack trace, and debug info based on formatter options.
 func (f *Formatter) formatSpellError(b *strings.Builder, err *SpellError) {
 	if err == nil {
 		b.WriteString("Error: <nil>\n")
@@ -161,7 +175,9 @@ func (f *Formatter) formatSpellError(b *strings.Builder, err *SpellError) {
 	}
 }
 
-// formatGenericError formats a generic error
+// formatGenericError formats a generic error.
+// It displays a simple error message with optional timestamp,
+// suitable for non-SpellError types.
 func (f *Formatter) formatGenericError(b *strings.Builder, err error) {
 	if f.options.ShowTimestamp {
 		b.WriteString(f.gray(fmt.Sprintf("[%s] ", time.Now().Format("15:04:05"))))
@@ -172,7 +188,8 @@ func (f *Formatter) formatGenericError(b *strings.Builder, err error) {
 	b.WriteString("\n")
 }
 
-// formatErrorHeader formats the error header with category
+// formatErrorHeader formats the error header with category.
+// It combines an icon and colored category name based on the error type.
 func (f *Formatter) formatErrorHeader(err *SpellError) string {
 	icon := f.getErrorIcon(err.Category)
 	category := f.formatCategory(err.Category)
@@ -180,7 +197,9 @@ func (f *Formatter) formatErrorHeader(err *SpellError) string {
 	return fmt.Sprintf("%s %s", icon, category)
 }
 
-// formatErrorMessage formats the main error message
+// formatErrorMessage formats the main error message.
+// If the error has a cause, it displays both the message and cause
+// in a hierarchical format with proper indentation.
 func (f *Formatter) formatErrorMessage(err *SpellError) string {
 	indent := strings.Repeat(" ", f.options.IndentLevel)
 
@@ -196,7 +215,9 @@ func (f *Formatter) formatErrorMessage(err *SpellError) string {
 	return indent + f.bold(err.Message)
 }
 
-// formatContext formats error context
+// formatContext formats error context information.
+// It displays key-value pairs from the context map with truncation
+// for long values and limits based on MaxContextItems.
 func (f *Formatter) formatContext(context map[string]interface{}) string {
 	var b strings.Builder
 
@@ -227,7 +248,9 @@ func (f *Formatter) formatContext(context map[string]interface{}) string {
 	return b.String()
 }
 
-// formatSuggestions formats error suggestions
+// formatSuggestions formats error suggestions.
+// The first suggestion uses an arrow icon, subsequent ones use bullets.
+// All suggestions are displayed with green coloring when enabled.
 func (f *Formatter) formatSuggestions(suggestions []string) string {
 	var b strings.Builder
 
@@ -250,7 +273,9 @@ func (f *Formatter) formatSuggestions(suggestions []string) string {
 	return b.String()
 }
 
-// formatStackTrace formats the stack trace
+// formatStackTrace formats the stack trace.
+// It shows function names and file locations with relative paths
+// when possible, limited by MaxStackFrames configuration.
 func (f *Formatter) formatStackTrace(frames []StackFrame) string {
 	var b strings.Builder
 
@@ -298,7 +323,9 @@ func (f *Formatter) formatStackTrace(frames []StackFrame) string {
 	return b.String()
 }
 
-// formatDebugInfo formats debug information
+// formatDebugInfo formats debug information.
+// In debug mode, it displays the error category, exit code,
+// and underlying error type for diagnostic purposes.
 func (f *Formatter) formatDebugInfo(err *SpellError) string {
 	var b strings.Builder
 
@@ -317,7 +344,9 @@ func (f *Formatter) formatDebugInfo(err *SpellError) string {
 	return b.String()
 }
 
-// formatCategory formats the error category
+// formatCategory formats the error category.
+// It capitalizes the category name and applies appropriate
+// color coding based on the error severity and type.
 func (f *Formatter) formatCategory(category ErrorCategory) string {
 	categoryStr := string(category)
 	// Capitalize first letter
@@ -355,7 +384,9 @@ func (f *Formatter) formatCategory(category ErrorCategory) string {
 	}
 }
 
-// getErrorIcon returns an icon for the error category
+// getErrorIcon returns an icon for the error category.
+// Each category has a specific emoji icon that visually
+// indicates the error type (e.g., ⚠ for usage, 🔒 for security).
 func (f *Formatter) getErrorIcon(category ErrorCategory) string {
 	switch category {
 	case CategoryUsage:
@@ -387,7 +418,9 @@ func (f *Formatter) getErrorIcon(category ErrorCategory) string {
 	}
 }
 
-// formatValue formats a context value
+// formatValue formats a context value.
+// It handles strings, errors, and other types with automatic
+// truncation for values longer than 50 characters.
 func (f *Formatter) formatValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
@@ -406,7 +439,9 @@ func (f *Formatter) formatValue(value interface{}) string {
 	}
 }
 
-// Color functions
+// Color functions for terminal output.
+// These functions wrap text in ANSI escape codes when ColorOutput is enabled.
+// red applies red color to text.
 func (f *Formatter) red(s string) string {
 	if f.options.ColorOutput {
 		return "\033[31m" + s + "\033[0m"
@@ -414,6 +449,7 @@ func (f *Formatter) red(s string) string {
 	return s
 }
 
+// green applies green color to text.
 func (f *Formatter) green(s string) string {
 	if f.options.ColorOutput {
 		return "\033[32m" + s + "\033[0m"
@@ -421,6 +457,7 @@ func (f *Formatter) green(s string) string {
 	return s
 }
 
+// yellow applies yellow color to text.
 func (f *Formatter) yellow(s string) string {
 	if f.options.ColorOutput {
 		return "\033[33m" + s + "\033[0m"
@@ -428,6 +465,7 @@ func (f *Formatter) yellow(s string) string {
 	return s
 }
 
+// blue applies blue color to text.
 func (f *Formatter) blue(s string) string {
 	if f.options.ColorOutput {
 		return "\033[34m" + s + "\033[0m"
@@ -435,6 +473,7 @@ func (f *Formatter) blue(s string) string {
 	return s
 }
 
+// magenta applies magenta color to text.
 func (f *Formatter) magenta(s string) string {
 	if f.options.ColorOutput {
 		return "\033[35m" + s + "\033[0m"
@@ -442,6 +481,7 @@ func (f *Formatter) magenta(s string) string {
 	return s
 }
 
+// cyan applies cyan color to text.
 func (f *Formatter) cyan(s string) string {
 	if f.options.ColorOutput {
 		return "\033[36m" + s + "\033[0m"
@@ -449,6 +489,7 @@ func (f *Formatter) cyan(s string) string {
 	return s
 }
 
+// gray applies gray color to text.
 func (f *Formatter) gray(s string) string {
 	if f.options.ColorOutput {
 		return "\033[90m" + s + "\033[0m"
@@ -456,6 +497,7 @@ func (f *Formatter) gray(s string) string {
 	return s
 }
 
+// bold applies bold formatting to text.
 func (f *Formatter) bold(s string) string {
 	if f.options.ColorOutput {
 		return "\033[1m" + s + "\033[0m"
@@ -463,7 +505,9 @@ func (f *Formatter) bold(s string) string {
 	return s
 }
 
-// isTerminal checks if output is a terminal
+// isTerminal checks if output is a terminal.
+// It uses file mode detection to determine if stderr is connected
+// to a terminal device, enabling automatic color support detection.
 func isTerminal() bool {
 	fileInfo, err := os.Stderr.Stat()
 	if err != nil {
@@ -472,7 +516,9 @@ func isTerminal() bool {
 	return (fileInfo.Mode() & os.ModeCharDevice) != 0
 }
 
-// FormatChain formats an error chain
+// FormatChain formats an error chain.
+// It displays multiple errors in a numbered list with appropriate
+// formatting for each error type and optional suggestions for the first error.
 func (f *Formatter) FormatChain(chain *Chain) string {
 	if chain == nil || !chain.HasErrors() {
 		return ""

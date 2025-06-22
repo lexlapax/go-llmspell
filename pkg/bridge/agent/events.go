@@ -19,7 +19,9 @@ import (
 	"github.com/lexlapax/go-llms/pkg/util/profiling"
 )
 
-// EventBridge provides script access to go-llms v0.3.5 event functionality
+// EventBridge provides script access to go-llms v0.3.5 event functionality.
+// It manages event publishing, subscription, storage, filtering, aggregation,
+// and replay capabilities for comprehensive event-driven programming.
 type EventBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -47,7 +49,9 @@ type EventBridge struct {
 	profiler *profiling.Profiler
 }
 
-// EventAggregator handles event aggregation logic
+// EventAggregator handles event aggregation logic.
+// It collects events within a time window and caches aggregated results
+// for efficient processing of event streams.
 type EventAggregator struct {
 	ID          string
 	Type        string
@@ -57,7 +61,9 @@ type EventAggregator struct {
 	ResultCache interface{}
 }
 
-// NewEventBridge creates a new event bridge
+// NewEventBridge creates a new event bridge.
+// It initializes the event bus, storage, recorder, and replayer
+// for full event management functionality.
 func NewEventBridge() *EventBridge {
 	bus := events.NewEventBus()
 	storage := events.NewMemoryStorage()
@@ -77,12 +83,15 @@ func NewEventBridge() *EventBridge {
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (b *EventBridge) GetID() string {
 	return "events"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the event bridge version,
+// description, and supported features.
 func (b *EventBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "events",
@@ -93,7 +102,9 @@ func (b *EventBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// It sets up the bridge-specific event publisher and listener
+// for script interaction with the event system.
 func (b *EventBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -116,7 +127,9 @@ func (b *EventBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup cleans up bridge resources
+// Cleanup cleans up bridge resources.
+// It unsubscribes all active subscriptions, clears registries,
+// and stops event recording.
 func (b *EventBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -137,19 +150,23 @@ func (b *EventBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if the bridge is initialized
+// IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *EventBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access event functionality through this bridge.
 func (b *EventBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// It provides metadata about all event-related methods available to scripts,
+// including publishing, subscription, storage, filtering, and replay operations.
 func (b *EventBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Event Bus Methods
@@ -333,7 +350,9 @@ func (b *EventBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// It defines how Go event types are mapped to script types
+// for events, filters, and queries.
 func (b *EventBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"Event": {
@@ -351,7 +370,9 @@ func (b *EventBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// It ensures that each method receives the correct number and
+// types of arguments before execution.
 func (b *EventBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	switch name {
 	case "publishEvent", "storeEvent", "serializeEvent":
@@ -400,7 +421,9 @@ func (b *EventBridge) ValidateMethod(name string, args []engine.ScriptValue) err
 	return nil
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate event operations.
 func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -833,7 +856,9 @@ func (b *EventBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// It specifies the permissions needed for event publishing,
+// subscription, querying, and storage access.
 func (b *EventBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -853,7 +878,9 @@ func (b *EventBridge) RequiredPermissions() []engine.Permission {
 
 // Helper methods
 
-// mapToEvent converts script data to domain.Event
+// mapToEvent converts script data to domain.Event.
+// It transforms a map representation into a proper event structure
+// with default values for missing fields.
 func (b *EventBridge) mapToEvent(data map[string]interface{}) domain.Event {
 	// This is a simplified implementation
 	// In practice, would need to properly construct domain.Event

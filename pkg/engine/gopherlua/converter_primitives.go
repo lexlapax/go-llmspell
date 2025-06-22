@@ -13,19 +13,23 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// PrimitiveConverter handles conversion of primitive types with specialized validation and error handling
+// PrimitiveConverter handles conversion of primitive types with specialized validation and error handling.
+// It provides granular control over type validation, error reporting, and conversion behavior
+// for basic types including bool, number, string, and nil.
 type PrimitiveConverter struct {
 	// Configuration options can be added here in the future
 }
 
-// NewPrimitiveConverter creates a new primitive type converter
+// NewPrimitiveConverter creates a new primitive type converter.
+// The converter provides specialized handling for basic Go and Lua types.
 func NewPrimitiveConverter() *PrimitiveConverter {
 	return &PrimitiveConverter{}
 }
 
 // Bool conversion methods
 
-// ToBool converts any value to a Go boolean with comprehensive type handling
+// ToBool converts any value to a Go boolean with comprehensive type handling.
+// It supports conversion from strings, numbers, and boolean values with detailed error reporting.
 func (pc *PrimitiveConverter) ToBool(value interface{}) (bool, error) {
 	if value == nil {
 		return false, nil

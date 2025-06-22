@@ -13,14 +13,20 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// ObservabilityAdapter bridges go-llms observability functionality to Lua
+// ObservabilityAdapter bridges go-llms observability functionality to Lua.
+// It combines guardrails for safety enforcement, metrics for performance monitoring,
+// and distributed tracing capabilities into a unified observability interface
+// for Lua scripts.
 type ObservabilityAdapter struct {
 	guardrailsBridge engine.Bridge
 	metricsBridge    engine.Bridge
 	tracingBridge    engine.Bridge
 }
 
-// NewObservabilityAdapter creates a new observability adapter
+// NewObservabilityAdapter creates a new observability adapter with the provided bridges.
+// The guardrailsBridge provides safety and compliance features. The metricsBridge
+// provides performance monitoring capabilities. The tracingBridge provides distributed
+// tracing functionality. Returns an adapter that can be registered as a Lua module.
 func NewObservabilityAdapter(guardrailsBridge, metricsBridge, tracingBridge engine.Bridge) *ObservabilityAdapter {
 	return &ObservabilityAdapter{
 		guardrailsBridge: guardrailsBridge,
@@ -29,17 +35,23 @@ func NewObservabilityAdapter(guardrailsBridge, metricsBridge, tracingBridge engi
 	}
 }
 
-// GetAdapterName returns the adapter name
+// GetAdapterName returns the adapter name.
+// Returns "observability" to identify this adapter type.
 func (oa *ObservabilityAdapter) GetAdapterName() string {
 	return "observability"
 }
 
-// GetBridge returns the primary bridge (guardrails)
+// GetBridge returns the primary bridge (guardrails).
+// The guardrails bridge is considered the primary bridge for this adapter
+// as it provides the core safety functionality.
 func (oa *ObservabilityAdapter) GetBridge() engine.Bridge {
 	return oa.guardrailsBridge
 }
 
-// CreateLuaModule creates a Lua module for observability
+// CreateLuaModule creates a Lua module for observability.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all observability operations organized into guardrails, metrics,
+// and tracing namespaces. The module provides both namespaced and flattened APIs.
 func (oa *ObservabilityAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table
@@ -464,7 +476,9 @@ func (oa *ObservabilityAdapter) addFlattenedTracingMethods(L *lua.LState, module
 	}))
 }
 
-// GetMethods returns available adapter methods
+// GetMethods returns the list of methods exposed by this adapter.
+// The returned slice includes all observability operations across guardrails,
+// metrics, and tracing subsystems.
 func (oa *ObservabilityAdapter) GetMethods() []string {
 	return []string{
 		// Legacy guardrails methods
@@ -482,7 +496,10 @@ func (oa *ObservabilityAdapter) GetMethods() []string {
 	}
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (oa *ObservabilityAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata

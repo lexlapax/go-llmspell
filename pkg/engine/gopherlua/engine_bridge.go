@@ -13,7 +13,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// BridgeManager manages bridge registration and Lua module creation
+// BridgeManager manages bridge registration and Lua module creation.
+// It handles the bridge lifecycle, creates Lua modules for each bridge,
+// and provides thread-safe access to registered bridges.
 type BridgeManager struct {
 	bridges   map[string]engine.Bridge
 	modules   map[string]*lua.LTable
@@ -21,7 +23,8 @@ type BridgeManager struct {
 	mu        sync.RWMutex
 }
 
-// NewBridgeManager creates a new bridge manager
+// NewBridgeManager creates a new bridge manager.
+// It initializes with a type converter for handling Go-Lua type conversions.
 func NewBridgeManager(converter *LuaTypeConverter) *BridgeManager {
 	return &BridgeManager{
 		bridges:   make(map[string]engine.Bridge),
@@ -30,7 +33,8 @@ func NewBridgeManager(converter *LuaTypeConverter) *BridgeManager {
 	}
 }
 
-// RegisterBridge registers a bridge with the engine and creates its Lua module
+// RegisterBridge registers a bridge with the engine and creates its Lua module.
+// It validates the bridge, initializes it, and prepares it for use in Lua scripts.
 func (bm *BridgeManager) RegisterBridge(bridge engine.Bridge) error {
 	if bridge == nil {
 		return fmt.Errorf("bridge cannot be nil")

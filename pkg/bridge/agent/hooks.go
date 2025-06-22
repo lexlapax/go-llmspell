@@ -14,7 +14,9 @@ import (
 	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
 )
 
-// scriptHook wraps a script-defined hook implementation
+// scriptHook wraps a script-defined hook implementation.
+// It implements the domain.Hook interface and provides lifecycle
+// callbacks for agent operations with priority ordering.
 type scriptHook struct {
 	id             string
 	beforeGenerate func(ctx interface{}, messages interface{})
@@ -25,7 +27,9 @@ type scriptHook struct {
 	enabled        bool
 }
 
-// Implement domain.Hook interface
+// BeforeGenerate implements domain.Hook interface.
+// It's called before the agent generates a response,
+// converting messages to script-compatible format.
 func (h *scriptHook) BeforeGenerate(ctx context.Context, messages []llmdomain.Message) {
 	if h.enabled && h.beforeGenerate != nil {
 		// Convert messages to script-compatible format
@@ -40,6 +44,9 @@ func (h *scriptHook) BeforeGenerate(ctx context.Context, messages []llmdomain.Me
 	}
 }
 
+// AfterGenerate implements domain.Hook interface.
+// It's called after the agent generates a response,
+// providing the response or error to the script hook.
 func (h *scriptHook) AfterGenerate(ctx context.Context, response llmdomain.Response, err error) {
 	if h.enabled && h.afterGenerate != nil {
 		// Convert response to script-compatible format
@@ -54,12 +61,18 @@ func (h *scriptHook) AfterGenerate(ctx context.Context, response llmdomain.Respo
 	}
 }
 
+// BeforeToolCall implements domain.Hook interface.
+// It's called before a tool is invoked, allowing scripts
+// to inspect or modify tool parameters.
 func (h *scriptHook) BeforeToolCall(ctx context.Context, tool string, params map[string]interface{}) {
 	if h.enabled && h.beforeToolCall != nil {
 		h.beforeToolCall(ctx, tool, params)
 	}
 }
 
+// AfterToolCall implements domain.Hook interface.
+// It's called after a tool completes execution,
+// providing the result or error to the script hook.
 func (h *scriptHook) AfterToolCall(ctx context.Context, tool string, result interface{}, err error) {
 	if h.enabled && h.afterToolCall != nil {
 		var scriptErr interface{}
@@ -70,26 +83,33 @@ func (h *scriptHook) AfterToolCall(ctx context.Context, tool string, result inte
 	}
 }
 
-// HooksBridge bridges hook functionality to scripts
+// HooksBridge bridges hook functionality to scripts.
+// It manages hook registration, priority ordering, and execution
+// for script-defined lifecycle callbacks in agent operations.
 type HooksBridge struct {
 	mu          sync.RWMutex
 	initialized bool
 	hooks       map[string]*scriptHook
 }
 
-// NewHooksBridge creates a new hooks bridge
+// NewHooksBridge creates a new hooks bridge.
+// It initializes an empty hook registry for managing
+// script-defined lifecycle callbacks.
 func NewHooksBridge() *HooksBridge {
 	return &HooksBridge{
 		hooks: make(map[string]*scriptHook),
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (b *HooksBridge) GetID() string {
 	return "hooks"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the bridge including
+// name, version, description, and author.
 func (b *HooksBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Hooks Bridge",
@@ -99,7 +119,8 @@ func (b *HooksBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the bridge
+// Initialize sets up the bridge.
+// It marks the bridge as initialized and ready for use.
 func (b *HooksBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -107,7 +128,8 @@ func (b *HooksBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup releases bridge resources
+// Cleanup releases bridge resources.
+// It clears all registered hooks and marks the bridge as uninitialized.
 func (b *HooksBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -116,14 +138,17 @@ func (b *HooksBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if bridge is ready
+// IsInitialized checks if bridge is ready.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *HooksBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// It provides metadata about all hook management methods
+// exposed to scripts through this bridge.
 func (b *HooksBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{
@@ -191,7 +216,9 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ExecuteMethod runs a bridge method
+// ExecuteMethod runs a bridge method.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate hook management functions.
 func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if !b.IsInitialized() {
 		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
@@ -251,6 +278,9 @@ func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []e
 	}
 }
 
+// registerHook registers a new hook with lifecycle callbacks.
+// It expects an ID string and a definition object containing hook functions
+// for beforeGenerate, afterGenerate, beforeToolCall, and afterToolCall.
 func (b *HooksBridge) registerHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("registerHook requires id and definition arguments")
@@ -303,6 +333,9 @@ func (b *HooksBridge) registerHook(ctx context.Context, args []engine.ScriptValu
 	return id, nil
 }
 
+// unregisterHook removes a registered hook.
+// It expects an ID string and returns true if the hook existed and was removed,
+// or false if the hook was not found.
 func (b *HooksBridge) unregisterHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("unregisterHook requires id argument")
@@ -323,6 +356,9 @@ func (b *HooksBridge) unregisterHook(ctx context.Context, args []engine.ScriptVa
 	return exists, nil
 }
 
+// listHooks returns all registered hooks sorted by priority.
+// It returns an array of hook information objects containing
+// ID, enabled status, and priority for each hook.
 func (b *HooksBridge) listHooks(ctx context.Context) (interface{}, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -345,6 +381,9 @@ func (b *HooksBridge) listHooks(ctx context.Context) (interface{}, error) {
 	return result, nil
 }
 
+// enableHook enables a disabled hook.
+// It expects an ID string and returns true if the hook was found and enabled,
+// or false with an error if the hook was not found.
 func (b *HooksBridge) enableHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("enableHook requires id argument")
@@ -366,6 +405,9 @@ func (b *HooksBridge) enableHook(ctx context.Context, args []engine.ScriptValue)
 	return false, fmt.Errorf("hook not found: %s", id)
 }
 
+// disableHook disables a hook without removing it.
+// It expects an ID string and returns true if the hook was found and disabled,
+// or false with an error if the hook was not found.
 func (b *HooksBridge) disableHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("disableHook requires id argument")
@@ -387,6 +429,9 @@ func (b *HooksBridge) disableHook(ctx context.Context, args []engine.ScriptValue
 	return false, fmt.Errorf("hook not found: %s", id)
 }
 
+// getHookInfo returns detailed information about a specific hook.
+// It expects an ID string and returns an object with the hook's
+// ID, enabled status, priority, and available callbacks.
 func (b *HooksBridge) getHookInfo(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getHookInfo requires id argument")
@@ -411,6 +456,9 @@ func (b *HooksBridge) getHookInfo(ctx context.Context, args []engine.ScriptValue
 	return nil, fmt.Errorf("hook not found: %s", id)
 }
 
+// executeHooks executes hooks of a specific type.
+// It expects a hook type string (beforeGenerate, afterGenerate, beforeToolCall, afterToolCall)
+// and a context object containing relevant data for the hook execution.
 func (b *HooksBridge) executeHooks(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("executeHooks requires type and context arguments")
@@ -447,6 +495,8 @@ func (b *HooksBridge) executeHooks(ctx context.Context, args []engine.ScriptValu
 	}
 }
 
+// getSortedHooks returns all enabled hooks sorted by priority.
+// Higher priority hooks are executed first.
 func (b *HooksBridge) getSortedHooks() []*scriptHook {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -466,6 +516,8 @@ func (b *HooksBridge) getSortedHooks() []*scriptHook {
 	return hooks
 }
 
+// executeBeforeGenerate executes all beforeGenerate hooks in priority order.
+// It passes the messages context to each hook's beforeGenerate callback.
 func (b *HooksBridge) executeBeforeGenerate(ctx context.Context, hooks []*scriptHook, hookContext map[string]interface{}) (interface{}, error) {
 	messages := hookContext["messages"]
 	for _, hook := range hooks {
@@ -476,6 +528,8 @@ func (b *HooksBridge) executeBeforeGenerate(ctx context.Context, hooks []*script
 	return true, nil
 }
 
+// executeAfterGenerate executes all afterGenerate hooks in priority order.
+// It passes the response and error context to each hook's afterGenerate callback.
 func (b *HooksBridge) executeAfterGenerate(ctx context.Context, hooks []*scriptHook, hookContext map[string]interface{}) (interface{}, error) {
 	response := hookContext["response"]
 	err := hookContext["error"]
@@ -487,6 +541,8 @@ func (b *HooksBridge) executeAfterGenerate(ctx context.Context, hooks []*scriptH
 	return true, nil
 }
 
+// executeBeforeToolCall executes all beforeToolCall hooks in priority order.
+// It passes the tool name and parameters to each hook's beforeToolCall callback.
 func (b *HooksBridge) executeBeforeToolCall(ctx context.Context, hooks []*scriptHook, hookContext map[string]interface{}) (interface{}, error) {
 	tool := hookContext["tool"]
 	params := hookContext["params"]
@@ -498,6 +554,8 @@ func (b *HooksBridge) executeBeforeToolCall(ctx context.Context, hooks []*script
 	return true, nil
 }
 
+// executeAfterToolCall executes all afterToolCall hooks in priority order.
+// It passes the tool name, result, and error to each hook's afterToolCall callback.
 func (b *HooksBridge) executeAfterToolCall(ctx context.Context, hooks []*scriptHook, hookContext map[string]interface{}) (interface{}, error) {
 	tool := hookContext["tool"]
 	result := hookContext["result"]
@@ -510,6 +568,8 @@ func (b *HooksBridge) executeAfterToolCall(ctx context.Context, hooks []*scriptH
 	return true, nil
 }
 
+// clearHooks removes all registered hooks.
+// It returns the count of hooks that were removed.
 func (b *HooksBridge) clearHooks(ctx context.Context) (interface{}, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -520,7 +580,9 @@ func (b *HooksBridge) clearHooks(ctx context.Context) (interface{}, error) {
 	return count, nil
 }
 
-// TypeMappings returns type mappings for the bridge
+// TypeMappings returns type mappings for the bridge.
+// It defines how Go types are mapped to script types for
+// hooks, hook information, and hook contexts.
 func (b *HooksBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"Hook": {
@@ -542,7 +604,9 @@ func (b *HooksBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns permissions needed by this bridge
+// RequiredPermissions returns permissions needed by this bridge.
+// It requires process permissions for hook registration,
+// execution, and management operations.
 func (b *HooksBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -554,23 +618,29 @@ func (b *HooksBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// Validate checks if the bridge is properly configured
+// Validate checks if the bridge is properly configured.
+// It currently performs no validation as the bridge has no
+// required configuration.
 func (b *HooksBridge) Validate() error {
 	return nil
 }
 
-// GetDependencies returns bridge dependencies
+// GetDependencies returns bridge dependencies.
+// The hooks bridge has no dependencies on other bridges.
 func (b *HooksBridge) GetDependencies() []string {
 	return []string{}
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// The hooks bridge requires no special engine registration.
 func (b *HooksBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	// No special registration needed for this bridge
 	return nil
 }
 
-// ValidateMethod validates method arguments before execution
+// ValidateMethod validates method arguments before execution.
+// It ensures that each method receives the correct number and
+// types of arguments before processing.
 func (b *HooksBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	switch name {
 	case "registerHook":
@@ -612,6 +682,9 @@ func (b *HooksBridge) ValidateMethod(name string, args []engine.ScriptValue) err
 var _ engine.Bridge = (*HooksBridge)(nil)
 
 // Helper functions for ScriptValue conversions
+
+// convertHooksListToScriptValue converts a slice of hook information maps
+// to a ScriptValue array for returning to scripts.
 func convertHooksListToScriptValue(hooks []map[string]interface{}) engine.ScriptValue {
 	result := make([]engine.ScriptValue, len(hooks))
 	for i, hook := range hooks {
@@ -620,6 +693,8 @@ func convertHooksListToScriptValue(hooks []map[string]interface{}) engine.Script
 	return engine.NewArrayValue(result)
 }
 
+// convertHookInfoToScriptValue converts a hook information map
+// to a ScriptValue object for returning to scripts.
 func convertHookInfoToScriptValue(info map[string]interface{}) engine.ScriptValue {
 	result := make(map[string]engine.ScriptValue)
 	for k, v := range info {

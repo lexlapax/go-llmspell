@@ -7,7 +7,9 @@ import (
 	"fmt"
 )
 
-// GenerateLLMSpellManPage generates the main llmspell man page
+// GenerateLLMSpellManPage generates the main llmspell man page.
+// It creates a comprehensive manual page documenting all commands,
+// options, and usage examples for the llmspell CLI.
 func GenerateLLMSpellManPage(version string) *ManPage {
 	man := NewManPage("llmspell", 1, version)
 	man.Description = "scriptable LLM interactions via Lua, JavaScript, and Tengo"
@@ -172,7 +174,9 @@ func GenerateLLMSpellManPage(version string) *ManPage {
 	return man
 }
 
-// GenerateCommandManPage generates a man page for a specific command
+// GenerateCommandManPage generates a man page for a specific command.
+// It creates detailed documentation for individual llmspell subcommands
+// with command-specific options, examples, and descriptions.
 func GenerateCommandManPage(command, version string) (*ManPage, error) {
 	name := fmt.Sprintf("llmspell-%s", command)
 	man := NewManPage(name, 1, version)
@@ -318,7 +322,9 @@ func GenerateCommandManPage(command, version string) (*ManPage, error) {
 	return man, nil
 }
 
-// GetAllCommands returns all available commands for man page generation
+// GetAllCommands returns all available commands for man page generation.
+// It provides a complete list of llmspell subcommands that have
+// corresponding man pages.
 func GetAllCommands() []string {
 	return []string{
 		"run",

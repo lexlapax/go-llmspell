@@ -11,19 +11,24 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// EngineRegistryManager wraps the engine registry for use by the runner
+// EngineRegistryManager wraps the engine registry for use by the runner.
+// It provides a higher-level interface for engine management, including
+// registration, execution, and statistics gathering.
 type EngineRegistryManager struct {
 	registry *engine.Registry
 }
 
-// NewEngineRegistryManager creates a new engine registry manager
+// NewEngineRegistryManager creates a new engine registry manager.
+// It wraps the provided engine registry for runner-specific operations.
 func NewEngineRegistryManager(registry *engine.Registry) *EngineRegistryManager {
 	return &EngineRegistryManager{
 		registry: registry,
 	}
 }
 
-// Initialize initializes the registry
+// Initialize initializes the registry.
+// It handles the case where the registry is already initialized,
+// treating it as a non-error condition.
 func (m *EngineRegistryManager) Initialize() error {
 	// If already initialized, that's OK
 	err := m.registry.Initialize()
@@ -33,7 +38,9 @@ func (m *EngineRegistryManager) Initialize() error {
 	return err
 }
 
-// RegisterEngines registers multiple engine factories
+// RegisterEngines registers multiple engine factories.
+// It iterates through the provided factories map and registers
+// each engine with the underlying registry.
 func (m *EngineRegistryManager) RegisterEngines(factories map[string]engine.EngineFactory) error {
 	for name, factory := range factories {
 		if err := m.registry.Register(factory); err != nil {
@@ -43,47 +50,65 @@ func (m *EngineRegistryManager) RegisterEngines(factories map[string]engine.Engi
 	return nil
 }
 
-// GetEngine gets or creates an engine instance
+// GetEngine gets or creates an engine instance.
+// It delegates to the underlying registry's GetEngine method
+// with the provided name and configuration.
 func (m *EngineRegistryManager) GetEngine(name string, config engine.EngineConfig) (engine.ScriptEngine, error) {
 	return m.registry.GetEngine(name, config)
 }
 
-// FindEngineByExtension finds the best engine for a file extension
+// FindEngineByExtension finds the best engine for a file extension.
+// It returns the name of the engine that can handle files with
+// the given extension.
 func (m *EngineRegistryManager) FindEngineByExtension(extension string) (string, error) {
 	return m.registry.FindEngineByExtension(extension)
 }
 
-// ListEngines returns information about all registered engines
+// ListEngines returns information about all registered engines.
+// It provides details about engine capabilities, supported extensions,
+// and features for each registered engine.
 func (m *EngineRegistryManager) ListEngines() []engine.EngineInfo {
 	return m.registry.ListEngines()
 }
 
-// GetEngineInfo returns information about a specific engine
+// GetEngineInfo returns information about a specific engine.
+// It retrieves detailed information about the engine's capabilities
+// and configuration requirements.
 func (m *EngineRegistryManager) GetEngineInfo(name string) (*engine.EngineInfo, error) {
 	return m.registry.GetEngineInfo(name)
 }
 
-// ExecuteScript executes a script using the specified engine
+// ExecuteScript executes a script using the specified engine.
+// It creates or retrieves an engine instance and executes the provided
+// script with the given parameters.
 func (m *EngineRegistryManager) ExecuteScript(ctx context.Context, engineName, script string, params map[string]interface{}) (interface{}, error) {
 	return m.registry.ExecuteScript(ctx, engineName, script, params)
 }
 
-// ExecuteFile executes a script file using the appropriate engine
+// ExecuteFile executes a script file using the appropriate engine.
+// It automatically selects the engine based on the file extension
+// and executes the file contents.
 func (m *EngineRegistryManager) ExecuteFile(ctx context.Context, filepath string, params map[string]interface{}) (interface{}, error) {
 	return m.registry.ExecuteFile(ctx, filepath, params)
 }
 
-// GetStats returns statistics for all engines
+// GetStats returns statistics for all engines.
+// It provides execution counts, timing information, and error rates
+// for performance monitoring and optimization.
 func (m *EngineRegistryManager) GetStats() map[string]*engine.EngineStats {
 	return m.registry.GetStats()
 }
 
-// Shutdown shuts down all engines and cleans up resources
+// Shutdown shuts down all engines and cleans up resources.
+// It ensures all engine instances are properly terminated and
+// resources are released.
 func (m *EngineRegistryManager) Shutdown() error {
 	return m.registry.Shutdown()
 }
 
-// BuildEngineConfig builds an engine configuration from runner config and engine-specific settings
+// BuildEngineConfig builds an engine configuration from runner config and engine-specific settings.
+// It merges runner-level settings with engine-specific overrides to create
+// a complete engine configuration with appropriate defaults.
 func BuildEngineConfig(runnerConfig *RunnerConfig, engineConfig map[string]interface{}) engine.EngineConfig {
 	config := engine.EngineConfig{
 		MemoryLimit:    64 * 1024 * 1024, // 64MB default
@@ -183,7 +208,9 @@ func BuildEngineConfig(runnerConfig *RunnerConfig, engineConfig map[string]inter
 	return config
 }
 
-// ApplyOptionsToConfig applies RunnerOptions to an engine config
+// ApplyOptionsToConfig applies RunnerOptions to an engine config.
+// It overrides specific configuration values based on the provided
+// options, such as timeout and debug settings.
 func ApplyOptionsToConfig(config engine.EngineConfig, options *RunnerOptions) engine.EngineConfig {
 	if options == nil {
 		return config
@@ -199,7 +226,9 @@ func ApplyOptionsToConfig(config engine.EngineConfig, options *RunnerOptions) en
 	return config
 }
 
-// GetEngineForSpell determines the appropriate engine for a spell
+// GetEngineForSpell determines the appropriate engine for a spell.
+// It first checks for an explicitly specified engine in the metadata,
+// then attempts to infer from the entry point file extension.
 func GetEngineForSpell(manager *EngineRegistryManager, metadata *SpellMetadata) (string, error) {
 	// If engine is explicitly specified in metadata, use it
 	if metadata.Engine != "" {
@@ -221,7 +250,9 @@ func GetEngineForSpell(manager *EngineRegistryManager, metadata *SpellMetadata) 
 	return "", fmt.Errorf("unable to determine engine for spell %s", metadata.Name)
 }
 
-// CreateEngineMetrics creates engine metrics from registry stats
+// CreateEngineMetrics creates engine metrics from registry stats.
+// It converts engine statistics into runner-specific metrics format
+// for consistent reporting and monitoring.
 func CreateEngineMetrics(stats map[string]*engine.EngineStats) map[string]*EngineMetric {
 	metrics := make(map[string]*EngineMetric)
 

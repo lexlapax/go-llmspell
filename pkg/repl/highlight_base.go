@@ -21,17 +21,22 @@ const (
 	ColorBracket  = "\033[97m" // White (bright)
 )
 
-// SyntaxHighlighter provides syntax highlighting for different script languages
+// SyntaxHighlighter provides syntax highlighting for different script languages.
+// It applies ANSI color codes to differentiate between keywords, strings,
+// comments, numbers, and other language elements.
 type SyntaxHighlighter struct {
 	engine string
 }
 
-// NewSyntaxHighlighter creates a new syntax highlighter for the specified engine
+// NewSyntaxHighlighter creates a new syntax highlighter for the specified engine.
+// The highlighter will apply language-specific rules based on the engine type.
 func NewSyntaxHighlighter(engine string) *SyntaxHighlighter {
 	return &SyntaxHighlighter{engine: engine}
 }
 
-// Highlight applies syntax highlighting to the input text
+// Highlight applies syntax highlighting to the input text.
+// It delegates to the appropriate language-specific highlighter based
+// on the configured engine, returning unhighlighted text for unknown engines.
 func (h *SyntaxHighlighter) Highlight(input string) string {
 	if input == "" {
 		return input
@@ -49,7 +54,9 @@ func (h *SyntaxHighlighter) Highlight(input string) string {
 	}
 }
 
-// Token represents a piece of text with its type
+// Token represents a piece of text with its type.
+// It includes the token's value, type classification, and position
+// information for accurate highlighting.
 type Token struct {
 	Type  string
 	Value string
@@ -66,13 +73,16 @@ const (
 	TokenTypeDefault = "default"
 )
 
-// BuiltinCategory represents different categories of built-in identifiers
+// BuiltinCategory represents different categories of built-in identifiers.
+// It allows grouping built-ins with different colors for better visual distinction.
 type BuiltinCategory struct {
 	Words []string
 	Color string
 }
 
-// Tokenize breaks the input into tokens (exported for testing)
+// Tokenize breaks the input into tokens (exported for testing).
+// It identifies strings, comments, keywords, built-ins, numbers, and default text,
+// returning a slice of tokens with their types and positions.
 func Tokenize(input string, keywords []string, builtins []string, commentPrefix string) []Token {
 	tokens := []Token{}
 	runes := []rune(input)
@@ -194,16 +204,22 @@ func Tokenize(input string, keywords []string, builtins []string, commentPrefix 
 	return tokens
 }
 
+// isWordChar checks if a rune is a valid word character.
+// Word characters include letters, digits, and underscores.
 func isWordChar(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_'
 }
 
+// isNumber checks if a string represents a number.
+// It matches integers and floating-point numbers.
 func isNumber(s string) bool {
 	matched, _ := regexp.MatchString(`^\d+(\.\d+)?$`, s)
 	return matched
 }
 
-// highlightWithTokens applies highlighting using tokenization
+// highlightWithTokens applies highlighting using tokenization.
+// It tokenizes the input and applies appropriate ANSI color codes
+// to each token based on its type.
 func highlightWithTokens(input string, keywords []string, builtins []string, commentPrefix string) string {
 	tokens := Tokenize(input, keywords, builtins, commentPrefix)
 
@@ -228,13 +244,17 @@ func highlightWithTokens(input string, keywords []string, builtins []string, com
 	return result.String()
 }
 
-// ExtendedToken includes metadata for additional information
+// ExtendedToken includes metadata for additional information.
+// It extends the base Token with metadata that can store category-specific
+// information like custom colors.
 type ExtendedToken struct {
 	Token
 	Metadata interface{}
 }
 
-// tokenizeWithCategories breaks the input into tokens with category support
+// tokenizeWithCategories breaks the input into tokens with category support.
+// It allows different built-in identifiers to have different colors based on
+// their category, providing more nuanced highlighting.
 func tokenizeWithCategories(input string, keywords []string, builtinCategories []BuiltinCategory, commentPrefix string) []ExtendedToken {
 	tokens := []ExtendedToken{}
 	runes := []rune(input)
@@ -377,7 +397,9 @@ func tokenizeWithCategories(input string, keywords []string, builtinCategories [
 	return tokens
 }
 
-// highlightWithCategories applies highlighting using tokenization with different builtin categories
+// highlightWithCategories applies highlighting using tokenization with different builtin categories.
+// It supports custom colors for different categories of built-in identifiers,
+// allowing more sophisticated syntax highlighting.
 func highlightWithCategories(input string, keywords []string, builtinCategories []BuiltinCategory, commentPrefix string) string {
 	tokens := tokenizeWithCategories(input, keywords, builtinCategories, commentPrefix)
 
@@ -405,7 +427,9 @@ func highlightWithCategories(input string, keywords []string, builtinCategories 
 	return result.String()
 }
 
-// StripColors removes ANSI color codes from text
+// StripColors removes ANSI color codes from text.
+// It uses a regular expression to strip all ANSI escape sequences,
+// returning plain text without formatting.
 func StripColors(text string) string {
 	ansiRe := regexp.MustCompile(`\033\[[0-9;]*m`)
 	return ansiRe.ReplaceAllString(text, "")

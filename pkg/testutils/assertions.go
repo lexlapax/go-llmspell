@@ -1,6 +1,9 @@
 // ABOUTME: ScriptValue assertion helpers provide comprehensive type checking and validation utilities
 // ABOUTME: Simplifies test assertions for ScriptValue types with clear error messages and common patterns
 
+// Package testutils provides comprehensive testing utilities for go-llmspell.
+// It includes assertion helpers for ScriptValue types, mock implementations
+// for engines and bridges, test fixtures, and utilities for testing script execution.
 package testutils
 
 import (
@@ -12,7 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// AssertScriptValueType checks if result is of expected type
+// AssertScriptValueType checks if result is of expected type.
+// It fails the test if the ScriptValue is nil or has a different type than expected.
 func AssertScriptValueType(t *testing.T, result engine.ScriptValue, expectedType engine.ScriptValueType) {
 	t.Helper()
 	require.NotNil(t, result, "ScriptValue should not be nil")
@@ -20,7 +24,8 @@ func AssertScriptValueType(t *testing.T, result engine.ScriptValue, expectedType
 		"Expected type %s, got %s", expectedType, result.Type())
 }
 
-// AssertIsString asserts that a ScriptValue is a string and returns the value
+// AssertIsString asserts that a ScriptValue is a string and returns the value.
+// It performs type checking and safe casting to StringValue.
 func AssertIsString(t *testing.T, result engine.ScriptValue) string {
 	t.Helper()
 	AssertScriptValueType(t, result, engine.TypeString)
@@ -29,14 +34,16 @@ func AssertIsString(t *testing.T, result engine.ScriptValue) string {
 	return sv.Value()
 }
 
-// AssertStringEquals asserts that a ScriptValue is a string with expected value
+// AssertStringEquals asserts that a ScriptValue is a string with expected value.
+// It combines type checking with value comparison for convenience.
 func AssertStringEquals(t *testing.T, result engine.ScriptValue, expected string) {
 	t.Helper()
 	actual := AssertIsString(t, result)
 	assert.Equal(t, expected, actual, "String value mismatch")
 }
 
-// AssertStringContains asserts that a ScriptValue is a string containing substring
+// AssertStringContains asserts that a ScriptValue is a string containing substring.
+// Useful for partial string matching in test assertions.
 func AssertStringContains(t *testing.T, result engine.ScriptValue, substring string) {
 	t.Helper()
 	actual := AssertIsString(t, result)
@@ -44,7 +51,8 @@ func AssertStringContains(t *testing.T, result engine.ScriptValue, substring str
 		"String '%s' should contain '%s'", actual, substring)
 }
 
-// AssertIsNumber asserts that a ScriptValue is a number and returns the value
+// AssertIsNumber asserts that a ScriptValue is a number and returns the value.
+// It performs type checking and safe casting to NumberValue.
 func AssertIsNumber(t *testing.T, result engine.ScriptValue) float64 {
 	t.Helper()
 	AssertScriptValueType(t, result, engine.TypeNumber)
@@ -53,14 +61,16 @@ func AssertIsNumber(t *testing.T, result engine.ScriptValue) float64 {
 	return nv.Value()
 }
 
-// AssertNumberEquals asserts that a ScriptValue is a number with expected value
+// AssertNumberEquals asserts that a ScriptValue is a number with expected value.
+// It combines type checking with exact numeric comparison.
 func AssertNumberEquals(t *testing.T, result engine.ScriptValue, expected float64) {
 	t.Helper()
 	actual := AssertIsNumber(t, result)
 	assert.Equal(t, expected, actual, "Number value mismatch")
 }
 
-// AssertNumberInRange asserts that a ScriptValue is a number within range
+// AssertNumberInRange asserts that a ScriptValue is a number within range.
+// Useful for testing numeric values that should fall within specific bounds.
 func AssertNumberInRange(t *testing.T, result engine.ScriptValue, min, max float64) {
 	t.Helper()
 	actual := AssertIsNumber(t, result)
@@ -68,7 +78,8 @@ func AssertNumberInRange(t *testing.T, result engine.ScriptValue, min, max float
 	assert.LessOrEqual(t, actual, max, "Number %f should be <= %f", actual, max)
 }
 
-// AssertIsBool asserts that a ScriptValue is a boolean and returns the value
+// AssertIsBool asserts that a ScriptValue is a boolean and returns the value.
+// It performs type checking and safe casting to BoolValue.
 func AssertIsBool(t *testing.T, result engine.ScriptValue) bool {
 	t.Helper()
 	AssertScriptValueType(t, result, engine.TypeBool)
@@ -77,7 +88,8 @@ func AssertIsBool(t *testing.T, result engine.ScriptValue) bool {
 	return bv.Value()
 }
 
-// AssertBoolEquals asserts that a ScriptValue is a boolean with expected value
+// AssertBoolEquals asserts that a ScriptValue is a boolean with expected value.
+// It combines type checking with boolean value comparison.
 func AssertBoolEquals(t *testing.T, result engine.ScriptValue, expected bool) {
 	t.Helper()
 	actual := AssertIsBool(t, result)

@@ -16,7 +16,9 @@ import (
 	"github.com/lexlapax/go-llms/pkg/agent/workflow"
 )
 
-// WorkflowBridge provides script access to go-llms workflow functionality
+// WorkflowBridge provides script access to go-llms workflow functionality.
+// It manages workflow creation, execution, serialization, script steps,
+// and template support for complex multi-step agent workflows.
 type WorkflowBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -43,7 +45,9 @@ type WorkflowBridge struct {
 	registry *core.AgentRegistry
 }
 
-// ScriptStepHandler handles script execution for workflow steps
+// ScriptStepHandler handles script execution for workflow steps.
+// It provides language-specific validation, execution, debugging,
+// and metadata management for script-based workflow steps.
 type ScriptStepHandler struct {
 	Language  string
 	Validator func(script string) error
@@ -52,7 +56,9 @@ type ScriptStepHandler struct {
 	Metadata  map[string]interface{}
 }
 
-// NewWorkflowBridge creates a new workflow bridge
+// NewWorkflowBridge creates a new workflow bridge.
+// It initializes empty registries for workflows, definitions,
+// serializers, script handlers, and templates.
 func NewWorkflowBridge() *WorkflowBridge {
 	return &WorkflowBridge{
 		workflows:        make(map[string]domain.BaseAgent),
@@ -66,12 +72,15 @@ func NewWorkflowBridge() *WorkflowBridge {
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (b *WorkflowBridge) GetID() string {
 	return "workflow"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the enhanced workflow bridge
+// including version, description, and supported features.
 func (b *WorkflowBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Workflow Bridge",
@@ -82,7 +91,9 @@ func (b *WorkflowBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// It sets up default serializers, script handlers, and templates
+// for workflow management.
 func (b *WorkflowBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -111,7 +122,8 @@ func (b *WorkflowBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup cleans up bridge resources
+// Cleanup cleans up bridge resources.
+// It stops and removes all active workflows and resets the bridge state.
 func (b *WorkflowBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -129,19 +141,23 @@ func (b *WorkflowBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if the bridge is initialized
+// IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *WorkflowBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access workflow functionality through this bridge.
 func (b *WorkflowBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// It provides metadata about all workflow-related methods available to scripts,
+// including creation, execution, management, and template operations.
 func (b *WorkflowBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Core workflow methods
@@ -518,7 +534,9 @@ func (b *WorkflowBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// It defines how Go workflow types are mapped to script types
+// for workflows, templates, steps, and states.
 func (b *WorkflowBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"Workflow": {
@@ -548,7 +566,9 @@ func (b *WorkflowBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// It ensures that each method receives the correct number and
+// types of arguments before execution.
 func (b *WorkflowBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Basic validation - specific methods can add more validation
 	switch name {
@@ -629,7 +649,9 @@ func (b *WorkflowBridge) ValidateMethod(name string, args []engine.ScriptValue) 
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// It specifies the permissions needed for workflow creation,
+// execution, and state management.
 func (b *WorkflowBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -647,7 +669,9 @@ func (b *WorkflowBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate workflow operations.
 func (b *WorkflowBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if !b.initialized {
 		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil

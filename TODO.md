@@ -133,6 +133,10 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] Created `/pkg/docs/gendocs_test.go` with full test coverage
     - [x] Fixed all lint errors
   - [x] Renamed `llmspell.go` to `manpage_llmspell.go` for consistency
+  - [x] **Architecture Note**: Added upstream request for go-llms documentation extensions
+    - [x] Documented need for script-aware Documentable interface
+    - [x] Proposed upstreaming man page generation to go-llms
+    - [x] Plan to bridge go-llms docs instead of reimplementing
 
 #### 2.4.4: Production Readiness
 - [ ] **Task 2.4.4.1: Comprehensive Testing**
@@ -164,9 +168,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Add CVE scanning
 
 #### 2.4.5: Documentation & Examples
-- [ ] **Task 2.4.5.1: CODE documentation**
-  - [ ] scan all code for godoc documentation 
-  - [ ] add godoc documentation in each code file
+- [x] **Task 2.4.5.1: CODE documentation** **[COMPLETED - 2025-06-22]**
 
 - [ ] **Task 2.4.5.2: User Guide** (`/docs/user-guide/`)
   - [ ] Getting started with Lua spells

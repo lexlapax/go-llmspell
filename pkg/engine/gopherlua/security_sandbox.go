@@ -1,6 +1,9 @@
 // ABOUTME: SandboxEnforcer implements comprehensive sandbox enforcement for Lua execution
 // ABOUTME: Handles ApplySandbox, environment filtering, metatable protection, and escape prevention
 
+// Package gopherlua provides a Lua engine implementation for go-llmspell.
+// This file implements comprehensive sandbox enforcement for secure Lua execution,
+// including environment filtering, metatable protection, and escape prevention.
 package gopherlua
 
 import (
@@ -9,7 +12,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// SandboxEnforcer manages sandbox enforcement for Lua states
+// SandboxEnforcer manages sandbox enforcement for Lua states.
+// It implements comprehensive security controls including library filtering,
+// global environment restrictions, and metatable protection.
 type SandboxEnforcer struct {
 	level            SecurityLevel
 	libraryLoader    *SafeLibraryLoader
@@ -17,7 +22,7 @@ type SandboxEnforcer struct {
 	blockedFunctions map[string]bool
 }
 
-// NewSandboxEnforcer creates a new sandbox enforcer
+// NewSandboxEnforcer creates a new sandbox enforcer.
 func NewSandboxEnforcer(level SecurityLevel) *SandboxEnforcer {
 	enforcer := &SandboxEnforcer{
 		level:            level,
@@ -35,7 +40,7 @@ func NewSandboxEnforcer(level SecurityLevel) *SandboxEnforcer {
 	return enforcer
 }
 
-// ApplySandbox applies comprehensive sandbox restrictions to a Lua state
+// ApplySandbox applies comprehensive sandbox restrictions to a Lua state.
 func (se *SandboxEnforcer) ApplySandbox(L *lua.LState) error {
 	// Step 1: Load libraries with restrictions
 	libraries := se.getAllowedLibraries()
@@ -71,7 +76,7 @@ func (se *SandboxEnforcer) ApplySandbox(L *lua.LState) error {
 	return nil
 }
 
-// filterGlobalEnvironment removes or replaces dangerous global functions
+// filterGlobalEnvironment removes or replaces dangerous global functions.
 func (se *SandboxEnforcer) filterGlobalEnvironment(L *lua.LState) error {
 	// Block dangerous global functions based on security level
 	dangerousGlobals := se.getDangerousGlobals()
@@ -86,7 +91,7 @@ func (se *SandboxEnforcer) filterGlobalEnvironment(L *lua.LState) error {
 	return se.installSafeGlobalReplacements(L)
 }
 
-// protectMetatables protects built-in metatables from modification
+// protectMetatables protects built-in metatables from modification.
 func (se *SandboxEnforcer) protectMetatables(L *lua.LState) error {
 	// Protect string metatable
 	if err := se.protectStringMetatable(L); err != nil {
@@ -99,7 +104,7 @@ func (se *SandboxEnforcer) protectMetatables(L *lua.LState) error {
 	return nil
 }
 
-// installRequireRestrictions installs restrictions on require function
+// installRequireRestrictions installs restrictions on require function.
 func (se *SandboxEnforcer) installRequireRestrictions(L *lua.LState) error {
 	// Preserve original require function
 	originalRequire := L.GetGlobal("require")
@@ -122,7 +127,7 @@ func (se *SandboxEnforcer) installRequireRestrictions(L *lua.LState) error {
 	return nil
 }
 
-// configureAllowedGlobals sets up allowed global functions based on security level
+// configureAllowedGlobals sets up allowed global functions based on security level.
 func (se *SandboxEnforcer) configureAllowedGlobals() {
 	// Always allowed globals
 	basicGlobals := []string{
@@ -167,7 +172,7 @@ func (se *SandboxEnforcer) configureAllowedGlobals() {
 	}
 }
 
-// configureBlockedFunctions sets up functions to block completely
+// configureBlockedFunctions sets up functions to block completely.
 func (se *SandboxEnforcer) configureBlockedFunctions() {
 	// Always blocked
 	se.blockedFunctions["debug"] = true
@@ -192,7 +197,7 @@ func (se *SandboxEnforcer) configureBlockedFunctions() {
 	}
 }
 
-// getAllowedLibraries returns libraries allowed for the security level
+// getAllowedLibraries returns libraries allowed for the security level.
 func (se *SandboxEnforcer) getAllowedLibraries() []string {
 	switch se.level {
 	case SecurityLevelMinimal:
@@ -209,7 +214,7 @@ func (se *SandboxEnforcer) getAllowedLibraries() []string {
 	}
 }
 
-// getDangerousGlobals returns globals that should be filtered
+// getDangerousGlobals returns globals that should be filtered.
 func (se *SandboxEnforcer) getDangerousGlobals() map[string]bool {
 	return map[string]bool{
 		"dofile":         true,
@@ -223,7 +228,7 @@ func (se *SandboxEnforcer) getDangerousGlobals() map[string]bool {
 	}
 }
 
-// isGlobalBlocked checks if a global should be blocked at current security level
+// isGlobalBlocked checks if a global should be blocked at current security level.
 func (se *SandboxEnforcer) isGlobalBlocked(name string) bool {
 	allowed, exists := se.allowedGlobals[name]
 	if !exists {
@@ -233,7 +238,7 @@ func (se *SandboxEnforcer) isGlobalBlocked(name string) bool {
 	return !allowed
 }
 
-// installSafeGlobalReplacements installs safe versions of critical functions
+// installSafeGlobalReplacements installs safe versions of critical functions.
 func (se *SandboxEnforcer) installSafeGlobalReplacements(L *lua.LState) error {
 	// Safe dofile replacement (always blocked)
 	L.SetGlobal("dofile", L.NewFunction(func(L *lua.LState) int {
@@ -256,7 +261,7 @@ func (se *SandboxEnforcer) installSafeGlobalReplacements(L *lua.LState) error {
 	return nil
 }
 
-// protectStringMetatable protects the string metatable from modification
+// protectStringMetatable protects the string metatable from modification.
 func (se *SandboxEnforcer) protectStringMetatable(L *lua.LState) error {
 	// Get string metatable
 	err := L.DoString(`
@@ -271,17 +276,20 @@ func (se *SandboxEnforcer) protectStringMetatable(L *lua.LState) error {
 	return err
 }
 
-// blockDebugAccess ensures debug library is not accessible
+// blockDebugAccess ensures debug library is not accessible.
 func (se *SandboxEnforcer) blockDebugAccess(L *lua.LState) {
 	L.SetGlobal("debug", lua.LNil)
 }
 
 // Require restriction functions
+
+// blockedRequire blocks require completely in strict mode.
 func (se *SandboxEnforcer) blockedRequire(L *lua.LState) int {
 	L.RaiseError("require is disabled in strict security mode")
 	return 0
 }
 
+// restrictedRequire allows only whitelisted modules in standard mode.
 func (se *SandboxEnforcer) restrictedRequire(L *lua.LState) int {
 	module := L.CheckString(1)
 
@@ -312,6 +320,7 @@ func (se *SandboxEnforcer) restrictedRequire(L *lua.LState) int {
 	return 0
 }
 
+// filteredRequire blocks dangerous modules in minimal mode.
 func (se *SandboxEnforcer) filteredRequire(L *lua.LState) int {
 	module := L.CheckString(1)
 

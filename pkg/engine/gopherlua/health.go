@@ -11,7 +11,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// HealthMetrics contains health information for a Lua state
+// HealthMetrics contains health information for a Lua state.
+// It provides comprehensive metrics for evaluating state health and
+// determining when states should be recycled or replaced.
 type HealthMetrics struct {
 	// Score is the overall health score (0.0 to 1.0, higher is better)
 	Score float64

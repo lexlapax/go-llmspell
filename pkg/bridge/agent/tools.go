@@ -23,7 +23,9 @@ import (
 	"github.com/lexlapax/go-llms/pkg/util/profiling"
 )
 
-// ToolsBridge provides access to go-llms tool discovery system with v2.0.0 enhancements
+// ToolsBridge provides access to go-llms tool discovery system with v2.0.0 enhancements.
+// It bridges tool functionality to scripts, enabling discovery, validation,
+// documentation generation, and execution analytics for agent tools.
 type ToolsBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -47,7 +49,9 @@ type ToolsBridge struct {
 	metricsLock      sync.RWMutex
 }
 
-// ValidationReport stores detailed validation results for a tool
+// ValidationReport stores detailed validation results for a tool.
+// It includes input/output validation results, schema issues,
+// and recommendations for fixing validation problems.
 type ValidationReport struct {
 	ToolName         string                         `json:"toolName"`
 	Timestamp        time.Time                      `json:"timestamp"`
@@ -57,7 +61,9 @@ type ValidationReport struct {
 	Recommendations  []string                       `json:"recommendations,omitempty"`
 }
 
-// ExecutionMetrics tracks tool execution statistics
+// ExecutionMetrics tracks tool execution statistics.
+// It provides comprehensive metrics including execution counts,
+// durations, error types, and parameter usage statistics.
 type ExecutionMetrics struct {
 	ToolName        string                 `json:"toolName"`
 	TotalExecutions int64                  `json:"totalExecutions"`
@@ -72,17 +78,22 @@ type ExecutionMetrics struct {
 	ParameterStats  map[string]interface{} `json:"parameterStats"`
 }
 
-// NewToolsBridge creates a new tools bridge
+// NewToolsBridge creates a new tools bridge.
+// It initializes an empty tools bridge ready for configuration
+// with tool discovery, validation, and documentation systems.
 func NewToolsBridge() *ToolsBridge {
 	return &ToolsBridge{}
 }
 
-// GetID returns the bridge ID
+// GetID returns the bridge ID.
+// It implements the engine.Bridge interface.
 func (b *ToolsBridge) GetID() string {
 	return "tools"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the enhanced tools bridge including
+// version, description, and supported features.
 func (b *ToolsBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Tools Bridge",
@@ -93,7 +104,9 @@ func (b *ToolsBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// It sets up tool discovery, schema validation, documentation generation,
+// and execution analytics systems.
 func (b *ToolsBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -129,7 +142,8 @@ func (b *ToolsBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs cleanup
+// Cleanup performs cleanup.
+// It releases all resources and resets the bridge to an uninitialized state.
 func (b *ToolsBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -140,19 +154,23 @@ func (b *ToolsBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if the bridge is initialized
+// IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *ToolsBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access tool functionality through this bridge.
 func (b *ToolsBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// It provides metadata about all tool-related methods available to scripts,
+// including discovery, validation, documentation, and execution operations.
 func (b *ToolsBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Tool discovery methods
@@ -350,7 +368,9 @@ func (b *ToolsBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// It defines how Go types are mapped to script types for tools,
+// validation results, execution metrics, and documentation.
 func (b *ToolsBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"Tool": {
@@ -392,7 +412,9 @@ func (b *ToolsBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// It ensures that each method receives the correct number and
+// types of arguments before execution.
 func (b *ToolsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	switch name {
 	case "listTools", "getAllToolsMetrics", "generateAllToolsDocs":
@@ -438,7 +460,9 @@ func (b *ToolsBridge) ValidateMethod(name string, args []engine.ScriptValue) err
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// It specifies the permissions needed for tool execution,
+// including process, file system, and network access.
 func (b *ToolsBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -462,7 +486,9 @@ func (b *ToolsBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// It implements the engine.Bridge interface, routing method calls to tool discovery,
+// validation, documentation, and execution functionality.
 func (b *ToolsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -1211,6 +1237,8 @@ func customToolToScriptValue(name string, tool domain.Tool) map[string]engine.Sc
 	}
 }
 
+// getStringField safely extracts a string field from a map.
+// It returns the string value if present, or an empty string if not found or not a string.
 func getStringField(m map[string]interface{}, field string) string {
 	if v, ok := m[field].(string); ok {
 		return v
@@ -1218,7 +1246,9 @@ func getStringField(m map[string]interface{}, field string) string {
 	return ""
 }
 
-// createEnhancedCustomTool creates a custom tool with full schema support using ToolBuilder
+// createEnhancedCustomTool creates a custom tool with full schema support using ToolBuilder.
+// It constructs a tool from a definition map that includes schemas, examples,
+// metadata, constraints, and execution handlers.
 func (b *ToolsBridge) createEnhancedCustomTool(toolDef map[string]interface{}) (domain.Tool, error) {
 	name := getStringField(toolDef, "name")
 	description := getStringField(toolDef, "description")

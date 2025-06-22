@@ -10,31 +10,37 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// ScriptValueBuilder provides fluent API for building test ScriptValues
+// ScriptValueBuilder provides fluent API for building test ScriptValues.
+// It supports method chaining for creating complex test data structures
+// with minimal boilerplate code.
 type ScriptValueBuilder struct {
 	values []engine.ScriptValue
 }
 
-// NewScriptValueBuilder creates a new builder instance
+// NewScriptValueBuilder creates a new builder instance.
+// The builder starts with an empty list of values.
 func NewScriptValueBuilder() *ScriptValueBuilder {
 	return &ScriptValueBuilder{
 		values: make([]engine.ScriptValue, 0),
 	}
 }
 
-// String adds a string value to the builder
+// String adds a string value to the builder.
+// Returns the builder for method chaining.
 func (b *ScriptValueBuilder) String(s string) *ScriptValueBuilder {
 	b.values = append(b.values, engine.NewStringValue(s))
 	return b
 }
 
-// Number adds a number value to the builder
+// Number adds a number value to the builder.
+// Returns the builder for method chaining.
 func (b *ScriptValueBuilder) Number(n float64) *ScriptValueBuilder {
 	b.values = append(b.values, engine.NewNumberValue(n))
 	return b
 }
 
-// Int adds an integer as a number value to the builder
+// Int adds an integer as a number value to the builder.
+// Convenience method that converts int to float64.
 func (b *ScriptValueBuilder) Int(n int) *ScriptValueBuilder {
 	return b.Number(float64(n))
 }

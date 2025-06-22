@@ -14,12 +14,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// StateManagerBridge bridges go-llms StateManager to script engines
+// StateManagerBridge bridges go-llms StateManager to script engines.
+// It provides comprehensive state lifecycle management including creation,
+// persistence, transformation, validation, and merging operations.
+// The bridge enables scripts to manage complex stateful applications
+// with built-in support for artifacts, messages, and metadata.
 type StateManagerBridge struct {
 	manager bridge.StateManager
 }
 
-// NewStateManagerBridge creates a new state manager bridge
+// NewStateManagerBridge creates a new state manager bridge.
+// The manager parameter must not be nil and should be a valid go-llms StateManager.
+// Returns an error if the manager is nil.
 func NewStateManagerBridge(manager bridge.StateManager) (*StateManagerBridge, error) {
 	if manager == nil {
 		return nil, fmt.Errorf("state manager cannot be nil")
@@ -30,12 +36,19 @@ func NewStateManagerBridge(manager bridge.StateManager) (*StateManagerBridge, er
 	}, nil
 }
 
-// Name returns the bridge name
+// Name returns the bridge name.
+// Always returns "state_manager" for this bridge.
 func (b *StateManagerBridge) Name() string {
 	return "state_manager"
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// Provides comprehensive state management operations including:
+//   - State lifecycle (create, save, load, delete)
+//   - Transformations and validation
+//   - Data operations (get, set, delete)
+//   - Metadata management
+//   - Artifact and message handling
 func (b *StateManagerBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{Name: "createState", Description: "Create a new state object", ReturnType: "State"},
@@ -65,7 +78,9 @@ func (b *StateManagerBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// TypeMappings returns type mappings for this bridge
+// TypeMappings returns type mappings for this bridge.
+// Maps go-llms state types to script-compatible object types
+// for seamless data conversion between domains.
 func (b *StateManagerBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"State": {
@@ -87,12 +102,15 @@ func (b *StateManagerBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// GetID returns the bridge ID
+// GetID returns the bridge ID.
+// Always returns "state_manager" for this bridge.
 func (b *StateManagerBridge) GetID() string {
 	return "state_manager"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides information about the bridge including name, version,
+// description, author, and license.
 func (b *StateManagerBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "State Manager Bridge",
@@ -103,28 +121,36 @@ func (b *StateManagerBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// Registers built-in transforms (filter, flatten, sanitize)
+// that are available to all script engines.
 func (b *StateManagerBridge) Initialize(ctx context.Context) error {
 	b.registerBuiltinTransforms()
 	return nil
 }
 
-// Cleanup cleans up bridge resources
+// Cleanup cleans up bridge resources.
+// Currently performs no cleanup as resources are managed by the StateManager.
+// Can be extended for resource cleanup if needed.
 func (b *StateManagerBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns whether the bridge is initialized
+// IsInitialized returns whether the bridge is initialized.
+// Always returns true as the bridge is ready after construction.
 func (b *StateManagerBridge) IsInitialized() bool {
 	return true
 }
 
-// RegisterWithEngine registers this bridge with a script engine
+// RegisterWithEngine registers this bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for integration.
 func (b *StateManagerBridge) RegisterWithEngine(scriptEngine engine.ScriptEngine) error {
 	return scriptEngine.RegisterBridge(b)
 }
 
-// ValidateMethod validates a method call
+// ValidateMethod validates a method call.
+// Checks if the method exists in the bridge's method list.
+// Returns an error if the method is not found.
 func (b *StateManagerBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Basic validation - method exists
 	for _, method := range b.Methods() {
@@ -135,7 +161,9 @@ func (b *StateManagerBridge) ValidateMethod(name string, args []engine.ScriptVal
 	return fmt.Errorf("method %s not found", name)
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Requires memory access for state management operations
+// including read and write permissions.
 func (b *StateManagerBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -811,7 +839,10 @@ func (b *StateManagerBridge) scriptToMessage(scriptObj map[string]interface{}) (
 	}, nil
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// Routes method calls to specific implementations and converts between
+// script values and go-llms domain objects. Handles all state operations
+// including lifecycle, data manipulation, and metadata management.
 func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	switch name {
 	case "createState":
@@ -1364,7 +1395,9 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 	}
 }
 
-// extractStateObject safely extracts a state object from ScriptValue, preserving the __state field
+// extractStateObject safely extracts a state object from ScriptValue, preserving the __state field.
+// This ensures round-trip conversion between script and Go representations
+// maintains the underlying state object reference.
 func (b *StateManagerBridge) extractStateObject(obj engine.ObjectValue) map[string]interface{} {
 	stateObj := make(map[string]interface{})
 	for k, v := range obj.Fields() {
@@ -1378,6 +1411,9 @@ func (b *StateManagerBridge) extractStateObject(obj engine.ObjectValue) map[stri
 	return stateObj
 }
 
+// registerBuiltinTransforms registers built-in transformation functions.
+// Provides standard transforms like filter, flatten, and sanitize that
+// can be applied to states for common data manipulation tasks.
 func (b *StateManagerBridge) registerBuiltinTransforms() {
 	// Register built-in filter transform
 	b.manager.RegisterTransform("filter", func(ctx context.Context, state *domain.State) (*domain.State, error) {

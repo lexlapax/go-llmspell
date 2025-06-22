@@ -22,6 +22,8 @@ import (
 )
 
 // UtilJSONBridge provides script access to go-llms structured output capabilities.
+// It manages JSON operations, schema validation, structured output parsing,
+// format conversion, and streaming for efficient JSON processing.
 type UtilJSONBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -34,11 +36,13 @@ type UtilJSONBridge struct {
 }
 
 // NewUtilJSONBridge creates a new JSON utilities bridge.
+// It initializes an empty bridge ready for JSON processing operations.
 func NewUtilJSONBridge() *UtilJSONBridge {
 	return &UtilJSONBridge{}
 }
 
 // NewUtilJSONBridgeWithValidator creates a new JSON utilities bridge with custom validator.
+// It allows using a pre-configured schema validator for JSON validation.
 func NewUtilJSONBridgeWithValidator(validator schemaDomain.Validator) *UtilJSONBridge {
 	return &UtilJSONBridge{
 		validator: validator,
@@ -46,11 +50,14 @@ func NewUtilJSONBridgeWithValidator(validator schemaDomain.Validator) *UtilJSONB
 }
 
 // GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (b *UtilJSONBridge) GetID() string {
 	return "util_json"
 }
 
 // GetMetadata returns bridge metadata.
+// It provides information about the JSON utilities bridge including
+// version, description, and supported JSON processing features.
 func (b *UtilJSONBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "util_json",
@@ -62,6 +69,8 @@ func (b *UtilJSONBridge) GetMetadata() engine.BridgeMetadata {
 }
 
 // Initialize initializes the bridge.
+// It sets up the validator, processor, prompt enhancer, and converter
+// for comprehensive JSON processing capabilities.
 func (b *UtilJSONBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -84,6 +93,7 @@ func (b *UtilJSONBridge) Initialize(ctx context.Context) error {
 }
 
 // Cleanup cleans up bridge resources.
+// It releases resources and marks the bridge as uninitialized.
 func (b *UtilJSONBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -93,6 +103,7 @@ func (b *UtilJSONBridge) Cleanup(ctx context.Context) error {
 }
 
 // IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *UtilJSONBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -100,11 +111,14 @@ func (b *UtilJSONBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access JSON utilities through this bridge.
 func (b *UtilJSONBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
 // Methods returns the methods exposed by this bridge.
+// It provides metadata about all JSON-related methods available to scripts,
+// including marshaling, streaming, schema operations, and format conversion.
 func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Optimized marshaling
@@ -336,6 +350,8 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 }
 
 // TypeMappings returns type conversion mappings.
+// It defines how Go JSON types are mapped to script types
+// for encoders, decoders, and IO interfaces.
 func (b *UtilJSONBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"JSONEncoder": {
@@ -362,12 +378,14 @@ func (b *UtilJSONBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
+// It delegates validation to the engine based on Methods() metadata.
 func (b *UtilJSONBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
 // RequiredPermissions returns required permissions.
+// It specifies permissions for JSON processing operations.
 func (b *UtilJSONBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -379,7 +397,9 @@ func (b *UtilJSONBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate JSON processing operations.
 func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -430,6 +450,8 @@ func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []
 
 // Method implementations
 
+// marshal converts a value to JSON string using optimized marshaling.
+// It uses go-llms json package for better performance.
 func (b *UtilJSONBridge) marshal(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -445,6 +467,8 @@ func (b *UtilJSONBridge) marshal(ctx context.Context, args []engine.ScriptValue)
 	return engine.NewStringValue(result), nil
 }
 
+// marshalIndent converts a value to indented JSON string.
+// It supports custom prefix and indentation for readable output.
 func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -479,6 +503,8 @@ func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.Script
 	return engine.NewStringValue(string(data)), nil
 }
 
+// marshalToBytes converts a value to JSON byte array.
+// It returns the JSON as an array of numbers for binary operations.
 func (b *UtilJSONBridge) marshalToBytes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -498,6 +524,8 @@ func (b *UtilJSONBridge) marshalToBytes(ctx context.Context, args []engine.Scrip
 	return engine.NewArrayValue(scriptBytes), nil
 }
 
+// unmarshal parses JSON string into a value.
+// It uses optimized parsing for better performance.
 func (b *UtilJSONBridge) unmarshal(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -516,6 +544,8 @@ func (b *UtilJSONBridge) unmarshal(ctx context.Context, args []engine.ScriptValu
 	return engine.ConvertToScriptValue(result), nil
 }
 
+// unmarshalFromBytes parses JSON byte array into a value.
+// It converts the byte array back to JSON before parsing.
 func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -543,6 +573,8 @@ func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []engine.S
 	return engine.ConvertToScriptValue(result), nil
 }
 
+// unmarshalStrict parses JSON with strict validation.
+// It can optionally disallow unknown fields for stricter parsing.
 func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -581,6 +613,8 @@ func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.Scri
 	return engine.ConvertToScriptValue(result), nil
 }
 
+// createEncoder creates a JSON encoder for streaming output.
+// It wraps an io.Writer for incremental JSON encoding.
 func (b *UtilJSONBridge) createEncoder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -599,6 +633,8 @@ func (b *UtilJSONBridge) createEncoder(ctx context.Context, args []engine.Script
 	return engine.NewCustomValue("JSONEncoder", encoder), nil
 }
 
+// createDecoder creates a JSON decoder for streaming input.
+// It wraps an io.Reader for incremental JSON decoding.
 func (b *UtilJSONBridge) createDecoder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -617,6 +653,8 @@ func (b *UtilJSONBridge) createDecoder(ctx context.Context, args []engine.Script
 	return engine.NewCustomValue("JSONDecoder", decoder), nil
 }
 
+// encodeStream encodes a value to a JSON stream.
+// It writes JSON data incrementally to the encoder's writer.
 func (b *UtilJSONBridge) encodeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -656,6 +694,8 @@ func (b *UtilJSONBridge) encodeStream(ctx context.Context, args []engine.ScriptV
 	return engine.NewNilValue(), nil
 }
 
+// decodeStream decodes a value from a JSON stream.
+// It reads JSON data incrementally from the decoder's reader.
 func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -693,6 +733,8 @@ func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []engine.ScriptV
 	return engine.ConvertToScriptValue(result), nil
 }
 
+// parseStructured parses and validates structured output from LLM responses.
+// It extracts JSON from LLM output and validates against a schema.
 func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -725,6 +767,8 @@ func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []engine.Scri
 	return engine.ConvertToScriptValue(result), nil
 }
 
+// parseWithRecovery extracts JSON from malformed or mixed content.
+// It attempts to recover valid JSON from corrupted or partial data.
 func (b *UtilJSONBridge) parseWithRecovery(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -739,6 +783,8 @@ func (b *UtilJSONBridge) parseWithRecovery(ctx context.Context, args []engine.Sc
 	return engine.NewStringValue(extracted), nil
 }
 
+// enhancePrompt adds schema information to prompts for better LLM output.
+// It modifies prompts to include JSON schema requirements for structured responses.
 func (b *UtilJSONBridge) enhancePrompt(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -783,6 +829,8 @@ func (b *UtilJSONBridge) enhancePrompt(ctx context.Context, args []engine.Script
 	return engine.NewStringValue(enhanced), nil
 }
 
+// convertFormat converts between JSON, YAML, and XML formats.
+// It preserves data structure while changing the serialization format.
 func (b *UtilJSONBridge) convertFormat(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, ErrInvalidArguments
@@ -831,6 +879,8 @@ func (b *UtilJSONBridge) convertFormat(ctx context.Context, args []engine.Script
 	return engine.NewStringValue(result), nil
 }
 
+// streamConvert converts formats using streaming for large data.
+// It processes data incrementally to handle files too large for memory.
 func (b *UtilJSONBridge) streamConvert(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 4 {
 		return nil, ErrInvalidArguments
@@ -895,6 +945,8 @@ func (b *UtilJSONBridge) streamConvert(ctx context.Context, args []engine.Script
 	return engine.NewNilValue(), nil
 }
 
+// prettyPrint formats JSON with indentation for readability.
+// It parses and reformats JSON with consistent spacing.
 func (b *UtilJSONBridge) prettyPrint(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -920,6 +972,8 @@ func (b *UtilJSONBridge) prettyPrint(ctx context.Context, args []engine.ScriptVa
 	return engine.NewStringValue(string(data)), nil
 }
 
+// minify removes unnecessary whitespace from JSON.
+// It creates compact JSON by removing formatting.
 func (b *UtilJSONBridge) minify(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -945,7 +999,8 @@ func (b *UtilJSONBridge) minify(ctx context.Context, args []engine.ScriptValue) 
 
 // Helper methods
 
-// convertToSchema converts a script schema map to go-llms Schema
+// convertToSchema converts a script schema map to go-llms Schema.
+// It marshals and unmarshals to transform the schema format.
 func (b *UtilJSONBridge) convertToSchema(schemaMap map[string]interface{}) (*schemaDomain.Schema, error) {
 	// Marshal the schema map to JSON
 	jsonBytes, err := llmjson.Marshal(schemaMap)
@@ -962,7 +1017,8 @@ func (b *UtilJSONBridge) convertToSchema(schemaMap map[string]interface{}) (*sch
 	return schema, nil
 }
 
-// stringToFormat converts a string to outputs.Format
+// stringToFormat converts a string to outputs.Format.
+// It maps format names to go-llms format constants.
 func (b *UtilJSONBridge) stringToFormat(format string) (outputs.Format, error) {
 	switch strings.ToLower(format) {
 	case "json":
@@ -976,7 +1032,8 @@ func (b *UtilJSONBridge) stringToFormat(format string) (outputs.Format, error) {
 	}
 }
 
-// convertToConversionOptions converts a script options map to outputs.ConversionOptions
+// convertToConversionOptions converts a script options map to outputs.ConversionOptions.
+// It extracts conversion settings like pretty printing and XML namespaces.
 func (b *UtilJSONBridge) convertToConversionOptions(optionsMap map[string]interface{}) *outputs.ConversionOptions {
 	opts := outputs.DefaultConversionOptions()
 

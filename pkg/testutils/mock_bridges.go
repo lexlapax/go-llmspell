@@ -12,10 +12,13 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// MethodHandler defines a function that handles method execution for mock bridges
+// MethodHandler defines a function that handles method execution for mock bridges.
+// It allows custom implementation of bridge methods in tests.
 type MethodHandler func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error)
 
-// MockBridge provides a configurable mock implementation of engine.Bridge
+// MockBridge provides a configurable mock implementation of engine.Bridge.
+// It supports custom method handlers, error injection, and complete
+// control over bridge behavior for testing various scenarios.
 type MockBridge struct {
 	mu          sync.RWMutex
 	id          string

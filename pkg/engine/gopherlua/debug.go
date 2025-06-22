@@ -1,6 +1,9 @@
 // ABOUTME: This file implements debugging support for Lua scripts including breakpoints, step debugging, and variable inspection.
 // ABOUTME: It provides comprehensive debugging capabilities for development and troubleshooting of Lua spells.
 
+// Package gopherlua provides a Lua engine implementation for go-llmspell.
+// This file implements comprehensive debugging capabilities including breakpoints,
+// step-through debugging, variable inspection, and performance profiling.
 package gopherlua
 
 import (
@@ -13,7 +16,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// DebuggerConfig configures the debugger behavior
+// DebuggerConfig configures the debugger behavior.
+// It controls various aspects of debugging including breakpoints,
+// step debugging, variable inspection, and output settings.
 type DebuggerConfig struct {
 	// Breakpoint settings
 	MaxBreakpoints int  `json:"max_breakpoints"`
@@ -39,7 +44,7 @@ type DebuggerConfig struct {
 	IncludeUpvalues   bool `json:"include_upvalues"`
 }
 
-// DefaultDebuggerConfig returns a default debugger configuration
+// DefaultDebuggerConfig returns a default debugger configuration.
 func DefaultDebuggerConfig() DebuggerConfig {
 	return DebuggerConfig{
 		MaxBreakpoints:      50,
@@ -58,7 +63,8 @@ func DefaultDebuggerConfig() DebuggerConfig {
 	}
 }
 
-// Breakpoint represents a debugging breakpoint
+// Breakpoint represents a debugging breakpoint.
+// It can be conditional and tracks hit count for debugging analysis.
 type Breakpoint struct {
 	ID        string            `json:"id"`
 	File      string            `json:"file"`
@@ -71,7 +77,8 @@ type Breakpoint struct {
 	CreatedAt time.Time         `json:"created_at"`
 }
 
-// WatchExpression represents a watch expression
+// WatchExpression represents a watch expression.
+// It evaluates Lua expressions and tracks their values during debugging.
 type WatchExpression struct {
 	ID         string      `json:"id"`
 	Expression string      `json:"expression"`
@@ -80,7 +87,8 @@ type WatchExpression struct {
 	UpdatedAt  time.Time   `json:"updated_at"`
 }
 
-// DebugFrame represents a single frame in the call stack
+// DebugFrame represents a single frame in the call stack.
+// It contains information about the function, location, and variables.
 type DebugFrame struct {
 	Index    int                    `json:"index"`
 	Function string                 `json:"function"`
@@ -90,7 +98,8 @@ type DebugFrame struct {
 	Upvalues map[string]interface{} `json:"upvalues,omitempty"`
 }
 
-// DebugState represents the current debugging state
+// DebugState represents the current debugging state.
+// It maintains information about execution status, breakpoints, and call stack.
 type DebugState struct {
 	Running      bool                        `json:"running"`
 	Paused       bool                        `json:"paused"`
@@ -104,7 +113,8 @@ type DebugState struct {
 	Error        string                      `json:"error,omitempty"`
 }
 
-// StepMode defines the stepping behavior
+// StepMode defines the stepping behavior during debugging.
+// It controls how execution proceeds when stepping through code.
 type StepMode string
 
 const (
@@ -115,7 +125,8 @@ const (
 	StepModeLine StepMode = "line" // Step to next line
 )
 
-// DebugEvent represents a debugging event
+// DebugEvent represents a debugging event.
+// Events are emitted during debugging for breakpoints, steps, and state changes.
 type DebugEvent struct {
 	Type      string      `json:"type"`
 	Timestamp time.Time   `json:"timestamp"`
@@ -123,10 +134,12 @@ type DebugEvent struct {
 	Frame     *DebugFrame `json:"frame,omitempty"`
 }
 
-// DebugEventHandler handles debug events
+// DebugEventHandler handles debug events.
+// It is called when debugging events occur such as breakpoints or state changes.
 type DebugEventHandler func(event DebugEvent)
 
-// Debugger provides debugging capabilities for Lua scripts
+// Debugger provides debugging capabilities for Lua scripts.
+// It supports breakpoints, step debugging, variable inspection, and watches.
 type Debugger struct {
 	config        DebuggerConfig
 	state         *DebugState
@@ -140,7 +153,7 @@ type Debugger struct {
 	hookInstalled bool
 }
 
-// NewDebugger creates a new debugger instance
+// NewDebugger creates a new debugger instance.
 func NewDebugger(config DebuggerConfig) *Debugger {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -161,7 +174,7 @@ func NewDebugger(config DebuggerConfig) *Debugger {
 	}
 }
 
-// AttachToEngine attaches the debugger to a Lua engine
+// AttachToEngine attaches the debugger to a Lua engine.
 func (d *Debugger) AttachToEngine(engine *LuaEngine) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -174,7 +187,7 @@ func (d *Debugger) AttachToEngine(engine *LuaEngine) error {
 	return d.installDebugHook()
 }
 
-// DetachFromEngine detaches the debugger from the engine
+// DetachFromEngine detaches the debugger from the engine.
 func (d *Debugger) DetachFromEngine() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -187,7 +200,7 @@ func (d *Debugger) DetachFromEngine() error {
 	return nil
 }
 
-// AddBreakpoint adds a breakpoint at the specified location
+// AddBreakpoint adds a breakpoint at the specified location.
 func (d *Debugger) AddBreakpoint(file string, line int, condition string) (*Breakpoint, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -218,7 +231,7 @@ func (d *Debugger) AddBreakpoint(file string, line int, condition string) (*Brea
 	return breakpoint, nil
 }
 
-// RemoveBreakpoint removes a breakpoint
+// RemoveBreakpoint removes a breakpoint.
 func (d *Debugger) RemoveBreakpoint(id string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -234,7 +247,7 @@ func (d *Debugger) RemoveBreakpoint(id string) error {
 	return nil
 }
 
-// SetBreakpointEnabled enables or disables a breakpoint
+// SetBreakpointEnabled enables or disables a breakpoint.
 func (d *Debugger) SetBreakpointEnabled(id string, enabled bool) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -250,7 +263,7 @@ func (d *Debugger) SetBreakpointEnabled(id string, enabled bool) error {
 	return nil
 }
 
-// AddWatchExpression adds a watch expression
+// AddWatchExpression adds a watch expression.
 func (d *Debugger) AddWatchExpression(expression string) (*WatchExpression, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -277,7 +290,7 @@ func (d *Debugger) AddWatchExpression(expression string) (*WatchExpression, erro
 	return watch, nil
 }
 
-// RemoveWatchExpression removes a watch expression
+// RemoveWatchExpression removes a watch expression.
 func (d *Debugger) RemoveWatchExpression(id string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -293,7 +306,7 @@ func (d *Debugger) RemoveWatchExpression(id string) error {
 	return nil
 }
 
-// Step performs a step operation
+// Step performs a step operation.
 func (d *Debugger) Step(mode StepMode) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -316,12 +329,12 @@ func (d *Debugger) Step(mode StepMode) error {
 	return nil
 }
 
-// Continue resumes execution
+// Continue resumes execution.
 func (d *Debugger) Continue() error {
 	return d.Step(StepModeNone)
 }
 
-// Pause pauses execution at the next statement
+// Pause pauses execution at the next statement.
 func (d *Debugger) Pause() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -336,7 +349,7 @@ func (d *Debugger) Pause() error {
 	return nil
 }
 
-// GetCallStack returns the current call stack
+// GetCallStack returns the current call stack.
 func (d *Debugger) GetCallStack() []DebugFrame {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -344,7 +357,7 @@ func (d *Debugger) GetCallStack() []DebugFrame {
 	return d.state.CallStack
 }
 
-// GetVariables returns variables at the specified frame
+// GetVariables returns variables at the specified frame.
 func (d *Debugger) GetVariables(frameIndex int) (map[string]interface{}, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -370,7 +383,7 @@ func (d *Debugger) GetVariables(frameIndex int) (map[string]interface{}, error) 
 	return variables, nil
 }
 
-// EvaluateExpression evaluates an expression in the current context
+// EvaluateExpression evaluates an expression in the current context.
 func (d *Debugger) EvaluateExpression(expression string) (interface{}, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -391,7 +404,7 @@ func (d *Debugger) EvaluateExpression(expression string) (interface{}, error) {
 	return d.luaValueToInterface(result), nil
 }
 
-// GetState returns the current debug state
+// GetState returns the current debug state.
 func (d *Debugger) GetState() *DebugState {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -401,7 +414,7 @@ func (d *Debugger) GetState() *DebugState {
 	return &stateCopy
 }
 
-// AddEventHandler adds a debug event handler
+// AddEventHandler adds a debug event handler.
 func (d *Debugger) AddEventHandler(handler DebugEventHandler) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -409,13 +422,13 @@ func (d *Debugger) AddEventHandler(handler DebugEventHandler) {
 	d.handlers = append(d.handlers, handler)
 }
 
-// Shutdown shuts down the debugger
+// Shutdown shuts down the debugger.
 func (d *Debugger) Shutdown() error {
 	d.cancel()
 	return d.DetachFromEngine()
 }
 
-// installDebugHook installs the debug hook in the Lua state
+// installDebugHook installs the debug hook in the Lua state.
 func (d *Debugger) installDebugHook() error {
 	// Note: gopher-lua doesn't support SetHook, so we use a simpler approach
 	// Debug functionality will be limited to manual breakpoints and variable inspection
@@ -428,8 +441,8 @@ func (d *Debugger) installDebugHook() error {
 // debugHook would be the main debug hook function, but gopher-lua doesn't support SetHook
 // Instead, we implement manual debugging through script instrumentation or breakpoint checking
 
-// CheckBreakpoint manually checks if execution should break at a given location
-// This can be called by the engine during script execution
+// CheckBreakpoint manually checks if execution should break at a given location.
+// This can be called by the engine during script execution.
 func (d *Debugger) CheckBreakpoint(file string, line int) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -475,7 +488,7 @@ func (d *Debugger) CheckBreakpoint(file string, line int) bool {
 	return false
 }
 
-// checkBreakpoints checks if we should break at the current location
+// checkBreakpoints checks if we should break at the current location.
 func (d *Debugger) checkBreakpoints(file string, line int) bool {
 	id := fmt.Sprintf("%s:%d", file, line)
 	breakpoint, exists := d.state.Breakpoints[id]
@@ -503,8 +516,8 @@ func (d *Debugger) checkBreakpoints(file string, line int) bool {
 	return true
 }
 
-// checkStepMode checks if we should break based on step mode
-// Note: Without hook support, step debugging is limited
+// checkStepMode checks if we should break based on step mode.
+// Note: Without hook support, step debugging is limited.
 func (d *Debugger) checkStepMode() bool {
 	switch d.state.StepMode {
 	case StepModeLine:
@@ -531,7 +544,7 @@ func (d *Debugger) checkStepMode() bool {
 	return false
 }
 
-// buildCallStack builds the current call stack
+// buildCallStack builds the current call stack.
 func (d *Debugger) buildCallStack(L *lua.LState) {
 	d.state.CallStack = []DebugFrame{}
 
@@ -562,7 +575,7 @@ func (d *Debugger) buildCallStack(L *lua.LState) {
 	}
 }
 
-// getLocalVariables gets local variables for a frame
+// getLocalVariables gets local variables for a frame.
 func (d *Debugger) getLocalVariables(L *lua.LState, level int) map[string]interface{} {
 	locals := make(map[string]interface{})
 
@@ -589,7 +602,7 @@ func (d *Debugger) getLocalVariables(L *lua.LState, level int) map[string]interf
 	return locals
 }
 
-// getUpvalues gets upvalues for a frame
+// getUpvalues gets upvalues for a frame.
 func (d *Debugger) getUpvalues(L *lua.LState, level int) map[string]interface{} {
 	upvalues := make(map[string]interface{})
 
@@ -619,14 +632,14 @@ func (d *Debugger) getUpvalues(L *lua.LState, level int) map[string]interface{} 
 	return upvalues
 }
 
-// updateWatchExpressions updates all watch expressions
+// updateWatchExpressions updates all watch expressions.
 func (d *Debugger) updateWatchExpressions() {
 	for _, watch := range d.state.Watches {
 		d.evaluateWatchExpression(watch)
 	}
 }
 
-// evaluateWatchExpression evaluates a single watch expression
+// evaluateWatchExpression evaluates a single watch expression.
 func (d *Debugger) evaluateWatchExpression(watch *WatchExpression) {
 	result, err := d.EvaluateExpression(watch.Expression)
 	if err != nil {
@@ -639,7 +652,7 @@ func (d *Debugger) evaluateWatchExpression(watch *WatchExpression) {
 	watch.UpdatedAt = time.Now()
 }
 
-// waitForStep waits for a step command
+// waitForStep waits for a step command.
 func (d *Debugger) waitForStep() {
 	// Release lock while waiting
 	d.mu.Unlock()
@@ -657,7 +670,7 @@ func (d *Debugger) waitForStep() {
 	}
 }
 
-// emitEvent emits a debug event to all handlers
+// emitEvent emits a debug event to all handlers.
 func (d *Debugger) emitEvent(eventType string, data interface{}) {
 	event := DebugEvent{
 		Type:      eventType,
@@ -674,7 +687,7 @@ func (d *Debugger) emitEvent(eventType string, data interface{}) {
 	}
 }
 
-// getPauseReason returns the reason for pausing
+// getPauseReason returns the reason for pausing.
 func (d *Debugger) getPauseReason() string {
 	if d.state.LastBreakHit != nil {
 		return "breakpoint"
@@ -685,7 +698,7 @@ func (d *Debugger) getPauseReason() string {
 	return "unknown"
 }
 
-// isTruthy checks if a value is truthy in Lua
+// isTruthy checks if a value is truthy in Lua.
 func (d *Debugger) isTruthy(value interface{}) bool {
 	if value == nil {
 		return false
@@ -696,7 +709,7 @@ func (d *Debugger) isTruthy(value interface{}) bool {
 	return true
 }
 
-// luaValueToInterface converts a Lua value to a Go interface
+// luaValueToInterface converts a Lua value to a Go interface.
 func (d *Debugger) luaValueToInterface(lv lua.LValue) interface{} {
 	switch v := lv.(type) {
 	case *lua.LNilType:
@@ -722,7 +735,7 @@ func (d *Debugger) luaValueToInterface(lv lua.LValue) interface{} {
 	}
 }
 
-// tableToMap converts a Lua table to a Go map with depth limit
+// tableToMap converts a Lua table to a Go map with depth limit.
 func (d *Debugger) tableToMap(table *lua.LTable, depth int) interface{} {
 	if depth >= d.config.MaxVarDepth {
 		return "<max depth reached>"

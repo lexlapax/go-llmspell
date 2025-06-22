@@ -11,13 +11,17 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ComplexConverter handles conversion of complex types with advanced features
+// ComplexConverter handles conversion of complex types with advanced features.
+// It supports maps, slices, structs, and interfaces with struct tag processing,
+// field mapping, and circular reference detection.
 type ComplexConverter struct {
 	primitiveConverter *PrimitiveConverter
 	maxDepth           int
 }
 
-// StructTagInfo contains parsed struct tag information
+// StructTagInfo contains parsed struct tag information.
+// It controls how struct fields are converted to Lua tables,
+// including field naming, omission rules, and validation.
 type StructTagInfo struct {
 	Name      string
 	Omitempty bool
@@ -25,7 +29,8 @@ type StructTagInfo struct {
 	Required  bool
 }
 
-// NewComplexConverter creates a new complex type converter
+// NewComplexConverter creates a new complex type converter.
+// It initializes with a default max depth of 32 for nested structure traversal.
 func NewComplexConverter() *ComplexConverter {
 	return &ComplexConverter{
 		primitiveConverter: NewPrimitiveConverter(),
@@ -35,7 +40,8 @@ func NewComplexConverter() *ComplexConverter {
 
 // Map conversion methods
 
-// MapToLua converts a Go map to a Lua table
+// MapToLua converts a Go map to a Lua table.
+// It handles nested maps and circular references with depth tracking.
 func (cc *ComplexConverter) MapToLua(L *lua.LState, value interface{}) (lua.LValue, error) {
 	return cc.mapToLuaWithDepth(L, value, 0, make(map[uintptr]bool))
 }

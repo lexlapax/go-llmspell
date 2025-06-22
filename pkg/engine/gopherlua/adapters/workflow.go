@@ -12,12 +12,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// WorkflowAdapter exposes workflow bridge functionality to Lua
+// WorkflowAdapter exposes workflow bridge functionality to Lua.
+// It provides workflow creation, execution, step management, templates,
+// and serialization capabilities for orchestrating complex LLM interactions
+// and processing pipelines.
 type WorkflowAdapter struct {
 	*gopherlua.BridgeAdapter
 }
 
-// NewWorkflowAdapter creates a new workflow adapter
+// NewWorkflowAdapter creates a new workflow adapter with the provided bridge.
+// The bridge parameter should be a workflow bridge from go-llms that provides
+// workflow orchestration functionality. Returns an adapter that can be registered
+// as a Lua module.
 func NewWorkflowAdapter(bridge engine.Bridge) *WorkflowAdapter {
 	adapter := &WorkflowAdapter{
 		BridgeAdapter: gopherlua.NewBridgeAdapter(bridge),
@@ -25,7 +31,9 @@ func NewWorkflowAdapter(bridge engine.Bridge) *WorkflowAdapter {
 	return adapter
 }
 
-// GetMethods returns the list of methods exposed by the underlying bridge
+// GetMethods returns the list of methods exposed by the underlying bridge.
+// The returned slice includes all workflow operations such as creation,
+// execution, step management, and serialization.
 func (wa *WorkflowAdapter) GetMethods() []string {
 	if wa.BridgeAdapter == nil || wa.GetBridge() == nil {
 		return []string{}
@@ -39,7 +47,10 @@ func (wa *WorkflowAdapter) GetMethods() []string {
 	return methods
 }
 
-// CreateLuaModule creates a Lua module with workflow-specific enhancements
+// CreateLuaModule creates a Lua module with workflow-specific enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all workflow operations, constants, and convenience methods.
+// The module provides a complete workflow orchestration API for Lua scripts.
 func (wa *WorkflowAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table

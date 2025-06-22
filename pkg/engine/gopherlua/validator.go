@@ -1,6 +1,9 @@
 // ABOUTME: This file implements script validation for Lua scripts including syntax, security, and performance checks.
 // ABOUTME: It provides comprehensive validation capabilities for use by the spell runner and development tools.
 
+// Package gopherlua provides a Lua engine implementation for go-llmspell.
+// This file implements comprehensive script validation including syntax checking,
+// security validation, performance analysis, and code quality linting.
 package gopherlua
 
 import (
@@ -11,7 +14,9 @@ import (
 	"github.com/yuin/gopher-lua/parse"
 )
 
-// ValidatorConfig configures the script validator behavior
+// ValidatorConfig configures the script validator behavior.
+// It controls which validation checks are performed including syntax,
+// security, performance, and type checking.
 type ValidatorConfig struct {
 	// Syntax validation
 	EnableSyntaxCheck bool `json:"enable_syntax_check"`
@@ -32,7 +37,7 @@ type ValidatorConfig struct {
 	RequireTypeAnnotations bool `json:"require_type_annotations"`
 }
 
-// DefaultValidatorConfig returns a default validator configuration
+// DefaultValidatorConfig returns a default validator configuration.
 func DefaultValidatorConfig() ValidatorConfig {
 	return ValidatorConfig{
 		EnableSyntaxCheck:      true,
@@ -60,7 +65,8 @@ func DefaultValidatorConfig() ValidatorConfig {
 	}
 }
 
-// ValidationResult contains the results of script validation
+// ValidationResult contains the results of script validation.
+// It includes detected errors, warnings, and code metrics.
 type ValidationResult struct {
 	Valid    bool                `json:"valid"`
 	Errors   []ValidationError   `json:"errors,omitempty"`
@@ -68,7 +74,8 @@ type ValidationResult struct {
 	Metrics  ValidationMetrics   `json:"metrics"`
 }
 
-// ValidationError represents a validation error
+// ValidationError represents a validation error.
+// Errors indicate issues that must be fixed before the script can run.
 type ValidationError struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
@@ -77,7 +84,8 @@ type ValidationError struct {
 	Code    string `json:"code,omitempty"`
 }
 
-// ValidationWarning represents a validation warning
+// ValidationWarning represents a validation warning.
+// Warnings indicate potential issues or style violations that should be addressed.
 type ValidationWarning struct {
 	Type       string `json:"type"`
 	Message    string `json:"message"`
@@ -86,7 +94,8 @@ type ValidationWarning struct {
 	Suggestion string `json:"suggestion,omitempty"`
 }
 
-// ValidationMetrics contains script complexity metrics
+// ValidationMetrics contains script complexity metrics.
+// These metrics help assess code quality and potential performance issues.
 type ValidationMetrics struct {
 	Lines                int `json:"lines"`
 	Functions            int `json:"functions"`
@@ -94,13 +103,15 @@ type ValidationMetrics struct {
 	CyclomaticComplexity int `json:"cyclomatic_complexity"`
 }
 
-// ScriptValidator validates Lua scripts
+// ScriptValidator validates Lua scripts.
+// It performs comprehensive validation including syntax checking,
+// security analysis, and code quality assessment.
 type ScriptValidator struct {
 	config   ValidatorConfig
 	patterns map[string]*regexp.Regexp
 }
 
-// NewScriptValidator creates a new script validator
+// NewScriptValidator creates a new script validator.
 func NewScriptValidator(config ValidatorConfig) *ScriptValidator {
 	v := &ScriptValidator{
 		config:   config,
@@ -115,7 +126,7 @@ func NewScriptValidator(config ValidatorConfig) *ScriptValidator {
 	return v
 }
 
-// ValidateScript validates a Lua script
+// ValidateScript validates a Lua script.
 func (v *ScriptValidator) ValidateScript(script string, filename string) (*ValidationResult, error) {
 	result := &ValidationResult{
 		Valid:    true,
@@ -155,7 +166,7 @@ func (v *ScriptValidator) ValidateScript(script string, filename string) (*Valid
 	return result, nil
 }
 
-// checkSyntax performs syntax validation
+// checkSyntax performs syntax validation.
 func (v *ScriptValidator) checkSyntax(script string, filename string, result *ValidationResult) error {
 	// Use gopher-lua's parser to check syntax
 	_, err := parse.Parse(strings.NewReader(script), filename)
@@ -182,7 +193,7 @@ func (v *ScriptValidator) checkSyntax(script string, filename string, result *Va
 	return nil
 }
 
-// performLinting checks for code style and best practices
+// performLinting checks for code style and best practices.
 func (v *ScriptValidator) performLinting(script string, result *ValidationResult) {
 	lines := strings.Split(script, "\n")
 
@@ -245,7 +256,7 @@ func (v *ScriptValidator) performLinting(script string, result *ValidationResult
 	}
 }
 
-// checkSecurity validates security constraints
+// checkSecurity validates security constraints.
 func (v *ScriptValidator) checkSecurity(script string, result *ValidationResult) {
 	// Check for forbidden patterns
 	for pattern, regex := range v.patterns {
@@ -303,7 +314,7 @@ func (v *ScriptValidator) checkSecurity(script string, result *ValidationResult)
 	}
 }
 
-// checkPerformance validates performance concerns
+// checkPerformance validates performance concerns.
 func (v *ScriptValidator) checkPerformance(script string, result *ValidationResult) {
 	// Check for deeply nested loops
 	loopPattern := regexp.MustCompile(`\b(for|while|repeat)\b`)
@@ -390,7 +401,7 @@ func (v *ScriptValidator) checkPerformance(script string, result *ValidationResu
 	}
 }
 
-// calculateMetrics calculates script complexity metrics
+// calculateMetrics calculates script complexity metrics.
 func (v *ScriptValidator) calculateMetrics(script string, result *ValidationResult) {
 	lines := strings.Split(script, "\n")
 	result.Metrics.Lines = len(lines)
@@ -408,7 +419,7 @@ func (v *ScriptValidator) calculateMetrics(script string, result *ValidationResu
 	result.Metrics.MaxDepth = v.calculateMaxDepth(script)
 }
 
-// calculateMaxDepth calculates the maximum nesting depth
+// calculateMaxDepth calculates the maximum nesting depth.
 func (v *ScriptValidator) calculateMaxDepth(script string) int {
 	lines := strings.Split(script, "\n")
 	depth := 0
@@ -434,14 +445,14 @@ func (v *ScriptValidator) calculateMaxDepth(script string) int {
 	return maxDepth
 }
 
-// ValidateFile validates a Lua script file
+// ValidateFile validates a Lua script file.
 func (v *ScriptValidator) ValidateFile(filename string) (*ValidationResult, error) {
 	// For now, return an error as we don't have file system access in the validator
 	// The caller should read the file and use ValidateScript
 	return nil, fmt.Errorf("use ValidateScript with file contents instead")
 }
 
-// GetLintRules returns the active linting rules
+// GetLintRules returns the active linting rules.
 func (v *ScriptValidator) GetLintRules() []string {
 	rules := []string{}
 

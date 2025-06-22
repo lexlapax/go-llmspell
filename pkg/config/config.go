@@ -1,6 +1,9 @@
 // ABOUTME: This file defines the main configuration structure for go-llmspell CLI.
 // ABOUTME: It provides comprehensive configuration options for engines, security, logging, and runtime behavior.
 
+// Package config provides configuration management for go-llmspell.
+// It defines configuration structures, loading mechanisms, and validation
+// for all aspects of the application including engines, security, and runtime settings.
 package config
 
 import (
@@ -9,7 +12,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// Config represents the complete configuration for go-llmspell
+// Config represents the complete configuration for go-llmspell.
+// It includes settings for engines, security, logging, CLI behavior,
+// REPL, spell runner, and templates.
 type Config struct {
 	// Core settings
 	Version string `yaml:"version" json:"version" env:"LLMSPELL_VERSION"`
@@ -39,7 +44,8 @@ type Config struct {
 	Templates TemplateConfig `yaml:"templates" json:"templates"`
 }
 
-// EngineConfig holds configuration for script engines
+// EngineConfig holds configuration for script engines.
+// It defines the default engine, resource limits, and engine-specific settings.
 type EngineConfig struct {
 	// Default engine to use when not specified
 	Default string `yaml:"default" json:"default" env:"LLMSPELL_ENGINE_DEFAULT"`
@@ -55,7 +61,8 @@ type EngineConfig struct {
 	Tengo      TengoEngineConfig      `yaml:"tengo" json:"tengo"`
 }
 
-// LuaEngineConfig holds Lua-specific configuration
+// LuaEngineConfig holds Lua-specific configuration.
+// It includes pool settings, performance options, and standard library configuration.
 type LuaEngineConfig struct {
 	// Pool settings
 	PoolMinSize     int           `yaml:"pool_min_size" json:"pool_min_size"`
@@ -72,7 +79,8 @@ type LuaEngineConfig struct {
 	StdlibModules []string `yaml:"stdlib_modules" json:"stdlib_modules"`
 }
 
-// JavaScriptEngineConfig holds JavaScript-specific configuration
+// JavaScriptEngineConfig holds JavaScript-specific configuration.
+// It defines ES version support, strict mode, and module settings.
 type JavaScriptEngineConfig struct {
 	// ES version support
 	ESVersion string `yaml:"es_version" json:"es_version"`
@@ -84,7 +92,8 @@ type JavaScriptEngineConfig struct {
 	ModuleSupport bool `yaml:"module_support" json:"module_support"`
 }
 
-// TengoEngineConfig holds Tengo-specific configuration
+// TengoEngineConfig holds Tengo-specific configuration.
+// It includes VM allocation limits and import restrictions.
 type TengoEngineConfig struct {
 	// VM settings
 	MaxAllocs int `yaml:"max_allocs" json:"max_allocs"`
@@ -93,7 +102,8 @@ type TengoEngineConfig struct {
 	ImportLimit int `yaml:"import_limit" json:"import_limit"`
 }
 
-// SecurityConfig holds security-related configuration
+// SecurityConfig holds security-related configuration.
+// It defines security profiles and filesystem access controls.
 type SecurityConfig struct {
 	// Security profile (sandbox, development, production)
 	Profile string `yaml:"profile" json:"profile" env:"LLMSPELL_SECURITY_PROFILE"`
@@ -122,7 +132,8 @@ type SecurityConfig struct {
 	MaxNetworkCalls int      `yaml:"max_network_calls" json:"max_network_calls"`
 }
 
-// LoggingConfig holds logging configuration
+// LoggingConfig holds logging configuration.
+// It defines log levels, output formats, destinations, and component-specific settings.
 type LoggingConfig struct {
 	// Log level (debug, info, warn, error)
 	Level string `yaml:"level" json:"level" env:"LLMSPELL_LOG_LEVEL"`
@@ -140,7 +151,8 @@ type LoggingConfig struct {
 	Components ComponentLogging `yaml:"components" json:"components"`
 }
 
-// LogFileSettings holds log file configuration
+// LogFileSettings holds log file configuration.
+// It defines rotation settings including size limits, backups, and compression.
 type LogFileSettings struct {
 	MaxSize    int  `yaml:"max_size" json:"max_size"`       // MB
 	MaxBackups int  `yaml:"max_backups" json:"max_backups"` // Number of backup files
@@ -148,7 +160,8 @@ type LogFileSettings struct {
 	Compress   bool `yaml:"compress" json:"compress"`       // Compress rotated files
 }
 
-// ComponentLogging holds component-specific logging levels
+// ComponentLogging holds component-specific logging levels.
+// It allows fine-grained control over logging verbosity per component.
 type ComponentLogging struct {
 	Engine   string `yaml:"engine" json:"engine"`
 	Bridge   string `yaml:"bridge" json:"bridge"`
@@ -157,7 +170,8 @@ type ComponentLogging struct {
 	REPL     string `yaml:"repl" json:"repl"`
 }
 
-// CLIConfig holds CLI-specific configuration
+// CLIConfig holds CLI-specific configuration.
+// It defines output formatting, progress indicators, and interaction settings.
 type CLIConfig struct {
 	// Output formatting
 	ColorOutput bool   `yaml:"color_output" json:"color_output"`
@@ -177,7 +191,8 @@ type CLIConfig struct {
 	CompletionShell  string `yaml:"completion_shell" json:"completion_shell"`
 }
 
-// REPLConfig holds REPL-specific configuration
+// REPLConfig holds REPL-specific configuration.
+// It defines history settings, display options, behavior, and engine preferences.
 type REPLConfig struct {
 	// History settings
 	HistoryFile     string `yaml:"history_file" json:"history_file"`
@@ -202,7 +217,9 @@ type REPLConfig struct {
 	AutoSwitch    bool   `yaml:"auto_switch" json:"auto_switch"`
 }
 
-// RunnerConfig holds spell runner configuration
+// RunnerConfig holds spell runner configuration.
+// It defines execution behavior, resource limits, parallel execution,
+// output formatting, and signal handling.
 type RunnerConfig struct {
 	// Default behavior
 	DefaultTimeout     time.Duration `yaml:"default_timeout" json:"default_timeout"`
@@ -233,7 +250,8 @@ type RunnerConfig struct {
 	CleanupTempFiles  bool          `yaml:"cleanup_temp_files" json:"cleanup_temp_files"`
 }
 
-// TemplateConfig holds template-related configuration
+// TemplateConfig holds template-related configuration.
+// It defines template paths and default values for project generation.
 type TemplateConfig struct {
 	// Template directories
 	BuiltinPath string   `yaml:"builtin_path" json:"builtin_path"`
@@ -249,7 +267,9 @@ type TemplateConfig struct {
 	ValidateOnCreate  bool `yaml:"validate_on_create" json:"validate_on_create"`
 }
 
-// GetDefaultConfig returns a configuration with sensible defaults
+// GetDefaultConfig returns a configuration with sensible defaults.
+// It provides production-ready default settings for all configuration
+// aspects including security, performance, and behavior.
 func GetDefaultConfig() *Config {
 	return &Config{
 		Version: "0.1.0",
@@ -389,14 +409,18 @@ func GetDefaultConfig() *Config {
 	}
 }
 
-// Validate checks the configuration for consistency and required values
+// Validate checks the configuration for consistency and required values.
+// It ensures all settings are within acceptable ranges and compatible
+// with each other.
 func (c *Config) Validate() error {
 	// TODO: Implement comprehensive validation
 	// This will be implemented as part of the config validation task
 	return nil
 }
 
-// GetEngineConfig returns the engine configuration for the specified engine
+// GetEngineConfig returns the engine configuration for the specified engine.
+// It merges global settings with engine-specific options to create
+// a complete engine configuration.
 func (c *Config) GetEngineConfig(engineName string) engine.EngineConfig {
 	base := engine.EngineConfig{
 		MemoryLimit:     c.Engine.MemoryLimit,

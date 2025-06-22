@@ -1,6 +1,9 @@
 // ABOUTME: Main documentation generator interface and orchestrator for all script engines.
 // ABOUTME: Coordinates language-specific generators to produce unified API documentation.
 
+// Package docs provides documentation generation functionality for go-llmspell.
+// It supports multiple output formats (Markdown, JSON, HTML) and generates
+// comprehensive API documentation for all supported script engines (Lua, JavaScript, Tengo).
 package docs
 
 import (
@@ -11,7 +14,9 @@ import (
 	"time"
 )
 
-// DocGenerator is the interface for language-specific documentation generators
+// DocGenerator is the interface for language-specific documentation generators.
+// Each script engine (Lua, JavaScript, Tengo) implements this interface
+// to provide language-specific documentation extraction and generation.
 type DocGenerator interface {
 	// GetLanguage returns the script language this generator supports
 	GetLanguage() string
@@ -29,7 +34,9 @@ type DocGenerator interface {
 	GenerateCompletion(modules []Module) interface{}
 }
 
-// Module represents a generic module in documentation (language-agnostic)
+// Module represents a generic module in documentation (language-agnostic).
+// It contains all the information needed to document a module including
+// its functions, constants, types, and usage examples.
 type Module struct {
 	Name        string                 `json:"name"`
 	Language    string                 `json:"language"`
@@ -42,7 +49,9 @@ type Module struct {
 	Since       string                 `json:"since"`
 }
 
-// Parameter represents a function parameter
+// Parameter represents a function parameter.
+// It includes type information, description, and whether
+// the parameter is optional with a default value.
 type Parameter struct {
 	Name        string      `json:"name"`
 	Type        string      `json:"type"`
@@ -51,13 +60,16 @@ type Parameter struct {
 	Default     interface{} `json:"default"`
 }
 
-// ReturnValue represents a function return value
+// ReturnValue represents a function return value.
+// It describes the type and purpose of values returned by functions.
 type ReturnValue struct {
 	Type        string `json:"type"`
 	Description string `json:"description"`
 }
 
-// Field represents a type field
+// Field represents a type field.
+// It's used to document fields within custom types,
+// including their type, description, and default values.
 type Field struct {
 	Name        string      `json:"name"`
 	Type        string      `json:"type"`
@@ -66,7 +78,9 @@ type Field struct {
 	Default     interface{} `json:"default"`
 }
 
-// Function represents a generic function in documentation
+// Function represents a generic function in documentation.
+// It contains comprehensive information about a function including
+// parameters, return values, examples, and metadata.
 type Function struct {
 	Name        string                 `json:"name"`
 	Module      string                 `json:"module"`
@@ -81,7 +95,9 @@ type Function struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 }
 
-// Type represents a type definition
+// Type represents a type definition.
+// It documents custom types including their fields,
+// methods, and usage examples.
 type Type struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description"`
@@ -91,7 +107,9 @@ type Type struct {
 	Metadata    map[string]string `json:"metadata"`
 }
 
-// ModuleExample represents a usage example
+// ModuleExample represents a usage example.
+// It provides code examples with expected output
+// to demonstrate module functionality.
 type ModuleExample struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -99,13 +117,17 @@ type ModuleExample struct {
 	Output      string `json:"output"`
 }
 
-// GeneratorManager manages multiple language-specific generators
+// GeneratorManager manages multiple language-specific generators.
+// It coordinates documentation generation across all supported
+// script engines and output formats.
 type GeneratorManager struct {
 	generators map[string]DocGenerator
 	config     GeneratorConfig
 }
 
-// GeneratorConfig holds configuration for documentation generation
+// GeneratorConfig holds configuration for documentation generation.
+// It specifies which languages and formats to generate,
+// and what components to include in the documentation.
 type GeneratorConfig struct {
 	OutputFormats []string // markdown, json, html, completion
 	Languages     []string // lua, javascript, tengo
@@ -114,7 +136,9 @@ type GeneratorConfig struct {
 	Version       string
 }
 
-// NewGeneratorManager creates a new generator manager
+// NewGeneratorManager creates a new generator manager.
+// It initializes an empty registry for language-specific generators
+// with the provided configuration.
 func NewGeneratorManager(config GeneratorConfig) *GeneratorManager {
 	return &GeneratorManager{
 		generators: make(map[string]DocGenerator),
@@ -122,7 +146,9 @@ func NewGeneratorManager(config GeneratorConfig) *GeneratorManager {
 	}
 }
 
-// RegisterGenerator registers a language-specific generator
+// RegisterGenerator registers a language-specific generator.
+// It returns an error if a generator for the same language
+// is already registered.
 func (m *GeneratorManager) RegisterGenerator(generator DocGenerator) error {
 	lang := generator.GetLanguage()
 	if _, exists := m.generators[lang]; exists {
@@ -132,7 +158,9 @@ func (m *GeneratorManager) RegisterGenerator(generator DocGenerator) error {
 	return nil
 }
 
-// GenerateAll generates documentation for all registered languages
+// GenerateAll generates documentation for all registered languages.
+// It extracts API information and generates documentation in all
+// requested formats for each configured language.
 func (m *GeneratorManager) GenerateAll() (*GenerationResult, error) {
 	result := &GenerationResult{
 		Timestamp: time.Now(),
@@ -182,7 +210,9 @@ func (m *GeneratorManager) GenerateAll() (*GenerationResult, error) {
 	return result, nil
 }
 
-// GenerateForLanguage generates documentation for a specific language
+// GenerateForLanguage generates documentation for a specific language.
+// It extracts API information and generates documentation in all
+// requested formats for the specified language only.
 func (m *GeneratorManager) GenerateForLanguage(language string) (*LanguageResult, error) {
 	generator, exists := m.generators[language]
 	if !exists {
@@ -220,14 +250,18 @@ func (m *GeneratorManager) GenerateForLanguage(language string) (*LanguageResult
 	return result, nil
 }
 
-// GenerationResult holds the complete generation result
+// GenerationResult holds the complete generation result.
+// It contains documentation for all processed languages
+// along with metadata about the generation process.
 type GenerationResult struct {
 	Timestamp time.Time                  `json:"timestamp"`
 	Version   string                     `json:"version"`
 	Languages map[string]*LanguageResult `json:"languages"`
 }
 
-// LanguageResult holds generation result for a specific language
+// LanguageResult holds generation result for a specific language.
+// It contains the extracted modules and generated documentation
+// in various formats for a single script engine.
 type LanguageResult struct {
 	Language   string      `json:"language"`
 	Modules    []Module    `json:"modules"`
@@ -236,7 +270,9 @@ type LanguageResult struct {
 	Completion interface{} `json:"-"`
 }
 
-// GetOutputPath returns the output path for a specific format and language
+// GetOutputPath returns the output path for a specific format and language.
+// It constructs an appropriate filename based on the language and format,
+// placing it in the specified base directory.
 func GetOutputPath(baseDir, language, format string) string {
 	filename := fmt.Sprintf("%s-api", language)
 	switch format {
@@ -254,17 +290,21 @@ func GetOutputPath(baseDir, language, format string) string {
 	return filepath.Join(baseDir, filename)
 }
 
-// GetSupportedLanguages returns all supported script languages
+// GetSupportedLanguages returns all supported script languages.
+// Currently supports Lua, JavaScript, and Tengo.
 func GetSupportedLanguages() []string {
 	return []string{"lua", "javascript", "tengo"}
 }
 
-// GetSupportedFormats returns all supported output formats
+// GetSupportedFormats returns all supported output formats.
+// Includes Markdown, JSON, completion data, and HTML.
 func GetSupportedFormats() []string {
 	return []string{"markdown", "json", "completion", "html"}
 }
 
-// GenerateCombinedMarkdown generates a combined markdown document for all languages
+// GenerateCombinedMarkdown generates a combined markdown document for all languages.
+// It creates a unified document with a table of contents and sections for each
+// language, making it easy to browse the complete API documentation.
 func GenerateCombinedMarkdown(result *GenerationResult) string {
 	var md strings.Builder
 
@@ -319,7 +359,8 @@ func GenerateCombinedMarkdown(result *GenerationResult) string {
 	return md.String()
 }
 
-// contains checks if a string slice contains a value
+// contains checks if a string slice contains a value.
+// It's a utility function for checking language and format filters.
 func contains(slice []string, value string) bool {
 	for _, v := range slice {
 		if v == value {
@@ -329,7 +370,9 @@ func contains(slice []string, value string) bool {
 	return false
 }
 
-// toTitle converts a string to title case
+// toTitle converts a string to title case.
+// It capitalizes the first letter of each word for better
+// presentation in documentation headers.
 func toTitle(s string) string {
 	if s == "" {
 		return ""

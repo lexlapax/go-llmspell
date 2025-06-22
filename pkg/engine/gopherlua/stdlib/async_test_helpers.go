@@ -1,6 +1,9 @@
 // ABOUTME: Async-specific test helpers for go-llmspell Lua standard library testing
 // ABOUTME: Provides utilities for promise assertions, coroutine lifecycle, timeout testing, and memory leak detection
 
+// Package stdlib provides the Lua standard library implementations for go-llmspell.
+// This file contains async-specific test helpers for testing promise-based operations,
+// coroutine lifecycle management, and async error handling.
 package stdlib
 
 import (
@@ -20,7 +23,18 @@ import (
 // Promise Assertion Utilities
 // ============================================================================
 
-// AssertPromiseResolves verifies that a promise resolves with expected value
+// AssertPromiseResolves verifies that a promise resolves with expected value.
+// It waits for the promise to resolve within the specified timeout and checks
+// that the resolved value matches the expected value.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state containing the promise
+//   - promiseVar: The name of the Lua variable holding the promise
+//   - expectedValue: The expected resolved value
+//   - timeout: Maximum time to wait for promise completion
+//
+// The function fails the test if the promise rejects or resolves with a different value.
 func AssertPromiseResolves(t *testing.T, L *lua.LState, promiseVar string, expectedValue lua.LValue, timeout time.Duration) {
 	t.Helper()
 
@@ -66,7 +80,17 @@ func AssertPromiseResolves(t *testing.T, L *lua.LState, promiseVar string, expec
 	}
 }
 
-// AssertPromiseRejects verifies that a promise rejects with expected error
+// AssertPromiseRejects verifies that a promise rejects with expected error.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state containing the promise
+//   - promiseVar: The name of the Lua variable holding the promise
+//   - expectedError: Substring expected to be contained in the error message
+//   - timeout: Maximum time to wait for promise completion
+//
+// The function fails the test if the promise resolves or rejects with an error
+// that doesn't contain the expected error substring.
 func AssertPromiseRejects(t *testing.T, L *lua.LState, promiseVar string, expectedError string, timeout time.Duration) {
 	t.Helper()
 
@@ -119,7 +143,18 @@ func AssertPromiseRejects(t *testing.T, L *lua.LState, promiseVar string, expect
 	}
 }
 
-// AssertPromiseCompletes verifies that a promise completes (resolves or rejects) within timeout
+// AssertPromiseCompletes verifies that a promise completes (resolves or rejects) within timeout.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state containing the promise
+//   - promiseVar: The name of the Lua variable holding the promise
+//   - timeout: Maximum time to wait for promise completion
+//
+// Returns:
+//   - bool: true if the promise completed within the timeout, false otherwise
+//
+// This function doesn't check the result, only that the promise finished executing.
 func AssertPromiseCompletes(t *testing.T, L *lua.LState, promiseVar string, timeout time.Duration) bool {
 	t.Helper()
 
@@ -155,7 +190,17 @@ func AssertPromiseCompletes(t *testing.T, L *lua.LState, promiseVar string, time
 	}
 }
 
-// CreateTestPromise creates a promise for testing
+// CreateTestPromise creates a promise for testing that resolves after a delay.
+//
+// Parameters:
+//   - L: The Lua state to create the promise in
+//   - resolveAfter: Duration to wait before resolving the promise
+//   - value: The value to resolve the promise with
+//
+// Returns:
+//   - string: The name of the global variable containing the created promise
+//
+// The created promise uses promise.sleep to delay resolution.
 func CreateTestPromise(L *lua.LState, resolveAfter time.Duration, value lua.LValue) string {
 	varName := fmt.Sprintf("_test_promise_%d", time.Now().UnixNano())
 
@@ -178,7 +223,9 @@ func CreateTestPromise(L *lua.LState, resolveAfter time.Duration, value lua.LVal
 // Coroutine Lifecycle Helpers
 // ============================================================================
 
-// CoroutineTracker tracks coroutine lifecycle events
+// CoroutineTracker tracks coroutine lifecycle events including creation,
+// resumption, yielding, completion, and errors. It provides thread-safe
+// tracking of multiple coroutines for testing purposes.
 type CoroutineTracker struct {
 	mu        sync.Mutex
 	created   []string
@@ -188,7 +235,10 @@ type CoroutineTracker struct {
 	errors    []string
 }
 
-// NewCoroutineTracker creates a new coroutine tracker
+// NewCoroutineTracker creates a new coroutine tracker with empty event lists.
+//
+// Returns:
+//   - *CoroutineTracker: A new tracker instance ready to record coroutine events
 func NewCoroutineTracker() *CoroutineTracker {
 	return &CoroutineTracker{
 		created:   []string{},
@@ -199,7 +249,18 @@ func NewCoroutineTracker() *CoroutineTracker {
 	}
 }
 
-// InstallCoroutineTracker installs tracking hooks for coroutines
+// InstallCoroutineTracker installs tracking hooks for coroutines by wrapping
+// the standard coroutine.create, coroutine.resume, and coroutine.yield functions.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to install tracking in
+//
+// Returns:
+//   - *CoroutineTracker: A tracker that will record all coroutine events
+//
+// The tracker intercepts coroutine operations to record lifecycle events
+// without affecting normal coroutine behavior.
 func InstallCoroutineTracker(t *testing.T, L *lua.LState) *CoroutineTracker {
 	t.Helper()
 
@@ -319,7 +380,13 @@ func InstallCoroutineTracker(t *testing.T, L *lua.LState) *CoroutineTracker {
 	return tracker
 }
 
-// GetStats returns coroutine statistics
+// GetStats returns coroutine statistics as a map of event type to count.
+//
+// Returns:
+//   - map[string]int: Map with keys "created", "resumed", "yielded", "completed", "errors"
+//     and values representing the count of each event type
+//
+// The method is thread-safe and returns a snapshot of current statistics.
 func (ct *CoroutineTracker) GetStats() map[string]int {
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
@@ -333,7 +400,14 @@ func (ct *CoroutineTracker) GetStats() map[string]int {
 	}
 }
 
-// AssertCoroutineCompleted verifies a coroutine completed successfully
+// AssertCoroutineCompleted verifies a coroutine completed successfully.
+//
+// Parameters:
+//   - t: The testing context
+//   - coroutineID: The ID (or substring of ID) of the coroutine to check
+//
+// The method fails the test if no coroutine with an ID containing the given
+// string has been recorded as completed.
 func (ct *CoroutineTracker) AssertCoroutineCompleted(t *testing.T, coroutineID string) {
 	t.Helper()
 
@@ -357,7 +431,9 @@ func (ct *CoroutineTracker) AssertCoroutineCompleted(t *testing.T, coroutineID s
 // Timeout Testing Utilities
 // ============================================================================
 
-// TimeoutTest represents a test with timeout handling
+// TimeoutTest represents a test case that involves timeout handling.
+// It allows testing both successful completion within timeout and
+// expected timeout scenarios.
 type TimeoutTest struct {
 	Name     string
 	Script   string
@@ -366,7 +442,15 @@ type TimeoutTest struct {
 	IsError  bool   // Whether an error is expected
 }
 
-// RunTimeoutTests runs a series of timeout tests
+// RunTimeoutTests runs a series of timeout tests with proper context handling.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run tests in
+//   - tests: Array of TimeoutTest cases to execute
+//
+// Each test is run in a separate subtest with its own timeout context.
+// Tests can verify both successful completion and expected timeouts.
 func RunTimeoutTests(t *testing.T, L *lua.LState, tests []TimeoutTest) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
@@ -401,7 +485,16 @@ func RunTimeoutTests(t *testing.T, L *lua.LState, tests []TimeoutTest) {
 	}
 }
 
-// AssertCompletesWithin verifies that code completes within a timeout
+// AssertCompletesWithin verifies that a Lua script completes execution within a timeout.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to execute the script in
+//   - script: The Lua script to execute
+//   - timeout: Maximum time allowed for script execution
+//
+// The function fails the test if the script doesn't complete within the timeout
+// or if it completes with an error.
 func AssertCompletesWithin(t *testing.T, L *lua.LState, script string, timeout time.Duration) {
 	t.Helper()
 
@@ -425,7 +518,8 @@ func AssertCompletesWithin(t *testing.T, L *lua.LState, script string, timeout t
 // Concurrent Operation Validators
 // ============================================================================
 
-// ConcurrentTest represents a concurrent test scenario
+// ConcurrentTest represents a concurrent test scenario with setup,
+// concurrent operations, teardown, and validation phases.
 type ConcurrentTest struct {
 	Name       string
 	Setup      string                            // Setup script
@@ -434,7 +528,16 @@ type ConcurrentTest struct {
 	Validate   func(t *testing.T, L *lua.LState) // Validation function
 }
 
-// RunConcurrentTests runs tests with concurrent operations
+// RunConcurrentTests runs tests with concurrent operations using coroutines.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run tests in
+//   - tests: Array of ConcurrentTest cases to execute
+//
+// Each concurrent operation is run in its own coroutine with synchronized
+// access to the Lua state. Setup and teardown scripts are run before and
+// after the concurrent operations.
 func RunConcurrentTests(t *testing.T, L *lua.LState, tests []ConcurrentTest) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
@@ -497,7 +600,18 @@ func RunConcurrentTests(t *testing.T, L *lua.LState, tests []ConcurrentTest) {
 	}
 }
 
-// AssertRaceConditionFree tests for race conditions in concurrent code
+// AssertRaceConditionFree tests for race conditions in concurrent code by running
+// the same operation multiple times concurrently and checking for consistency.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run tests in
+//   - setup: Lua script to run before the concurrent operations
+//   - operation: Lua script to run concurrently (use $RESULT as placeholder for result variable)
+//   - iterations: Number of concurrent operations to run
+//
+// The function verifies that all concurrent operations produce the same result,
+// indicating no race conditions affected the outcome.
 func AssertRaceConditionFree(t *testing.T, L *lua.LState, setup string, operation string, iterations int) {
 	t.Helper()
 
@@ -561,7 +675,8 @@ func AssertRaceConditionFree(t *testing.T, L *lua.LState, setup string, operatio
 // Memory Leak Detectors
 // ============================================================================
 
-// MemorySnapshot captures memory statistics
+// MemorySnapshot captures memory statistics for both Go runtime and Lua state
+// at a specific point in time. Used for memory leak detection.
 type MemorySnapshot struct {
 	Timestamp  time.Time
 	GoMemory   runtime.MemStats
@@ -570,7 +685,16 @@ type MemorySnapshot struct {
 	LuaObjects int
 }
 
-// CaptureMemorySnapshot captures current memory state
+// CaptureMemorySnapshot captures current memory state for both Go and Lua.
+//
+// Parameters:
+//   - L: The Lua state to capture memory statistics from
+//
+// Returns:
+//   - *MemorySnapshot: Snapshot containing Go memory stats, Lua memory usage,
+//     goroutine count, and Lua object count
+//
+// The function forces garbage collection before capturing to get accurate readings.
 func CaptureMemorySnapshot(L *lua.LState) *MemorySnapshot {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -618,7 +742,16 @@ func CaptureMemorySnapshot(L *lua.LState) *MemorySnapshot {
 	}
 }
 
-// AssertNoMemoryLeak verifies no significant memory leak occurred
+// AssertNoMemoryLeak verifies no significant memory leak occurred between two snapshots.
+//
+// Parameters:
+//   - t: The testing context
+//   - before: Memory snapshot taken before the operation
+//   - after: Memory snapshot taken after the operation
+//   - maxGrowthPercent: Maximum allowed memory growth as a percentage
+//
+// The function checks Go memory, Lua memory, and goroutine count.
+// It fails the test if any metric exceeds the allowed growth percentage.
 func AssertNoMemoryLeak(t *testing.T, before, after *MemorySnapshot, maxGrowthPercent float64) {
 	t.Helper()
 
@@ -644,7 +777,19 @@ func AssertNoMemoryLeak(t *testing.T, before, after *MemorySnapshot, maxGrowthPe
 	}
 }
 
-// RunMemoryLeakTest runs a test checking for memory leaks
+// RunMemoryLeakTest runs a test checking for memory leaks by executing an operation
+// multiple times and comparing memory usage before and after.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to run the test in
+//   - setup: Lua script to run before the iterations
+//   - operation: Lua script to run repeatedly
+//   - cleanup: Lua script to run after the iterations
+//   - iterations: Number of times to run the operation
+//
+// The test allows up to 10% memory growth. Periodic garbage collection is
+// performed during execution to simulate real conditions.
 func RunMemoryLeakTest(t *testing.T, L *lua.LState, setup, operation, cleanup string, iterations int) {
 	t.Helper()
 
@@ -712,7 +857,15 @@ func luaValueToString(v lua.LValue) string {
 	}
 }
 
-// WaitForAsync waits for all async operations to complete
+// WaitForAsync waits for all async operations to complete in the Lua state.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state with pending async operations
+//   - timeout: Maximum time to wait for completion
+//
+// The function attempts to wait for promises and coroutines to finish.
+// It fails the test if operations don't complete within the timeout.
 func WaitForAsync(t *testing.T, L *lua.LState, timeout time.Duration) {
 	t.Helper()
 
@@ -738,7 +891,16 @@ func WaitForAsync(t *testing.T, L *lua.LState, timeout time.Duration) {
 	}
 }
 
-// AssertEventuallyTrue asserts that a condition becomes true eventually
+// AssertEventuallyTrue asserts that a Lua expression becomes true within a timeout.
+//
+// Parameters:
+//   - t: The testing context
+//   - L: The Lua state to evaluate the condition in
+//   - condition: Lua expression that should eventually evaluate to true
+//   - timeout: Maximum time to wait for the condition
+//   - message: Error message to display if condition never becomes true
+//
+// The function polls the condition every 10ms until it becomes true or times out.
 func AssertEventuallyTrue(t *testing.T, L *lua.LState, condition string, timeout time.Duration, message string) {
 	t.Helper()
 

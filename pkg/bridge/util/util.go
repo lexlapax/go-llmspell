@@ -10,6 +10,10 @@
 // - Common validation functions (URL, email)
 // These could be useful for go-llms internals and other consumers of the library.
 
+// Package util provides a bridge for general-purpose utility functions.
+// It offers string manipulation, time/duration handling, UUID generation,
+// hashing, validation, retry logic, and error handling utilities for script environments.
+// These utilities complement go-llms functionality without reimplementing core features.
 package util
 
 import (
@@ -29,22 +33,29 @@ import (
 )
 
 // UtilBridge provides script access to general go-llms utilities.
+// It bridges various utility functions including string manipulation, time handling,
+// UUID generation, hashing, validation, and error handling. The bridge maintains
+// thread-safe initialization state and provides a consistent interface for scripts.
 type UtilBridge struct {
 	mu          sync.RWMutex
 	initialized bool
 }
 
 // NewUtilBridge creates a new utilities bridge.
+// Returns an uninitialized bridge that must be initialized before use.
 func NewUtilBridge() *UtilBridge {
 	return &UtilBridge{}
 }
 
 // GetID returns the bridge identifier.
+// Always returns "util" for this bridge.
 func (b *UtilBridge) GetID() string {
 	return "util"
 }
 
 // GetMetadata returns bridge metadata.
+// Provides information about the bridge including name, version,
+// description, author, and license for documentation and discovery.
 func (b *UtilBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "util",
@@ -56,6 +67,8 @@ func (b *UtilBridge) GetMetadata() engine.BridgeMetadata {
 }
 
 // Initialize initializes the bridge.
+// Thread-safe initialization that can be called multiple times safely.
+// Returns nil on success or if already initialized.
 func (b *UtilBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -69,6 +82,7 @@ func (b *UtilBridge) Initialize(ctx context.Context) error {
 }
 
 // Cleanup cleans up bridge resources.
+// Marks the bridge as uninitialized. Thread-safe and idempotent.
 func (b *UtilBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -78,6 +92,7 @@ func (b *UtilBridge) Cleanup(ctx context.Context) error {
 }
 
 // IsInitialized checks if the bridge is initialized.
+// Thread-safe check of initialization status.
 func (b *UtilBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -85,11 +100,14 @@ func (b *UtilBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for proper integration.
 func (b *UtilBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
 // Methods returns the methods exposed by this bridge.
+// Provides comprehensive utility functions including error handling, string manipulation,
+// time utilities, retry logic, validation, UUID generation, hashing, and sleep functionality.
 func (b *UtilBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Error handling utilities
@@ -226,6 +244,8 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 }
 
 // TypeMappings returns type conversion mappings.
+// Maps Go error and function types to script-compatible object and function types
+// for proper data conversion during method execution.
 func (b *UtilBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"error": {
@@ -240,12 +260,16 @@ func (b *UtilBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
+// Currently delegates all validation to the engine based on method metadata.
+// Returns nil as the engine handles parameter validation.
 func (b *UtilBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
 // RequiredPermissions returns required permissions.
+// Specifies that scripts need memory access for utility functions and
+// time access for sleep operations.
 func (b *UtilBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -263,7 +287,10 @@ func (b *UtilBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// Routes method calls to appropriate utility implementations including UUID generation,
+// string truncation, hashing, sleep, and duration formatting. Returns script-compatible
+// values and handles parameter validation for each method.
 func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()

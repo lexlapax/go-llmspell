@@ -15,26 +15,32 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// ToolsRegistryBridge provides script access to go-llms built-in tools registry
+// ToolsRegistryBridge provides script access to go-llms built-in tools registry.
+// It enables tool discovery, filtering, documentation retrieval, and MCP export
+// functionality without reimplementing the underlying tool system.
 type ToolsRegistryBridge struct {
 	initialized bool
 	registry    tools.ToolRegistry
 	mu          sync.RWMutex
 }
 
-// NewToolsRegistryBridge creates a new tools registry bridge
+// NewToolsRegistryBridge creates a new tools registry bridge.
+// It wraps the global go-llms tools registry for script access.
 func NewToolsRegistryBridge() *ToolsRegistryBridge {
 	return &ToolsRegistryBridge{
 		registry: tools.Tools, // Use global registry
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// Always returns "tools_registry" for this bridge.
 func (tb *ToolsRegistryBridge) GetID() string {
 	return "tools_registry"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides comprehensive information about the bridge including
+// dependencies on go-llms tools package.
 func (tb *ToolsRegistryBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:         "tools_registry",
@@ -46,7 +52,9 @@ func (tb *ToolsRegistryBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the tools registry bridge
+// Initialize sets up the tools registry bridge.
+// Currently performs minimal initialization as the registry
+// is already initialized by go-llms.
 func (tb *ToolsRegistryBridge) Initialize(ctx context.Context) error {
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -55,7 +63,9 @@ func (tb *ToolsRegistryBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs bridge cleanup
+// Cleanup performs bridge cleanup.
+// Marks the bridge as uninitialized. The underlying registry
+// remains intact as it's managed by go-llms.
 func (tb *ToolsRegistryBridge) Cleanup(ctx context.Context) error {
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -64,19 +74,23 @@ func (tb *ToolsRegistryBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns initialization status
+// IsInitialized returns initialization status.
+// Thread-safe check of bridge initialization state.
 func (tb *ToolsRegistryBridge) IsInitialized() bool {
 	tb.mu.RLock()
 	defer tb.mu.RUnlock()
 	return tb.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for integration.
 func (tb *ToolsRegistryBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(tb)
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// Provides comprehensive tool discovery, filtering, documentation,
+// and MCP export capabilities for script environments.
 func (tb *ToolsRegistryBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Tool discovery and listing
@@ -206,7 +220,9 @@ func (tb *ToolsRegistryBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// Ensures bridge is initialized and validates parameter counts
+// against method definitions.
 func (tb *ToolsRegistryBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !tb.IsInitialized() {
 		return fmt.Errorf("tools registry bridge not initialized")
@@ -230,7 +246,9 @@ func (tb *ToolsRegistryBridge) ValidateMethod(name string, args []engine.ScriptV
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// ExecuteMethod executes bridge methods with ScriptValue parameters
+// ExecuteMethod executes bridge methods with ScriptValue parameters.
+// Routes method calls to appropriate implementations and returns
+// script-compatible values wrapped in ScriptValue types.
 func (tb *ToolsRegistryBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	tb.mu.RLock()
 	defer tb.mu.RUnlock()
@@ -273,7 +291,9 @@ func (tb *ToolsRegistryBridge) ExecuteMethod(ctx context.Context, name string, a
 	}
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// Defines mappings between go-llms tool types and script types
+// for proper data conversion during method execution.
 func (tb *ToolsRegistryBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"tool_registry_entry": {
@@ -315,7 +335,9 @@ func (tb *ToolsRegistryBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Specifies that scripts need storage access for registry operations
+// and memory access for metadata handling.
 func (tb *ToolsRegistryBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -337,7 +359,9 @@ func (tb *ToolsRegistryBridge) RequiredPermissions() []engine.Permission {
 
 // Tool discovery and listing
 
-// listTools lists all registered tools
+// listTools lists all registered tools.
+// Returns an array of tool metadata including name, description,
+// category, tags, version, and status flags.
 func (tb *ToolsRegistryBridge) listTools(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listTools", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -362,7 +386,9 @@ func (tb *ToolsRegistryBridge) listTools(ctx context.Context, args []engine.Scri
 	return engine.NewArrayValue(result), nil
 }
 
-// getTool gets a tool by name
+// getTool gets a tool by name.
+// Returns comprehensive tool information including schemas,
+// constraints, examples, and operational characteristics.
 func (tb *ToolsRegistryBridge) getTool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getTool", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -396,7 +422,9 @@ func (tb *ToolsRegistryBridge) getTool(ctx context.Context, args []engine.Script
 	return engine.NewObjectValue(toolData), nil
 }
 
-// searchTools searches tools by query string
+// searchTools searches tools by query string.
+// Performs text-based search across tool names, descriptions,
+// and metadata to find matching tools.
 func (tb *ToolsRegistryBridge) searchTools(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("searchTools", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -421,7 +449,8 @@ func (tb *ToolsRegistryBridge) searchTools(ctx context.Context, args []engine.Sc
 	return engine.NewArrayValue(result), nil
 }
 
-// listToolsByCategory lists tools in specific category
+// listToolsByCategory lists tools in specific category.
+// Filters tools by their assigned category for organized discovery.
 func (tb *ToolsRegistryBridge) listToolsByCategory(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByCategory", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -446,7 +475,9 @@ func (tb *ToolsRegistryBridge) listToolsByCategory(ctx context.Context, args []e
 	return engine.NewArrayValue(result), nil
 }
 
-// listToolsByTags lists tools matching all provided tags
+// listToolsByTags lists tools matching all provided tags.
+// Returns tools that have all specified tags, enabling precise
+// filtering for specific capabilities.
 func (tb *ToolsRegistryBridge) listToolsByTags(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByTags", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -479,7 +510,8 @@ func (tb *ToolsRegistryBridge) listToolsByTags(ctx context.Context, args []engin
 	return engine.NewArrayValue(result), nil
 }
 
-// getToolCategories gets all available tool categories
+// getToolCategories gets all available tool categories.
+// Returns a list of unique categories used across all registered tools.
 func (tb *ToolsRegistryBridge) getToolCategories(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getToolCategories", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -496,7 +528,9 @@ func (tb *ToolsRegistryBridge) getToolCategories(ctx context.Context, args []eng
 
 // Tool filtering by permissions and resources
 
-// listToolsByPermission lists tools requiring specific permission
+// listToolsByPermission lists tools requiring specific permission.
+// Filters tools based on their permission requirements for security-aware
+// tool discovery.
 func (tb *ToolsRegistryBridge) listToolsByPermission(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByPermission", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -521,7 +555,9 @@ func (tb *ToolsRegistryBridge) listToolsByPermission(ctx context.Context, args [
 	return engine.NewArrayValue(result), nil
 }
 
-// listToolsByResourceUsage lists tools matching resource criteria
+// listToolsByResourceUsage lists tools matching resource criteria.
+// Filters tools based on resource requirements like memory usage,
+// network access, file system access, and concurrency needs.
 func (tb *ToolsRegistryBridge) listToolsByResourceUsage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("listToolsByResourceUsage", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -567,7 +603,9 @@ func (tb *ToolsRegistryBridge) listToolsByResourceUsage(ctx context.Context, arg
 
 // Tool documentation
 
-// getToolDocumentation gets comprehensive documentation for a tool
+// getToolDocumentation gets comprehensive documentation for a tool.
+// Returns complete documentation including usage instructions, examples,
+// constraints, error guidance, and schema definitions.
 func (tb *ToolsRegistryBridge) getToolDocumentation(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getToolDocumentation", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -605,7 +643,9 @@ func (tb *ToolsRegistryBridge) getToolDocumentation(ctx context.Context, args []
 
 // Tool registration
 
-// registerTool registers a new tool in the registry (simplified interface)
+// registerTool registers a new tool in the registry (simplified interface).
+// Currently returns an error as tool registration from scripts requires
+// proper domain.Tool implementation. Tools should be registered in Go code.
 func (tb *ToolsRegistryBridge) registerTool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("registerTool", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -621,7 +661,9 @@ func (tb *ToolsRegistryBridge) registerTool(ctx context.Context, args []engine.S
 
 // MCP export functionality
 
-// exportToolToMCP exports single tool to MCP format
+// exportToolToMCP exports single tool to MCP format.
+// Converts a tool to Model Context Protocol format for integration
+// with MCP-compatible systems.
 func (tb *ToolsRegistryBridge) exportToolToMCP(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("exportToolToMCP", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -645,7 +687,9 @@ func (tb *ToolsRegistryBridge) exportToolToMCP(ctx context.Context, args []engin
 	return engine.NewObjectValue(mcpData), nil
 }
 
-// exportAllToolsToMCP exports all tools to MCP catalog
+// exportAllToolsToMCP exports all tools to MCP catalog.
+// Creates a complete MCP catalog of all registered tools for
+// bulk export and integration.
 func (tb *ToolsRegistryBridge) exportAllToolsToMCP(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("exportAllToolsToMCP", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -681,7 +725,9 @@ func (tb *ToolsRegistryBridge) exportAllToolsToMCP(ctx context.Context, args []e
 
 // Registry management
 
-// clearRegistry clears all tools from registry (testing only)
+// clearRegistry clears all tools from registry (testing only).
+// Removes all tools from the registry. Should only be used in
+// testing scenarios as it affects the global registry.
 func (tb *ToolsRegistryBridge) clearRegistry(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("clearRegistry", args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -691,7 +737,9 @@ func (tb *ToolsRegistryBridge) clearRegistry(ctx context.Context, args []engine.
 	return engine.NewNilValue(), nil
 }
 
-// getRegistryStats gets registry statistics and metrics
+// getRegistryStats gets registry statistics and metrics.
+// Returns comprehensive statistics including tool counts by category,
+// deprecated/experimental tool counts, and category distribution.
 func (tb *ToolsRegistryBridge) getRegistryStats(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := tb.ValidateMethod("getRegistryStats", args); err != nil {
 		return engine.NewErrorValue(err), nil

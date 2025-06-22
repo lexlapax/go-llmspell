@@ -12,7 +12,10 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// UtilsAdapter combines multiple utility bridges into a unified adapter
+// UtilsAdapter combines multiple utility bridges into a unified adapter.
+// It provides authentication, debugging, error handling, JSON processing,
+// LLM utilities, logging, structured logging (slog), and general utility
+// functions in a single convenient interface for Lua scripts.
 type UtilsAdapter struct {
 	authBridge    engine.Bridge
 	debugBridge   engine.Bridge
@@ -25,7 +28,12 @@ type UtilsAdapter struct {
 	typeConverter *gopherlua.LuaTypeConverter
 }
 
-// NewUtilsAdapter creates a new utility adapter
+// NewUtilsAdapter creates a new utility adapter with the provided bridges.
+// Each bridge parameter provides specific utility functionality: authBridge for
+// authentication, debugBridge for debugging, errorsBridge for error handling,
+// jsonBridge for JSON operations, llmBridge for LLM utilities, loggerBridge for
+// logging, slogBridge for structured logging, and utilBridge for general utilities.
+// Returns an adapter that can be registered as a Lua module.
 func NewUtilsAdapter(authBridge, debugBridge, errorsBridge, jsonBridge, llmBridge, loggerBridge, slogBridge, utilBridge engine.Bridge) *UtilsAdapter {
 	return &UtilsAdapter{
 		authBridge:    authBridge,
@@ -40,12 +48,16 @@ func NewUtilsAdapter(authBridge, debugBridge, errorsBridge, jsonBridge, llmBridg
 	}
 }
 
-// GetAdapterName returns the adapter name
+// GetAdapterName returns the adapter name.
+// Returns "utils" to identify this adapter type.
 func (ua *UtilsAdapter) GetAdapterName() string {
 	return "utils"
 }
 
-// CreateLuaModule creates a Lua module with utility enhancements
+// CreateLuaModule creates a Lua module with utility enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all utility operations organized by functionality. All methods are
+// exposed at the module level with prefixed names (e.g., authAuthenticate, jsonParse).
 func (ua *UtilsAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table

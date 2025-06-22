@@ -13,7 +13,10 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// StateAdapter specializes BridgeAdapter for state management functionality
+// StateAdapter specializes BridgeAdapter for state management functionality.
+// It provides state creation, manipulation, transformation, validation,
+// persistence, and context management operations for maintaining application
+// state across LLM interactions.
 type StateAdapter struct {
 	*gopherlua.BridgeAdapter
 
@@ -21,7 +24,10 @@ type StateAdapter struct {
 	contextBridge engine.Bridge // StateContextBridge for shared contexts
 }
 
-// NewStateAdapter creates a new state adapter
+// NewStateAdapter creates a new state adapter with the provided bridge.
+// The bridge parameter should be a state bridge from go-llms that provides
+// state management functionality. Returns an adapter that can be registered
+// as a Lua module.
 func NewStateAdapter(bridge engine.Bridge) *StateAdapter {
 	// Create state adapter
 	adapter := &StateAdapter{}
@@ -37,7 +43,10 @@ func NewStateAdapter(bridge engine.Bridge) *StateAdapter {
 	return adapter
 }
 
-// NewStateAdapterWithContext creates a new state adapter with context bridge
+// NewStateAdapterWithContext creates a new state adapter with context bridge.
+// The bridge parameter provides core state functionality while the contextBridge
+// parameter enables shared context management across multiple states.
+// Returns an adapter that can be registered as a Lua module.
 func NewStateAdapterWithContext(bridge engine.Bridge, contextBridge engine.Bridge) *StateAdapter {
 	adapter := NewStateAdapter(bridge)
 	adapter.contextBridge = contextBridge
@@ -51,7 +60,10 @@ func (sa *StateAdapter) ensureStateMethods() {
 	// In production, this could validate that expected state methods exist
 }
 
-// CreateLuaModule creates a Lua module with state-specific enhancements
+// CreateLuaModule creates a Lua module with state-specific enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all state operations, transforms, context management, and persistence
+// functionality. The module wraps certain operations for enhanced functionality.
 func (sa *StateAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table
@@ -674,7 +686,10 @@ func (sa *StateAdapter) addStateConstants(L *lua.LState, module *lua.LTable) {
 	L.SetField(module, "TRANSFORM_TYPES", transformTypes)
 }
 
-// WrapMethod wraps a bridge method with state-specific handling
+// WrapMethod wraps a bridge method with state-specific handling.
+// It adds validation and error handling for state operations and
+// ensures proper state object management. Returns a Lua function
+// that can be called from Lua scripts.
 func (sa *StateAdapter) WrapMethod(methodName string) lua.LGFunction {
 	// Get base wrapped method if available
 	if sa.BridgeAdapter != nil {
@@ -915,7 +930,10 @@ func (sa *StateAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[string]
 	return result
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (sa *StateAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
@@ -948,7 +966,9 @@ func (sa *StateAdapter) GetBridge() engine.Bridge {
 	return nil
 }
 
-// GetMethods returns the available methods
+// GetMethods returns the list of methods exposed by this adapter.
+// The returned slice includes all state operations such as creation,
+// manipulation, transforms, validation, persistence, and context management.
 func (sa *StateAdapter) GetMethods() []string {
 	// Get base methods if bridge adapter exists
 	var methods []string

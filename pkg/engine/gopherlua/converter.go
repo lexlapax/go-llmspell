@@ -18,7 +18,9 @@ const (
 	defaultCacheSize = 1000
 )
 
-// LuaTypeConverter implements engine.TypeConverter for Lua engine
+// LuaTypeConverter implements engine.TypeConverter for Lua engine.
+// It provides bidirectional type conversion between Go and Lua values
+// with support for custom types, circular reference detection, and conversion caching.
 type LuaTypeConverter struct {
 	mu              sync.RWMutex
 	customTypes     map[string]*customTypeConverter
@@ -28,7 +30,9 @@ type LuaTypeConverter struct {
 	scriptConverter *ScriptValueConverter
 }
 
-// LuaTypeConverterConfig provides configuration options for the converter
+// LuaTypeConverterConfig provides configuration options for the converter.
+// MaxDepth prevents stack overflow from circular references, and CacheSize
+// controls the LRU cache for conversion results.
 type LuaTypeConverterConfig struct {
 	MaxDepth  int
 	CacheSize int
@@ -51,7 +55,8 @@ type conversionCache struct {
 	evictions int64
 }
 
-// CacheStats provides cache performance metrics
+// CacheStats provides cache performance metrics.
+// It tracks cache efficiency with hit/miss ratios and eviction counts.
 type CacheStats struct {
 	Hits      int64
 	Misses    int64
@@ -59,7 +64,8 @@ type CacheStats struct {
 	Size      int
 }
 
-// NewLuaTypeConverter creates a new type converter with default configuration
+// NewLuaTypeConverter creates a new type converter with default configuration.
+// Default max depth is 32 and cache size is 1000 entries.
 func NewLuaTypeConverter() *LuaTypeConverter {
 	return NewLuaTypeConverterWithConfig(LuaTypeConverterConfig{
 		MaxDepth:  defaultMaxDepth,
@@ -67,7 +73,8 @@ func NewLuaTypeConverter() *LuaTypeConverter {
 	})
 }
 
-// NewLuaTypeConverterWithConfig creates a new type converter with custom configuration
+// NewLuaTypeConverterWithConfig creates a new type converter with custom configuration.
+// Zero values in the config will be replaced with defaults.
 func NewLuaTypeConverterWithConfig(config LuaTypeConverterConfig) *LuaTypeConverter {
 	if config.MaxDepth <= 0 {
 		config.MaxDepth = defaultMaxDepth
@@ -98,7 +105,9 @@ func newConversionCache(maxSize int) *conversionCache {
 	}
 }
 
-// ToLua converts a Go value to a Lua value
+// ToLua converts a Go value to a Lua value.
+// It handles primitive types, collections (slices, arrays, maps), structs, and custom types.
+// Circular references are detected and reported as errors.
 func (ltc *LuaTypeConverter) ToLua(L *lua.LState, value interface{}) (lua.LValue, error) {
 	// Check cache first for simple types
 	if ltc.isCacheable(value) {
@@ -261,7 +270,9 @@ func (ltc *LuaTypeConverter) structToLuaTable(L *lua.LState, rv reflect.Value, d
 	return table, nil
 }
 
-// FromLua converts a Lua value to a Go value
+// FromLua converts a Lua value to a Go value.
+// Tables are converted to either slices (for array-like tables) or maps.
+// Circular references in tables are detected and reported as errors.
 func (ltc *LuaTypeConverter) FromLua(value lua.LValue) (interface{}, error) {
 	return ltc.fromLuaWithDepth(value, 0, make(map[*lua.LTable]bool))
 }
@@ -390,7 +401,9 @@ func (ltc *LuaTypeConverter) luaTableToMap(table *lua.LTable, depth int, visited
 	return result, nil
 }
 
-// RegisterCustomType registers a custom type converter
+// RegisterCustomType registers a custom type converter.
+// The typeName should match the Go type's string representation.
+// Both toLua and fromLua functions must be provided.
 func (ltc *LuaTypeConverter) RegisterCustomType(
 	typeName string,
 	toLua func(*lua.LState, interface{}) (lua.LValue, error),
@@ -411,7 +424,8 @@ func (ltc *LuaTypeConverter) RegisterCustomType(
 	return nil
 }
 
-// GetCacheStats returns cache performance statistics
+// GetCacheStats returns cache performance statistics.
+// The statistics include hit/miss counts, evictions, and current cache size.
 func (ltc *LuaTypeConverter) GetCacheStats() CacheStats {
 	ltc.conversionCache.mu.RLock()
 	defer ltc.conversionCache.mu.RUnlock()
@@ -465,7 +479,8 @@ func (cc *conversionCache) recordMiss() {
 
 // Implementation of engine.TypeConverter interface
 
-// ToFunction converts a ScriptValue to engine.Function
+// ToFunction converts a ScriptValue to engine.Function.
+// The ScriptValue must be of TypeFunction, otherwise an error is returned.
 func (ltc *LuaTypeConverter) ToFunction(v engine.ScriptValue) (engine.Function, error) {
 	if v == nil || v.Type() != engine.TypeFunction {
 		return nil, fmt.Errorf("cannot convert %s to Function", v.Type())
@@ -480,12 +495,14 @@ func (ltc *LuaTypeConverter) ToFunction(v engine.ScriptValue) (engine.Function, 
 	return nil, fmt.Errorf("ScriptValue does not contain a valid Function")
 }
 
-// FromFunction converts engine.Function to ScriptValue
+// FromFunction converts engine.Function to ScriptValue.
+// The function is wrapped in a FunctionValue ScriptValue.
 func (ltc *LuaTypeConverter) FromFunction(fn engine.Function) (engine.ScriptValue, error) {
 	return engine.NewFunctionValue("function", fn), nil
 }
 
-// SupportsType checks if the converter supports a given type
+// SupportsType checks if the converter supports a given type.
+// It checks both built-in types and registered custom types.
 func (ltc *LuaTypeConverter) SupportsType(typeName string) bool {
 	// Check custom types
 	ltc.mu.RLock()
@@ -519,7 +536,8 @@ func (ltc *LuaTypeConverter) SupportsType(typeName string) bool {
 	return supportedTypes[typeName]
 }
 
-// GetTypeInfo returns information about a supported type
+// GetTypeInfo returns information about a supported type.
+// This is a basic implementation that categorizes types as primitives.
 func (ltc *LuaTypeConverter) GetTypeInfo(typeName string) engine.TypeInfo {
 	// This is a placeholder implementation
 	return engine.TypeInfo{
@@ -534,27 +552,32 @@ func (ltc *LuaTypeConverter) GetTypeInfo(typeName string) engine.TypeInfo {
 
 // ScriptValue integration methods
 
-// ToScriptValue converts a Go value to a ScriptValue
+// ToScriptValue converts a Go value to a ScriptValue.
+// This delegates to the internal ScriptValueConverter for consistency.
 func (ltc *LuaTypeConverter) ToScriptValue(value interface{}) (engine.ScriptValue, error) {
 	return ltc.scriptConverter.GoToScriptValue(value)
 }
 
-// FromScriptValue converts a ScriptValue to a Go value
+// FromScriptValue converts a ScriptValue to a Go value.
+// The underlying Go value is extracted from the ScriptValue wrapper.
 func (ltc *LuaTypeConverter) FromScriptValue(sv engine.ScriptValue) interface{} {
 	return ltc.scriptConverter.ScriptValueToGo(sv)
 }
 
-// ToLuaScriptValue converts a lua.LValue to a ScriptValue
+// ToLuaScriptValue converts a lua.LValue to a ScriptValue.
+// This provides a bridge between Lua's type system and the engine's ScriptValue system.
 func (ltc *LuaTypeConverter) ToLuaScriptValue(L *lua.LState, lv lua.LValue) (engine.ScriptValue, error) {
 	return ltc.scriptConverter.LValueToScriptValue(L, lv)
 }
 
-// FromLuaScriptValue converts a ScriptValue to a lua.LValue
+// FromLuaScriptValue converts a ScriptValue to a lua.LValue.
+// This allows ScriptValues from other engines to be used in Lua scripts.
 func (ltc *LuaTypeConverter) FromLuaScriptValue(L *lua.LState, sv engine.ScriptValue) (lua.LValue, error) {
 	return ltc.scriptConverter.ScriptValueToLValue(L, sv)
 }
 
-// ToLuaWithScriptValue converts a Go value to Lua via ScriptValue (for consistency)
+// ToLuaWithScriptValue converts a Go value to Lua via ScriptValue (for consistency).
+// This ensures all conversions go through the same ScriptValue pipeline.
 func (ltc *LuaTypeConverter) ToLuaWithScriptValue(L *lua.LState, value interface{}) (lua.LValue, error) {
 	// First convert to ScriptValue
 	sv, err := ltc.ToScriptValue(value)
@@ -566,7 +589,8 @@ func (ltc *LuaTypeConverter) ToLuaWithScriptValue(L *lua.LState, value interface
 	return ltc.FromLuaScriptValue(L, sv)
 }
 
-// FromLuaWithScriptValue converts a Lua value to Go via ScriptValue (for consistency)
+// FromLuaWithScriptValue converts a Lua value to Go via ScriptValue (for consistency).
+// This ensures all conversions go through the same ScriptValue pipeline.
 func (ltc *LuaTypeConverter) FromLuaWithScriptValue(L *lua.LState, lv lua.LValue) (interface{}, error) {
 	// First convert to ScriptValue
 	sv, err := ltc.ToLuaScriptValue(L, lv)

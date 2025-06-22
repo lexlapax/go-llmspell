@@ -1,6 +1,9 @@
 // ABOUTME: Main entry point for the llmspell CLI using Kong for command parsing.
 // ABOUTME: Provides spell execution, validation, REPL, and management commands.
 
+// Package main implements the llmspell command-line interface.
+// It provides commands for executing LLM spell scripts, managing configurations,
+// and interacting with script engines through a unified CLI experience.
 package main
 
 import (
@@ -21,12 +24,17 @@ import (
 
 // Version information set during build
 var (
+	// version is the semantic version of the build
 	version   = "dev"
+	// buildDate is the ISO8601 date of the build
 	buildDate = ""
+	// gitCommit is the git commit hash of the build
 	gitCommit = ""
 )
 
-// CLI represents the command-line interface structure
+// CLI represents the command-line interface structure.
+// It defines global flags and available commands using Kong tags
+// for automatic CLI parsing and help generation.
 type CLI struct {
 	// Global flags
 	DebugMode  bool   `help:"Enable debug mode" env:"LLMSPELL_DEBUG" name:"debug"`
@@ -53,6 +61,9 @@ type CLI struct {
 // osExit allows testing of exit behavior
 var osExit = os.Exit
 
+// main is the entry point for the llmspell CLI.
+// It sets up signal handling, parses command-line arguments using Kong,
+// loads configuration, and executes the appropriate command.
 func main() {
 	// Set up signal handling
 	ctx, cancel := context.WithCancel(context.Background())
@@ -154,7 +165,9 @@ func main() {
 	}
 }
 
-// loadConfig loads configuration from file or defaults
+// loadConfig loads configuration from file or defaults.
+// It uses the config loader with environment variable support
+// and returns default configuration if loading fails.
 func loadConfig(configPath string) *config.Config {
 	// Set up loader options
 	options := config.LoaderOptions{
@@ -177,7 +190,9 @@ func loadConfig(configPath string) *config.Config {
 	return cfg
 }
 
-// formatVersion formats version information
+// formatVersion formats version information.
+// It combines version, git commit hash, and build date
+// into a human-readable string for display.
 func formatVersion() string {
 	v := version
 	if gitCommit != "" {
@@ -189,7 +204,9 @@ func formatVersion() string {
 	return v
 }
 
-// createCommandContext creates context for command execution
+// createCommandContext creates context for command execution.
+// It enriches the context with configuration, flags, and registry
+// information needed by command implementations.
 func createCommandContext(ctx context.Context, cfg *config.Config, cli *CLI, engineRegistry *runner.EngineRegistryManager) context.Context {
 	ctx = context.WithValue(ctx, commands.ConfigKey, cfg)
 	ctx = context.WithValue(ctx, commands.DebugKey, cli.DebugMode)
@@ -199,7 +216,9 @@ func createCommandContext(ctx context.Context, cfg *config.Config, cli *CLI, eng
 	return ctx
 }
 
-// setupErrorHandler sets up error handling
+// setupErrorHandler sets up error handling.
+// It initializes the global error handler with debug and interactive
+// settings from the configuration.
 func setupErrorHandler(cfg *config.Config) *errors.ErrorHandler {
 	// Initialize global error handler
 	errors.InitializeErrorHandler(cfg.Debug, true)

@@ -1,6 +1,9 @@
 // ABOUTME: Async bridge method wrappers for non-blocking operations in GopherLua engine
 // ABOUTME: Provides promisification, streaming support, progress callbacks, and cancellation tokens
 
+// Package gopherlua provides a Lua engine implementation for go-llmspell.
+// This file implements asynchronous wrappers for bridge methods, enabling
+// non-blocking execution patterns including promises, streams, and cancellation.
 package gopherlua
 
 import (
@@ -14,14 +17,18 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// AsyncBridgeWrapper wraps a bridge to provide async method execution
+// AsyncBridgeWrapper wraps a bridge to provide async method execution.
+// It enables non-blocking execution patterns including promises, streams,
+// and cancellation tokens for bridge methods.
 type AsyncBridgeWrapper struct {
 	bridge     engine.Bridge
 	runtime    *AsyncRuntime
 	channelMgr *ChannelManager
 }
 
-// Stream represents a stream of values from an async operation
+// Stream represents a stream of values from an async operation.
+// It provides a channel-based interface for consuming asynchronous results
+// as they become available.
 type Stream struct {
 	channelID string
 	manager   *ChannelManager
@@ -29,7 +36,8 @@ type Stream struct {
 	mu        sync.Mutex
 }
 
-// CancellationToken provides cancellation support for async operations
+// CancellationToken provides cancellation support for async operations.
+// It allows scripts to cancel long-running operations and check cancellation status.
 type CancellationToken struct {
 	id        string
 	ctx       context.Context
@@ -38,10 +46,11 @@ type CancellationToken struct {
 	mu        sync.RWMutex
 }
 
-// ProgressCallback is called to report progress of async operations
+// ProgressCallback is called to report progress of async operations.
+// The progress value should be between 0.0 and 1.0, where 1.0 indicates completion.
 type ProgressCallback func(progress float64)
 
-// NewAsyncBridgeWrapper creates a new async wrapper for a bridge
+// NewAsyncBridgeWrapper creates a new async wrapper for a bridge.
 func NewAsyncBridgeWrapper(b engine.Bridge, runtime *AsyncRuntime, channelMgr *ChannelManager) (*AsyncBridgeWrapper, error) {
 	if b == nil {
 		return nil, fmt.Errorf("bridge cannot be nil")
@@ -61,51 +70,63 @@ func NewAsyncBridgeWrapper(b engine.Bridge, runtime *AsyncRuntime, channelMgr *C
 }
 
 // Bridge interface delegation
+
+// GetID returns the ID of the wrapped bridge.
 func (w *AsyncBridgeWrapper) GetID() string {
 	return w.bridge.GetID()
 }
 
+// GetMetadata returns the metadata of the wrapped bridge.
 func (w *AsyncBridgeWrapper) GetMetadata() engine.BridgeMetadata {
 	return w.bridge.GetMetadata()
 }
 
+// Initialize initializes the wrapped bridge.
 func (w *AsyncBridgeWrapper) Initialize(ctx context.Context) error {
 	return w.bridge.Initialize(ctx)
 }
 
+// Cleanup cleans up the wrapped bridge.
 func (w *AsyncBridgeWrapper) Cleanup(ctx context.Context) error {
 	return w.bridge.Cleanup(ctx)
 }
 
+// Methods returns the methods exposed by the wrapped bridge.
 func (w *AsyncBridgeWrapper) Methods() []engine.MethodInfo {
 	return w.bridge.Methods()
 }
 
+// TypeMappings returns the type mappings for the wrapped bridge.
 func (w *AsyncBridgeWrapper) TypeMappings() map[string]engine.TypeMapping {
 	return w.bridge.TypeMappings()
 }
 
+// IsInitialized checks if the wrapped bridge is initialized.
 func (w *AsyncBridgeWrapper) IsInitialized() bool {
 	return w.bridge.IsInitialized()
 }
 
+// RegisterWithEngine registers the wrapped bridge with a script engine.
 func (w *AsyncBridgeWrapper) RegisterWithEngine(eng engine.ScriptEngine) error {
 	return w.bridge.RegisterWithEngine(eng)
 }
 
+// RequiredPermissions returns the permissions required by the wrapped bridge.
 func (w *AsyncBridgeWrapper) RequiredPermissions() []engine.Permission {
 	return w.bridge.RequiredPermissions()
 }
 
+// ValidateMethod validates a method call on the wrapped bridge.
 func (w *AsyncBridgeWrapper) ValidateMethod(method string, args []engine.ScriptValue) error {
 	return w.bridge.ValidateMethod(method, args)
 }
 
+// ExecuteMethod executes a method on the wrapped bridge synchronously.
 func (w *AsyncBridgeWrapper) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	return w.bridge.ExecuteMethod(ctx, method, args)
 }
 
-// ExecuteMethodAsync executes a bridge method asynchronously and returns a promise
+// ExecuteMethodAsync executes a bridge method asynchronously and returns a promise.
 func (w *AsyncBridgeWrapper) ExecuteMethodAsync(ctx context.Context, L *lua.LState, method string, args []engine.ScriptValue) (*Promise, error) {
 	// Create an empty promise that we'll resolve manually
 	promise, err := w.runtime.CreateEmptyPromise(ctx)
@@ -133,7 +154,7 @@ func (w *AsyncBridgeWrapper) ExecuteMethodAsync(ctx context.Context, L *lua.LSta
 	return promise, nil
 }
 
-// ExecuteMethodStream executes a method that returns a stream of values
+// ExecuteMethodStream executes a method that returns a stream of values.
 func (w *AsyncBridgeWrapper) ExecuteMethodStream(ctx context.Context, L *lua.LState, method string, args []engine.ScriptValue) (*Stream, error) {
 	// Execute the method
 	result, err := w.bridge.ExecuteMethod(ctx, method, args)
@@ -208,7 +229,7 @@ func (w *AsyncBridgeWrapper) ExecuteMethodStream(ctx context.Context, L *lua.LSt
 	}, nil
 }
 
-// ExecuteMethodAsyncWithProgress executes a method with progress reporting
+// ExecuteMethodAsyncWithProgress executes a method with progress reporting.
 func (w *AsyncBridgeWrapper) ExecuteMethodAsyncWithProgress(ctx context.Context, L *lua.LState, method string, args []engine.ScriptValue, progressCb ProgressCallback) (*Promise, error) {
 	// Create the base promise
 	promise, err := w.ExecuteMethodAsync(ctx, L, method, args)
@@ -248,7 +269,7 @@ func (w *AsyncBridgeWrapper) ExecuteMethodAsyncWithProgress(ctx context.Context,
 	return promise, nil
 }
 
-// CreateCancellationToken creates a new cancellation token
+// CreateCancellationToken creates a new cancellation token.
 func (w *AsyncBridgeWrapper) CreateCancellationToken() *CancellationToken {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &CancellationToken{
@@ -258,7 +279,7 @@ func (w *AsyncBridgeWrapper) CreateCancellationToken() *CancellationToken {
 	}
 }
 
-// ExecuteMethodAsyncWithToken executes a method with cancellation token support
+// ExecuteMethodAsyncWithToken executes a method with cancellation token support.
 func (w *AsyncBridgeWrapper) ExecuteMethodAsyncWithToken(ctx context.Context, L *lua.LState, method string, args []engine.ScriptValue, token *CancellationToken) (*Promise, error) {
 	// Combine contexts - either the provided context or token can cancel
 	combinedCtx, cancel := context.WithCancel(ctx)
@@ -274,7 +295,7 @@ func (w *AsyncBridgeWrapper) ExecuteMethodAsyncWithToken(ctx context.Context, L 
 	return w.ExecuteMethodAsync(combinedCtx, L, method, args)
 }
 
-// AwaitAll waits for all promises to resolve
+// AwaitAll waits for all promises to resolve.
 func (w *AsyncBridgeWrapper) AwaitAll(ctx context.Context, promises ...*Promise) ([]lua.LValue, error) {
 	results := make([]lua.LValue, len(promises))
 	errors := make([]error, len(promises))
@@ -302,7 +323,7 @@ func (w *AsyncBridgeWrapper) AwaitAll(ctx context.Context, promises ...*Promise)
 	return results, nil
 }
 
-// AwaitRace waits for the first promise to resolve
+// AwaitRace waits for the first promise to resolve.
 func (w *AsyncBridgeWrapper) AwaitRace(ctx context.Context, promises ...*Promise) (lua.LValue, int, error) {
 	if len(promises) == 0 {
 		return lua.LNil, -1, fmt.Errorf("no promises provided")
@@ -336,7 +357,7 @@ func (w *AsyncBridgeWrapper) AwaitRace(ctx context.Context, promises ...*Promise
 
 // Stream methods
 
-// Next returns the next value from the stream
+// Next returns the next value from the stream.
 func (s *Stream) Next(ctx context.Context) (lua.LValue, error) {
 	s.mu.Lock()
 	if s.closed {
@@ -348,7 +369,7 @@ func (s *Stream) Next(ctx context.Context) (lua.LValue, error) {
 	return s.manager.Receive(ctx, s.channelID)
 }
 
-// Close closes the stream
+// Close closes the stream.
 func (s *Stream) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -363,7 +384,7 @@ func (s *Stream) Close() error {
 
 // CancellationToken methods
 
-// Cancel cancels the token
+// Cancel cancels the token.
 func (t *CancellationToken) Cancel() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -374,24 +395,24 @@ func (t *CancellationToken) Cancel() {
 	}
 }
 
-// IsCancelled checks if the token is cancelled
+// IsCancelled checks if the token is cancelled.
 func (t *CancellationToken) IsCancelled() bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.cancelled
 }
 
-// Context returns the context associated with the token
+// Context returns the context associated with the token.
 func (t *CancellationToken) Context() context.Context {
 	return t.ctx
 }
 
-// GetID returns the token ID
+// GetID returns the token ID.
 func (t *CancellationToken) GetID() string {
 	return t.id
 }
 
-// Helper function to convert ScriptValue to LValue
+// ScriptValueToLValue converts a ScriptValue to a Lua LValue.
 func ScriptValueToLValue(sv engine.ScriptValue) lua.LValue {
 	if sv == nil {
 		return lua.LNil

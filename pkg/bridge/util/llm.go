@@ -27,6 +27,8 @@ import (
 )
 
 // UtilLLMBridge provides script access to go-llms LLM utilities.
+// It manages provider creation, typed generation, model discovery,
+// response parsing, streaming events, and cost tracking.
 type UtilLLMBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -40,14 +42,16 @@ type UtilLLMBridge struct {
 	costTracker      *CostTracker                         // Per-request cost tracking
 }
 
-// CostTracker tracks costs per request
+// CostTracker tracks costs per request.
+// It maintains per-request cost details and total costs per provider.
 type CostTracker struct {
 	mu     sync.RWMutex
 	costs  map[string]*RequestCost
 	totals map[string]float64 // Total costs per provider
 }
 
-// RequestCost represents the cost of a single request
+// RequestCost represents the cost of a single request.
+// It includes token counts, cost breakdowns, and metadata.
 type RequestCost struct {
 	RequestID    string
 	Provider     string
@@ -63,6 +67,7 @@ type RequestCost struct {
 }
 
 // NewUtilLLMBridge creates a new LLM utilities bridge.
+// It initializes empty registries for metadata and cost tracking.
 func NewUtilLLMBridge() *UtilLLMBridge {
 	return &UtilLLMBridge{
 		metadataRegistry: make(map[string]provider.ProviderMetadata),
@@ -74,6 +79,7 @@ func NewUtilLLMBridge() *UtilLLMBridge {
 }
 
 // NewUtilLLMBridgeWithEventEmitter creates a new LLM utilities bridge with event emitter.
+// It enables streaming events and cost tracking notifications.
 func NewUtilLLMBridgeWithEventEmitter(eventEmitter agentDomain.EventEmitter) *UtilLLMBridge {
 	return &UtilLLMBridge{
 		eventEmitter:     eventEmitter,
@@ -86,11 +92,14 @@ func NewUtilLLMBridgeWithEventEmitter(eventEmitter agentDomain.EventEmitter) *Ut
 }
 
 // GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (b *UtilLLMBridge) GetID() string {
 	return "util_llm"
 }
 
 // GetMetadata returns bridge metadata.
+// It provides information about the LLM utilities bridge including
+// version, description, and supported LLM features.
 func (b *UtilLLMBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "util_llm",
@@ -102,6 +111,8 @@ func (b *UtilLLMBridge) GetMetadata() engine.BridgeMetadata {
 }
 
 // Initialize initializes the bridge.
+// It sets up the validator, event bus, and model service
+// for comprehensive LLM functionality.
 func (b *UtilLLMBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -132,6 +143,7 @@ func (b *UtilLLMBridge) Initialize(ctx context.Context) error {
 }
 
 // Cleanup cleans up bridge resources.
+// It releases resources and marks the bridge as uninitialized.
 func (b *UtilLLMBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -141,6 +153,7 @@ func (b *UtilLLMBridge) Cleanup(ctx context.Context) error {
 }
 
 // IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *UtilLLMBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -148,11 +161,14 @@ func (b *UtilLLMBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access LLM utilities through this bridge.
 func (b *UtilLLMBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
 // Methods returns the methods exposed by this bridge.
+// It provides metadata about all LLM-related methods available to scripts,
+// including provider management, generation, model discovery, and cost tracking.
 func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Provider creation utilities
@@ -344,6 +360,8 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 }
 
 // TypeMappings returns type conversion mappings.
+// It defines how Go LLM types are mapped to script types
+// for pools, inventory, configurations, and costs.
 func (b *UtilLLMBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"ProviderPool": {
@@ -370,12 +388,15 @@ func (b *UtilLLMBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
+// It delegates validation to the engine based on Methods() metadata.
 func (b *UtilLLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
 // RequiredPermissions returns required permissions.
+// It specifies permissions for LLM provider access, cache operations,
+// and metadata storage.
 func (b *UtilLLMBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -399,7 +420,9 @@ func (b *UtilLLMBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate LLM operations.
 func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -928,7 +951,8 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 	}
 }
 
-// Helper function to convert ProviderMetadata to ScriptValue
+// convertProviderMetadataToScriptValue converts ProviderMetadata to ScriptValue.
+// It extracts capabilities and constraints into a script-friendly format.
 func convertProviderMetadataToScriptValue(metadata provider.ProviderMetadata) engine.ScriptValue {
 	// Get capabilities
 	capabilities := metadata.GetCapabilities()

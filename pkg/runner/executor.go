@@ -10,7 +10,9 @@ import (
 	"time"
 )
 
-// ScriptExecutor implements the Runner interface for executing scripts
+// ScriptExecutor implements the Runner interface for executing scripts.
+// It manages engine lifecycle, concurrent execution limits, progress tracking,
+// and metrics collection across multiple script engines.
 type ScriptExecutor struct {
 	config        *RunnerConfig
 	engineManager *EngineRegistryManager
@@ -29,7 +31,9 @@ type ScriptExecutor struct {
 	shutdownComplete bool
 }
 
-// NewScriptExecutor creates a new script executor
+// NewScriptExecutor creates a new script executor.
+// It initializes the executor with the provided configuration, engine manager,
+// and selector, setting up concurrency controls and metrics tracking.
 func NewScriptExecutor(config *RunnerConfig, engineManager *EngineRegistryManager, selector *EngineSelector) *ScriptExecutor {
 	return &ScriptExecutor{
 		config:        config,
@@ -44,7 +48,9 @@ func NewScriptExecutor(config *RunnerConfig, engineManager *EngineRegistryManage
 	}
 }
 
-// Initialize prepares the executor for running scripts
+// Initialize prepares the executor for running scripts.
+// It ensures the executor hasn't been shut down and initializes
+// the engine manager for script execution.
 func (e *ScriptExecutor) Initialize(ctx context.Context) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -61,7 +67,9 @@ func (e *ScriptExecutor) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Execute runs a script with the given parameters
+// Execute runs a script with the given parameters.
+// It uses default options with the provided parameters and delegates
+// to ExecuteWithOptions for the actual execution.
 func (e *ScriptExecutor) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
 	options := &RunnerOptions{
 		Parameters: params,
@@ -76,7 +84,9 @@ func (e *ScriptExecutor) Execute(ctx context.Context, script string, params map[
 	return result.Value, result.Error
 }
 
-// ExecuteFile runs a script file with the given parameters
+// ExecuteFile runs a script file with the given parameters.
+// It automatically selects the appropriate engine based on the file extension
+// and executes the file contents with the provided parameters.
 func (e *ScriptExecutor) ExecuteFile(ctx context.Context, filepath string, params map[string]interface{}) (interface{}, error) {
 	// Determine engine from file extension
 	engineName, err := e.selector.SelectByExtension(filepath)
@@ -100,7 +110,9 @@ func (e *ScriptExecutor) ExecuteFile(ctx context.Context, filepath string, param
 	return result, nil
 }
 
-// ExecuteWithOptions executes a script with custom options
+// ExecuteWithOptions executes a script with custom options.
+// It handles concurrency control, progress reporting, engine selection,
+// timeout enforcement, and metrics tracking for the execution.
 func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, options *RunnerOptions) (*ExecutionResult, error) {
 	// Check if shutdown in progress
 	e.mu.RLock()
@@ -224,7 +236,9 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 	return result, nil
 }
 
-// ExecuteSpell executes a spell with its metadata
+// ExecuteSpell executes a spell with its metadata.
+// It applies parameter defaults, validates inputs, selects the appropriate
+// engine, and executes the spell's entry point with proper metadata tracking.
 func (e *ScriptExecutor) ExecuteSpell(ctx context.Context, spell *SpellMetadata, params map[string]interface{}) (*ExecutionResult, error) {
 	// Apply parameter defaults
 	params = e.loader.ApplyDefaults(spell, params)
@@ -263,14 +277,18 @@ func (e *ScriptExecutor) ExecuteSpell(ctx context.Context, spell *SpellMetadata,
 	return result, nil
 }
 
-// Validate checks if a script is valid without executing it
+// Validate checks if a script is valid without executing it.
+// It performs syntax validation using engine-specific validators.
+// Currently a placeholder for future implementation.
 func (e *ScriptExecutor) Validate(script string) error {
 	// This would integrate with engine-specific validators
 	// For now, just a placeholder
 	return nil
 }
 
-// Shutdown cleanly shuts down the executor
+// Shutdown cleanly shuts down the executor.
+// It waits for all running executions to complete (with timeout)
+// and shuts down the engine manager, ensuring graceful termination.
 func (e *ScriptExecutor) Shutdown() error {
 	e.mu.Lock()
 	if e.shutdownComplete {
@@ -303,7 +321,9 @@ func (e *ScriptExecutor) Shutdown() error {
 	return nil
 }
 
-// GetMetrics returns execution metrics
+// GetMetrics returns execution metrics.
+// It creates a copy of the current metrics to avoid race conditions
+// and merges data from the engine registry for comprehensive statistics.
 func (e *ScriptExecutor) GetMetrics() *RunnerMetrics {
 	e.metricsLock.RLock()
 	defer e.metricsLock.RUnlock()
@@ -346,7 +366,9 @@ func (e *ScriptExecutor) GetMetrics() *RunnerMetrics {
 	return metrics
 }
 
-// updateMetrics updates execution metrics
+// updateMetrics updates execution metrics.
+// It tracks success/error counts, execution duration, and maintains
+// per-engine statistics for performance monitoring.
 func (e *ScriptExecutor) updateMetrics(engineName string, duration time.Duration, err error) {
 	e.metricsLock.Lock()
 	defer e.metricsLock.Unlock()

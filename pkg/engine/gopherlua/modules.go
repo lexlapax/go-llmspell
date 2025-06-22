@@ -12,7 +12,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ModuleDefinition defines a Lua module
+// ModuleDefinition defines a Lua module.
+// It includes metadata, dependencies, and loading functions for modules
+// that can be registered with the module system.
 type ModuleDefinition struct {
 	Name         string         // Module name
 	Version      string         // Module version (optional)
@@ -25,14 +27,16 @@ type ModuleDefinition struct {
 	initialized  bool           // Whether InitFunc has been called
 }
 
-// ModuleBundle groups related modules
+// ModuleBundle groups related modules.
+// Bundles allow organizing modules by functionality and loading them together.
 type ModuleBundle struct {
 	Name        string   // Bundle name
 	Description string   // Bundle description
 	Modules     []string // Module names in the bundle
 }
 
-// ModuleInfo provides information about a registered module
+// ModuleInfo provides information about a registered module.
+// This is returned by query functions to describe available modules.
 type ModuleInfo struct {
 	Name         string
 	Version      string

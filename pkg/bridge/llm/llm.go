@@ -1,6 +1,11 @@
 // ABOUTME: LLM bridge provides access to language model providers through go-llms interfaces.
 // ABOUTME: Wraps go-llms Provider interface for script engine access without reimplementation.
 
+// Package llm provides the LLM bridge for go-llmspell.
+// It wraps go-llms language model provider functionality including text generation,
+// structured output, streaming, schema validation, and provider management.
+// The bridge enables scripts to interact with various LLM providers through a
+// unified interface without reimplementing provider logic.
 package llm
 
 import (
@@ -14,6 +19,9 @@ import (
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.
+// It manages multiple LLM providers, handles fallback chains, tracks performance
+// metrics, and provides unified access to text generation, structured output,
+// and streaming capabilities across different providers.
 type LLMBridge struct {
 	mu             sync.RWMutex
 	providers      map[string]bridge.Provider
@@ -27,7 +35,9 @@ type LLMBridge struct {
 	metrics map[string]*ProviderMetrics
 }
 
-// ProviderMetrics tracks performance metrics for each provider
+// ProviderMetrics tracks performance metrics for each provider.
+// It records request counts, success/failure rates, latency statistics,
+// and error information for monitoring and optimization.
 type ProviderMetrics struct {
 	TotalRequests   int64
 	SuccessfulCalls int64
@@ -39,6 +49,8 @@ type ProviderMetrics struct {
 }
 
 // NewLLMBridge creates a new LLM bridge.
+// Initializes with empty provider map and metrics tracking.
+// Providers must be registered before use.
 func NewLLMBridge() *LLMBridge {
 	return &LLMBridge{
 		providers: make(map[string]bridge.Provider),
@@ -47,11 +59,14 @@ func NewLLMBridge() *LLMBridge {
 }
 
 // GetID returns the bridge ID.
+// Always returns "llm" for this bridge.
 func (b *LLMBridge) GetID() string {
 	return "llm"
 }
 
 // GetMetadata returns bridge metadata.
+// Provides information about the bridge including dependencies
+// on go-llms LLM domain package.
 func (b *LLMBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "llm",
@@ -66,6 +81,8 @@ func (b *LLMBridge) GetMetadata() engine.BridgeMetadata {
 }
 
 // Initialize initializes the bridge.
+// Currently performs minimal initialization. Can be extended
+// to pre-load default providers or establish connections.
 func (b *LLMBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -79,6 +96,8 @@ func (b *LLMBridge) Initialize(ctx context.Context) error {
 }
 
 // Cleanup performs cleanup operations.
+// Clears all providers and resets the bridge to uninitialized state.
+// Provider cleanup should be handled separately.
 func (b *LLMBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -91,6 +110,7 @@ func (b *LLMBridge) Cleanup(ctx context.Context) error {
 }
 
 // IsInitialized checks if the bridge is initialized.
+// Thread-safe check of initialization status.
 func (b *LLMBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -98,11 +118,15 @@ func (b *LLMBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for integration.
 func (b *LLMBridge) RegisterWithEngine(e engine.ScriptEngine) error {
 	return e.RegisterBridge(b)
 }
 
 // Methods returns the methods exposed by this bridge.
+// Provides comprehensive LLM functionality including provider management,
+// text generation, structured output, streaming, schema validation,
+// and performance monitoring.
 func (b *LLMBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Provider management
@@ -402,6 +426,8 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method parameters.
+// Ensures bridge is initialized and validates parameter counts
+// against method definitions. Returns error for unknown methods.
 func (b *LLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !b.IsInitialized() {
 		return fmt.Errorf("llm bridge not initialized")
@@ -430,6 +456,9 @@ func (b *LLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error
 }
 
 // ExecuteMethod executes a bridge method.
+// Routes method calls to appropriate implementations, handling
+// provider management, text generation, streaming, schema operations,
+// and metrics. Returns script-compatible values.
 func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := b.ValidateMethod(name, args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -512,6 +541,8 @@ func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []engin
 }
 
 // TypeMappings returns type conversion hints.
+// Maps go-llms provider and response types to script types
+// for proper data conversion during method execution.
 func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"provider": {
@@ -538,6 +569,8 @@ func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // RequiredPermissions returns required permissions.
+// Specifies that scripts need network access for LLM APIs
+// and memory access for response caching.
 func (b *LLMBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -1013,6 +1046,9 @@ func (b *LLMBridge) testProviderConnection(ctx context.Context, args []engine.Sc
 
 // Helper methods
 
+// updateMetrics updates provider metrics with call results.
+// Records success/failure, updates latency statistics, and
+// calculates running averages for performance monitoring.
 func (b *LLMBridge) updateMetrics(provider string, success bool, latency time.Duration) {
 	b.mu.Lock()
 	defer b.mu.Unlock()

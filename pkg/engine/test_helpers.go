@@ -18,7 +18,8 @@ import (
 	"time"
 )
 
-// testMockScriptEngine provides a simple mock implementation for engine tests
+// testMockScriptEngine provides a simple mock implementation for engine tests.
+// It implements the ScriptEngine interface with configurable behavior.
 type testMockScriptEngine struct {
 	mu             sync.RWMutex
 	name           string
@@ -37,7 +38,8 @@ type testMockScriptEngine struct {
 	shutdownError   error
 }
 
-// newTestMockScriptEngine creates a new mock engine for testing
+// newTestMockScriptEngine creates a new mock engine for testing.
+// The engine is initialized with the given name and version "1.0.0".
 func newTestMockScriptEngine(name string) *testMockScriptEngine {
 	return &testMockScriptEngine{
 		name:     name,
@@ -47,7 +49,7 @@ func newTestMockScriptEngine(name string) *testMockScriptEngine {
 	}
 }
 
-// withExecuteFunc sets a custom execute function
+// withExecuteFunc sets a custom execute function for the mock engine.
 func (m *testMockScriptEngine) withExecuteFunc(f func(ctx context.Context, script string, params map[string]interface{}) (ScriptValue, error)) *testMockScriptEngine {
 	m.mu.Lock()
 	defer m.mu.Unlock()

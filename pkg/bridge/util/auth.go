@@ -1,6 +1,9 @@
 // ABOUTME: Auth utilities bridge provides access to go-llms authentication functions.
 // ABOUTME: Wraps auth configuration, scheme detection, and HTTP request authentication.
 
+// Package util provides utility bridges for script engines.
+// It includes authentication, debugging, error handling, JSON processing,
+// LLM utilities, logging, and general utility functions.
 package util
 
 import (
@@ -30,6 +33,8 @@ var (
 )
 
 // UtilAuthBridge provides script access to go-llms auth utilities.
+// It manages authentication configuration, OAuth2 flows, token validation,
+// multi-scheme authentication, credential management, and auth event logging.
 type UtilAuthBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -43,7 +48,9 @@ type UtilAuthBridge struct {
 	credentialCache map[string]*credentialEntry    // Credential serialization cache
 }
 
-// credentialEntry stores serialized credentials with metadata
+// credentialEntry stores serialized credentials with metadata.
+// It tracks creation time, last usage, refresh requirements,
+// and additional metadata for credential lifecycle management.
 type credentialEntry struct {
 	AuthConfig *llmauth.AuthConfig
 	CreatedAt  time.Time
@@ -53,6 +60,8 @@ type credentialEntry struct {
 }
 
 // NewUtilAuthBridge creates a new auth utilities bridge.
+// It initializes empty registries for auth schemes and credential cache,
+// ready for configuration with authentication components.
 func NewUtilAuthBridge() *UtilAuthBridge {
 	return &UtilAuthBridge{
 		authSchemes:     make(map[string]*llmauth.AuthScheme),
@@ -61,6 +70,7 @@ func NewUtilAuthBridge() *UtilAuthBridge {
 }
 
 // NewUtilAuthBridgeWithEventEmitter creates a new auth utilities bridge with event emitter.
+// It enables auth event logging and security auditing through the provided event emitter.
 func NewUtilAuthBridgeWithEventEmitter(eventEmitter domain.EventEmitter) *UtilAuthBridge {
 	return &UtilAuthBridge{
 		eventEmitter:    eventEmitter,
@@ -70,11 +80,14 @@ func NewUtilAuthBridgeWithEventEmitter(eventEmitter domain.EventEmitter) *UtilAu
 }
 
 // GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (b *UtilAuthBridge) GetID() string {
 	return "util_auth"
 }
 
 // GetMetadata returns bridge metadata.
+// It provides information about the auth utilities bridge including
+// version, description, and supported authentication features.
 func (b *UtilAuthBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "util_auth",
@@ -86,6 +99,8 @@ func (b *UtilAuthBridge) GetMetadata() engine.BridgeMetadata {
 }
 
 // Initialize initializes the bridge.
+// It sets up the validator, event bus, and session manager
+// for comprehensive authentication support.
 func (b *UtilAuthBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -115,6 +130,7 @@ func (b *UtilAuthBridge) Initialize(ctx context.Context) error {
 }
 
 // Cleanup cleans up bridge resources.
+// It releases resources and marks the bridge as uninitialized.
 func (b *UtilAuthBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -124,6 +140,7 @@ func (b *UtilAuthBridge) Cleanup(ctx context.Context) error {
 }
 
 // IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *UtilAuthBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -131,11 +148,14 @@ func (b *UtilAuthBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access authentication utilities through this bridge.
 func (b *UtilAuthBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
 // Methods returns the methods exposed by this bridge.
+// It provides metadata about all auth-related methods available to scripts,
+// including configuration, HTTP authentication, OAuth2, and credential management.
 func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Auth configuration
@@ -398,6 +418,8 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 }
 
 // TypeMappings returns type conversion mappings.
+// It defines how Go auth types are mapped to script types
+// for AuthConfig, AuthScheme, and OAuth2Config.
 func (b *UtilAuthBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"AuthConfig": {
@@ -416,12 +438,15 @@ func (b *UtilAuthBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // ValidateMethod validates method calls.
+// It delegates validation to the engine based on Methods() metadata.
 func (b *UtilAuthBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
 // RequiredPermissions returns required permissions.
+// It specifies permissions for environment access, OAuth2 operations,
+// and credential management.
 func (b *UtilAuthBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -445,7 +470,9 @@ func (b *UtilAuthBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate authentication operations.
 func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	// Check initialization without holding the lock during method execution
 	b.mu.RLock()
@@ -490,6 +517,8 @@ func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []
 
 // Helper method implementations
 
+// createAuthConfig creates an authentication configuration from type and credentials.
+// It converts script credentials to a go-llms AuthConfig structure.
 func (b *UtilAuthBridge) createAuthConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -524,6 +553,8 @@ func (b *UtilAuthBridge) createAuthConfig(ctx context.Context, args []engine.Scr
 	}), nil
 }
 
+// applyAuth applies authentication to an HTTP request.
+// It uses the auth configuration to add appropriate headers or parameters.
 func (b *UtilAuthBridge) applyAuth(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -540,6 +571,8 @@ func (b *UtilAuthBridge) applyAuth(ctx context.Context, args []engine.ScriptValu
 	return engine.NewBoolValue(true), nil
 }
 
+// detectAuthSchemeFromState detects authentication scheme from agent state.
+// It analyzes state configuration to determine the appropriate auth method.
 func (b *UtilAuthBridge) detectAuthSchemeFromState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -553,6 +586,8 @@ func (b *UtilAuthBridge) detectAuthSchemeFromState(ctx context.Context, args []e
 	}), nil
 }
 
+// discoverOAuth2Endpoints discovers OAuth2 endpoints from issuer URL.
+// It attempts to fetch .well-known/openid-configuration for endpoint discovery.
 func (b *UtilAuthBridge) discoverOAuth2Endpoints(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -601,6 +636,8 @@ func (b *UtilAuthBridge) discoverOAuth2Endpoints(ctx context.Context, args []eng
 	}), nil
 }
 
+// validateOAuth2Token validates an OAuth2 access token.
+// It parses JWT claims and optionally validates against a schema.
 func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -672,6 +709,8 @@ func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []engine.
 	}), nil
 }
 
+// parseJWTClaims parses JWT token claims without verification.
+// It extracts standard claims (exp, iat, sub, aud, iss) from the token.
 func (b *UtilAuthBridge) parseJWTClaims(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -697,6 +736,8 @@ func (b *UtilAuthBridge) parseJWTClaims(ctx context.Context, args []engine.Scrip
 	}), nil
 }
 
+// autoRefreshToken configures automatic token refresh.
+// It sets up metadata for automatic refresh before token expiration.
 func (b *UtilAuthBridge) autoRefreshToken(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -721,6 +762,8 @@ func (b *UtilAuthBridge) autoRefreshToken(ctx context.Context, args []engine.Scr
 	}), nil
 }
 
+// registerAuthScheme registers an authentication scheme for an endpoint.
+// It associates auth requirements with specific API endpoints.
 func (b *UtilAuthBridge) registerAuthScheme(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -767,6 +810,8 @@ func (b *UtilAuthBridge) registerAuthScheme(ctx context.Context, args []engine.S
 	return engine.NewBoolValue(true), nil
 }
 
+// getAuthSchemes retrieves all authentication schemes for an endpoint.
+// It performs pattern matching to find applicable auth schemes.
 func (b *UtilAuthBridge) getAuthSchemes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -792,6 +837,8 @@ func (b *UtilAuthBridge) getAuthSchemes(ctx context.Context, args []engine.Scrip
 	return engine.NewArrayValue(schemes), nil
 }
 
+// serializeCredentials serializes authentication credentials for storage.
+// It converts auth configuration to JSON with optional encryption.
 func (b *UtilAuthBridge) serializeCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -824,6 +871,8 @@ func (b *UtilAuthBridge) serializeCredentials(ctx context.Context, args []engine
 	return engine.NewStringValue(string(serialized)), nil
 }
 
+// deserializeCredentials deserializes stored authentication credentials.
+// It reconstructs auth configuration from JSON with optional decryption.
 func (b *UtilAuthBridge) deserializeCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
@@ -849,6 +898,8 @@ func (b *UtilAuthBridge) deserializeCredentials(ctx context.Context, args []engi
 	return engine.NewObjectValue(authConfigFields), nil
 }
 
+// cacheCredentials caches authentication credentials with TTL.
+// It stores credentials in memory with expiration tracking.
 func (b *UtilAuthBridge) cacheCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
@@ -896,6 +947,8 @@ func (b *UtilAuthBridge) cacheCredentials(ctx context.Context, args []engine.Scr
 	return engine.NewBoolValue(true), nil
 }
 
+// logAuthEvent logs an authentication event for security auditing.
+// It emits events to both the event emitter and event bus for comprehensive tracking.
 func (b *UtilAuthBridge) logAuthEvent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments

@@ -17,7 +17,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 )
 
-// BaseREPL provides common REPL functionality that can be extended by engine-specific implementations
+// BaseREPL provides common REPL functionality that can be extended by engine-specific implementations.
+// It handles readline integration, history management, syntax highlighting, command execution,
+// and multi-line input support for all script engines.
 type BaseREPL struct {
 	config      REPLConfig
 	history     []string
@@ -27,7 +29,9 @@ type BaseREPL struct {
 	closed      bool
 }
 
-// NewBaseREPL creates a new base REPL instance
+// NewBaseREPL creates a new base REPL instance.
+// It initializes the REPL with the provided configuration, sets up I/O streams,
+// loads history, and configures readline if using standard input/output.
 func NewBaseREPL(config REPLConfig) (*BaseREPL, error) {
 	if err := config.Validate(); err != nil {
 		return nil, errors.Wrap(err, errors.CategoryConfig, "invalid REPL configuration")
@@ -65,7 +69,9 @@ func NewBaseREPL(config REPLConfig) (*BaseREPL, error) {
 	return repl, nil
 }
 
-// Start begins the interactive REPL session
+// Start begins the interactive REPL session.
+// It runs the main REPL loop, reading input, evaluating expressions,
+// and printing results until the user exits or the context is cancelled.
 func (r *BaseREPL) Start(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -150,7 +156,9 @@ func (r *BaseREPL) Start(ctx context.Context) error {
 	}
 }
 
-// Evaluate executes a single line of code and returns the result
+// Evaluate executes a single line of code and returns the result.
+// It first checks if the input is a REPL command (starting with .)
+// and executes it if so, otherwise evaluates it as script code.
 func (r *BaseREPL) Evaluate(ctx context.Context, input string) (string, error) {
 	input = strings.TrimSpace(input)
 
@@ -164,13 +172,16 @@ func (r *BaseREPL) Evaluate(ctx context.Context, input string) (string, error) {
 	return fmt.Sprintf("Executing (%s): %s", r.config.Engine, input), nil
 }
 
-// Complete provides auto-completion suggestions for the given input
+// Complete provides auto-completion suggestions for the given input.
+// It delegates to the completer which provides context-aware completions
+// for keywords, variables, and REPL commands.
 func (r *BaseREPL) Complete(input string) []string {
 	completer := NewCompleter(r)
 	return completer.GetCompletions(input)
 }
 
-// highlightInput applies syntax highlighting to input if enabled
+// highlightInput applies syntax highlighting to input if enabled.
+// Returns the original input if highlighting is disabled or unavailable.
 func (r *BaseREPL) highlightInput(input string) string {
 	if !r.config.SyntaxHighlight || r.highlighter == nil {
 		return input
@@ -178,7 +189,9 @@ func (r *BaseREPL) highlightInput(input string) string {
 	return r.highlighter.Highlight(input)
 }
 
-// AddHistory adds a line to the command history
+// AddHistory adds a line to the command history.
+// It avoids duplicate consecutive entries and maintains the history
+// size limit. Also updates readline history if available.
 func (r *BaseREPL) AddHistory(line string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -207,7 +220,8 @@ func (r *BaseREPL) AddHistory(line string) {
 	}
 }
 
-// GetHistory returns the command history
+// GetHistory returns the command history.
+// Returns a copy of the history to prevent external modification.
 func (r *BaseREPL) GetHistory() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -218,7 +232,9 @@ func (r *BaseREPL) GetHistory() []string {
 	return result
 }
 
-// Close shuts down the REPL and cleans up resources
+// Close shuts down the REPL and cleans up resources.
+// It saves history if configured, closes readline, and marks
+// the REPL as closed to prevent further operations.
 func (r *BaseREPL) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -241,7 +257,9 @@ func (r *BaseREPL) Close() error {
 	return nil
 }
 
-// setupReadline configures the readline instance
+// setupReadline configures the readline instance.
+// It sets up prompts, history file, and auto-completion
+// based on the REPL configuration.
 func (r *BaseREPL) setupReadline() error {
 	cfg := &readline.Config{
 		Prompt:      r.config.Prompt,
@@ -262,7 +280,9 @@ func (r *BaseREPL) setupReadline() error {
 	return nil
 }
 
-// executeCommand executes a built-in REPL command
+// executeCommand executes a built-in REPL command.
+// It looks up the command handler and invokes it with parsed arguments.
+// Returns an error if the command is unknown.
 func (r *BaseREPL) executeCommand(ctx context.Context, input, command string) (string, error) {
 	commands := GetBuiltinCommands()
 
@@ -277,7 +297,9 @@ func (r *BaseREPL) executeCommand(ctx context.Context, input, command string) (s
 	return cmd.Handler(ctx, args)
 }
 
-// isIncompleteInput checks if the input appears to be incomplete (for multi-line support)
+// isIncompleteInput checks if the input appears to be incomplete (for multi-line support).
+// It uses engine-specific heuristics to determine if more input is expected,
+// such as unclosed blocks or incomplete statements.
 func (r *BaseREPL) isIncompleteInput(input string) bool {
 	input = strings.TrimSpace(input)
 
@@ -295,7 +317,9 @@ func (r *BaseREPL) isIncompleteInput(input string) bool {
 	return false
 }
 
-// readMultilineInput reads additional lines for multi-line input
+// readMultilineInput reads additional lines for multi-line input.
+// It continues reading lines with the continue prompt until the input
+// is complete or an empty line is entered.
 func (r *BaseREPL) readMultilineInput(initial string) string {
 	var lines []string
 	lines = append(lines, initial)
@@ -339,7 +363,9 @@ func (r *BaseREPL) readMultilineInput(initial string) string {
 	return strings.Join(lines, "\n")
 }
 
-// loadHistory loads command history from file
+// loadHistory loads command history from file.
+// It reads the history file line by line and populates the history buffer,
+// trimming to the configured size limit if necessary.
 func (r *BaseREPL) loadHistory() {
 	if r.config.HistoryFile == "" {
 		return
@@ -365,7 +391,9 @@ func (r *BaseREPL) loadHistory() {
 	}
 }
 
-// saveHistory saves command history to file
+// saveHistory saves command history to file.
+// It creates the necessary directories and writes each history
+// entry as a separate line in the history file.
 func (r *BaseREPL) saveHistory() {
 	if r.config.HistoryFile == "" {
 		return

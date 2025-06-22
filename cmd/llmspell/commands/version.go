@@ -9,7 +9,9 @@ import (
 	"runtime"
 )
 
-// VersionCmd shows version information
+// VersionCmd shows version information.
+// It displays version details, build information,
+// dependencies, and compatibility status.
 type VersionCmd struct {
 	BaseCommand
 	Short       bool   `short:"s" help:"Show short version only"`
@@ -21,12 +23,17 @@ type VersionCmd struct {
 
 // Version info - will be set during build
 var (
+	// Version is the semantic version number
 	Version   = "dev"
+	// BuildDate is the build timestamp
 	BuildDate = ""
+	// GitCommit is the git commit hash
 	GitCommit = ""
 )
 
-// Run executes the command
+// Run executes the command.
+// It formats and displays version information based on
+// the specified flags and output format.
 func (c *VersionCmd) Run(ctx context.Context) error {
 	if c.Format == "json" {
 		return c.outputJSON()
@@ -69,6 +76,8 @@ func (c *VersionCmd) Run(ctx context.Context) error {
 	return nil
 }
 
+// outputJSON outputs version information in JSON format.
+// It includes all available version and build metadata.
 func (c *VersionCmd) outputJSON() error {
 	info := map[string]interface{}{
 		"version":    Version,
@@ -90,6 +99,7 @@ func (c *VersionCmd) outputJSON() error {
 	return nil
 }
 
+// getBuildDate returns the build date if set, otherwise "unknown".
 func getBuildDate() string {
 	if BuildDate != "" {
 		return BuildDate

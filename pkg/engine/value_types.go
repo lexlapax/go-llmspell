@@ -9,23 +9,25 @@ import (
 	"strings"
 )
 
-// ScriptValueType represents the type of a ScriptValue
+// ScriptValueType represents the type of a ScriptValue.
+// It provides a unified type system across all script engines.
 type ScriptValueType int
 
+// ScriptValue type constants define the possible types a script value can have.
 const (
-	TypeNil ScriptValueType = iota
-	TypeBool
-	TypeNumber
-	TypeString
-	TypeArray
-	TypeObject
-	TypeFunction
-	TypeError
-	TypeChannel
-	TypeCustom
+	TypeNil      ScriptValueType = iota // Nil/null/undefined value
+	TypeBool                             // Boolean value
+	TypeNumber                           // Numeric value (float64)
+	TypeString                           // String value
+	TypeArray                            // Array/list value
+	TypeObject                           // Object/map/table value
+	TypeFunction                         // Function/callable value
+	TypeError                            // Error value
+	TypeChannel                          // Channel for communication
+	TypeCustom                           // Custom/user-defined type
 )
 
-// String returns the string representation of the type
+// String returns the string representation of the type.
 func (t ScriptValueType) String() string {
 	switch t {
 	case TypeNil:
@@ -53,36 +55,49 @@ func (t ScriptValueType) String() string {
 	}
 }
 
-// ScriptValue represents a value that can be passed between script engines and Go
+// ScriptValue represents a value that can be passed between script engines and Go.
+// It provides a unified interface for values across different scripting languages,
+// allowing seamless value exchange between engines and Go code.
 type ScriptValue interface {
-	// Type returns the type of this value
+	// Type returns the type of this value.
 	Type() ScriptValueType
 
-	// IsNil returns true if this value represents nil/null/undefined
+	// IsNil returns true if this value represents nil/null/undefined.
 	IsNil() bool
 
-	// String returns a string representation of the value
+	// String returns a string representation of the value.
 	String() string
 
-	// ToGo converts the value to a native Go type
+	// ToGo converts the value to a native Go type.
 	ToGo() interface{}
 
-	// Equals checks if this value equals another value
+	// Equals checks if this value equals another value.
+	// Equality semantics may vary by type and engine.
 	Equals(other ScriptValue) bool
 }
 
-// NilValue represents a nil/null/undefined value
+// NilValue represents a nil/null/undefined value.
+// It is used to represent the absence of a value across all script engines.
 type NilValue struct{}
 
+// Type returns TypeNil.
 func (n NilValue) Type() ScriptValueType { return TypeNil }
-func (n NilValue) IsNil() bool           { return true }
-func (n NilValue) String() string        { return "nil" }
-func (n NilValue) ToGo() interface{}     { return nil }
+
+// IsNil returns true.
+func (n NilValue) IsNil() bool { return true }
+
+// String returns "nil".
+func (n NilValue) String() string { return "nil" }
+
+// ToGo returns nil.
+func (n NilValue) ToGo() interface{} { return nil }
+
+// Equals returns true if other is also a nil value.
 func (n NilValue) Equals(other ScriptValue) bool {
 	return other != nil && other.Type() == TypeNil
 }
 
-// BoolValue represents a boolean value
+// BoolValue represents a boolean value.
 type BoolValue struct {
 	value bool
 }
@@ -409,7 +424,9 @@ func NewCustomValue(typeName string, value interface{}) ScriptValue {
 
 // Helper functions
 
-// IsTrue returns whether a ScriptValue is truthy
+// IsTrue returns whether a ScriptValue is truthy.
+// Nil, false, 0, empty string, empty array, and empty object are falsy.
+// All other values are truthy.
 func IsTrue(v ScriptValue) bool {
 	if v == nil || v.IsNil() {
 		return false
@@ -443,7 +460,8 @@ func IsTrue(v ScriptValue) bool {
 	return false
 }
 
-// ConvertToString attempts to convert a ScriptValue to a string
+// ConvertToString attempts to convert a ScriptValue to a string.
+// Nil values return empty string. All other values use their String() method.
 func ConvertToString(v ScriptValue) (string, error) {
 	if v == nil || v.IsNil() {
 		return "", nil
@@ -451,7 +469,9 @@ func ConvertToString(v ScriptValue) (string, error) {
 	return v.String(), nil
 }
 
-// ConvertToNumber attempts to convert a ScriptValue to a number
+// ConvertToNumber attempts to convert a ScriptValue to a number.
+// Nil returns 0. Bool returns 1 for true, 0 for false.
+// String attempts parsing. Other types return an error.
 func ConvertToNumber(v ScriptValue) (float64, error) {
 	if v == nil || v.IsNil() {
 		return 0, nil
@@ -481,7 +501,8 @@ func ConvertToNumber(v ScriptValue) (float64, error) {
 	return 0, fmt.Errorf("cannot convert %s to number", v.Type())
 }
 
-// ConvertToBool attempts to convert a ScriptValue to a boolean
+// ConvertToBool attempts to convert a ScriptValue to a boolean.
+// Uses the same truthiness rules as IsTrue().
 func ConvertToBool(v ScriptValue) (bool, error) {
 	return IsTrue(v), nil
 }

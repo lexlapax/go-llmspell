@@ -15,25 +15,31 @@ import (
 	"time"
 )
 
-// BridgeManager interface for documentation extraction
+// BridgeManager interface for documentation extraction.
+// It provides access to bridge modules for API documentation generation.
 type BridgeManager interface {
 	ListBridges() []string
 	GetBridge(id string) interface{}
 }
 
-// LuaDocGenerator generates documentation for Lua APIs
+// LuaDocGenerator generates documentation for Lua APIs.
+// It implements the DocGenerator interface to extract and generate
+// documentation for Lua bridge modules and standard library.
 type LuaDocGenerator struct {
 	BridgeManager BridgeManager
 	ModulePaths   []string
 	OutputFormats []string
 }
 
-// GetLanguage returns "lua" for this generator
+// GetLanguage returns "lua" for this generator.
+// It implements the DocGenerator interface.
 func (g *LuaDocGenerator) GetLanguage() string {
 	return "lua"
 }
 
-// ExtractAPIs extracts API information from bridges and stdlib
+// ExtractAPIs extracts API information from bridges and stdlib.
+// It combines bridge modules and standard library modules into
+// a unified API documentation structure.
 func (g *LuaDocGenerator) ExtractAPIs() ([]Module, error) {
 	// Extract from bridges
 	bridgeModules, err := g.ExtractBridgeAPIs()
@@ -58,7 +64,9 @@ func (g *LuaDocGenerator) ExtractAPIs() ([]Module, error) {
 	return modules, nil
 }
 
-// GenerateMarkdown generates markdown documentation
+// GenerateMarkdown generates markdown documentation.
+// It converts generic modules to Lua-specific format and
+// produces comprehensive Markdown API documentation.
 func (g *LuaDocGenerator) GenerateMarkdown(modules []Module) string {
 	// Convert back to Lua modules for existing implementation
 	var luaModules []LuaModule
@@ -68,7 +76,9 @@ func (g *LuaDocGenerator) GenerateMarkdown(modules []Module) string {
 	return g.GenerateMarkdownDocs(luaModules)
 }
 
-// GenerateJSON generates JSON documentation
+// GenerateJSON generates JSON documentation.
+// It produces machine-readable API documentation
+// suitable for tooling and IDE integration.
 func (g *LuaDocGenerator) GenerateJSON(modules []Module) (string, error) {
 	// Convert back to Lua modules for existing implementation
 	var luaModules []LuaModule
@@ -78,7 +88,9 @@ func (g *LuaDocGenerator) GenerateJSON(modules []Module) (string, error) {
 	return g.GenerateJSONDocs(luaModules)
 }
 
-// GenerateCompletion generates IDE completion data
+// GenerateCompletion generates IDE completion data.
+// It creates completion definitions for Lua language servers
+// and IDE plugins to provide intelligent code completion.
 func (g *LuaDocGenerator) GenerateCompletion(modules []Module) interface{} {
 	// Convert back to Lua modules for existing implementation
 	var luaModules []LuaModule
@@ -88,7 +100,9 @@ func (g *LuaDocGenerator) GenerateCompletion(modules []Module) interface{} {
 	return g.GenerateCompletionData(luaModules)
 }
 
-// APIFunction represents a Lua function in the documentation
+// APIFunction represents a Lua function in the documentation.
+// It contains all metadata needed to document a Lua function
+// including parameters, return values, and usage examples.
 type APIFunction struct {
 	Name        string                 `json:"name"`
 	Module      string                 `json:"module"`
@@ -103,7 +117,9 @@ type APIFunction struct {
 	Metadata    map[string]interface{} `json:"metadata"`
 }
 
-// LuaModule represents a Lua module in the documentation
+// LuaModule represents a Lua module in the documentation.
+// It contains all functions, constants, types, and examples
+// that make up a complete Lua module documentation.
 type LuaModule struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
@@ -115,7 +131,9 @@ type LuaModule struct {
 	Since       string                 `json:"since"`
 }
 
-// TypeDefinition represents a Lua type definition
+// TypeDefinition represents a Lua type definition.
+// It documents custom types including their fields,
+// methods, and usage patterns in Lua.
 type TypeDefinition struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description"`
@@ -125,7 +143,9 @@ type TypeDefinition struct {
 	Metadata    map[string]string `json:"metadata"`
 }
 
-// CompletionData represents data for IDE completion
+// CompletionData represents data for IDE completion.
+// It provides structured information for language servers
+// and IDE plugins to offer intelligent code completion.
 type CompletionData struct {
 	Functions []CompletionFunction `json:"functions"`
 	Modules   []CompletionModule   `json:"modules"`
@@ -133,7 +153,9 @@ type CompletionData struct {
 	Keywords  []string             `json:"keywords"`
 }
 
-// CompletionFunction represents a function for completion
+// CompletionFunction represents a function for completion.
+// It includes signature information and parameter details
+// for accurate function completion suggestions.
 type CompletionFunction struct {
 	Name       string              `json:"name"`
 	Module     string              `json:"module"`
@@ -143,35 +165,45 @@ type CompletionFunction struct {
 	Snippets   []CompletionSnippet `json:"snippets"`
 }
 
-// CompletionParam represents a parameter for completion
+// CompletionParam represents a parameter for completion.
+// It provides type and optionality information for
+// function parameter completion.
 type CompletionParam struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
 	Optional bool   `json:"optional"`
 }
 
-// CompletionModule represents a module for completion
+// CompletionModule represents a module for completion.
+// It lists available functions within a module for
+// hierarchical completion suggestions.
 type CompletionModule struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 	Functions   []string `json:"functions"`
 }
 
-// CompletionType represents a type for completion
+// CompletionType represents a type for completion.
+// It provides field and method information for
+// custom type completion suggestions.
 type CompletionType struct {
 	Name    string   `json:"name"`
 	Fields  []string `json:"fields"`
 	Methods []string `json:"methods"`
 }
 
-// CompletionSnippet represents a code snippet
+// CompletionSnippet represents a code snippet.
+// It defines reusable code templates that can be
+// inserted via completion triggers.
 type CompletionSnippet struct {
 	Trigger     string `json:"trigger"`
 	Description string `json:"description"`
 	Body        string `json:"body"`
 }
 
-// NewLuaDocGenerator creates a new Lua documentation generator
+// NewLuaDocGenerator creates a new Lua documentation generator.
+// It configures the generator with standard module paths and
+// output formats for comprehensive Lua API documentation.
 func NewLuaDocGenerator(bridgeManager BridgeManager) *LuaDocGenerator {
 	return &LuaDocGenerator{
 		BridgeManager: bridgeManager,
@@ -183,7 +215,9 @@ func NewLuaDocGenerator(bridgeManager BridgeManager) *LuaDocGenerator {
 	}
 }
 
-// ExtractBridgeAPIs extracts API information from bridge implementations
+// ExtractBridgeAPIs extracts API information from bridge implementations.
+// It iterates through all registered bridges and uses reflection to
+// extract method signatures and documentation.
 func (g *LuaDocGenerator) ExtractBridgeAPIs() ([]LuaModule, error) {
 	var modules []LuaModule
 
@@ -207,7 +241,9 @@ func (g *LuaDocGenerator) ExtractBridgeAPIs() ([]LuaModule, error) {
 	return modules, nil
 }
 
-// extractBridgeModule extracts module information from a bridge
+// extractBridgeModule extracts module information from a bridge.
+// It uses reflection to analyze the bridge structure and extract
+// all public methods, converting them to Lua API documentation.
 func (g *LuaDocGenerator) extractBridgeModule(bridgeID string, bridgeInstance interface{}) (LuaModule, error) {
 	module := LuaModule{
 		Name:        bridgeID,
@@ -260,7 +296,9 @@ func (g *LuaDocGenerator) extractBridgeModule(bridgeID string, bridgeInstance in
 	return module, nil
 }
 
-// shouldSkipMethod determines if a method should be skipped
+// shouldSkipMethod determines if a method should be skipped.
+// It filters out common Go methods and internal bridge methods
+// that shouldn't be exposed in the Lua API documentation.
 func (g *LuaDocGenerator) shouldSkipMethod(methodName string) bool {
 	skipMethods := []string{
 		"String", "GoString", "Error", // Common Go methods
@@ -276,7 +314,9 @@ func (g *LuaDocGenerator) shouldSkipMethod(methodName string) bool {
 	return false
 }
 
-// extractMethodInfo extracts information about a method
+// extractMethodInfo extracts information about a method.
+// It analyzes method signatures using reflection to determine
+// parameters, return values, and generates appropriate documentation.
 func (g *LuaDocGenerator) extractMethodInfo(moduleName string, method reflect.Method) (APIFunction, error) {
 	function := APIFunction{
 		Name:       g.convertMethodName(method.Name),
@@ -324,7 +364,9 @@ func (g *LuaDocGenerator) extractMethodInfo(moduleName string, method reflect.Me
 	return function, nil
 }
 
-// convertMethodName converts Go method name to Lua naming convention
+// convertMethodName converts Go method name to Lua naming convention.
+// It transforms PascalCase method names to snake_case following
+// Lua's standard naming conventions.
 func (g *LuaDocGenerator) convertMethodName(methodName string) string {
 	// Convert PascalCase to snake_case
 	re := regexp.MustCompile(`([a-z0-9])([A-Z])`)
@@ -332,7 +374,9 @@ func (g *LuaDocGenerator) convertMethodName(methodName string) string {
 	return strings.ToLower(snake)
 }
 
-// convertGoTypeToLua converts Go type to Lua type representation
+// convertGoTypeToLua converts Go type to Lua type representation.
+// It maps Go's type system to Lua's type system, handling complex
+// types like slices, maps, and interfaces appropriately.
 func (g *LuaDocGenerator) convertGoTypeToLua(goType reflect.Type) string {
 	switch goType.Kind() {
 	case reflect.Bool:
@@ -365,7 +409,9 @@ func (g *LuaDocGenerator) convertGoTypeToLua(goType reflect.Type) string {
 	}
 }
 
-// generateMethodDescription generates a description for a method
+// generateMethodDescription generates a description for a method.
+// It creates a human-readable description based on the method name,
+// parameter count, and return value count.
 func (g *LuaDocGenerator) generateMethodDescription(methodName string, params []Parameter, returns []ReturnValue) string {
 	// Convert method name to human readable
 	readable := strings.ReplaceAll(methodName, "_", " ")
@@ -384,7 +430,9 @@ func (g *LuaDocGenerator) generateMethodDescription(methodName string, params []
 	return description + "."
 }
 
-// generateMethodExample generates an example for a method
+// generateMethodExample generates an example for a method.
+// It creates a realistic code example showing how to call
+// the method with appropriate parameter values.
 func (g *LuaDocGenerator) generateMethodExample(moduleName, methodName string, params []Parameter) string {
 	if len(params) == 0 {
 		return fmt.Sprintf("local result = %s.%s()", moduleName, methodName)
@@ -407,7 +455,9 @@ func (g *LuaDocGenerator) generateMethodExample(moduleName, methodName string, p
 	return fmt.Sprintf("local result = %s.%s(%s)", moduleName, methodName, strings.Join(paramNames, ", "))
 }
 
-// ExtractStdlibAPIs extracts API information from Lua standard library modules
+// ExtractStdlibAPIs extracts API information from Lua standard library modules.
+// It parses Lua source files in the stdlib directory to extract function
+// signatures and documentation comments.
 func (g *LuaDocGenerator) ExtractStdlibAPIs() ([]LuaModule, error) {
 	var modules []LuaModule
 
@@ -796,7 +846,9 @@ func (g *LuaDocGenerator) createSpellFunctions() []APIFunction {
 	}
 }
 
-// GenerateMarkdownDocs generates markdown documentation
+// GenerateMarkdownDocs generates markdown documentation.
+// It creates a comprehensive Markdown document with table of contents,
+// module descriptions, function signatures, and usage examples.
 func (g *LuaDocGenerator) GenerateMarkdownDocs(modules []LuaModule) string {
 	var sb strings.Builder
 
@@ -878,7 +930,9 @@ func (g *LuaDocGenerator) writeMarkdownFunction(sb *strings.Builder, function AP
 	}
 }
 
-// GenerateJSONDocs generates JSON documentation
+// GenerateJSONDocs generates JSON documentation.
+// It produces a machine-readable JSON representation of the API
+// suitable for tooling integration and programmatic access.
 func (g *LuaDocGenerator) GenerateJSONDocs(modules []LuaModule) (string, error) {
 	docs := map[string]interface{}{
 		"generated_at": time.Now().Format(time.RFC3339),
@@ -894,7 +948,9 @@ func (g *LuaDocGenerator) GenerateJSONDocs(modules []LuaModule) (string, error) 
 	return string(jsonData), nil
 }
 
-// GenerateCompletionData generates IDE completion data
+// GenerateCompletionData generates IDE completion data.
+// It creates structured data for language servers and IDE plugins
+// to provide intelligent code completion for Lua scripts.
 func (g *LuaDocGenerator) GenerateCompletionData(modules []LuaModule) CompletionData {
 	completion := CompletionData{
 		Functions: []CompletionFunction{},

@@ -16,7 +16,11 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// TracingBridge provides script access to go-llms distributed tracing
+// TracingBridge provides script access to go-llms distributed tracing.
+// It manages distributed tracing spans and OpenTelemetry-compatible
+// operations. The bridge supports span creation, attribute management,
+// error recording, and lifecycle hooks for comprehensive application
+// tracing across service boundaries.
 type TracingBridge struct {
 	initialized bool
 	tracers     map[string]core.Tracer
@@ -25,7 +29,9 @@ type TracingBridge struct {
 	mu          sync.RWMutex
 }
 
-// NewTracingBridge creates a new tracing bridge
+// NewTracingBridge creates a new tracing bridge.
+// Returns an initialized bridge with empty tracer and span registries
+// ready for distributed tracing operations.
 func NewTracingBridge() *TracingBridge {
 	return &TracingBridge{
 		tracers: make(map[string]core.Tracer),
@@ -34,12 +40,15 @@ func NewTracingBridge() *TracingBridge {
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// Always returns "tracing" for this bridge.
 func (tb *TracingBridge) GetID() string {
 	return "tracing"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides comprehensive information about the tracing bridge
+// including version, dependencies, and OpenTelemetry compatibility.
 func (tb *TracingBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:         "tracing",
@@ -51,7 +60,9 @@ func (tb *TracingBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the tracing bridge
+// Initialize sets up the tracing bridge.
+// Prepares the bridge for span creation and management.
+// Returns an error if initialization fails.
 func (tb *TracingBridge) Initialize(ctx context.Context) error {
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -60,7 +71,9 @@ func (tb *TracingBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs bridge cleanup
+// Cleanup performs bridge cleanup.
+// Ends all active spans and clears registries.
+// Ensures clean shutdown of tracing resources.
 func (tb *TracingBridge) Cleanup(ctx context.Context) error {
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
@@ -81,19 +94,25 @@ func (tb *TracingBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns initialization status
+// IsInitialized returns initialization status.
+// Thread-safe check for bridge initialization state.
+// Returns true if the bridge has been initialized.
 func (tb *TracingBridge) IsInitialized() bool {
 	tb.mu.RLock()
 	defer tb.mu.RUnlock()
 	return tb.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// Enables the engine to access distributed tracing functionality.
+// Returns an error if registration fails.
 func (tb *TracingBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(tb)
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// Provides comprehensive tracing operations including span management,
+// attribute setting, error recording, and lifecycle hooks.
 func (tb *TracingBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{
@@ -202,7 +221,9 @@ func (tb *TracingBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// Checks that the method exists and has the required number of arguments.
+// Returns an error if the bridge is not initialized or validation fails.
 func (tb *TracingBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !tb.IsInitialized() {
 		return fmt.Errorf("tracing bridge not initialized")
@@ -226,7 +247,9 @@ func (tb *TracingBridge) ValidateMethod(name string, args []engine.ScriptValue) 
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// Routes method calls to their implementations and handles return value conversion.
+// Returns an error if the method is unknown or execution fails.
 func (tb *TracingBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	switch name {
 	case "createTracer":
@@ -303,7 +326,9 @@ func (tb *TracingBridge) ExecuteMethod(ctx context.Context, name string, args []
 	}
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// Maps go-llms tracing types to script-compatible representations
+// for seamless integration with script engines.
 func (tb *TracingBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"tracer": {
@@ -333,7 +358,9 @@ func (tb *TracingBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Specifies the permissions needed for tracing operations including
+// span creation, modification, and hook management.
 func (tb *TracingBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -359,7 +386,9 @@ func (tb *TracingBridge) RequiredPermissions() []engine.Permission {
 
 // Bridge method implementations
 
-// createTracer creates a new tracer
+// createTracer creates a new tracer.
+// Tracers are the entry point for creating spans in distributed tracing.
+// Returns a tracer object with ID for span creation operations.
 func (tb *TracingBridge) createTracer(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createTracer", args); err != nil {
 		return nil, err
@@ -385,7 +414,9 @@ func (tb *TracingBridge) createTracer(ctx context.Context, args []engine.ScriptV
 	}, nil
 }
 
-// startSpan starts a new tracing span
+// startSpan starts a new tracing span.
+// Creates a span within a tracer for tracking a specific operation.
+// Supports optional attributes for span initialization.
 func (tb *TracingBridge) startSpan(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("startSpan", args); err != nil {
 		return nil, err
@@ -435,7 +466,9 @@ func (tb *TracingBridge) startSpan(ctx context.Context, args []engine.ScriptValu
 	}, nil
 }
 
-// endSpan ends a tracing span
+// endSpan ends a tracing span.
+// Marks the completion of a traced operation.
+// Removes the span from active tracking after ending.
 func (tb *TracingBridge) endSpan(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("endSpan", args); err != nil {
 		return err
@@ -460,7 +493,9 @@ func (tb *TracingBridge) endSpan(ctx context.Context, args []engine.ScriptValue)
 	return nil
 }
 
-// setSpanAttributes sets attributes on a span
+// setSpanAttributes sets attributes on a span.
+// Adds or updates key-value pairs on an active span.
+// Useful for adding context during operation execution.
 func (tb *TracingBridge) setSpanAttributes(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("setSpanAttributes", args); err != nil {
 		return err
@@ -495,7 +530,9 @@ func (tb *TracingBridge) setSpanAttributes(ctx context.Context, args []engine.Sc
 	return nil
 }
 
-// recordSpanError records an error on a span
+// recordSpanError records an error on a span.
+// Marks the span with an error for debugging and monitoring.
+// The error is recorded as an event with error details.
 func (tb *TracingBridge) recordSpanError(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("recordSpanError", args); err != nil {
 		return err
@@ -524,7 +561,9 @@ func (tb *TracingBridge) recordSpanError(ctx context.Context, args []engine.Scri
 	return nil
 }
 
-// setSpanStatus sets span status
+// setSpanStatus sets span status.
+// Updates the span's status code (ok, error, unset) with optional description.
+// Status indicates the overall success or failure of the operation.
 func (tb *TracingBridge) setSpanStatus(ctx context.Context, args []engine.ScriptValue) error {
 	if err := tb.ValidateMethod("setSpanStatus", args); err != nil {
 		return err
@@ -571,7 +610,9 @@ func (tb *TracingBridge) setSpanStatus(ctx context.Context, args []engine.Script
 	return nil
 }
 
-// createAgentTracingHook creates a tracing hook for agent lifecycle
+// createAgentTracingHook creates a tracing hook for agent lifecycle.
+// Automatically traces agent initialization, execution, and cleanup.
+// Returns a hook object that can be attached to agents.
 func (tb *TracingBridge) createAgentTracingHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createAgentTracingHook", args); err != nil {
 		return nil, err
@@ -600,7 +641,9 @@ func (tb *TracingBridge) createAgentTracingHook(ctx context.Context, args []engi
 	}, nil
 }
 
-// createToolCallTracingHook creates a tracing hook for tool calls
+// createToolCallTracingHook creates a tracing hook for tool calls.
+// Automatically traces tool invocations with input/output details.
+// Returns a hook object for comprehensive tool monitoring.
 func (tb *TracingBridge) createToolCallTracingHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := tb.ValidateMethod("createToolCallTracingHook", args); err != nil {
 		return nil, err
@@ -684,7 +727,9 @@ func (tb *TracingBridge) createCompositeTracingHook(ctx context.Context, args []
 	}, nil
 }
 
-// spanFromContext gets the current span from context
+// spanFromContext gets the current span from context.
+// Retrieves the active span from the current execution context.
+// Returns nil if no span is currently active.
 func (tb *TracingBridge) spanFromContext(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	span := core.SpanFromContext(ctx)
 	if span == nil {

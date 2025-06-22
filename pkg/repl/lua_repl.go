@@ -14,14 +14,18 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// LuaREPL provides a Lua-specific REPL implementation
+// LuaREPL provides a Lua-specific REPL implementation.
+// It extends BaseREPL with Lua engine integration, persistent state management,
+// and Lua-specific features like script loading and completion.
 type LuaREPL struct {
 	*BaseREPL
 	engine   engine.ScriptEngine // Used for capabilities and validation
 	luaState *lua.LState         // Persistent state for REPL evaluations
 }
 
-// NewLuaREPL creates a new Lua REPL instance
+// NewLuaREPL creates a new Lua REPL instance.
+// It initializes both the Lua engine and a persistent Lua state for
+// maintaining variables and functions across REPL commands.
 func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 	if config.Engine != "lua" {
 		return nil, errors.Newf(errors.CategoryConfig, "engine must be 'lua', got '%s'", config.Engine)
@@ -63,7 +67,9 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 	return luaREPL, nil
 }
 
-// Evaluate executes Lua code and returns the result
+// Evaluate executes Lua code and returns the result.
+// It first checks for REPL commands, then evaluates Lua expressions
+// using the persistent state, returning any non-nil results.
 func (l *LuaREPL) Evaluate(ctx context.Context, input string) (string, error) {
 	input = strings.TrimSpace(input)
 
@@ -90,7 +96,9 @@ func (l *LuaREPL) Evaluate(ctx context.Context, input string) (string, error) {
 	return "", nil
 }
 
-// Complete provides Lua-specific auto-completion
+// Complete provides Lua-specific auto-completion.
+// It extends base completions with Lua keywords, built-ins,
+// and standard library functions.
 func (l *LuaREPL) Complete(input string) []string {
 	// Get base completions first
 	completions := l.BaseREPL.Complete(input)
@@ -104,7 +112,9 @@ func (l *LuaREPL) Complete(input string) []string {
 	return completions
 }
 
-// Close shuts down the Lua REPL and cleans up resources
+// Close shuts down the Lua REPL and cleans up resources.
+// It closes the persistent Lua state, shuts down the engine,
+// and calls the base REPL close method.
 func (l *LuaREPL) Close() error {
 	// Close persistent Lua state
 	if l.luaState != nil {
@@ -120,7 +130,9 @@ func (l *LuaREPL) Close() error {
 	return l.BaseREPL.Close()
 }
 
-// executeCommand executes REPL commands with Lua-specific extensions
+// executeCommand executes REPL commands with Lua-specific extensions.
+// It handles Lua-specific commands like .load and delegates others
+// to the base REPL implementation.
 func (l *LuaREPL) executeCommand(ctx context.Context, input, command string) (string, error) {
 	switch command {
 	case "load":
@@ -133,7 +145,9 @@ func (l *LuaREPL) executeCommand(ctx context.Context, input, command string) (st
 	}
 }
 
-// handleLoadCommand loads and executes a Lua file
+// handleLoadCommand loads and executes a Lua file.
+// It uses the persistent Lua state to execute the file contents,
+// preserving any definitions for future REPL commands.
 func (l *LuaREPL) handleLoadCommand(_ context.Context, input string) (string, error) {
 	args := strings.Fields(input)
 	if len(args) < 2 {
@@ -161,7 +175,9 @@ func (l *LuaREPL) handleLoadCommand(_ context.Context, input string) (string, er
 	return response, nil
 }
 
-// handleEnginesCommand shows Lua engine information
+// handleEnginesCommand shows Lua engine information.
+// It displays the current engine name and runtime metrics
+// such as scripts executed and error counts.
 func (l *LuaREPL) handleEnginesCommand(_ context.Context) (string, error) {
 	var result strings.Builder
 	result.WriteString("Current engine: lua\n")
@@ -176,7 +192,9 @@ func (l *LuaREPL) handleEnginesCommand(_ context.Context) (string, error) {
 	return result.String(), nil
 }
 
-// getLuaCompletions returns Lua-specific completion suggestions
+// getLuaCompletions returns Lua-specific completion suggestions.
+// It provides completions for Lua keywords, built-in functions,
+// and standard library functions that match the input prefix.
 func (l *LuaREPL) getLuaCompletions(input string) []string {
 	var completions []string
 

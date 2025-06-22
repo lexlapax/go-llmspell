@@ -12,7 +12,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SpellMetadata represents the metadata from a spell.yaml file
+// SpellMetadata represents the metadata from a spell.yaml file.
+// It contains information about the spell's configuration, dependencies,
+// parameters, and execution requirements.
 type SpellMetadata struct {
 	// Basic information
 	Name        string `yaml:"name"`
@@ -38,7 +40,9 @@ type SpellMetadata struct {
 	RootDir string `yaml:"-"`
 }
 
-// SpellParameter defines a parameter that can be passed to a spell
+// SpellParameter defines a parameter that can be passed to a spell.
+// It includes type information, validation rules, and default values
+// for spell inputs.
 type SpellParameter struct {
 	Name        string      `yaml:"name"`
 	Type        string      `yaml:"type"`
@@ -48,7 +52,9 @@ type SpellParameter struct {
 	Validation  string      `yaml:"validation,omitempty"`
 }
 
-// Validate checks if the spell metadata is valid
+// Validate checks if the spell metadata is valid.
+// It ensures all required fields are present and parameter
+// definitions are properly formed.
 func (m *SpellMetadata) Validate() error {
 	if m.Name == "" {
 		return fmt.Errorf("spell name is required")
@@ -78,7 +84,9 @@ func (m *SpellMetadata) Validate() error {
 	return nil
 }
 
-// validateParameter validates a single parameter
+// validateParameter validates a single parameter.
+// It checks that the parameter has a name, valid type,
+// and meets other requirements.
 func validateParameter(p SpellParameter) error {
 	if p.Name == "" {
 		return fmt.Errorf("parameter name is required")
@@ -103,17 +111,23 @@ func validateParameter(p SpellParameter) error {
 	return nil
 }
 
-// SpellLoader handles loading spell metadata from files
+// SpellLoader handles loading spell metadata from files.
+// It provides methods for loading, validating, and working with
+// spell configurations from YAML files.
 type SpellLoader struct {
 	// Could add caching or other features in the future
 }
 
-// NewSpellLoader creates a new spell loader
+// NewSpellLoader creates a new spell loader.
+// The loader can be used to load spell metadata from files
+// and directories.
 func NewSpellLoader() *SpellLoader {
 	return &SpellLoader{}
 }
 
-// LoadFromFile loads spell metadata from a spell.yaml file
+// LoadFromFile loads spell metadata from a spell.yaml file.
+// It reads the file, parses the YAML content, validates the metadata,
+// and sets the root directory for relative path resolution.
 func (l *SpellLoader) LoadFromFile(filename string) (*SpellMetadata, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -136,7 +150,9 @@ func (l *SpellLoader) LoadFromFile(filename string) (*SpellMetadata, error) {
 	return &metadata, nil
 }
 
-// LoadFromDirectory loads spell metadata from a directory containing spell.yaml
+// LoadFromDirectory loads spell metadata from a directory containing spell.yaml.
+// It verifies the directory exists, looks for a spell.yaml file within it,
+// and loads the spell configuration.
 func (l *SpellLoader) LoadFromDirectory(dir string) (*SpellMetadata, error) {
 	// Check if directory exists
 	info, err := os.Stat(dir)
@@ -168,7 +184,9 @@ func (l *SpellLoader) LoadFromDirectory(dir string) (*SpellMetadata, error) {
 	return metadata, nil
 }
 
-// ResolveEntryPoint resolves the entry point path relative to the spell root
+// ResolveEntryPoint resolves the entry point path relative to the spell root.
+// It handles both absolute and relative paths, ensuring the entry point
+// can be properly located for execution.
 func (l *SpellLoader) ResolveEntryPoint(metadata *SpellMetadata) string {
 	// If entry point is absolute, return as-is
 	if filepath.IsAbs(metadata.EntryPoint) {
@@ -184,7 +202,9 @@ func (l *SpellLoader) ResolveEntryPoint(metadata *SpellMetadata) string {
 	return filepath.Join(metadata.RootDir, metadata.EntryPoint)
 }
 
-// ValidateParameters validates that the provided parameters match the spell's requirements
+// ValidateParameters validates that the provided parameters match the spell's requirements.
+// It ensures all required parameters are present and could be extended
+// to perform type validation in the future.
 func (l *SpellLoader) ValidateParameters(metadata *SpellMetadata, params map[string]interface{}) error {
 	// Check required parameters
 	for _, param := range metadata.Parameters {
@@ -200,7 +220,9 @@ func (l *SpellLoader) ValidateParameters(metadata *SpellMetadata, params map[str
 	return nil
 }
 
-// ApplyDefaults applies default values to parameters that weren't provided
+// ApplyDefaults applies default values to parameters that weren't provided.
+// It creates a new parameter map with user-provided values and fills in
+// any missing parameters with their default values from the spell metadata.
 func (l *SpellLoader) ApplyDefaults(metadata *SpellMetadata, params map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 

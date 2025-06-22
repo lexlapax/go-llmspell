@@ -14,7 +14,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
 
-// DebugCmd debugs a spell script
+// DebugCmd debugs a spell script.
+// It provides interactive debugging capabilities including
+// breakpoints, step-by-step execution, and environment inspection.
 type DebugCmd struct {
 	BaseCommand
 	Script      string            `arg:"" help:"Script file to debug" type:"existingfile"`
@@ -25,7 +27,9 @@ type DebugCmd struct {
 	Timeout     int               `short:"t" help:"Execution timeout in seconds" default:"300"`
 }
 
-// Run executes the debug command
+// Run executes the debug command.
+// It sets up a debug session with the specified breakpoints
+// and execution mode, then runs the script in debug mode.
 func (c *DebugCmd) Run(ctx context.Context) error {
 	// Read script content first to validate file exists
 	scriptContent, err := os.ReadFile(c.Script)

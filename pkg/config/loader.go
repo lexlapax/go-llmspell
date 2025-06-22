@@ -18,14 +18,18 @@ import (
 	yamlv3 "gopkg.in/yaml.v3"
 )
 
-// Loader handles configuration loading from multiple sources
+// Loader handles configuration loading from multiple sources.
+// It uses Koanf to provide layered configuration with support for
+// files, environment variables, and runtime modifications.
 type Loader struct {
 	koanf   *koanf.Koanf
 	options LoaderOptions
 	mu      sync.RWMutex
 }
 
-// LoaderOptions configures the loader behavior
+// LoaderOptions configures the loader behavior.
+// It specifies file locations, environment variable prefixes,
+// watch settings, and validation options.
 type LoaderOptions struct {
 	// Configuration file settings
 	ConfigFile   string
@@ -46,7 +50,9 @@ type LoaderOptions struct {
 	StrictMode     bool
 }
 
-// NewLoader creates a new configuration loader
+// NewLoader creates a new configuration loader.
+// It initializes the loader with default values for any
+// unspecified options.
 func NewLoader(options LoaderOptions) *Loader {
 	if options.ConfigName == "" {
 		options.ConfigName = "config"
@@ -70,7 +76,9 @@ func NewLoader(options LoaderOptions) *Loader {
 	}
 }
 
-// LoadConfig loads configuration from all sources in priority order
+// LoadConfig loads configuration from all sources in priority order.
+// The priority is: defaults → file → environment variables → flags.
+// Returns the merged configuration or an error if loading fails.
 func (l *Loader) LoadConfig() (*Config, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -123,7 +131,9 @@ func (l *Loader) LoadConfig() (*Config, error) {
 	return &config, nil
 }
 
-// LoadConfigFromFile loads configuration from a specific file
+// LoadConfigFromFile loads configuration from a specific file.
+// It still applies environment variables on top of the file configuration.
+// Useful for explicit configuration file selection.
 func (l *Loader) LoadConfigFromFile(filepath string) (*Config, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -164,7 +174,9 @@ func (l *Loader) LoadConfigFromFile(filepath string) (*Config, error) {
 	return &config, nil
 }
 
-// MergeFlags merges command-line flags into the configuration
+// MergeFlags merges command-line flags into the configuration.
+// Flags have the highest priority and override all other sources.
+// The flagsMap should use dot notation for nested values.
 func (l *Loader) MergeFlags(flagsMap map[string]interface{}) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -177,7 +189,8 @@ func (l *Loader) MergeFlags(flagsMap map[string]interface{}) error {
 	return nil
 }
 
-// GetCurrentConfig returns the current configuration state
+// GetCurrentConfig returns the current configuration state.
+// It unmarshals the current merged configuration from all sources.
 func (l *Loader) GetCurrentConfig() (*Config, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -192,7 +205,9 @@ func (l *Loader) GetCurrentConfig() (*Config, error) {
 	return &config, nil
 }
 
-// SaveConfig saves the current configuration to a file
+// SaveConfig saves the current configuration to a file.
+// It marshals the configuration to YAML format and writes to disk.
+// Creates parent directories if they don't exist.
 func (l *Loader) SaveConfig(config *Config, configPath string) error {
 	// Marshal config directly to YAML using yaml.v3 package
 	yamlData, err := yamlv3.Marshal(config)
@@ -214,7 +229,9 @@ func (l *Loader) SaveConfig(config *Config, configPath string) error {
 	return nil
 }
 
-// Watch starts watching the configuration file for changes
+// Watch starts watching the configuration file for changes.
+// The callback is invoked whenever the configuration file is modified.
+// Returns an error if no configuration file is found.
 func (l *Loader) Watch(callback func(*Config) error) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -234,14 +251,16 @@ func (l *Loader) Watch(callback func(*Config) error) error {
 	return l.setupFileWatcher(configFile, nil)
 }
 
-// GetRaw returns the raw configuration value at the given key
+// GetRaw returns the raw configuration value at the given key.
+// Uses dot notation for nested keys (e.g., "engine.lua.pool_size").
 func (l *Loader) GetRaw(key string) interface{} {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return l.koanf.Get(key)
 }
 
-// SetRaw sets a raw configuration value at the given key
+// SetRaw sets a raw configuration value at the given key.
+// Uses dot notation for nested keys. Changes are not persisted to disk.
 func (l *Loader) SetRaw(key string, value interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

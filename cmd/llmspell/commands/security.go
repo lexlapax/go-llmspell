@@ -9,14 +9,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 )
 
-// SecurityCmd manages security profiles
+// SecurityCmd manages security profiles.
+// It provides commands to list available profiles, show profile details,
+// and validate profile configurations.
 type SecurityCmd struct {
 	BaseCommand
 	Action  string `arg:"" help:"Action to perform: list (show all profiles), show (display profile details), validate (check profile validity)" enum:"list,show,validate" default:"list"`
 	Profile string `arg:"" optional:"" help:"Security profile name (sandbox, development, production)"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It performs the requested security action: list all profiles,
+// show details of a specific profile, or validate a profile name.
 func (c *SecurityCmd) Run(ctx context.Context) error {
 	switch c.Action {
 	case "list":

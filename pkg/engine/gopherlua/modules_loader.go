@@ -11,7 +11,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ModuleLoaderConfig provides configuration for module loading
+// ModuleLoaderConfig provides configuration for module loading.
+// It controls module search paths, caching behavior, and dependency resolution.
 type ModuleLoaderConfig struct {
 	// Base path for module files
 	BasePath string
@@ -29,13 +30,15 @@ type ModuleLoaderConfig struct {
 	AutoLoadDeps bool
 }
 
-// ModuleLoader handles module loading operations
+// ModuleLoader handles module loading operations.
+// It provides lazy loading, profile-based loading, and automatic dependency resolution.
 type ModuleLoader struct {
 	system *ModuleSystem
 	config ModuleLoaderConfig
 }
 
-// NewModuleLoader creates a new module loader
+// NewModuleLoader creates a new module loader.
+// It requires a module system instance and configuration for module search and loading behavior.
 func NewModuleLoader(system *ModuleSystem, config ModuleLoaderConfig) *ModuleLoader {
 	return &ModuleLoader{
 		system: system,

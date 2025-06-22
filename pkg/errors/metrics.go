@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-// ErrorMetrics tracks error statistics
+// ErrorMetrics tracks error statistics.
+// It provides comprehensive error monitoring including counts by category,
+// error rates over time, and recent error history for debugging.
 type ErrorMetrics struct {
 	// Counters by category
 	categoryCounters map[ErrorCategory]*int64
@@ -29,7 +31,9 @@ type ErrorMetrics struct {
 	mu sync.RWMutex
 }
 
-// RateTracker tracks error rates over time
+// RateTracker tracks error rates over time.
+// It uses a circular buffer of time buckets to calculate
+// rolling error rates without storing individual timestamps.
 type RateTracker struct {
 	window      time.Duration
 	buckets     []int64
@@ -39,7 +43,9 @@ type RateTracker struct {
 	mu          sync.Mutex
 }
 
-// RecentErrorsBuffer stores recent errors for debugging
+// RecentErrorsBuffer stores recent errors for debugging.
+// It maintains a circular buffer of error records with their
+// full context for post-mortem analysis.
 type RecentErrorsBuffer struct {
 	errors     []*ErrorRecord
 	maxSize    int
@@ -47,20 +53,25 @@ type RecentErrorsBuffer struct {
 	mu         sync.RWMutex
 }
 
-// ErrorRecord represents a recorded error
+// ErrorRecord represents a recorded error.
+// It captures the error details, timestamp, and any additional
+// context at the time of the error for debugging.
 type ErrorRecord struct {
 	Error     *SpellError
 	Timestamp time.Time
 	Context   map[string]interface{}
 }
 
-// Global metrics instance
+// Global metrics instance.
+// Uses sync.Once to ensure thread-safe lazy initialization.
 var (
 	globalMetrics *ErrorMetrics
 	metricsOnce   sync.Once
 )
 
-// GetMetrics returns the global error metrics instance
+// GetMetrics returns the global error metrics instance.
+// It's initialized lazily on first access with default settings
+// for all error categories.
 func GetMetrics() *ErrorMetrics {
 	metricsOnce.Do(func() {
 		globalMetrics = NewErrorMetrics()
@@ -68,7 +79,9 @@ func GetMetrics() *ErrorMetrics {
 	return globalMetrics
 }
 
-// NewErrorMetrics creates a new error metrics instance
+// NewErrorMetrics creates a new error metrics instance.
+// It initializes counters and rate trackers for all known error
+// categories with a 100-entry recent errors buffer.
 func NewErrorMetrics() *ErrorMetrics {
 	m := &ErrorMetrics{
 		categoryCounters: make(map[ErrorCategory]*int64),
@@ -94,7 +107,9 @@ func NewErrorMetrics() *ErrorMetrics {
 	return m
 }
 
-// RecordError records an error in metrics
+// RecordError records an error in metrics.
+// It increments counters, updates rate trackers, and stores
+// the error in recent history. Non-SpellErrors are wrapped.
 func (m *ErrorMetrics) RecordError(err error) {
 	if err == nil || m == nil {
 		return
@@ -141,12 +156,16 @@ func (m *ErrorMetrics) RecordError(err error) {
 	m.recentErrors.Add(record)
 }
 
-// GetTotalErrors returns the total number of errors recorded
+// GetTotalErrors returns the total number of errors recorded.
+// This is the sum of all category counters since initialization
+// or last reset.
 func (m *ErrorMetrics) GetTotalErrors() int64 {
 	return atomic.LoadInt64(&m.totalErrors)
 }
 
-// GetCategoryCount returns the error count for a specific category
+// GetCategoryCount returns the error count for a specific category.
+// Returns 0 for unknown categories. The count is since initialization
+// or last reset.
 func (m *ErrorMetrics) GetCategoryCount(category ErrorCategory) int64 {
 	m.mu.RLock()
 	counter, exists := m.categoryCounters[category]
@@ -159,7 +178,9 @@ func (m *ErrorMetrics) GetCategoryCount(category ErrorCategory) int64 {
 	return atomic.LoadInt64(counter)
 }
 
-// GetErrorRate returns the error rate for a specific category
+// GetErrorRate returns the error rate for a specific category.
+// The rate is calculated as errors per minute over the configured
+// time window (default 1 minute).
 func (m *ErrorMetrics) GetErrorRate(category ErrorCategory) float64 {
 	m.mu.RLock()
 	rateTracker, exists := m.errorRates[category]
@@ -172,12 +193,16 @@ func (m *ErrorMetrics) GetErrorRate(category ErrorCategory) float64 {
 	return rateTracker.GetRate()
 }
 
-// GetRecentErrors returns recent error records
+// GetRecentErrors returns recent error records.
+// Returns up to 'limit' most recent errors in reverse chronological
+// order for debugging and analysis.
 func (m *ErrorMetrics) GetRecentErrors(limit int) []*ErrorRecord {
 	return m.recentErrors.GetRecent(limit)
 }
 
-// GetStats returns error statistics
+// GetStats returns error statistics.
+// It provides a comprehensive snapshot including total errors,
+// uptime, and per-category statistics with percentages and rates.
 func (m *ErrorMetrics) GetStats() *ErrorStats {
 	stats := &ErrorStats{
 		TotalErrors: m.GetTotalErrors(),
@@ -205,7 +230,9 @@ func (m *ErrorMetrics) GetStats() *ErrorStats {
 	return stats
 }
 
-// Reset resets all metrics
+// Reset resets all metrics.
+// This clears all counters, rate trackers, and recent errors.
+// Useful for testing or periodic metric resets.
 func (m *ErrorMetrics) Reset() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -230,21 +257,27 @@ func (m *ErrorMetrics) Reset() {
 	m.startTime = time.Now()
 }
 
-// ErrorStats represents error statistics
+// ErrorStats represents error statistics.
+// It provides a point-in-time snapshot of all error metrics
+// for reporting and monitoring.
 type ErrorStats struct {
 	TotalErrors int64
 	Uptime      time.Duration
 	Categories  map[ErrorCategory]*CategoryStats
 }
 
-// CategoryStats represents statistics for a specific error category
+// CategoryStats represents statistics for a specific error category.
+// It includes the absolute count, percentage of total errors,
+// and current error rate per minute.
 type CategoryStats struct {
 	Count      int64
 	Percentage float64
 	Rate       float64 // errors per minute
 }
 
-// NewRateTracker creates a new rate tracker
+// NewRateTracker creates a new rate tracker.
+// The window parameter defines the time period for rate calculation,
+// and buckets determines the granularity of tracking.
 func NewRateTracker(window time.Duration, buckets int) *RateTracker {
 	return &RateTracker{
 		window:      window,
@@ -254,7 +287,9 @@ func NewRateTracker(window time.Duration, buckets int) *RateTracker {
 	}
 }
 
-// Record records an event
+// Record records an event.
+// It updates the current time bucket and handles bucket
+// rotation based on elapsed time.
 func (rt *RateTracker) Record() {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -263,7 +298,9 @@ func (rt *RateTracker) Record() {
 	atomic.AddInt64(&rt.buckets[rt.currentIdx], 1)
 }
 
-// GetRate returns the current rate (events per minute)
+// GetRate returns the current rate (events per minute).
+// It sums all buckets within the time window and calculates
+// the rate normalized to events per minute.
 func (rt *RateTracker) GetRate() float64 {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -285,7 +322,9 @@ func (rt *RateTracker) GetRate() float64 {
 	return 0
 }
 
-// Reset resets the rate tracker
+// Reset resets the rate tracker.
+// This clears all buckets and resets the time tracking,
+// effectively starting rate calculation from zero.
 func (rt *RateTracker) Reset() {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -297,7 +336,9 @@ func (rt *RateTracker) Reset() {
 	rt.lastUpdate = time.Now()
 }
 
-// updateBuckets updates bucket indices based on elapsed time
+// updateBuckets updates bucket indices based on elapsed time.
+// It advances the current bucket index and clears expired buckets
+// to maintain accurate rolling window calculations.
 func (rt *RateTracker) updateBuckets() {
 	elapsed := time.Since(rt.lastUpdate)
 	bucketDuration := rt.window / time.Duration(rt.bucketCount)
@@ -316,7 +357,9 @@ func (rt *RateTracker) updateBuckets() {
 	}
 }
 
-// NewRecentErrorsBuffer creates a new recent errors buffer
+// NewRecentErrorsBuffer creates a new recent errors buffer.
+// The maxSize parameter determines how many recent errors to keep
+// in the circular buffer for debugging purposes.
 func NewRecentErrorsBuffer(maxSize int) *RecentErrorsBuffer {
 	return &RecentErrorsBuffer{
 		errors:  make([]*ErrorRecord, maxSize),
@@ -324,7 +367,9 @@ func NewRecentErrorsBuffer(maxSize int) *RecentErrorsBuffer {
 	}
 }
 
-// Add adds an error record to the buffer
+// Add adds an error record to the buffer.
+// It overwrites the oldest entry when the buffer is full,
+// maintaining a fixed-size history of recent errors.
 func (reb *RecentErrorsBuffer) Add(record *ErrorRecord) {
 	reb.mu.Lock()
 	defer reb.mu.Unlock()
@@ -333,7 +378,9 @@ func (reb *RecentErrorsBuffer) Add(record *ErrorRecord) {
 	reb.currentIdx = (reb.currentIdx + 1) % reb.maxSize
 }
 
-// GetRecent returns the most recent error records
+// GetRecent returns the most recent error records.
+// Records are returned in reverse chronological order (newest first)
+// up to the specified limit.
 func (reb *RecentErrorsBuffer) GetRecent(limit int) []*ErrorRecord {
 	reb.mu.RLock()
 	defer reb.mu.RUnlock()
@@ -355,7 +402,9 @@ func (reb *RecentErrorsBuffer) GetRecent(limit int) []*ErrorRecord {
 	return result
 }
 
-// Clear clears the buffer
+// Clear clears the buffer.
+// This removes all stored error records and resets the buffer
+// to its initial empty state.
 func (reb *RecentErrorsBuffer) Clear() {
 	reb.mu.Lock()
 	defer reb.mu.Unlock()
@@ -366,7 +415,9 @@ func (reb *RecentErrorsBuffer) Clear() {
 	reb.currentIdx = 0
 }
 
-// MetricsFormatterOptions configures metrics formatting
+// MetricsFormatterOptions configures metrics formatting.
+// It controls which metrics are displayed and how they're formatted
+// for different output scenarios (terminal, logs, monitoring).
 type MetricsFormatterOptions struct {
 	ShowCategories   bool
 	ShowRates        bool
@@ -375,7 +426,9 @@ type MetricsFormatterOptions struct {
 	ColorOutput      bool
 }
 
-// DefaultMetricsFormatterOptions returns default options
+// DefaultMetricsFormatterOptions returns default options.
+// The defaults show all available metrics with color output
+// and the 10 most recent errors.
 func DefaultMetricsFormatterOptions() MetricsFormatterOptions {
 	return MetricsFormatterOptions{
 		ShowCategories:   true,
@@ -386,7 +439,9 @@ func DefaultMetricsFormatterOptions() MetricsFormatterOptions {
 	}
 }
 
-// FormatMetrics formats error metrics for display
+// FormatMetrics formats error metrics for display.
+// It creates a human-readable representation of error statistics
+// based on the provided formatting options.
 func FormatMetrics(metrics *ErrorMetrics, options MetricsFormatterOptions) string {
 	// Implementation would format metrics for display
 	// This is a placeholder for brevity
@@ -394,7 +449,9 @@ func FormatMetrics(metrics *ErrorMetrics, options MetricsFormatterOptions) strin
 	return formatStats(stats, options)
 }
 
-// formatStats formats error statistics
+// formatStats formats error statistics.
+// This is a placeholder for the actual implementation that would
+// create formatted tables, apply colors, and structure the output.
 func formatStats(stats *ErrorStats, options MetricsFormatterOptions) string {
 	// Placeholder implementation
 	// Would format stats with colors, tables, etc.

@@ -3,7 +3,9 @@
 
 package repl
 
-// highlightTengo applies Tengo-specific syntax highlighting
+// highlightTengo applies Tengo-specific syntax highlighting.
+// It recognizes Tengo keywords, built-in functions, type checking functions,
+// and single-line comments starting with //.
 func (h *SyntaxHighlighter) highlightTengo(input string) string {
 	// Tengo keywords
 	tengoKeywords := []string{

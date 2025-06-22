@@ -11,14 +11,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/shell"
 )
 
-// CompletionCmd generates shell completion scripts
+// CompletionCmd generates shell completion scripts.
+// It supports multiple shells and provides installation
+// instructions for each shell type.
 type CompletionCmd struct {
 	BaseCommand
 	Shell string `arg:"" optional:"" help:"Shell type (bash, zsh, fish, powershell, sh)"`
 	List  bool   `short:"l" help:"List supported shells"`
 }
 
-// Run executes the completion command
+// Run executes the completion command.
+// It generates shell completion scripts for the specified shell
+// or auto-detects the current shell if not specified.
 func (c *CompletionCmd) Run(ctx context.Context) error {
 	if c.List {
 		return c.listShells()
@@ -63,7 +67,9 @@ func (c *CompletionCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-// listShells lists all supported shells
+// listShells lists all supported shells.
+// It displays available shell types and usage examples
+// for installing completions.
 func (c *CompletionCmd) listShells() error {
 	c.Println("Supported shells:")
 	for _, s := range shell.GetSupportedShells() {
@@ -77,7 +83,9 @@ func (c *CompletionCmd) listShells() error {
 	return nil
 }
 
-// detectShell attempts to detect the current shell
+// detectShell attempts to detect the current shell.
+// It checks SHELL environment variable and falls back
+// to platform-specific defaults.
 func (c *CompletionCmd) detectShell() string {
 	// First try SHELL environment variable
 	if shellEnv := os.Getenv("SHELL"); shellEnv != "" {
@@ -128,7 +136,8 @@ func (c *CompletionCmd) detectShell() string {
 	return ""
 }
 
-// isTerminal checks if stdout is a terminal
+// isTerminal checks if stdout is a terminal.
+// Used to determine whether to show installation instructions.
 func isTerminal() bool {
 	fileInfo, err := os.Stdout.Stat()
 	if err != nil {
@@ -137,7 +146,8 @@ func isTerminal() bool {
 	return (fileInfo.Mode() & os.ModeCharDevice) != 0
 }
 
-// contains checks if a string contains a substring
+// contains checks if a string contains a substring.
+// Simple recursive implementation for substring checking.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || contains(s[1:], substr))
 }

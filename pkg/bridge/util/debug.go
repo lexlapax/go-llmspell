@@ -15,7 +15,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// DebugBridge provides script access to go-llms compatible debug logging system
+// DebugBridge provides script access to go-llms compatible debug logging system.
+// It manages component-based debug control, conditional compilation support,
+// and environment-based configuration for fine-grained debugging.
 type DebugBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -23,7 +25,9 @@ type DebugBridge struct {
 	logger      *log.Logger     // Debug logger instance
 }
 
-// NewDebugBridge creates a new debug logging bridge
+// NewDebugBridge creates a new debug logging bridge.
+// It initializes a logger with go-llms compatible format and parses
+// environment configuration from GO_LLMS_DEBUG variable.
 func NewDebugBridge() *DebugBridge {
 	// Initialize with go-llms compatible logger format
 	logger := log.New(os.Stderr, "[DEBUG] ", log.Ldate|log.Ltime|log.Lshortfile)
@@ -39,12 +43,15 @@ func NewDebugBridge() *DebugBridge {
 	return bridge
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (db *DebugBridge) GetID() string {
 	return "debug"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the debug bridge including
+// version, description, and supported debug features.
 func (db *DebugBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:         "debug",
@@ -56,7 +63,8 @@ func (db *DebugBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the debug bridge
+// Initialize sets up the debug bridge.
+// It marks the bridge as initialized and ready for use.
 func (db *DebugBridge) Initialize(ctx context.Context) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -65,7 +73,8 @@ func (db *DebugBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs bridge cleanup
+// Cleanup performs bridge cleanup.
+// It clears component state and marks the bridge as uninitialized.
 func (db *DebugBridge) Cleanup(ctx context.Context) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -75,19 +84,23 @@ func (db *DebugBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns initialization status
+// IsInitialized returns initialization status.
+// It returns true if the bridge has been initialized and is ready for use.
 func (db *DebugBridge) IsInitialized() bool {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 	return db.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access debug functionality through this bridge.
 func (db *DebugBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(db)
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// It provides metadata about all debug-related methods available to scripts,
+// including logging, component control, and configuration methods.
 func (db *DebugBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Debug logging methods
@@ -167,7 +180,8 @@ func (db *DebugBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// It ensures initialization and checks argument counts for each method.
 func (db *DebugBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !db.IsInitialized() {
 		return fmt.Errorf("debug bridge not initialized")
@@ -191,7 +205,9 @@ func (db *DebugBridge) ValidateMethod(name string, args []engine.ScriptValue) er
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// It defines how Go debug types are mapped to script types
+// for logger instances and configuration objects.
 func (db *DebugBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"debug_logger": {
@@ -209,7 +225,9 @@ func (db *DebugBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// It specifies permissions for debug logging configuration
+// and component state management.
 func (db *DebugBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -227,7 +245,9 @@ func (db *DebugBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate debug operations.
 func (db *DebugBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	switch name {
 	case "debugPrintf":
@@ -258,7 +278,8 @@ func (db *DebugBridge) ExecuteMethod(ctx context.Context, name string, args []en
 
 // Bridge method implementations
 
-// debugPrintf logs formatted debug message for component
+// debugPrintf logs formatted debug message for component.
+// It only outputs if the component is enabled for debugging.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) debugPrintf(ctx context.Context, args []engine.ScriptValue) error {
@@ -297,7 +318,8 @@ func (db *DebugBridge) debugPrintf(ctx context.Context, args []engine.ScriptValu
 	return nil
 }
 
-// debugPrintln logs debug message for component
+// debugPrintln logs debug message for component.
+// It only outputs if the component is enabled for debugging.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) debugPrintln(ctx context.Context, args []engine.ScriptValue) error {
@@ -326,7 +348,8 @@ func (db *DebugBridge) debugPrintln(ctx context.Context, args []engine.ScriptVal
 	return nil
 }
 
-// isDebugEnabled checks if debug logging is enabled for component
+// isDebugEnabled checks if debug logging is enabled for component.
+// It returns true if the component has debug logging enabled.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) isDebugEnabled(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -347,7 +370,8 @@ func (db *DebugBridge) isDebugEnabled(ctx context.Context, args []engine.ScriptV
 	return engine.NewBoolValue(enabled), nil
 }
 
-// enableDebugComponent enables debug logging for specific component
+// enableDebugComponent enables debug logging for specific component.
+// It adds the component to the active debug components list.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) enableDebugComponent(ctx context.Context, args []engine.ScriptValue) error {
@@ -367,7 +391,8 @@ func (db *DebugBridge) enableDebugComponent(ctx context.Context, args []engine.S
 	return nil
 }
 
-// disableDebugComponent disables debug logging for specific component
+// disableDebugComponent disables debug logging for specific component.
+// It removes the component from the active debug components list.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) disableDebugComponent(ctx context.Context, args []engine.ScriptValue) error {
@@ -387,7 +412,8 @@ func (db *DebugBridge) disableDebugComponent(ctx context.Context, args []engine.
 	return nil
 }
 
-// listEnabledComponents gets list of components with debug logging enabled
+// listEnabledComponents gets list of components with debug logging enabled.
+// It returns an array of component names that have debugging active.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) listEnabledComponents(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -408,7 +434,8 @@ func (db *DebugBridge) listEnabledComponents(ctx context.Context, args []engine.
 	return engine.NewArrayValue(enabled), nil
 }
 
-// setCustomLogger sets custom logger for debug output
+// setCustomLogger sets custom logger for debug output.
+// It configures the logger with custom prefix and flags.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) setCustomLogger(ctx context.Context, args []engine.ScriptValue) error {
@@ -446,7 +473,8 @@ func (db *DebugBridge) setCustomLogger(ctx context.Context, args []engine.Script
 	return nil
 }
 
-// getDebugEnvironment gets current GO_LLMS_DEBUG environment configuration
+// getDebugEnvironment gets current GO_LLMS_DEBUG environment configuration.
+// It returns the environment value, enabled components, and compilation mode.
 //
 //nolint:unused // Bridge method called via reflection
 func (db *DebugBridge) getDebugEnvironment(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
@@ -471,7 +499,8 @@ func (db *DebugBridge) getDebugEnvironment(ctx context.Context, args []engine.Sc
 
 // Helper methods
 
-// isComponentEnabled checks if a component is enabled for debugging
+// isComponentEnabled checks if a component is enabled for debugging.
+// It looks up the component in the local state map.
 func (db *DebugBridge) isComponentEnabled(component string) bool {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
@@ -485,7 +514,8 @@ func (db *DebugBridge) isComponentEnabled(component string) bool {
 	return false
 }
 
-// getGoLLMSDebugEnv returns the GO_LLMS_DEBUG environment variable value
+// getGoLLMSDebugEnv returns the GO_LLMS_DEBUG environment variable value.
+// It returns "not_set" if the environment variable is not defined.
 func (db *DebugBridge) getGoLLMSDebugEnv() string {
 	envValue := os.Getenv("GO_LLMS_DEBUG")
 	if envValue == "" {
@@ -494,7 +524,8 @@ func (db *DebugBridge) getGoLLMSDebugEnv() string {
 	return envValue
 }
 
-// getEnabledComponentsFromEnv returns components enabled via environment
+// getEnabledComponentsFromEnv returns components enabled via environment.
+// It collects all components marked as enabled in the internal state.
 func (db *DebugBridge) getEnabledComponentsFromEnv() []string {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
@@ -508,14 +539,16 @@ func (db *DebugBridge) getEnabledComponentsFromEnv() []string {
 	return enabled
 }
 
-// getCompilationMode returns whether debug mode is compiled in
+// getCompilationMode returns whether debug mode is compiled in.
+// It indicates the build configuration for conditional compilation.
 func (db *DebugBridge) getCompilationMode() string {
 	// In a real implementation, this would detect the build tags
 	// For now, we return a default indication
 	return "conditional_compilation_enabled"
 }
 
-// parseEnvironmentConfig parses GO_LLMS_DEBUG environment variable
+// parseEnvironmentConfig parses GO_LLMS_DEBUG environment variable.
+// It supports both "all" for all components and comma-separated component lists.
 func (db *DebugBridge) parseEnvironmentConfig() {
 	envDebug := os.Getenv("GO_LLMS_DEBUG")
 	if envDebug == "" {

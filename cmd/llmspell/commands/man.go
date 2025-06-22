@@ -13,7 +13,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 )
 
-// ManCmd generates man pages
+// ManCmd generates man pages.
+// It creates UNIX manual pages for llmspell and its subcommands
+// in various formats with optional system installation.
 type ManCmd struct {
 	BaseCommand
 	Command string `arg:"" optional:"" help:"Specific command to generate man page for (empty for main page)"`
@@ -24,7 +26,9 @@ type ManCmd struct {
 	Format  string `help:"Output format" enum:"troff,text,html" default:"troff"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It generates man pages in the specified format and
+// optionally installs them to the system man directory.
 func (c *ManCmd) Run(ctx context.Context) error {
 	version := "dev" // This would come from build info in real implementation
 
@@ -79,7 +83,9 @@ func (c *ManCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-// generateAll generates all man pages
+// generateAll generates all man pages.
+// It creates man pages for the main command and all subcommands
+// in the specified output directory.
 func (c *ManCmd) generateAll(ctx context.Context, version string) error {
 	if c.Dir == "" {
 		c.Dir = "man"
@@ -120,7 +126,9 @@ func (c *ManCmd) generateAll(ctx context.Context, version string) error {
 	return nil
 }
 
-// installManPages installs man pages to system directory
+// installManPages installs man pages to system directory.
+// It finds the appropriate man directory and installs all
+// generated man pages with proper permissions.
 func (c *ManCmd) installManPages(ctx context.Context, version string) error {
 	// Determine man directory
 	manDir := c.findManDirectory()
@@ -165,7 +173,9 @@ func (c *ManCmd) installManPages(ctx context.Context, version string) error {
 	return nil
 }
 
-// findManDirectory finds appropriate man directory
+// findManDirectory finds appropriate man directory.
+// It checks common system locations and falls back to
+// user-specific directories if needed.
 func (c *ManCmd) findManDirectory() string {
 	// Try common locations
 	candidates := []string{
@@ -189,7 +199,8 @@ func (c *ManCmd) findManDirectory() string {
 	return ""
 }
 
-// checkWritePermission checks if we can write to directory
+// checkWritePermission checks if we can write to directory.
+// It creates and removes a test file to verify write access.
 func (c *ManCmd) checkWritePermission(dir string) error {
 	testFile := filepath.Join(dir, ".llmspell-test")
 	f, err := os.Create(testFile)
@@ -201,7 +212,9 @@ func (c *ManCmd) checkWritePermission(dir string) error {
 	return nil
 }
 
-// writeToFile writes content to file
+// writeToFile writes content to file.
+// It creates the directory structure if needed and writes
+// the content with appropriate permissions.
 func (c *ManCmd) writeToFile(path string, content string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -217,7 +230,8 @@ func (c *ManCmd) writeToFile(path string, content string) error {
 	return nil
 }
 
-// convertToText converts troff to plain text (simplified)
+// convertToText converts troff to plain text (simplified).
+// It removes basic troff formatting commands for readable text output.
 func (c *ManCmd) convertToText(troff string) string {
 	// This is a very simplified conversion
 	// In a real implementation, you'd use a proper troff parser
@@ -250,7 +264,8 @@ func (c *ManCmd) convertToText(troff string) string {
 	return text
 }
 
-// convertToHTML converts troff to HTML (simplified)
+// convertToHTML converts troff to HTML (simplified).
+// It wraps the text conversion in basic HTML structure.
 func (c *ManCmd) convertToHTML(troff string) string {
 	// This is a very simplified conversion
 	html := "<html><head><title>LLMSpell Manual</title></head><body>\n"
@@ -261,7 +276,8 @@ func (c *ManCmd) convertToHTML(troff string) string {
 	return html
 }
 
-// replaceAll replaces all occurrences of old with new
+// replaceAll replaces all occurrences of old with new.
+// Simple string replacement helper function.
 func replaceAll(s, old, new string) string {
 	// Simple implementation since strings.ReplaceAll might not be available
 	for {
@@ -274,7 +290,8 @@ func replaceAll(s, old, new string) string {
 	return s
 }
 
-// findString finds the index of substr in s
+// findString finds the index of substr in s.
+// Returns -1 if substring is not found.
 func findString(s, substr string) int {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		if s[i:i+len(substr)] == substr {

@@ -17,7 +17,9 @@ import (
 	"github.com/yuin/gopher-lua/parse"
 )
 
-// OptimizedCompilerConfig configures the optimized compiler
+// OptimizedCompilerConfig configures the optimized compiler.
+// It provides fine-grained control over various optimization techniques
+// including caching, source transformations, and static analysis.
 type OptimizedCompilerConfig struct {
 	// Chunk cache configuration
 	ChunkCacheConfig ChunkCacheConfig

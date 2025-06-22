@@ -13,20 +13,29 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// ToolsAdapter bridges go-llms tools functionality to Lua
+// ToolsAdapter bridges go-llms tools functionality to Lua.
+// It provides tool discovery, execution, registration, validation,
+// and metrics capabilities for extending LLM functionality with
+// external tools and APIs.
 type ToolsAdapter struct {
 	bridge         engine.Bridge
 	registryBridge engine.Bridge // Tool registry bridge for enhanced functionality
 }
 
-// NewToolsAdapter creates a new tools adapter
+// NewToolsAdapter creates a new tools adapter with the provided bridge.
+// The bridge parameter should be a tools bridge from go-llms that provides
+// tool management functionality. Returns an adapter that can be registered
+// as a Lua module.
 func NewToolsAdapter(bridge engine.Bridge) *ToolsAdapter {
 	return &ToolsAdapter{
 		bridge: bridge,
 	}
 }
 
-// NewToolsAdapterWithRegistry creates a new tools adapter with registry bridge
+// NewToolsAdapterWithRegistry creates a new tools adapter with registry bridge.
+// The bridge parameter provides core tool functionality while the registryBridge
+// parameter enables enhanced tool registry operations. Returns an adapter that
+// can be registered as a Lua module.
 func NewToolsAdapterWithRegistry(bridge engine.Bridge, registryBridge engine.Bridge) *ToolsAdapter {
 	return &ToolsAdapter{
 		bridge:         bridge,
@@ -34,17 +43,22 @@ func NewToolsAdapterWithRegistry(bridge engine.Bridge, registryBridge engine.Bri
 	}
 }
 
-// GetAdapterName returns the adapter name
+// GetAdapterName returns the adapter name.
+// Returns "tools" to identify this adapter type.
 func (ta *ToolsAdapter) GetAdapterName() string {
 	return "tools"
 }
 
-// GetBridge returns the underlying bridge
+// GetBridge returns the underlying bridge instance.
+// Returns nil if no bridge has been configured.
 func (ta *ToolsAdapter) GetBridge() engine.Bridge {
 	return ta.bridge
 }
 
-// CreateLuaModule creates a Lua module for tools
+// CreateLuaModule creates a Lua module for tools.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all tool operations including discovery, execution, registration,
+// validation, and metrics. The module includes both core and registry operations.
 func (ta *ToolsAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table
@@ -127,7 +141,10 @@ func (ta *ToolsAdapter) CreateLuaModule() lua.LGFunction {
 	}
 }
 
-// GetMethods returns available adapter methods
+// GetMethods returns the list of methods exposed by this adapter.
+// The returned slice includes all tool operations such as discovery,
+// execution, registration, validation, and metrics. Additional registry
+// methods are included if a registry bridge is configured.
 func (ta *ToolsAdapter) GetMethods() []string {
 	methods := []string{
 		"listTools", "searchTools", "getToolInfo", "getToolSchema",
@@ -151,7 +168,10 @@ func (ta *ToolsAdapter) GetMethods() []string {
 	return methods
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (ta *ToolsAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata

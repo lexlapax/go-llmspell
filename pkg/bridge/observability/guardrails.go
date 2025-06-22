@@ -1,6 +1,11 @@
 // ABOUTME: Guardrails bridge for go-llms safety system and content filtering
 // ABOUTME: Provides script-accessible guardrail validation and behavioral constraints
 
+// Package observability provides observability bridges for script engines.
+// It implements guardrails for safety and content filtering, metrics collection
+// for performance monitoring, and distributed tracing capabilities. The package
+// wraps go-llms observability features including validation guardrails, performance
+// metrics, and OpenTelemetry-compatible tracing infrastructure.
 package observability
 
 import (
@@ -16,7 +21,11 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// GuardrailsBridge provides script access to go-llms safety system
+// GuardrailsBridge provides script access to go-llms safety system.
+// It manages guardrails for content filtering, behavioral constraints,
+// and safety validation. The bridge supports individual guardrails,
+// guardrail chains for complex validation logic, and asynchronous
+// validation operations with progress tracking.
 type GuardrailsBridge struct {
 	initialized   bool
 	guardrails    map[string]domain.Guardrail
@@ -25,7 +34,9 @@ type GuardrailsBridge struct {
 	mu            sync.RWMutex
 }
 
-// NewGuardrailsBridge creates a new guardrails bridge
+// NewGuardrailsBridge creates a new guardrails bridge.
+// Returns an initialized bridge with empty guardrail registries
+// ready for validation rule configuration.
 func NewGuardrailsBridge() *GuardrailsBridge {
 	return &GuardrailsBridge{
 		guardrails:    make(map[string]domain.Guardrail),
@@ -34,12 +45,15 @@ func NewGuardrailsBridge() *GuardrailsBridge {
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// Always returns "guardrails" for this bridge.
 func (gb *GuardrailsBridge) GetID() string {
 	return "guardrails"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides comprehensive information about the guardrails bridge
+// including version, dependencies, and capabilities.
 func (gb *GuardrailsBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:         "guardrails",
@@ -51,7 +65,9 @@ func (gb *GuardrailsBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the guardrails bridge
+// Initialize sets up the guardrails bridge.
+// Prepares the bridge for guardrail registration and validation operations.
+// Returns an error if initialization fails.
 func (gb *GuardrailsBridge) Initialize(ctx context.Context) error {
 	gb.mu.Lock()
 	defer gb.mu.Unlock()
@@ -60,7 +76,9 @@ func (gb *GuardrailsBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs bridge cleanup
+// Cleanup performs bridge cleanup.
+// Clears all registered guardrails, chains, and async channels.
+// Ensures clean shutdown of validation resources.
 func (gb *GuardrailsBridge) Cleanup(ctx context.Context) error {
 	gb.mu.Lock()
 	defer gb.mu.Unlock()
@@ -74,19 +92,25 @@ func (gb *GuardrailsBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns initialization status
+// IsInitialized returns initialization status.
+// Thread-safe check for bridge initialization state.
+// Returns true if the bridge has been initialized.
 func (gb *GuardrailsBridge) IsInitialized() bool {
 	gb.mu.RLock()
 	defer gb.mu.RUnlock()
 	return gb.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// Enables the engine to access guardrail validation functionality.
+// Returns an error if registration fails.
 func (gb *GuardrailsBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(gb)
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// Provides comprehensive guardrail operations including creation,
+// chaining, validation, and asynchronous processing capabilities.
 func (gb *GuardrailsBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{
@@ -195,7 +219,9 @@ func (gb *GuardrailsBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// Checks that the method exists and has the required number of arguments.
+// Returns an error if the bridge is not initialized or validation fails.
 func (gb *GuardrailsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !gb.IsInitialized() {
 		return fmt.Errorf("guardrails bridge not initialized")
@@ -219,7 +245,9 @@ func (gb *GuardrailsBridge) ValidateMethod(name string, args []engine.ScriptValu
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// Maps go-llms guardrail types to script-compatible representations
+// for seamless integration with script engines.
 func (gb *GuardrailsBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"guardrail": {
@@ -243,7 +271,9 @@ func (gb *GuardrailsBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Specifies the permissions needed for guardrail operations including
+// creation, validation, and async processing capabilities.
 func (gb *GuardrailsBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -261,7 +291,9 @@ func (gb *GuardrailsBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// Routes method calls to their implementations and handles return value conversion.
+// Returns an error if the method is unknown or execution fails.
 func (gb *GuardrailsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	switch name {
 	case "createGuardrailFunc":
@@ -331,7 +363,9 @@ func (gb *GuardrailsBridge) ExecuteMethod(ctx context.Context, name string, args
 
 // Bridge method implementations
 
-// createGuardrailFunc creates a guardrail from a validation function
+// createGuardrailFunc creates a guardrail from a validation function.
+// The validation function receives state data and returns true if valid.
+// Returns a guardrail object with ID and metadata on success.
 func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createGuardrailFunc", args); err != nil {
 		return nil, err
@@ -453,7 +487,9 @@ func (gb *GuardrailsBridge) createGuardrailFunc(ctx context.Context, args []engi
 	}, nil
 }
 
-// createGuardrailChain creates a new guardrail chain
+// createGuardrailChain creates a new guardrail chain.
+// Chains allow sequential or fail-fast execution of multiple guardrails.
+// Returns a chain object with ID for adding guardrails.
 func (gb *GuardrailsBridge) createGuardrailChain(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createGuardrailChain", args); err != nil {
 		return nil, err
@@ -505,7 +541,9 @@ func (gb *GuardrailsBridge) createGuardrailChain(ctx context.Context, args []eng
 	}, nil
 }
 
-// addGuardrailToChain adds a guardrail to a chain
+// addGuardrailToChain adds a guardrail to a chain.
+// The guardrail will be executed in the order it was added.
+// Returns an error if the chain or guardrail doesn't exist.
 func (gb *GuardrailsBridge) addGuardrailToChain(ctx context.Context, args []engine.ScriptValue) error {
 	if err := gb.ValidateMethod("addGuardrailToChain", args); err != nil {
 		return err
@@ -539,7 +577,9 @@ func (gb *GuardrailsBridge) addGuardrailToChain(ctx context.Context, args []engi
 	return nil
 }
 
-// validateGuardrail validates state against a guardrail
+// validateGuardrail validates state against a guardrail.
+// Performs synchronous validation and returns immediately.
+// Returns an error if validation fails or guardrail doesn't exist.
 func (gb *GuardrailsBridge) validateGuardrail(ctx context.Context, args []engine.ScriptValue) error {
 	if err := gb.ValidateMethod("validateGuardrail", args); err != nil {
 		return err
@@ -573,7 +613,9 @@ func (gb *GuardrailsBridge) validateGuardrail(ctx context.Context, args []engine
 	return guardrail.Validate(ctx, state)
 }
 
-// validateGuardrailAsync validates state asynchronously
+// validateGuardrailAsync validates state asynchronously.
+// Returns immediately with a validation ID for tracking progress.
+// The timeout parameter specifies maximum wait time in seconds.
 func (gb *GuardrailsBridge) validateGuardrailAsync(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("validateGuardrailAsync", args); err != nil {
 		return nil, err
@@ -624,8 +666,9 @@ func (gb *GuardrailsBridge) validateGuardrailAsync(ctx context.Context, args []e
 	}, nil
 }
 
-// validateChain validates state against a guardrail chain
-// Used via bridge reflection system, not directly called in Go code
+// validateChain validates state against a guardrail chain.
+// Executes all guardrails in the chain according to fail-fast setting.
+// Returns an error if any guardrail in the chain fails validation.
 //
 //nolint:unused // Bridge method called via reflection
 func (gb *GuardrailsBridge) validateChain(ctx context.Context, args []engine.ScriptValue) error {
@@ -663,7 +706,9 @@ func (gb *GuardrailsBridge) validateChain(ctx context.Context, args []engine.Scr
 
 // Built-in guardrail creation methods
 
-// createRequiredKeysGuardrail creates a guardrail that requires specific keys
+// createRequiredKeysGuardrail creates a guardrail that requires specific keys.
+// Validates that state contains all specified keys with non-nil values.
+// Returns a guardrail object configured for key validation.
 func (gb *GuardrailsBridge) createRequiredKeysGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createRequiredKeysGuardrail", args); err != nil {
 		return nil, err
@@ -711,7 +756,9 @@ func (gb *GuardrailsBridge) createRequiredKeysGuardrail(ctx context.Context, arg
 	}, nil
 }
 
-// createContentModerationGuardrail creates a content moderation guardrail
+// createContentModerationGuardrail creates a content moderation guardrail.
+// Validates that content doesn't contain prohibited words or phrases.
+// Applies to both input and output for comprehensive filtering.
 func (gb *GuardrailsBridge) createContentModerationGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createContentModerationGuardrail", args); err != nil {
 		return nil, err
@@ -759,7 +806,9 @@ func (gb *GuardrailsBridge) createContentModerationGuardrail(ctx context.Context
 	}, nil
 }
 
-// createMessageCountGuardrail creates a message count guardrail
+// createMessageCountGuardrail creates a message count guardrail.
+// Limits the number of messages in conversation state.
+// Useful for preventing unbounded conversation growth.
 func (gb *GuardrailsBridge) createMessageCountGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createMessageCountGuardrail", args); err != nil {
 		return nil, err
@@ -796,7 +845,9 @@ func (gb *GuardrailsBridge) createMessageCountGuardrail(ctx context.Context, arg
 	}, nil
 }
 
-// createMaxStateSizeGuardrail creates a max state size guardrail
+// createMaxStateSizeGuardrail creates a max state size guardrail.
+// Limits the total size of state data to prevent memory issues.
+// Size is calculated as serialized byte count.
 func (gb *GuardrailsBridge) createMaxStateSizeGuardrail(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := gb.ValidateMethod("createMaxStateSizeGuardrail", args); err != nil {
 		return nil, err
@@ -833,7 +884,8 @@ func (gb *GuardrailsBridge) createMaxStateSizeGuardrail(ctx context.Context, arg
 	}, nil
 }
 
-// convertScriptObjectToMap converts a ScriptValue object to a map
+// convertScriptObjectToMap converts a ScriptValue object to a map.
+// Helper function for converting script objects to Go maps.
 func convertScriptObjectToMap(obj engine.ObjectValue) map[string]interface{} {
 	result := make(map[string]interface{})
 	for key, value := range obj.Fields() {
@@ -844,7 +896,9 @@ func convertScriptObjectToMap(obj engine.ObjectValue) map[string]interface{} {
 
 // Helper methods for state conversion
 
-// stateToMap converts a domain.State to a script-friendly map
+// stateToMap converts a domain.State to a script-friendly map.
+// Extracts all state data, messages, artifacts, and metadata.
+// Returns an error if conversion fails.
 func (gb *GuardrailsBridge) stateToMap(state *domain.State) (map[string]interface{}, error) {
 	if state == nil {
 		return make(map[string]interface{}), nil
@@ -894,7 +948,9 @@ func (gb *GuardrailsBridge) stateToMap(state *domain.State) (map[string]interfac
 	return result, nil
 }
 
-// mapToState converts a script map to a domain.State
+// mapToState converts a script map to a domain.State.
+// Reconstructs state from map data including messages and artifacts.
+// Skips internal fields (prefixed with underscore) during conversion.
 func (gb *GuardrailsBridge) mapToState(data map[string]interface{}) (*domain.State, error) {
 	state := domain.NewState()
 

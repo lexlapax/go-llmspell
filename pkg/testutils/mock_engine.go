@@ -13,7 +13,8 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// ExecuteCall records details of each Execute method call for verification
+// ExecuteCall records details of each Execute method call for verification.
+// It captures all inputs and outputs for test assertions.
 type ExecuteCall struct {
 	Script string
 	Params map[string]interface{}
@@ -21,7 +22,9 @@ type ExecuteCall struct {
 	Error  error
 }
 
-// MockScriptEngine provides a configurable mock implementation of engine.ScriptEngine
+// MockScriptEngine provides a configurable mock implementation of engine.ScriptEngine.
+// It supports custom execution functions, call recording, and full interface compliance
+// for comprehensive testing of bridge and engine interactions.
 type MockScriptEngine struct {
 	mu             sync.RWMutex
 	name           string

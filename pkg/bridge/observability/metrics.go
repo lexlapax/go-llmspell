@@ -16,7 +16,11 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// MetricsBridge provides script access to go-llms metrics system
+// MetricsBridge provides script access to go-llms metrics system.
+// It manages performance metrics including counters, gauges, timers,
+// and ratio counters. The bridge provides thread-safe operations
+// for metric collection and aggregation with support for custom
+// metrics and comprehensive performance monitoring.
 type MetricsBridge struct {
 	initialized   bool
 	registry      *metrics.Registry
@@ -27,7 +31,9 @@ type MetricsBridge struct {
 	mu            sync.RWMutex
 }
 
-// NewMetricsBridge creates a new metrics bridge
+// NewMetricsBridge creates a new metrics bridge.
+// Returns an initialized bridge connected to the global metrics registry
+// for comprehensive performance monitoring capabilities.
 func NewMetricsBridge() *MetricsBridge {
 	return &MetricsBridge{
 		registry:      metrics.GetRegistry(),
@@ -38,12 +44,15 @@ func NewMetricsBridge() *MetricsBridge {
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// Always returns "metrics" for this bridge.
 func (mb *MetricsBridge) GetID() string {
 	return "metrics"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides comprehensive information about the metrics bridge
+// including version, dependencies, and capabilities.
 func (mb *MetricsBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:         "metrics",
@@ -55,7 +64,9 @@ func (mb *MetricsBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the metrics bridge
+// Initialize sets up the metrics bridge.
+// Prepares the bridge for metric collection and monitoring.
+// Returns an error if initialization fails.
 func (mb *MetricsBridge) Initialize(ctx context.Context) error {
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
@@ -64,7 +75,9 @@ func (mb *MetricsBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs bridge cleanup
+// Cleanup performs bridge cleanup.
+// Clears all registered metrics and resets collections.
+// Ensures clean shutdown of metric resources.
 func (mb *MetricsBridge) Cleanup(ctx context.Context) error {
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
@@ -79,19 +92,25 @@ func (mb *MetricsBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns initialization status
+// IsInitialized returns initialization status.
+// Thread-safe check for bridge initialization state.
+// Returns true if the bridge has been initialized.
 func (mb *MetricsBridge) IsInitialized() bool {
 	mb.mu.RLock()
 	defer mb.mu.RUnlock()
 	return mb.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// Enables the engine to access metric collection functionality.
+// Returns an error if registration fails.
 func (mb *MetricsBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(mb)
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// Provides comprehensive metric operations including creation,
+// updates, timing, and aggregation capabilities.
 func (mb *MetricsBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Counter methods
@@ -291,7 +310,9 @@ func (mb *MetricsBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// Checks that the method exists and has the required number of arguments.
+// Returns an error if the bridge is not initialized or validation fails.
 func (mb *MetricsBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !mb.IsInitialized() {
 		return fmt.Errorf("metrics bridge not initialized")
@@ -315,7 +336,9 @@ func (mb *MetricsBridge) ValidateMethod(name string, args []engine.ScriptValue) 
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// Maps go-llms metric types to script-compatible representations
+// for seamless integration with script engines.
 func (mb *MetricsBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"counter": {
@@ -345,7 +368,9 @@ func (mb *MetricsBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// Routes method calls to their implementations and handles return value conversion.
+// Returns an error if the method is unknown or execution fails.
 func (mb *MetricsBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	switch name {
 	case "createCounter":
@@ -482,7 +507,9 @@ func (mb *MetricsBridge) ExecuteMethod(ctx context.Context, name string, args []
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Specifies the permissions needed for metric operations including
+// creation, updates, and aggregation capabilities.
 func (mb *MetricsBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -504,7 +531,9 @@ func (mb *MetricsBridge) RequiredPermissions() []engine.Permission {
 
 // Counter methods
 
-// createCounter creates a new counter
+// createCounter creates a new counter.
+// Counters are monotonically increasing values for tracking counts.
+// Returns a counter object with ID for increment operations.
 func (mb *MetricsBridge) createCounter(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createCounter", args); err != nil {
 		return nil, err
@@ -532,7 +561,9 @@ func (mb *MetricsBridge) createCounter(ctx context.Context, args []engine.Script
 	}, nil
 }
 
-// incrementCounter increments a counter by 1
+// incrementCounter increments a counter by 1.
+// Thread-safe operation for tracking event occurrences.
+// Returns an error if the counter doesn't exist.
 func (mb *MetricsBridge) incrementCounter(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("incrementCounter", args); err != nil {
 		return err
@@ -609,7 +640,9 @@ func (mb *MetricsBridge) getCounterValue(ctx context.Context, args []engine.Scri
 
 // Gauge methods
 
-// createGauge creates a new gauge
+// createGauge creates a new gauge.
+// Gauges track values that can go up and down (e.g., memory usage).
+// Returns a gauge object with ID for value operations.
 func (mb *MetricsBridge) createGauge(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createGauge", args); err != nil {
 		return nil, err
@@ -637,7 +670,9 @@ func (mb *MetricsBridge) createGauge(ctx context.Context, args []engine.ScriptVa
 	}, nil
 }
 
-// setGaugeValue sets the gauge value
+// setGaugeValue sets the gauge value.
+// Replaces the current gauge value with the specified number.
+// Returns an error if the gauge doesn't exist.
 func (mb *MetricsBridge) setGaugeValue(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("setGaugeValue", args); err != nil {
 		return err
@@ -740,7 +775,9 @@ func (mb *MetricsBridge) getGaugeValue(ctx context.Context, args []engine.Script
 
 // Ratio counter methods
 
-// createRatioCounter creates a new ratio counter
+// createRatioCounter creates a new ratio counter.
+// Tracks ratios between two counters (e.g., cache hit rate).
+// Returns a ratio counter object with ID for tracking operations.
 func (mb *MetricsBridge) createRatioCounter(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createRatioCounter", args); err != nil {
 		return nil, err
@@ -768,7 +805,9 @@ func (mb *MetricsBridge) createRatioCounter(ctx context.Context, args []engine.S
 	}, nil
 }
 
-// incrementRatioNumerator increments the ratio numerator
+// incrementRatioNumerator increments the ratio numerator.
+// Increases the success/hit count for ratio calculation.
+// Returns an error if the ratio counter doesn't exist.
 func (mb *MetricsBridge) incrementRatioNumerator(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("incrementRatioNumerator", args); err != nil {
 		return err
@@ -864,7 +903,9 @@ func (mb *MetricsBridge) getRatioValues(ctx context.Context, args []engine.Scrip
 
 // Timer methods
 
-// createTimer creates a new timer
+// createTimer creates a new timer.
+// Timers track execution duration with statistical analysis.
+// Returns a timer object with ID for timing operations.
 func (mb *MetricsBridge) createTimer(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("createTimer", args); err != nil {
 		return nil, err
@@ -892,7 +933,9 @@ func (mb *MetricsBridge) createTimer(ctx context.Context, args []engine.ScriptVa
 	}, nil
 }
 
-// startTimer starts a timer
+// startTimer starts a timer.
+// Begins timing an operation for duration tracking.
+// Returns an error if the timer doesn't exist.
 func (mb *MetricsBridge) startTimer(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("startTimer", args); err != nil {
 		return err
@@ -996,7 +1039,9 @@ func (mb *MetricsBridge) getTimerStats(ctx context.Context, args []engine.Script
 
 // Registry methods
 
-// getAllMetrics gets all metrics from the registry
+// getAllMetrics gets all metrics from the registry.
+// Returns a comprehensive snapshot of all metric values.
+// Useful for monitoring and reporting purposes.
 func (mb *MetricsBridge) getAllMetrics(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
 	if err := mb.ValidateMethod("getAllMetrics", args); err != nil {
 		return nil, err
@@ -1049,7 +1094,9 @@ func (mb *MetricsBridge) getAllMetrics(ctx context.Context, args []engine.Script
 	return result, nil
 }
 
-// resetAllMetrics resets all metrics
+// resetAllMetrics resets all metrics.
+// Clears all metric registrations from the bridge.
+// Note: Does not reset the global registry values.
 func (mb *MetricsBridge) resetAllMetrics(ctx context.Context, args []engine.ScriptValue) error {
 	if err := mb.ValidateMethod("resetAllMetrics", args); err != nil {
 		return err

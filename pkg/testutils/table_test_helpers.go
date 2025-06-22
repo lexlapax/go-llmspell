@@ -13,7 +13,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// MethodTestCase represents a test case for bridge method execution
+// MethodTestCase represents a test case for bridge method execution.
+// It provides a standardized structure for table-driven tests with
+// support for setup/teardown and comprehensive error checking.
 type MethodTestCase struct {
 	Name       string               // Test case name
 	Method     string               // Method name to test
@@ -26,7 +28,9 @@ type MethodTestCase struct {
 	SkipReason string               // Optional skip reason
 }
 
-// ValidationTestCase represents a test case for ValidateMethod testing
+// ValidationTestCase represents a test case for ValidateMethod testing.
+// It focuses on method argument validation without execution,
+// useful for testing input validation logic.
 type ValidationTestCase struct {
 	Name       string               // Test case name
 	Method     string               // Method name to validate

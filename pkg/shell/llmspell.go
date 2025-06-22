@@ -1,6 +1,9 @@
 // ABOUTME: LLMSpell-specific shell completion setup using Kong CLI metadata.
 // ABOUTME: Extracts command structure from Kong to generate accurate completions.
 
+// Package shell provides shell completion generation for various shells.
+// It supports bash, zsh, fish, PowerShell, and basic POSIX shell,
+// with specific features for llmspell CLI integration.
 package shell
 
 import (
@@ -9,7 +12,9 @@ import (
 	"strings"
 )
 
-// GenerateFromKong generates shell completion from Kong CLI structure
+// GenerateFromKong generates shell completion from Kong CLI structure.
+// It uses reflection to extract commands, subcommands, and flags from
+// a Kong CLI application structure for accurate completion generation.
 func GenerateFromKong(app interface{}, programName string) (*CompletionGenerator, error) {
 	gen := NewCompletionGenerator(programName)
 
@@ -51,7 +56,9 @@ func GenerateFromKong(app interface{}, programName string) (*CompletionGenerator
 	return gen, nil
 }
 
-// extractCommand extracts a command from a struct field
+// extractCommand extracts a command from a struct field.
+// It processes the field's tags and type information to build
+// a complete command structure with flags and subcommands.
 func extractCommand(field reflect.StructField) *Command {
 	cmd := &Command{
 		Name:        toKebabCase(field.Name),
@@ -91,7 +98,9 @@ func extractCommand(field reflect.StructField) *Command {
 	return cmd
 }
 
-// extractFlag extracts a flag from a struct field
+// extractFlag extracts a flag from a struct field.
+// It determines flag properties including short/long names,
+// value requirements, and enum values from struct tags.
 func extractFlag(field reflect.StructField) *Flag {
 	// Skip if it's a command
 	if field.Tag.Get("cmd") != "" {
@@ -140,6 +149,8 @@ func extractFlag(field reflect.StructField) *Flag {
 
 // Helper functions for tag parsing
 
+// getHelp extracts the help text from a struct tag.
+// It returns an empty string if no help tag is found.
 func getHelp(tag reflect.StructTag) string {
 	if help := tag.Get("help"); help != "" {
 		return help
@@ -147,6 +158,8 @@ func getHelp(tag reflect.StructTag) string {
 	return ""
 }
 
+// getShort extracts the short flag name from a struct tag.
+// It returns an empty string if no short tag is found.
 func getShort(tag reflect.StructTag) string {
 	if short := tag.Get("short"); short != "" {
 		return short
@@ -154,6 +167,9 @@ func getShort(tag reflect.StructTag) string {
 	return ""
 }
 
+// getEnum extracts enum values from a struct tag.
+// It returns a comma-separated string of valid values,
+// or empty string if no enum tag is found.
 func getEnum(tag reflect.StructTag) string {
 	if enum := tag.Get("enum"); enum != "" {
 		return enum
@@ -161,7 +177,9 @@ func getEnum(tag reflect.StructTag) string {
 	return ""
 }
 
-// toKebabCase converts PascalCase to kebab-case
+// toKebabCase converts PascalCase to kebab-case.
+// It's used to convert Go struct field names to CLI-friendly
+// command and flag names.
 func toKebabCase(s string) string {
 	var result strings.Builder
 	for i, r := range s {
@@ -173,7 +191,9 @@ func toKebabCase(s string) string {
 	return result.String()
 }
 
-// LLMSpellCommands defines the llmspell command structure for completion
+// LLMSpellCommands defines the llmspell command structure for completion.
+// It manually defines all commands, subcommands, and flags for the
+// llmspell CLI to enable accurate shell completion.
 func LLMSpellCommands() *CompletionGenerator {
 	gen := NewCompletionGenerator("llmspell")
 
@@ -341,7 +361,9 @@ func LLMSpellCommands() *CompletionGenerator {
 	return gen
 }
 
-// InstallInstructions returns installation instructions for each shell
+// InstallInstructions returns installation instructions for each shell.
+// It provides shell-specific commands and configuration needed to
+// enable tab completion for the llmspell CLI.
 func InstallInstructions(shell Shell) string {
 	switch shell {
 	case Bash:

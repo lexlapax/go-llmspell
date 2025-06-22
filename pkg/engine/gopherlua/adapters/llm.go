@@ -12,7 +12,10 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// LLMAdapter specializes BridgeAdapter for LLM functionality
+// LLMAdapter specializes BridgeAdapter for LLM functionality.
+// It provides comprehensive LLM operations including agent creation,
+// completion methods, streaming, model selection, provider management,
+// and connection pool functionality for Lua scripts.
 type LLMAdapter struct {
 	*gopherlua.BridgeAdapter
 
@@ -21,7 +24,11 @@ type LLMAdapter struct {
 	poolBridge      engine.Bridge
 }
 
-// NewLLMAdapter creates a new LLM adapter with optional related bridges
+// NewLLMAdapter creates a new LLM adapter with optional related bridges.
+// The bridge parameter is the main LLM bridge from go-llms. The providersBridge
+// parameter enables provider management functionality. The poolBridge parameter
+// enables connection pool management. Returns an adapter that can be registered
+// as a Lua module.
 func NewLLMAdapter(bridge engine.Bridge, providersBridge engine.Bridge, poolBridge engine.Bridge) *LLMAdapter {
 	// Create base adapter
 	baseAdapter := gopherlua.NewBridgeAdapter(bridge)
@@ -46,7 +53,10 @@ func (la *LLMAdapter) ensureLLMMethods() {
 	// In production, this could validate that expected LLM methods exist
 }
 
-// CreateLuaModule creates a Lua module with LLM-specific enhancements
+// CreateLuaModule creates a Lua module with LLM-specific enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all LLM operations, provider management, pool management, and
+// model selection functionality. The module provides a complete LLM API for Lua scripts.
 func (la *LLMAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Get base module
@@ -1339,7 +1349,10 @@ func (la *LLMAdapter) addConstants(L *lua.LState, module *lua.LTable) {
 	L.SetField(module, "STRATEGIES", strategies)
 }
 
-// WrapMethod wraps a bridge method with LLM-specific handling
+// WrapMethod wraps a bridge method with LLM-specific handling.
+// It adds validation and error handling for LLM operations like
+// generate, stream, and embeddings. Returns a Lua function
+// that can be called from Lua scripts.
 func (la *LLMAdapter) WrapMethod(methodName string) lua.LGFunction {
 	// Get base wrapped method
 	baseWrapped := la.BridgeAdapter.WrapMethod(methodName)
@@ -1590,7 +1603,10 @@ func (la *LLMAdapter) tableToMap(table *lua.LTable) map[string]engine.ScriptValu
 	return result
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (la *LLMAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	bridgeMetadata := la.GetBridge().GetMetadata()
@@ -1612,7 +1628,9 @@ func (la *LLMAdapter) GetBridge() engine.Bridge {
 	return la.BridgeAdapter.GetBridge()
 }
 
-// GetMethods returns the available methods
+// GetMethods returns the list of methods exposed by this adapter.
+// The returned slice includes all LLM operations such as agent creation,
+// text generation, streaming, embeddings, provider management, and pool operations.
 func (la *LLMAdapter) GetMethods() []string {
 	// Get base methods
 	methods := la.BridgeAdapter.GetMethods()

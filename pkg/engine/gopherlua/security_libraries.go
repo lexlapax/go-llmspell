@@ -1,6 +1,9 @@
 // ABOUTME: SafeLibraryLoader handles secure loading of Lua standard libraries
 // ABOUTME: Removes dangerous functions and provides safe replacements based on security level
 
+// Package gopherlua provides a Lua engine implementation for go-llmspell.
+// This file implements secure loading of Lua standard libraries, removing
+// dangerous functions and providing safe replacements based on security levels.
 package gopherlua
 
 import (
@@ -10,7 +13,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// SafeLibraryLoader manages library loading with security restrictions
+// SafeLibraryLoader manages library loading with security restrictions.
+// It controls which Lua standard libraries are loaded and removes dangerous
+// functions based on the configured security level.
 type SafeLibraryLoader struct {
 	level           SecurityLevel
 	libraryLoaders  map[string]lua.LGFunction
@@ -18,7 +23,7 @@ type SafeLibraryLoader struct {
 	replacements    map[string]lua.LGFunction
 }
 
-// NewSafeLibraryLoader creates a new safe library loader
+// NewSafeLibraryLoader creates a new safe library loader.
 func NewSafeLibraryLoader(level SecurityLevel) *SafeLibraryLoader {
 	loader := &SafeLibraryLoader{
 		level: level,
@@ -45,7 +50,7 @@ func NewSafeLibraryLoader(level SecurityLevel) *SafeLibraryLoader {
 	return loader
 }
 
-// LoadLibraries loads the specified libraries with security restrictions
+// LoadLibraries loads the specified libraries with security restrictions.
 func (sll *SafeLibraryLoader) LoadLibraries(L *lua.LState, libraries []string) error {
 	for _, libName := range libraries {
 		// Skip debug library completely
@@ -73,7 +78,7 @@ func (sll *SafeLibraryLoader) LoadLibraries(L *lua.LState, libraries []string) e
 	return nil
 }
 
-// RemoveDangerousFunctions removes functions that are considered dangerous
+// RemoveDangerousFunctions removes functions that are considered dangerous.
 func (sll *SafeLibraryLoader) RemoveDangerousFunctions(L *lua.LState) error {
 	for libName, functions := range sll.deniedFunctions {
 		lib := L.GetGlobal(libName)
@@ -91,7 +96,7 @@ func (sll *SafeLibraryLoader) RemoveDangerousFunctions(L *lua.LState) error {
 	return nil
 }
 
-// ApplyCustomReplacements installs safe replacement functions
+// ApplyCustomReplacements installs safe replacement functions.
 func (sll *SafeLibraryLoader) ApplyCustomReplacements(L *lua.LState) error {
 	// Replace dangerous global functions with safe versions
 	for name, replacement := range sll.replacements {
@@ -101,7 +106,7 @@ func (sll *SafeLibraryLoader) ApplyCustomReplacements(L *lua.LState) error {
 	return nil
 }
 
-// configureDeniedFunctions sets up the list of functions to remove based on security level
+// configureDeniedFunctions sets up the list of functions to remove based on security level.
 func (sll *SafeLibraryLoader) configureDeniedFunctions() {
 	switch sll.level {
 	case SecurityLevelMinimal:
@@ -136,7 +141,7 @@ func (sll *SafeLibraryLoader) configureDeniedFunctions() {
 	}
 }
 
-// configureReplacements sets up safe replacement functions
+// configureReplacements sets up safe replacement functions.
 func (sll *SafeLibraryLoader) configureReplacements() {
 	// Safe print that captures output
 	sll.replacements["print"] = func(L *lua.LState) int {
@@ -196,7 +201,7 @@ func (sll *SafeLibraryLoader) configureReplacements() {
 	}
 }
 
-// isLibraryAllowed checks if a library is allowed at the current security level
+// isLibraryAllowed checks if a library is allowed at the current security level.
 func (sll *SafeLibraryLoader) isLibraryAllowed(libName string) bool {
 	switch sll.level {
 	case SecurityLevelStrict:

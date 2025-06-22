@@ -9,12 +9,14 @@ import (
 	"time"
 )
 
-// TestContext creates a basic test context with background
+// TestContext creates a basic test context with background.
+// This is the simplest context for tests that don't need timeout or cancellation.
 func TestContext() context.Context {
 	return context.Background()
 }
 
-// TestContextWithTimeout creates a test context with the specified timeout
+// TestContextWithTimeout creates a test context with the specified timeout.
+// It automatically registers cleanup to ensure the context is cancelled when the test completes.
 func TestContextWithTimeout(t *testing.T, timeout time.Duration) (context.Context, context.CancelFunc) {
 	t.Helper()
 
@@ -28,7 +30,8 @@ func TestContextWithTimeout(t *testing.T, timeout time.Duration) (context.Contex
 	return ctx, cancel
 }
 
-// TestContextWithCancel creates a test context with cancellation capability
+// TestContextWithCancel creates a test context with cancellation capability.
+// It automatically registers cleanup to ensure the context is cancelled when the test completes.
 func TestContextWithCancel(t *testing.T) (context.Context, context.CancelFunc) {
 	t.Helper()
 

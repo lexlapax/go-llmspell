@@ -13,7 +13,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// ScriptLoggerBridge provides a unified script-friendly logging interface
+// ScriptLoggerBridge provides a unified script-friendly logging interface.
+// It combines debug and structured logging capabilities with context propagation
+// and customizable output formatting for comprehensive script logging.
 type ScriptLoggerBridge struct {
 	mu           sync.RWMutex
 	initialized  bool
@@ -23,7 +25,8 @@ type ScriptLoggerBridge struct {
 	config       *LoggerConfig          // Logger configuration
 }
 
-// LoggerConfig holds configuration for the script logger
+// LoggerConfig holds configuration for the script logger.
+// It specifies logging levels, formats, components, and output targets.
 type LoggerConfig struct {
 	DefaultLevel    string                 `json:"default_level"`    // Default log level
 	EnableDebug     bool                   `json:"enable_debug"`     // Enable debug logging
@@ -34,7 +37,8 @@ type LoggerConfig struct {
 	OutputTarget    string                 `json:"output_target"`    // Output target: stderr, stdout, file
 }
 
-// DefaultLoggerConfig returns default configuration
+// DefaultLoggerConfig returns default configuration.
+// It sets up reasonable defaults for script logging with both debug and structured modes.
 func DefaultLoggerConfig() *LoggerConfig {
 	return &LoggerConfig{
 		DefaultLevel:    "info",
@@ -47,7 +51,8 @@ func DefaultLoggerConfig() *LoggerConfig {
 	}
 }
 
-// NewScriptLoggerBridge creates a new unified script logger bridge
+// NewScriptLoggerBridge creates a new unified script logger bridge.
+// It initializes both debug and structured logging bridges for comprehensive logging.
 func NewScriptLoggerBridge() *ScriptLoggerBridge {
 	return &ScriptLoggerBridge{
 		debugBridge:  NewDebugBridge(),
@@ -57,12 +62,15 @@ func NewScriptLoggerBridge() *ScriptLoggerBridge {
 	}
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (sl *ScriptLoggerBridge) GetID() string {
 	return "script_logger"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the script logger bridge including
+// version, description, and dependencies on debug and slog bridges.
 func (sl *ScriptLoggerBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "script_logger",
@@ -77,7 +85,8 @@ func (sl *ScriptLoggerBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the script logger bridge
+// Initialize sets up the script logger bridge.
+// It initializes both debug and structured logging sub-bridges.
 func (sl *ScriptLoggerBridge) Initialize(ctx context.Context) error {
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
@@ -95,7 +104,8 @@ func (sl *ScriptLoggerBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs bridge cleanup
+// Cleanup performs bridge cleanup.
+// It cleans up both sub-bridges and clears context attributes.
 func (sl *ScriptLoggerBridge) Cleanup(ctx context.Context) error {
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
@@ -120,19 +130,23 @@ func (sl *ScriptLoggerBridge) Cleanup(ctx context.Context) error {
 	return err
 }
 
-// IsInitialized returns initialization status
+// IsInitialized returns initialization status.
+// It returns true if the bridge has been initialized and is ready for use.
 func (sl *ScriptLoggerBridge) IsInitialized() bool {
 	sl.mu.RLock()
 	defer sl.mu.RUnlock()
 	return sl.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access unified logging through this bridge.
 func (sl *ScriptLoggerBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(sl)
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// It provides metadata about all logging methods available to scripts,
+// including unified logging, context management, and convenience methods.
 func (sl *ScriptLoggerBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Unified logging methods
@@ -297,13 +311,16 @@ func (sl *ScriptLoggerBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// It delegates validation to the engine based on Methods() metadata.
 func (sl *ScriptLoggerBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// It defines how Go logging types are mapped to script types
+// for configuration, context, and logger instances.
 func (sl *ScriptLoggerBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"logger_config": {
@@ -327,7 +344,8 @@ func (sl *ScriptLoggerBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// It specifies permissions for context management and log output.
 func (sl *ScriptLoggerBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -345,7 +363,9 @@ func (sl *ScriptLoggerBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate logging operations.
 func (sl *ScriptLoggerBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	// Check initialization first
 	sl.mu.RLock()
@@ -396,7 +416,8 @@ func (sl *ScriptLoggerBridge) ExecuteMethod(ctx context.Context, name string, ar
 
 // Bridge method implementations
 
-// log is the unified logging method
+// log is the unified logging method.
+// It handles multiple argument patterns for flexible logging with level, component, and attributes.
 func (sl *ScriptLoggerBridge) log(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("log requires at least level and message")
@@ -472,7 +493,8 @@ func (sl *ScriptLoggerBridge) log(ctx context.Context, args []engine.ScriptValue
 	return sl.logWithLevelAndContext(ctx, level, component, message, attributes)
 }
 
-// logWithContext logs with additional context propagation
+// logWithContext logs with additional context propagation.
+// It merges provided context with global attributes for enriched logging.
 func (sl *ScriptLoggerBridge) logWithContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("logWithContext requires level and message")
@@ -502,7 +524,8 @@ func (sl *ScriptLoggerBridge) logWithContext(ctx context.Context, args []engine.
 	return sl.logWithLevelAndContext(ctx, level, "", message, mergedAttrs)
 }
 
-// withContext creates logging context with attributes
+// withContext creates logging context with attributes.
+// It returns a context object that can be used for scoped logging.
 func (sl *ScriptLoggerBridge) withContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("withContext requires attributes")
@@ -529,7 +552,8 @@ func (sl *ScriptLoggerBridge) withContext(ctx context.Context, args []engine.Scr
 	return engine.NewObjectValue(contextObj), nil
 }
 
-// setGlobalContext sets global context attributes
+// setGlobalContext sets global context attributes.
+// These attributes are included in all subsequent log messages.
 func (sl *ScriptLoggerBridge) setGlobalContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("setGlobalContext requires attributes")
@@ -552,7 +576,8 @@ func (sl *ScriptLoggerBridge) setGlobalContext(ctx context.Context, args []engin
 	return engine.NewNilValue(), nil
 }
 
-// clearGlobalContext clears global context attributes
+// clearGlobalContext clears global context attributes.
+// It removes all global attributes from future log messages.
 func (sl *ScriptLoggerBridge) clearGlobalContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
@@ -561,7 +586,8 @@ func (sl *ScriptLoggerBridge) clearGlobalContext(ctx context.Context, args []eng
 	return engine.NewNilValue(), nil
 }
 
-// configure configures the script logger
+// configure configures the script logger.
+// It updates logger settings including level, format, and enabled components.
 func (sl *ScriptLoggerBridge) configure(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("configure requires config object")
@@ -617,7 +643,8 @@ func (sl *ScriptLoggerBridge) configure(ctx context.Context, args []engine.Scrip
 	return engine.NewNilValue(), nil
 }
 
-// getConfiguration gets current logger configuration
+// getConfiguration gets current logger configuration.
+// It returns all current logger settings and enabled components.
 func (sl *ScriptLoggerBridge) getConfiguration(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	sl.mu.RLock()
 	defer sl.mu.RUnlock()
@@ -647,7 +674,8 @@ func (sl *ScriptLoggerBridge) getConfiguration(ctx context.Context, args []engin
 	}), nil
 }
 
-// enableComponent enables debug logging for a component
+// enableComponent enables debug logging for a component.
+// It activates debug output for the specified component name.
 func (sl *ScriptLoggerBridge) enableComponent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("enableComponent requires component name")
@@ -666,7 +694,8 @@ func (sl *ScriptLoggerBridge) enableComponent(ctx context.Context, args []engine
 	return sl.debugBridge.ExecuteMethod(ctx, "enableDebugComponent", args)
 }
 
-// disableComponent disables debug logging for a component
+// disableComponent disables debug logging for a component.
+// It deactivates debug output for the specified component name.
 func (sl *ScriptLoggerBridge) disableComponent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("disableComponent requires component name")
@@ -685,7 +714,8 @@ func (sl *ScriptLoggerBridge) disableComponent(ctx context.Context, args []engin
 	return sl.debugBridge.ExecuteMethod(ctx, "disableDebugComponent", args)
 }
 
-// listEnabledComponents lists components with debug logging enabled
+// listEnabledComponents lists components with debug logging enabled.
+// It delegates to the debug bridge to get the component list.
 func (sl *ScriptLoggerBridge) listEnabledComponents(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	// Forward to debug bridge
 	return sl.debugBridge.ExecuteMethod(ctx, "listEnabledComponents", args)
@@ -693,7 +723,8 @@ func (sl *ScriptLoggerBridge) listEnabledComponents(ctx context.Context, args []
 
 // Convenience logging methods
 
-// debug logs a debug message
+// debug logs a debug message.
+// It supports optional component name and structured attributes.
 func (sl *ScriptLoggerBridge) debug(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("debug requires message")
@@ -730,7 +761,8 @@ func (sl *ScriptLoggerBridge) debug(ctx context.Context, args []engine.ScriptVal
 	return sl.logWithLevelAndContext(ctx, "debug", component, message, attributes)
 }
 
-// info logs an info message
+// info logs an info message.
+// It supports optional structured attributes for context.
 func (sl *ScriptLoggerBridge) info(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("info requires message")
@@ -753,7 +785,8 @@ func (sl *ScriptLoggerBridge) info(ctx context.Context, args []engine.ScriptValu
 	return sl.logWithLevelAndContext(ctx, "info", "", message, attributes)
 }
 
-// warn logs a warning message
+// warn logs a warning message.
+// It supports optional structured attributes for context.
 func (sl *ScriptLoggerBridge) warn(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("warn requires message")
@@ -776,7 +809,8 @@ func (sl *ScriptLoggerBridge) warn(ctx context.Context, args []engine.ScriptValu
 	return sl.logWithLevelAndContext(ctx, "warn", "", message, attributes)
 }
 
-// error logs an error message
+// error logs an error message.
+// It supports optional structured attributes for context.
 func (sl *ScriptLoggerBridge) error(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("error requires message")
@@ -799,7 +833,8 @@ func (sl *ScriptLoggerBridge) error(ctx context.Context, args []engine.ScriptVal
 	return sl.logWithLevelAndContext(ctx, "error", "", message, attributes)
 }
 
-// logBridgeError logs bridge-related errors
+// logBridgeError logs bridge-related errors.
+// It provides standardized error logging for bridge operations.
 func (sl *ScriptLoggerBridge) logBridgeError(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("logBridgeError requires bridgeId, operation, and error")
@@ -839,7 +874,8 @@ func (sl *ScriptLoggerBridge) logBridgeError(ctx context.Context, args []engine.
 	return sl.logWithLevelAndContext(ctx, "error", "bridge", message, errorAttrs)
 }
 
-// formatMessage formats log message with template
+// formatMessage formats log message with template.
+// It performs simple template substitution with provided attributes.
 func (sl *ScriptLoggerBridge) formatMessage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("formatMessage requires template and attributes")
@@ -868,7 +904,8 @@ func (sl *ScriptLoggerBridge) formatMessage(ctx context.Context, args []engine.S
 
 // Helper methods
 
-// logWithLevelAndContext performs the actual logging with unified handling
+// logWithLevelAndContext performs the actual logging with unified handling.
+// It routes to both debug and structured logging based on configuration.
 func (sl *ScriptLoggerBridge) logWithLevelAndContext(ctx context.Context, level, component, message string, attributes map[string]interface{}) (engine.ScriptValue, error) {
 	// Merge with global context
 	mergedAttrs := sl.mergeAttributes(attributes)
@@ -928,7 +965,8 @@ func (sl *ScriptLoggerBridge) logWithLevelAndContext(ctx context.Context, level,
 	return engine.NewNilValue(), nil
 }
 
-// mergeAttributes merges provided attributes with global context
+// mergeAttributes merges provided attributes with global context.
+// It combines global attributes with message-specific attributes.
 func (sl *ScriptLoggerBridge) mergeAttributes(attrs map[string]interface{}) map[string]interface{} {
 	sl.mu.RLock()
 	defer sl.mu.RUnlock()

@@ -13,7 +13,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/repl"
 )
 
-// REPLCmd starts an interactive REPL
+// REPLCmd starts an interactive REPL.
+// It provides an interactive environment for executing scripts
+// with support for history, syntax highlighting, and auto-completion.
 type REPLCmd struct {
 	BaseCommand
 	Engine      string `short:"e" help:"Script engine to use"`
@@ -23,7 +25,9 @@ type REPLCmd struct {
 	NoComplete  bool   `help:"Disable auto-completion"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It initializes the REPL with the specified configuration
+// and starts the interactive session.
 func (c *REPLCmd) Run(ctx context.Context) error {
 	// Get configuration from context
 	cfg := GetConfig(ctx)

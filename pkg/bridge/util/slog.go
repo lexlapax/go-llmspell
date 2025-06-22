@@ -18,7 +18,9 @@ import (
 	ldomain "github.com/lexlapax/go-llms/pkg/llm/domain"
 )
 
-// SlogBridge provides script access to go-llms structured logging system
+// SlogBridge provides script access to go-llms structured logging system.
+// It integrates slog with go-llms LoggingHook for comprehensive structured
+// logging with emoji enhancement and key-value attributes.
 type SlogBridge struct {
 	mu          sync.RWMutex
 	initialized bool
@@ -27,7 +29,9 @@ type SlogBridge struct {
 	level       core.LogLevel     // Current log level
 }
 
-// NewSlogBridge creates a new structured logging bridge
+// NewSlogBridge creates a new structured logging bridge.
+// It initializes with a default text handler and creates a logging hook
+// for integration with go-llms lifecycle logging.
 func NewSlogBridge() *SlogBridge {
 	// Initialize with default slog logger
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
@@ -45,12 +49,15 @@ func NewSlogBridge() *SlogBridge {
 	return bridge
 }
 
-// GetID returns the bridge identifier
+// GetID returns the bridge identifier.
+// It implements the engine.Bridge interface.
 func (sb *SlogBridge) GetID() string {
 	return "slog"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the slog bridge including
+// version, description, and dependencies on slog and go-llms.
 func (sb *SlogBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:         "slog",
@@ -62,7 +69,8 @@ func (sb *SlogBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize sets up the structured logging bridge
+// Initialize sets up the structured logging bridge.
+// It marks the bridge as initialized and ready for use.
 func (sb *SlogBridge) Initialize(ctx context.Context) error {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
@@ -71,7 +79,8 @@ func (sb *SlogBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup performs bridge cleanup
+// Cleanup performs bridge cleanup.
+// It marks the bridge as uninitialized.
 func (sb *SlogBridge) Cleanup(ctx context.Context) error {
 	sb.mu.Lock()
 	defer sb.mu.Unlock()
@@ -80,19 +89,23 @@ func (sb *SlogBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns initialization status
+// IsInitialized returns initialization status.
+// It returns true if the bridge has been initialized and is ready for use.
 func (sb *SlogBridge) IsInitialized() bool {
 	sb.mu.RLock()
 	defer sb.mu.RUnlock()
 	return sb.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access structured logging through this bridge.
 func (sb *SlogBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(sb)
 }
 
-// Methods returns available bridge methods
+// Methods returns available bridge methods.
+// It provides metadata about all structured logging methods available to scripts,
+// including basic logging, lifecycle hooks, and configuration.
 func (sb *SlogBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Basic logging methods
@@ -220,13 +233,16 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method calls
+// ValidateMethod validates method calls.
+// It delegates validation to the engine based on Methods() metadata.
 func (sb *SlogBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
-// TypeMappings returns type conversion mappings
+// TypeMappings returns type conversion mappings.
+// It defines how Go logging types are mapped to script types
+// for loggers, levels, hooks, and LLM messages.
 func (sb *SlogBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"slog_logger": {
@@ -262,7 +278,8 @@ func (sb *SlogBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// It specifies permissions for logging configuration and context management.
 func (sb *SlogBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -280,7 +297,9 @@ func (sb *SlogBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method
+// ExecuteMethod executes a bridge method.
+// It implements the engine.Bridge interface, routing method calls
+// to the appropriate structured logging operations.
 func (sb *SlogBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	// Check initialization first
 	sb.mu.RLock()
@@ -323,7 +342,8 @@ func (sb *SlogBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 
 // Bridge method implementations
 
-// info logs an info message with optional emoji and attributes
+// info logs an info message with optional emoji and attributes.
+// It supports structured key-value logging at info level.
 func (sb *SlogBridge) info(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("info requires at least a message")
@@ -337,7 +357,8 @@ func (sb *SlogBridge) info(ctx context.Context, args []engine.ScriptValue) (engi
 	return sb.logWithLevel(ctx, slog.LevelInfo, message, args[1:])
 }
 
-// warn logs a warning message with optional emoji and attributes
+// warn logs a warning message with optional emoji and attributes.
+// It supports structured key-value logging at warning level.
 func (sb *SlogBridge) warn(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("warn requires at least a message")
@@ -351,7 +372,8 @@ func (sb *SlogBridge) warn(ctx context.Context, args []engine.ScriptValue) (engi
 	return sb.logWithLevel(ctx, slog.LevelWarn, message, args[1:])
 }
 
-// error logs an error message with optional emoji and attributes
+// error logs an error message with optional emoji and attributes.
+// It supports structured key-value logging at error level.
 func (sb *SlogBridge) error(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("error requires at least a message")
@@ -365,7 +387,8 @@ func (sb *SlogBridge) error(ctx context.Context, args []engine.ScriptValue) (eng
 	return sb.logWithLevel(ctx, slog.LevelError, message, args[1:])
 }
 
-// debug logs a debug message with optional emoji and attributes
+// debug logs a debug message with optional emoji and attributes.
+// It supports structured key-value logging at debug level.
 func (sb *SlogBridge) debug(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("debug requires at least a message")
@@ -379,7 +402,8 @@ func (sb *SlogBridge) debug(ctx context.Context, args []engine.ScriptValue) (eng
 	return sb.logWithLevel(ctx, slog.LevelDebug, message, args[1:])
 }
 
-// logWithLevel handles the actual logging with emoji and attributes
+// logWithLevel handles the actual logging with emoji and attributes.
+// It prepends emojis to messages and adds structured attributes.
 func (sb *SlogBridge) logWithLevel(ctx context.Context, level slog.Level, message string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	var emoji string
 	var attrs []slog.Attr
@@ -405,7 +429,8 @@ func (sb *SlogBridge) logWithLevel(ctx context.Context, level slog.Level, messag
 	return engine.NewNilValue(), nil
 }
 
-// logBeforeGenerate calls the logging hook's BeforeGenerate method
+// logBeforeGenerate calls the logging hook's BeforeGenerate method.
+// It logs LLM messages before generation for debugging and auditing.
 func (sb *SlogBridge) logBeforeGenerate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("logBeforeGenerate requires messages array")
@@ -447,7 +472,8 @@ func (sb *SlogBridge) logBeforeGenerate(ctx context.Context, args []engine.Scrip
 	return engine.NewNilValue(), nil
 }
 
-// logAfterGenerate calls the logging hook's AfterGenerate method
+// logAfterGenerate calls the logging hook's AfterGenerate method.
+// It logs LLM responses after generation with optional error information.
 func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("logAfterGenerate requires response object")
@@ -478,7 +504,8 @@ func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []engine.Script
 	return engine.NewNilValue(), nil
 }
 
-// logBeforeToolCall calls the logging hook's BeforeToolCall method
+// logBeforeToolCall calls the logging hook's BeforeToolCall method.
+// It logs tool invocations before execution with parameters.
 func (sb *SlogBridge) logBeforeToolCall(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("logBeforeToolCall requires tool name and params")
@@ -505,7 +532,8 @@ func (sb *SlogBridge) logBeforeToolCall(ctx context.Context, args []engine.Scrip
 	return engine.NewNilValue(), nil
 }
 
-// logAfterToolCall calls the logging hook's AfterToolCall method
+// logAfterToolCall calls the logging hook's AfterToolCall method.
+// It logs tool results after execution with optional error information.
 func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("logAfterToolCall requires at least tool name")
@@ -541,7 +569,8 @@ func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []engine.Script
 	return engine.NewNilValue(), nil
 }
 
-// setLogLevel sets the structured logging level
+// setLogLevel sets the structured logging level.
+// It configures the verbosity of the logging hook (basic, detailed, debug).
 func (sb *SlogBridge) setLogLevel(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("setLogLevel requires level string")
@@ -574,7 +603,8 @@ func (sb *SlogBridge) setLogLevel(ctx context.Context, args []engine.ScriptValue
 	return engine.NewNilValue(), nil
 }
 
-// getLogLevel gets the current structured logging level
+// getLogLevel gets the current structured logging level.
+// It returns the current verbosity setting as a string.
 func (sb *SlogBridge) getLogLevel(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	sb.mu.RLock()
 	level := sb.level
@@ -596,7 +626,8 @@ func (sb *SlogBridge) getLogLevel(ctx context.Context, args []engine.ScriptValue
 	return engine.NewStringValue(levelStr), nil
 }
 
-// configureLogger configures the structured logger
+// configureLogger configures the structured logger.
+// It sets the output format (text/json) and log level threshold.
 func (sb *SlogBridge) configureLogger(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("configureLogger requires config object")
@@ -650,7 +681,8 @@ func (sb *SlogBridge) configureLogger(ctx context.Context, args []engine.ScriptV
 	return engine.NewNilValue(), nil
 }
 
-// withAttributes creates context with structured attributes
+// withAttributes creates context with structured attributes.
+// It returns a logger context that includes the specified attributes in all logs.
 func (sb *SlogBridge) withAttributes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("withAttributes requires attributes object")

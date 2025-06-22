@@ -1,6 +1,11 @@
 // ABOUTME: Schema bridge providing access to go-llms schema validation system
 // ABOUTME: Wraps go-llms schema functionality for script-based validation and generation
 
+// Package structured provides bridges for structured data handling in script engines.
+// It implements schema validation, generation, versioning, and migration functionality
+// by wrapping go-llms schema system. The package enables scripts to define and validate
+// complex data structures with support for custom validators, async validation,
+// and multiple schema formats including JSON Schema and OpenAPI.
 package structured
 
 import (
@@ -19,7 +24,9 @@ import (
 	"github.com/lexlapax/go-llms/pkg/schema/validation"
 )
 
-// validationMetrics tracks performance metrics for validation operations
+// validationMetrics tracks performance metrics for validation operations.
+// It records total validations, success/failure counts, latency statistics,
+// cache performance, and async validation counts for monitoring and optimization.
 type validationMetrics struct {
 	TotalValidations      int64         `json:"totalValidations"`
 	SuccessfulValidations int64         `json:"successfulValidations"`
@@ -31,7 +38,9 @@ type validationMetrics struct {
 	mutex                 sync.RWMutex
 }
 
-// asyncValidationRequest represents an async validation request
+// asyncValidationRequest represents an async validation request.
+// It contains the schema and data to validate along with callback information
+// for notifying completion of asynchronous validation operations.
 type asyncValidationRequest struct {
 	ID       string               `json:"id"`
 	Schema   *schemaDomain.Schema `json:"schema"`
@@ -40,7 +49,10 @@ type asyncValidationRequest struct {
 	Created  time.Time            `json:"created"`
 }
 
-// SchemaBridge provides access to go-llms schema validation system
+// SchemaBridge provides access to go-llms schema validation system.
+// It wraps go-llms schema functionality including validation, generation,
+// versioning, migration, and custom validators. The bridge supports both
+// synchronous and asynchronous validation with performance metrics and caching.
 type SchemaBridge struct {
 	mu                    sync.RWMutex
 	initialized           bool
@@ -58,7 +70,9 @@ type SchemaBridge struct {
 	conditionalValidators map[string]interface{}               // Conditional validation functions
 }
 
-// NewSchemaBridge creates a new schema bridge
+// NewSchemaBridge creates a new schema bridge.
+// Initializes with empty registries and starts the async validation queue.
+// The bridge must be initialized before use.
 func NewSchemaBridge() *SchemaBridge {
 	return &SchemaBridge{
 		migrators:             make(map[string]repository.SchemaMigrator),
@@ -70,12 +84,15 @@ func NewSchemaBridge() *SchemaBridge {
 	}
 }
 
-// GetID returns the bridge ID
+// GetID returns the bridge ID.
+// Always returns "schema" for this bridge.
 func (b *SchemaBridge) GetID() string {
 	return "schema"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides comprehensive information about the bridge including
+// dependencies on go-llms schema packages.
 func (b *SchemaBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Schema Bridge",
@@ -92,7 +109,9 @@ func (b *SchemaBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// Sets up go-llms validator, generator, and repository components.
+// Starts the async validation worker for processing queued validations.
 func (b *SchemaBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -114,7 +133,9 @@ func (b *SchemaBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup cleans up bridge resources
+// Cleanup cleans up bridge resources.
+// Closes the file repository if initialized and stops the async
+// validation queue processing.
 func (b *SchemaBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -133,19 +154,27 @@ func (b *SchemaBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if the bridge is initialized
+// IsInitialized checks if the bridge is initialized.
+// Thread-safe check of initialization status.
 func (b *SchemaBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for integration.
 func (b *SchemaBridge) RegisterWithEngine(e engine.ScriptEngine) error {
 	return e.RegisterBridge(b)
 }
 
-// Methods returns all available methods
+// Methods returns all available methods.
+// Provides comprehensive schema operations including:
+//   - Core schema operations (create, validate, generate)
+//   - Repository management (save, load, version control)
+//   - Tag-based generation
+//   - Import/export in multiple formats
+//   - Custom validation registration
 func (b *SchemaBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Core Schema Operations
@@ -203,7 +232,9 @@ func (b *SchemaBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// ValidateMethod validates method parameters
+// ValidateMethod validates method parameters.
+// Checks if the bridge is initialized and validates parameter counts
+// against method definitions.
 func (b *SchemaBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	if !b.IsInitialized() {
 		return fmt.Errorf("schema bridge not initialized")
@@ -231,7 +262,9 @@ func (b *SchemaBridge) ValidateMethod(name string, args []engine.ScriptValue) er
 	return fmt.Errorf("unknown method: %s", name)
 }
 
-// ExecuteMethod executes a bridge method with ScriptValue support
+// ExecuteMethod executes a bridge method with ScriptValue support.
+// Routes method calls to appropriate implementations and converts
+// between script values and go-llms domain objects.
 func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if err := b.ValidateMethod(name, args); err != nil {
 		return engine.NewErrorValue(err), nil
@@ -340,6 +373,10 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 // Implementation methods start here
 
 // Core Schema Operations
+
+// createSchema creates a new schema from the provided schema data.
+// The schema data should be an object containing type, properties, and constraints.
+// Returns the created schema with timestamp and creation status.
 func (b *SchemaBridge) createSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if args[0].Type() != engine.TypeObject {
 		return engine.NewErrorValue(fmt.Errorf("expected object for schema data, got %s", args[0].Type())), nil
@@ -506,6 +543,10 @@ func (b *SchemaBridge) convertJSONSchema(ctx context.Context, args []engine.Scri
 }
 
 // Repository Operations
+
+// saveSchema saves a schema to the repository with the specified name.
+// The schema is stored both in memory and in the persistent repository if available.
+// Returns nil on success or an error if the save operation fails.
 func (b *SchemaBridge) saveSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if args[0].Type() != engine.TypeString {
 		return engine.NewErrorValue(fmt.Errorf("expected string for schema name, got %s", args[0].Type())), nil
@@ -590,7 +631,9 @@ func (b *SchemaBridge) deleteSchema(ctx context.Context, args []engine.ScriptVal
 	return engine.NewNilValue(), nil
 }
 
-// initializeFileRepository sets up a file-based schema repository
+// initializeFileRepository sets up a file-based schema repository.
+// Creates a repository that persists schemas to the specified directory,
+// enabling schema versioning and recovery across application restarts.
 func (b *SchemaBridge) initializeFileRepository(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	if args[0].Type() != engine.TypeString {
 		return engine.NewErrorValue(fmt.Errorf("expected string for directory path, got %s", args[0].Type())), nil
@@ -780,6 +823,9 @@ func (b *SchemaBridge) validateConditional(ctx context.Context, args []engine.Sc
 
 // Helper functions
 
+// processAsyncValidations processes async validation requests from the queue.
+// Runs in a separate goroutine and handles validation requests asynchronously,
+// updating metrics and invoking callbacks when validations complete.
 func (b *SchemaBridge) processAsyncValidations(ctx context.Context) {
 	for {
 		select {
@@ -816,7 +862,9 @@ func (b *SchemaBridge) processAsyncValidations(ctx context.Context) {
 	}
 }
 
-// schemaToScript converts a go-llms schema to a script-friendly format
+// schemaToScript converts a go-llms schema to a script-friendly format.
+// Transforms domain schema objects into plain maps that can be easily
+// manipulated by script engines.
 func schemaToScript(schema *schemaDomain.Schema) map[string]interface{} {
 	if schema == nil {
 		return map[string]interface{}{}
@@ -854,7 +902,9 @@ func schemaToScript(schema *schemaDomain.Schema) map[string]interface{} {
 	return result
 }
 
-// propertyToScript converts a property to script format
+// propertyToScript converts a property to script format.
+// Transforms domain property objects including type, constraints,
+// and validation rules into script-compatible representations.
 func propertyToScript(prop *schemaDomain.Property) map[string]interface{} {
 	result := map[string]interface{}{
 		"type": prop.Type,
@@ -883,7 +933,9 @@ func propertyToScript(prop *schemaDomain.Property) map[string]interface{} {
 	return result
 }
 
-// scriptToSchema converts script format to go-llms schema
+// scriptToSchema converts script format to go-llms schema.
+// Parses script-provided schema definitions and creates proper
+// domain schema objects with validation rules and constraints.
 func scriptToSchema(def map[string]interface{}) (*schemaDomain.Schema, error) {
 	schema := &schemaDomain.Schema{}
 
@@ -929,7 +981,9 @@ func scriptToSchema(def map[string]interface{}) (*schemaDomain.Schema, error) {
 	return schema, nil
 }
 
-// scriptToProperty converts script format to go-llms property
+// scriptToProperty converts script format to go-llms property.
+// Parses property definitions from scripts including type information,
+// constraints, and validation patterns.
 func scriptToProperty(def map[string]interface{}) (*schemaDomain.Property, error) {
 	prop := &schemaDomain.Property{}
 
@@ -960,7 +1014,9 @@ func scriptToProperty(def map[string]interface{}) (*schemaDomain.Property, error
 	return prop, nil
 }
 
-// validationErrorsToScript converts validation errors to script format
+// validationErrorsToScript converts validation errors to script format.
+// Transforms error strings into structured error objects that scripts
+// can easily process and display to users.
 func validationErrorsToScript(errors []string) []interface{} {
 	result := make([]interface{}, len(errors))
 	for i, err := range errors {
@@ -972,7 +1028,9 @@ func validationErrorsToScript(errors []string) []interface{} {
 	return result
 }
 
-// TypeMappings returns type conversion hints
+// TypeMappings returns type conversion hints.
+// Maps go-llms schema types to script-compatible types for
+// proper data conversion during method execution.
 func (b *SchemaBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"schema": {
@@ -988,7 +1046,9 @@ func (b *SchemaBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Requires file system access for schema persistence and
+// memory access for validation result caching.
 func (b *SchemaBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{

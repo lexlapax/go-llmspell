@@ -1,6 +1,33 @@
 // ABOUTME: This file defines the core interfaces for the multi-engine scripting architecture.
 // ABOUTME: It provides engine-agnostic abstractions for script execution, bridging, and type conversion.
 
+// Package engine provides the core interfaces and types for the multi-engine scripting architecture.
+// It defines engine-agnostic abstractions that allow go-llmspell to support multiple scripting
+// languages (Lua, JavaScript, Tengo) through a unified API.
+//
+// The package includes:
+//   - ScriptEngine interface for engine implementations
+//   - Bridge interface for exposing Go functionality to scripts
+//   - TypeConverter interface for handling type conversions
+//   - Common types and constants used across all engines
+//
+// Example usage:
+//
+//	engine := lua.NewEngine()
+//	err := engine.Initialize(engine.EngineConfig{
+//	    SandboxMode: true,
+//	    MemoryLimit: 100 * 1024 * 1024, // 100MB
+//	})
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	defer engine.Shutdown()
+//
+//	result, err := engine.Execute(ctx, "return 2 + 2", nil)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println(result) // Output: 4
 package engine
 
 import (
@@ -12,26 +39,52 @@ import (
 // This abstraction allows go-llmspell to support multiple scripting languages
 // (Lua, JavaScript, Tengo) through a unified API.
 type ScriptEngine interface {
-	// Lifecycle management
+	// Initialize prepares the engine for use with the given configuration.
+	// This must be called before any script execution.
 	Initialize(config EngineConfig) error
+	
+	// Execute runs a script string with optional parameters and returns the result.
+	// The params map is made available to the script as global variables.
 	Execute(ctx context.Context, script string, params map[string]interface{}) (ScriptValue, error)
+	
+	// ExecuteFile loads and executes a script from a file path.
+	// The params map is made available to the script as global variables.
 	ExecuteFile(ctx context.Context, path string, params map[string]interface{}) (ScriptValue, error)
+	
+	// Shutdown cleanly shuts down the engine and releases all resources.
+	// After calling Shutdown, the engine cannot be used again.
 	Shutdown() error
 
-	// Bridge management - allows engines to register functionality from Go
+	// RegisterBridge registers a bridge with the engine, making its methods available to scripts.
 	RegisterBridge(bridge Bridge) error
+	
+	// UnregisterBridge removes a previously registered bridge by name.
 	UnregisterBridge(name string) error
+	
+	// GetBridge retrieves a registered bridge by name.
 	GetBridge(name string) (Bridge, error)
+	
+	// ListBridges returns the names of all registered bridges.
 	ListBridges() []string
 
-	// Type system - handles conversion between engine types and Go types
+	// ToNative converts a script value to a native Go value.
+	// This is used when retrieving values from scripts.
 	ToNative(scriptValue ScriptValue) (interface{}, error)
+	
+	// FromNative converts a native Go value to a script value.
+	// This is used when passing values to scripts.
 	FromNative(goValue interface{}) (ScriptValue, error)
 
-	// Metadata and capabilities
+	// Name returns the name of the scripting engine (e.g., "lua", "javascript", "tengo").
 	Name() string
+	
+	// Version returns the version of the scripting engine implementation.
 	Version() string
+	
+	// FileExtensions returns the file extensions this engine supports (e.g., [".lua"]).
 	FileExtensions() []string
+	
+	// Features returns the list of features supported by this engine.
 	Features() []EngineFeature
 
 	// Resource management and security
@@ -459,6 +512,8 @@ type ClientLibraryOptions struct {
 // Errors that engines can return
 
 // EngineError represents an error from a script engine.
+// It includes detailed information about the error location and type
+// to help with debugging script execution issues.
 type EngineError struct {
 	Type       ErrorType `json:"type"`
 	Message    string    `json:"message"`
@@ -468,10 +523,13 @@ type EngineError struct {
 	Cause      error     `json:"-"`
 }
 
+// Error implements the error interface, returning the error message.
 func (e *EngineError) Error() string {
 	return e.Message
 }
 
+// Unwrap returns the underlying cause of the error, if any.
+// This allows the error to work with errors.Is and errors.As.
 func (e *EngineError) Unwrap() error {
 	return e.Cause
 }

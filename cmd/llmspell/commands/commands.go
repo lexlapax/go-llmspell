@@ -1,6 +1,10 @@
 // ABOUTME: Package commands provides all CLI command implementations for llmspell.
 // ABOUTME: Each command is in its own file for better organization and testing.
 
+// Package commands implements all the command-line interface commands for llmspell.
+// Each command is implemented in its own file and follows the Kong pattern for CLI
+// parsing. Commands handle script execution, validation, configuration management,
+// and other spell-related operations.
 package commands
 
 // This file is intentionally left empty.

@@ -8,8 +8,10 @@ import (
 	"reflect"
 )
 
-// ConvertToScriptValue converts interface{} to appropriate ScriptValue type
-// This is the canonical conversion function used across all bridges
+// ConvertToScriptValue converts interface{} to appropriate ScriptValue type.
+// This is the canonical conversion function used across all bridges.
+// It handles all standard Go types and automatically detects the appropriate
+// ScriptValue type based on the input.
 func ConvertToScriptValue(v interface{}) ScriptValue {
 	switch val := v.(type) {
 	case nil:
@@ -78,7 +80,8 @@ func ConvertToScriptValue(v interface{}) ScriptValue {
 	}
 }
 
-// ConvertMapToScriptValue converts a map[string]interface{} to map[string]ScriptValue
+// ConvertMapToScriptValue converts a map[string]interface{} to map[string]ScriptValue.
+// Each value in the map is recursively converted using ConvertToScriptValue.
 func ConvertMapToScriptValue(data map[string]interface{}) map[string]ScriptValue {
 	if data == nil {
 		return nil
@@ -90,7 +93,8 @@ func ConvertMapToScriptValue(data map[string]interface{}) map[string]ScriptValue
 	return result
 }
 
-// ConvertSliceToScriptValue converts a []interface{} to []ScriptValue
+// ConvertSliceToScriptValue converts a []interface{} to []ScriptValue.
+// Each element in the slice is recursively converted using ConvertToScriptValue.
 func ConvertSliceToScriptValue(data []interface{}) []ScriptValue {
 	if data == nil {
 		return nil
@@ -102,8 +106,9 @@ func ConvertSliceToScriptValue(data []interface{}) []ScriptValue {
 	return result
 }
 
-// ConvertFromScriptValue converts ScriptValue back to interface{}
-// This is useful for bridges that need to pass data to go-llms functions
+// ConvertFromScriptValue converts ScriptValue back to interface{}.
+// This is useful for bridges that need to pass data to go-llms functions.
+// Nil ScriptValues return nil.
 func ConvertFromScriptValue(v ScriptValue) interface{} {
 	if v == nil || v.IsNil() {
 		return nil
@@ -137,7 +142,8 @@ func ConvertScriptValueSlice(data []ScriptValue) []interface{} {
 
 // Validation helpers for bridge method arguments
 
-// ValidateStringArg validates that args[index] is a string and returns its value
+// ValidateStringArg validates that args[index] is a string and returns its value.
+// Returns an error if the argument is missing or not a string.
 func ValidateStringArg(args []ScriptValue, index int, name string) (string, error) {
 	if len(args) <= index {
 		return "", fmt.Errorf("%s argument required", name)

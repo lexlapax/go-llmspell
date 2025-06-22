@@ -15,12 +15,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// ModelInfoAdapter specializes BridgeAdapter for model information functionality
+// ModelInfoAdapter specializes BridgeAdapter for model information functionality.
+// It provides model discovery, capability querying, comparison operations,
+// and recommendation algorithms to help Lua scripts select the most appropriate
+// models for their use cases.
 type ModelInfoAdapter struct {
 	*gopherlua.BridgeAdapter
 }
 
-// NewModelInfoAdapter creates a new model info adapter
+// NewModelInfoAdapter creates a new model info adapter with the provided bridge.
+// The bridge parameter should be a model info bridge from go-llms that provides
+// model discovery and information functionality. Returns an adapter that can be
+// registered as a Lua module.
 func NewModelInfoAdapter(bridge engine.Bridge) *ModelInfoAdapter {
 	// Create model info adapter
 	adapter := &ModelInfoAdapter{}
@@ -33,12 +39,16 @@ func NewModelInfoAdapter(bridge engine.Bridge) *ModelInfoAdapter {
 	return adapter
 }
 
-// GetAdapterName returns the adapter name
+// GetAdapterName returns the adapter name.
+// Returns "modelinfo" to identify this adapter type.
 func (mia *ModelInfoAdapter) GetAdapterName() string {
 	return "modelinfo"
 }
 
-// CreateLuaModule creates a Lua module with model info enhancements
+// CreateLuaModule creates a Lua module with model info enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all model discovery, capability, and selection operations.
+// The module provides both flattened and namespaced APIs for backward compatibility.
 func (mia *ModelInfoAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table
@@ -1677,7 +1687,10 @@ func (mia *ModelInfoAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[st
 	return result
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (mia *ModelInfoAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
@@ -1710,7 +1723,9 @@ func (mia *ModelInfoAdapter) GetBridge() engine.Bridge {
 	return nil
 }
 
-// GetMethods returns the available methods
+// GetMethods returns the list of methods exposed by this adapter.
+// The returned slice includes all model info operations such as discovery,
+// capability queries, comparisons, and selection algorithms.
 func (mia *ModelInfoAdapter) GetMethods() []string {
 	// Get base methods if bridge adapter exists
 	var methods []string

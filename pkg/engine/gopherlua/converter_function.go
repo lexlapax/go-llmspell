@@ -10,13 +10,16 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// FunctionConverter handles conversion of Go functions to Lua functions
+// FunctionConverter handles conversion of Go functions to Lua functions.
+// It provides automatic argument conversion, return value handling,
+// panic recovery, and support for variadic functions.
 type FunctionConverter struct {
 	primitiveConverter *PrimitiveConverter
 	complexConverter   *ComplexConverter
 }
 
-// NewFunctionConverter creates a new function converter
+// NewFunctionConverter creates a new function converter.
+// It initializes with primitive and complex converters for comprehensive type support.
 func NewFunctionConverter() *FunctionConverter {
 	return &FunctionConverter{
 		primitiveConverter: NewPrimitiveConverter(),
@@ -24,7 +27,9 @@ func NewFunctionConverter() *FunctionConverter {
 	}
 }
 
-// WrapGoFunction wraps a Go function for use in Lua
+// WrapGoFunction wraps a Go function for use in Lua.
+// It performs automatic type conversion for arguments and return values,
+// handles panics, and validates function signatures.
 func (fc *FunctionConverter) WrapGoFunction(L *lua.LState, fn interface{}) (lua.LValue, error) {
 	if fn == nil {
 		return nil, fmt.Errorf("function cannot be nil")

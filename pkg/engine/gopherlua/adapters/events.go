@@ -12,7 +12,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// EventsAdapter specializes BridgeAdapter for event system functionality
+// EventsAdapter specializes BridgeAdapter for event system functionality.
+// It provides event bus operations, subscription management, filtering,
+// aggregation, recording, and replay capabilities to Lua scripts.
 type EventsAdapter struct {
 	*gopherlua.BridgeAdapter
 
@@ -20,7 +22,10 @@ type EventsAdapter struct {
 	storageBridge engine.Bridge // For event storage if separate from main bridge
 }
 
-// NewEventsAdapter creates a new events adapter
+// NewEventsAdapter creates a new events adapter with the provided bridge.
+// The bridge parameter should be an event bridge from go-llms that provides
+// event handling functionality. Returns an adapter that can be registered
+// as a Lua module.
 func NewEventsAdapter(bridge engine.Bridge) *EventsAdapter {
 	// Create events adapter
 	adapter := &EventsAdapter{}
@@ -36,7 +41,10 @@ func NewEventsAdapter(bridge engine.Bridge) *EventsAdapter {
 	return adapter
 }
 
-// NewEventsAdapterWithStorage creates a new events adapter with storage bridge
+// NewEventsAdapterWithStorage creates a new events adapter with storage bridge.
+// The bridge parameter provides core event functionality while the storageBridge
+// parameter provides persistence capabilities for event recording and replay.
+// Returns an adapter that can be registered as a Lua module.
 func NewEventsAdapterWithStorage(bridge engine.Bridge, storageBridge engine.Bridge) *EventsAdapter {
 	adapter := NewEventsAdapter(bridge)
 	adapter.storageBridge = storageBridge
@@ -50,7 +58,10 @@ func (ea *EventsAdapter) ensureEventMethods() {
 	// In production, this could validate that expected event methods exist
 }
 
-// CreateLuaModule creates a Lua module with event-specific enhancements
+// CreateLuaModule creates a Lua module with event-specific enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all event operations, constants, and metadata. The module provides
+// a complete event handling API for Lua scripts.
 func (ea *EventsAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table
@@ -509,7 +520,10 @@ func (ea *EventsAdapter) addEventConstants(L *lua.LState, module *lua.LTable) {
 	L.SetField(module, "AGGREGATION_TYPES", aggTypes)
 }
 
-// WrapMethod wraps a bridge method with event-specific handling
+// WrapMethod wraps a bridge method with event-specific handling.
+// It adds validation and error handling for event operations like
+// publishEvent, subscribe, and unsubscribe. Returns a Lua function
+// that can be called from Lua scripts.
 func (ea *EventsAdapter) WrapMethod(methodName string) lua.LGFunction {
 	// Get base wrapped method if available
 	if ea.BridgeAdapter != nil {
@@ -570,7 +584,10 @@ func (ea *EventsAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[string
 	return result
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (ea *EventsAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
@@ -595,7 +612,8 @@ func (ea *EventsAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name strin
 	return ms.Register(module)
 }
 
-// GetBridge returns the underlying bridge
+// GetBridge returns the underlying bridge instance.
+// Returns nil if no bridge has been configured.
 func (ea *EventsAdapter) GetBridge() engine.Bridge {
 	if ea.BridgeAdapter != nil {
 		return ea.BridgeAdapter.GetBridge()
@@ -603,7 +621,9 @@ func (ea *EventsAdapter) GetBridge() engine.Bridge {
 	return nil
 }
 
-// GetMethods returns the available methods
+// GetMethods returns the list of methods exposed by this adapter.
+// The returned slice includes all event-related operations such as
+// event bus management, subscriptions, filtering, aggregation, and replay.
 func (ea *EventsAdapter) GetMethods() []string {
 	// Get base methods if bridge adapter exists
 	var methods []string

@@ -8,18 +8,22 @@ import (
 	"strings"
 )
 
-// Completer implements readline.AutoCompleter for REPL auto-completion
+// Completer implements readline.AutoCompleter for REPL auto-completion.
+// It provides context-aware completions for REPL commands and
+// language-specific keywords, functions, and built-ins.
 type Completer struct {
 	repl *BaseREPL
 }
 
-// NewCompleter creates a new completer instance for the given REPL
+// NewCompleter creates a new completer instance for the given REPL.
+// The completer will provide suggestions based on the REPL's engine type.
 func NewCompleter(repl *BaseREPL) *Completer {
 	return &Completer{repl: repl}
 }
 
-// Do implements the readline.AutoCompleter interface
-// It processes the current line and position to provide completion suggestions
+// Do implements the readline.AutoCompleter interface.
+// It processes the current line and position to provide completion suggestions,
+// returning a list of possible completions and the length of the completed prefix.
 func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	input := string(line[:pos])
 	completions := c.GetCompletions(input)
@@ -32,7 +36,9 @@ func (c *Completer) Do(line []rune, pos int) (newLine [][]rune, length int) {
 	return results, len(input)
 }
 
-// GetCompletions provides auto-completion suggestions for the given input
+// GetCompletions provides auto-completion suggestions for the given input.
+// It determines whether to provide REPL command completions (for input starting with .)
+// or language-specific completions, returning a sorted list of suggestions.
 func (c *Completer) GetCompletions(input string) []string {
 	var completions []string
 
@@ -48,7 +54,8 @@ func (c *Completer) GetCompletions(input string) []string {
 	return completions
 }
 
-// getREPLCommandCompletions returns completions for REPL commands (starting with .)
+// getREPLCommandCompletions returns completions for REPL commands (starting with .).
+// It matches the input prefix against all available built-in commands.
 func (c *Completer) getREPLCommandCompletions(input string) []string {
 	var completions []string
 
@@ -63,7 +70,8 @@ func (c *Completer) getREPLCommandCompletions(input string) []string {
 	return completions
 }
 
-// getLanguageCompletions returns language-specific completions based on the engine
+// getLanguageCompletions returns language-specific completions based on the engine.
+// It delegates to the appropriate language-specific completion function.
 func (c *Completer) getLanguageCompletions(input string) []string {
 	switch c.repl.config.Engine {
 	case "lua":
@@ -77,7 +85,9 @@ func (c *Completer) getLanguageCompletions(input string) []string {
 	}
 }
 
-// getLuaCompletions returns Lua-specific keyword and built-in completions
+// getLuaCompletions returns Lua-specific keyword and built-in completions.
+// It includes Lua keywords, built-in functions, and standard library names
+// that match the input prefix.
 func (c *Completer) getLuaCompletions(input string) []string {
 	var completions []string
 
@@ -112,8 +122,9 @@ func (c *Completer) getLuaCompletions(input string) []string {
 	return completions
 }
 
-// getJavaScriptCompletions returns JavaScript-specific completions
-// Currently returns basic keywords - will be expanded when JS engine is implemented
+// getJavaScriptCompletions returns JavaScript-specific completions.
+// Currently returns basic keywords - will be expanded when JS engine is implemented.
+// Includes ES6+ keywords, built-in objects, and common global functions.
 func (c *Completer) getJavaScriptCompletions(input string) []string {
 	var completions []string
 
@@ -141,8 +152,9 @@ func (c *Completer) getJavaScriptCompletions(input string) []string {
 	return completions
 }
 
-// getTengoCompletions returns Tengo-specific completions
-// Currently returns basic keywords - will be expanded when Tengo engine is implemented
+// getTengoCompletions returns Tengo-specific completions.
+// Currently returns basic keywords - will be expanded when Tengo engine is implemented.
+// Includes Tengo keywords, built-in functions, and type checking functions.
 func (c *Completer) getTengoCompletions(input string) []string {
 	var completions []string
 

@@ -1,9 +1,14 @@
 // ABOUTME: Built-in spell templates for various use cases.
 // ABOUTME: Contains basic, advanced, agent-based, workflow, and interactive templates.
 
+// Package template provides spell template generation functionality.
+// It includes templates for various spell types including basic, advanced,
+// agent-based, workflow, and interactive spells.
 package template
 
-// createBasicTemplate creates a basic spell template
+// createBasicTemplate creates a basic spell template.
+// It generates a simple spell structure for basic LLM interactions
+// with minimal configuration and a straightforward script.
 func (g *Generator) createBasicTemplate() *SpellTemplate {
 	return &SpellTemplate{
 		Name:        "Basic Spell",
@@ -73,7 +78,9 @@ llmspell run main.{{if eq .Engine "javascript"}}js{{else if eq .Engine "js"}}js{
 	}
 }
 
-// createAdvancedTemplate creates an advanced spell template
+// createAdvancedTemplate creates an advanced spell template.
+// It includes state management, error handling, multiple operation modes,
+// and library modules for more sophisticated LLM applications.
 func (g *Generator) createAdvancedTemplate() *SpellTemplate {
 	return &SpellTemplate{
 		Name:        "Advanced Spell",
@@ -196,7 +203,9 @@ Edit ` + "`config/default.yaml`" + ` to customize default settings.
 	}
 }
 
-// createAgentTemplate creates an agent-based spell template
+// createAgentTemplate creates an agent-based spell template.
+// It provides a structure for autonomous agents that can use tools,
+// make decisions, and complete complex tasks iteratively.
 func (g *Generator) createAgentTemplate() *SpellTemplate {
 	return &SpellTemplate{
 		Name:        "Agent Spell",
@@ -311,7 +320,9 @@ Reads and processes local files.
 	}
 }
 
-// createWorkflowTemplate creates a workflow spell template
+// createWorkflowTemplate creates a workflow spell template.
+// It supports multi-step processes with checkpoints, state persistence,
+// and different workflow types for document processing and data analysis.
 func (g *Generator) createWorkflowTemplate() *SpellTemplate {
 	return &SpellTemplate{
 		Name:        "Workflow Spell",
@@ -437,7 +448,9 @@ llmspell run main.{{if eq .Engine "javascript"}}js{{else if eq .Engine "js"}}js{
 	}
 }
 
-// createInteractiveTemplate creates an interactive spell template
+// createInteractiveTemplate creates an interactive spell template.
+// It provides a terminal-based interface for real-time user interaction,
+// supporting chat, quiz, and assistant modes with conversation history.
 func (g *Generator) createInteractiveTemplate() *SpellTemplate {
 	return &SpellTemplate{
 		Name:        "Interactive Spell",

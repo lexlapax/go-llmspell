@@ -13,7 +13,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// BridgeAdapter wraps a go-llms bridge for Lua script access
+// BridgeAdapter wraps a go-llms bridge for Lua script access.
+// It automatically discovers bridge methods, handles type conversion,
+// and provides validation and caching for improved performance.
 type BridgeAdapter struct {
 	bridge      engine.Bridge
 	converter   *LuaTypeConverter
@@ -23,7 +25,8 @@ type BridgeAdapter struct {
 	mu          sync.RWMutex
 }
 
-// NewBridgeAdapter creates a new bridge adapter
+// NewBridgeAdapter creates a new bridge adapter.
+// It initializes the type converter and caches method information for efficient access.
 func NewBridgeAdapter(b engine.Bridge) *BridgeAdapter {
 	adapter := &BridgeAdapter{
 		bridge:      b,
@@ -41,12 +44,14 @@ func NewBridgeAdapter(b engine.Bridge) *BridgeAdapter {
 	return adapter
 }
 
-// GetBridge returns the wrapped bridge
+// GetBridge returns the wrapped bridge.
+// This provides access to the underlying engine.Bridge instance.
 func (ba *BridgeAdapter) GetBridge() engine.Bridge {
 	return ba.bridge
 }
 
-// GetID returns the bridge ID
+// GetID returns the bridge ID.
+// This delegates to the wrapped bridge's GetID method.
 func (ba *BridgeAdapter) GetID() string {
 	return ba.bridge.GetID()
 }

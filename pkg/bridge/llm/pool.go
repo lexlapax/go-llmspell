@@ -16,7 +16,8 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/bridge"
 )
 
-// PoolStrategy defines the strategy for selecting providers from a pool
+// PoolStrategy defines the strategy for selecting providers from a pool.
+// It supports various load balancing and failover strategies.
 type PoolStrategy string
 
 const (
@@ -27,7 +28,9 @@ const (
 	StrategyLeastUsed  PoolStrategy = "least_used"
 )
 
-// ProviderPool manages a pool of LLM providers
+// ProviderPool manages a pool of LLM providers.
+// It implements various strategies for load balancing, failover,
+// and performance-based routing across multiple providers.
 type ProviderPool struct {
 	Name            string
 	Providers       []string // Provider names
@@ -40,7 +43,9 @@ type ProviderPool struct {
 	mu              sync.RWMutex
 }
 
-// PoolConfig holds configuration for a provider pool
+// PoolConfig holds configuration for a provider pool.
+// It defines retry behavior, timeouts, circuit breaker settings,
+// and health check intervals for pool management.
 type PoolConfig struct {
 	MaxRetries          int
 	RetryDelay          time.Duration
@@ -50,7 +55,9 @@ type PoolConfig struct {
 	HealthCheckInterval time.Duration
 }
 
-// PoolMetrics tracks metrics for a provider pool
+// PoolMetrics tracks metrics for a provider pool.
+// It maintains statistics for overall pool performance and
+// individual provider metrics within the pool.
 type PoolMetrics struct {
 	TotalRequests   int64
 	SuccessfulCalls int64
@@ -60,7 +67,9 @@ type PoolMetrics struct {
 	mu              sync.RWMutex
 }
 
-// ProviderPoolMetrics tracks metrics for a provider in a pool
+// ProviderPoolMetrics tracks metrics for a provider in a pool.
+// It includes request counts, latency measurements, error tracking,
+// and health status for individual providers.
 type ProviderPoolMetrics struct {
 	Requests       int64
 	Successes      int64
@@ -72,23 +81,31 @@ type ProviderPoolMetrics struct {
 	HealthStatus   string
 }
 
-// ResponsePool manages pooled response objects
+// ResponsePool manages pooled response objects.
+// It provides object pooling for efficient memory usage
+// when handling LLM responses.
 type ResponsePool struct {
 	pool sync.Pool
 }
 
-// TokenPool manages pooled token objects
+// TokenPool manages pooled token objects.
+// It provides object pooling for token structures
+// to reduce allocation overhead.
 type TokenPool struct {
 	pool sync.Pool
 }
 
-// ChannelPool manages pooled channels for streaming
+// ChannelPool manages pooled channels for streaming.
+// It reuses channels for streaming responses to minimize
+// channel allocation overhead.
 type ChannelPool struct {
 	channels map[string]chan bridge.ResponseStream
 	mu       sync.RWMutex
 }
 
-// PoolBridge provides connection pooling for LLM providers
+// PoolBridge provides connection pooling for LLM providers.
+// It manages multiple provider pools with different strategies,
+// object pooling for responses and tokens, and performance tracking.
 type PoolBridge struct {
 	mu           sync.RWMutex
 	initialized  bool
@@ -99,7 +116,9 @@ type PoolBridge struct {
 	llmBridge    *LLMBridge // Reference to main LLM bridge
 }
 
-// NewPoolBridge creates a new pool bridge
+// NewPoolBridge creates a new pool bridge.
+// It initializes provider pools, object pools for responses and tokens,
+// and channel pools for streaming with a reference to the main LLM bridge.
 func NewPoolBridge(llmBridge *LLMBridge) *PoolBridge {
 	return &PoolBridge{
 		pools: make(map[string]*ProviderPool),
@@ -124,19 +143,23 @@ func NewPoolBridge(llmBridge *LLMBridge) *PoolBridge {
 	}
 }
 
-// Token represents a pooled token object
+// Token represents a pooled token object.
+// It's used for efficient token management in pooling scenarios.
 type Token struct {
 	Value     string
 	CreatedAt time.Time
 	Used      bool
 }
 
-// GetID returns the bridge ID
+// GetID returns the bridge ID.
+// It implements the engine.Bridge interface.
 func (b *PoolBridge) GetID() string {
 	return "pool"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// It provides information about the pool bridge including
+// version, description, and supported features.
 func (b *PoolBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "Pool Bridge",
@@ -147,7 +170,8 @@ func (b *PoolBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// It sets up the bridge for provider pool management.
 func (b *PoolBridge) Initialize(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -160,7 +184,8 @@ func (b *PoolBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup cleans up bridge resources
+// Cleanup cleans up bridge resources.
+// It removes all pools, closes channels, and resets the bridge state.
 func (b *PoolBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -178,19 +203,23 @@ func (b *PoolBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized checks if the bridge is initialized
+// IsInitialized checks if the bridge is initialized.
+// It returns true if the bridge has been initialized and is ready for use.
 func (b *PoolBridge) IsInitialized() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine
+// RegisterWithEngine registers the bridge with a script engine.
+// It enables the script engine to access pool functionality through this bridge.
 func (b *PoolBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 	return engine.RegisterBridge(b)
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// It provides metadata about all pool-related methods available to scripts,
+// including pool creation, management, metrics, and load-balanced generation.
 func (b *PoolBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		// Pool Management

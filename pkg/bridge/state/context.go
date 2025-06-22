@@ -1,6 +1,10 @@
 // ABOUTME: State Context Bridge implementation that exposes go-llms SharedStateContext to script engines
 // ABOUTME: Provides parent-child state sharing with configurable inheritance for multi-agent systems
 
+// Package state provides state management bridges for script engines.
+// It implements bridges for SharedStateContext and StateManager from go-llms,
+// enabling scripts to manage state with parent-child relationships, validation,
+// persistence, and transformation capabilities.
 package state
 
 import (
@@ -23,7 +27,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// TransformMetrics tracks transformation pipeline metrics
+// TransformMetrics tracks transformation pipeline metrics.
+// It records execution counts, timing information, success/error rates,
+// and cache hit/miss statistics for performance monitoring.
 type TransformMetrics struct {
 	ExecutionCount  int64         `json:"execution_count"`
 	TotalDuration   time.Duration `json:"total_duration"`
@@ -35,7 +41,11 @@ type TransformMetrics struct {
 	CacheMisses     int64         `json:"cache_misses"`
 }
 
-// StateContextBridge bridges go-llms SharedStateContext to script engines
+// StateContextBridge bridges go-llms SharedStateContext to script engines.
+// It provides comprehensive state management with parent-child relationships,
+// schema validation, event emission, persistence, and transformation pipelines.
+// The bridge supports advanced features like state versioning, compression,
+// event replay, and multi-level inheritance configuration.
 type StateContextBridge struct {
 	mu       sync.RWMutex
 	contexts map[string]*domain.SharedStateContext
@@ -72,24 +82,36 @@ type StateContextBridge struct {
 	transformMu        sync.RWMutex                      // Separate mutex for transformation operations
 }
 
-// inheritanceConfig tracks inheritance settings for a shared context
+// inheritanceConfig tracks inheritance settings for a shared context.
+// It controls which aspects of parent state are inherited by child contexts,
+// including messages, artifacts, and metadata.
 type inheritanceConfig struct {
 	inheritMessages  bool
 	inheritArtifacts bool
 	inheritMetadata  bool
 }
 
-// NewStateContextBridge creates a new state context bridge
+// NewStateContextBridge creates a new state context bridge.
+// It initializes with default in-memory event storage and no persistence.
+// For advanced features, use NewStateContextBridgeWithOptions.
 func NewStateContextBridge() (*StateContextBridge, error) {
 	return NewStateContextBridgeWithEventEmitter(nil)
 }
 
-// NewStateContextBridgeWithEventEmitter creates a new state context bridge with event emission
+// NewStateContextBridgeWithEventEmitter creates a new state context bridge with event emission.
+// The eventEmitter parameter enables custom event handling for state changes.
+// If nil, events are still tracked internally but not emitted externally.
 func NewStateContextBridgeWithEventEmitter(eventEmitter domain.EventEmitter) (*StateContextBridge, error) {
 	return NewStateContextBridgeWithOptions(eventEmitter, "", false)
 }
 
-// NewStateContextBridgeWithOptions creates a new state context bridge with full configuration
+// NewStateContextBridgeWithOptions creates a new state context bridge with full configuration.
+// Parameters:
+//   - eventEmitter: Custom event emitter for state change notifications (optional)
+//   - persistDir: Directory for state persistence (empty string disables persistence)
+//   - enableCompress: Enable gzip compression for persisted states
+//
+// The bridge initializes with schema validation, event tracking, and optional persistence.
 func NewStateContextBridgeWithOptions(eventEmitter domain.EventEmitter, persistDir string, enableCompress bool) (*StateContextBridge, error) {
 	// Create schema repository using go-llms infrastructure
 	schemaRepo := repository.NewInMemorySchemaRepository()
@@ -155,12 +177,15 @@ func NewStateContextBridgeWithOptions(eventEmitter domain.EventEmitter, persistD
 	}, nil
 }
 
-// GetID returns the bridge ID
+// GetID returns the bridge ID.
+// Always returns "state_context" for this bridge.
 func (b *StateContextBridge) GetID() string {
 	return "state_context"
 }
 
-// GetMetadata returns bridge metadata
+// GetMetadata returns bridge metadata.
+// Provides information about the bridge including name, version,
+// description, author, and license for documentation and discovery.
 func (b *StateContextBridge) GetMetadata() engine.BridgeMetadata {
 	return engine.BridgeMetadata{
 		Name:        "State Context Bridge",
@@ -171,27 +196,41 @@ func (b *StateContextBridge) GetMetadata() engine.BridgeMetadata {
 	}
 }
 
-// Initialize initializes the bridge
+// Initialize initializes the bridge.
+// Currently performs minimal initialization as most setup occurs in the constructor.
+// Can be extended for lazy initialization of resources.
 func (b *StateContextBridge) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Cleanup cleans up bridge resources
+// Cleanup cleans up bridge resources.
+// Currently performs minimal cleanup as resources are managed by go-llms.
+// Can be extended to close persistence connections or flush caches.
 func (b *StateContextBridge) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-// IsInitialized returns whether the bridge is initialized
+// IsInitialized returns whether the bridge is initialized.
+// Always returns true as initialization occurs in the constructor.
 func (b *StateContextBridge) IsInitialized() bool {
 	return true
 }
 
-// RegisterWithEngine registers this bridge with a script engine
+// RegisterWithEngine registers this bridge with a script engine.
+// Delegates to the engine's RegisterBridge method for proper integration.
 func (b *StateContextBridge) RegisterWithEngine(scriptEngine engine.ScriptEngine) error {
 	return scriptEngine.RegisterBridge(b)
 }
 
-// Methods returns the methods exposed by this bridge
+// Methods returns the methods exposed by this bridge.
+// Provides comprehensive state management operations including:
+//   - Context creation and configuration
+//   - State manipulation (get/set/delete)
+//   - Schema validation and versioning
+//   - Event filtering and replay
+//   - State persistence and migration
+//   - Transformation pipelines
+//   - Import/export functionality
 func (b *StateContextBridge) Methods() []engine.MethodInfo {
 	return []engine.MethodInfo{
 		{Name: "createSharedContext", Description: "Create a new shared state context with parent", ReturnType: "SharedStateContext"},
@@ -275,7 +314,9 @@ func (b *StateContextBridge) Methods() []engine.MethodInfo {
 	}
 }
 
-// TypeMappings returns type mappings for this bridge
+// TypeMappings returns type mappings for this bridge.
+// Maps go-llms domain types to script-compatible types for proper
+// data conversion during method execution.
 func (b *StateContextBridge) TypeMappings() map[string]engine.TypeMapping {
 	return map[string]engine.TypeMapping{
 		"SharedStateContext": {
@@ -321,13 +362,17 @@ func (b *StateContextBridge) TypeMappings() map[string]engine.TypeMapping {
 	}
 }
 
-// ValidateMethod validates a method call
+// ValidateMethod validates a method call.
+// Currently delegates to the engine for validation based on method metadata.
+// Always returns nil as detailed validation occurs during method execution.
 func (b *StateContextBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
 	// Validation is handled by the engine, so we always return nil
 	return nil
 }
 
-// RequiredPermissions returns required permissions
+// RequiredPermissions returns required permissions.
+// Defines memory access for state operations and storage access
+// for persistence functionality.
 func (b *StateContextBridge) RequiredPermissions() []engine.Permission {
 	return []engine.Permission{
 		{
@@ -345,7 +390,9 @@ func (b *StateContextBridge) RequiredPermissions() []engine.Permission {
 	}
 }
 
-// ExecuteMethod executes a bridge method by calling the appropriate go-llms function
+// ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
+// Routes method calls to specific implementations based on the method name.
+// Returns script-compatible values or errors for all operations.
 func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
 	switch name {
 	case "createSharedContext":

@@ -12,12 +12,18 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
-// StructuredAdapter specializes BridgeAdapter for structured output functionality
+// StructuredAdapter specializes BridgeAdapter for structured output functionality.
+// It provides schema creation, validation, generation, repository operations,
+// import/export capabilities, and custom validation features for ensuring
+// LLM outputs conform to specified schemas.
 type StructuredAdapter struct {
 	*gopherlua.BridgeAdapter
 }
 
-// NewStructuredAdapter creates a new structured adapter
+// NewStructuredAdapter creates a new structured adapter with the provided bridge.
+// The bridge parameter should be a structured bridge from go-llms that provides
+// schema validation and generation functionality. Returns an adapter that can be
+// registered as a Lua module.
 func NewStructuredAdapter(bridge engine.Bridge) *StructuredAdapter {
 	// Create structured adapter
 	adapter := &StructuredAdapter{}
@@ -40,7 +46,11 @@ func (sa *StructuredAdapter) ensureStructuredMethods() {
 	// In production, this could validate that expected structured methods exist
 }
 
-// CreateLuaModule creates a Lua module with structured-specific enhancements
+// CreateLuaModule creates a Lua module with structured-specific enhancements.
+// Returns a Lua function that, when called, creates and returns a module table
+// containing all structured output operations including validation, generation,
+// repository management, and import/export functionality. The module provides
+// both convenience methods and flattened namespace methods.
 func (sa *StructuredAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		// Create module table
@@ -699,7 +709,10 @@ func (sa *StructuredAdapter) addStructuredConstants(L *lua.LState, module *lua.L
 	L.SetField(module, "OPERATORS", operators)
 }
 
-// WrapMethod wraps a bridge method with structured-specific handling
+// WrapMethod wraps a bridge method with structured-specific handling.
+// It adds validation and error handling for structured operations like
+// schema creation and validation. Returns a Lua function that can be
+// called from Lua scripts.
 func (sa *StructuredAdapter) WrapMethod(methodName string) lua.LGFunction {
 	// Get base wrapped method if available
 	if sa.BridgeAdapter != nil {
@@ -760,7 +773,10 @@ func (sa *StructuredAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[st
 	return result
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
+// RegisterAsModule registers the adapter as a module in the module system.
+// The ms parameter is the module system to register with. The name parameter
+// specifies the module name that scripts will use to import this functionality.
+// Returns an error if registration fails.
 func (sa *StructuredAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
@@ -785,7 +801,8 @@ func (sa *StructuredAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name s
 	return ms.Register(module)
 }
 
-// GetBridge returns the underlying bridge
+// GetBridge returns the underlying bridge instance.
+// Returns nil if no bridge has been configured.
 func (sa *StructuredAdapter) GetBridge() engine.Bridge {
 	if sa.BridgeAdapter != nil {
 		return sa.BridgeAdapter.GetBridge()
@@ -793,7 +810,9 @@ func (sa *StructuredAdapter) GetBridge() engine.Bridge {
 	return nil
 }
 
-// GetMethods returns the available methods
+// GetMethods returns the list of methods exposed by this adapter.
+// The returned slice includes all structured operations such as validation,
+// generation, repository management, import/export, and custom validators.
 func (sa *StructuredAdapter) GetMethods() []string {
 	// Get base methods if bridge adapter exists
 	var methods []string

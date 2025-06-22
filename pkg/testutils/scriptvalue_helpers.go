@@ -11,8 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ExtractScriptValue extracts the underlying Go value from a ScriptValue result
-// This helper is used to fix tests after ScriptValue refactoring
+// ExtractScriptValue extracts the underlying Go value from a ScriptValue result.
+// This helper is used to fix tests after ScriptValue refactoring.
+// It safely handles nil values and non-ScriptValue types.
 func ExtractScriptValue(t *testing.T, result any) any {
 	t.Helper()
 
@@ -34,7 +35,8 @@ func ExtractScriptValue(t *testing.T, result any) any {
 	return sv.ToGo()
 }
 
-// AssertScriptValueInterface asserts that a ScriptValue result equals expected value
+// AssertScriptValueInterface asserts that a ScriptValue result equals expected value.
+// It handles automatic extraction of values from ScriptValue wrappers for comparison.
 func AssertScriptValueInterface(t *testing.T, expected any, result any) {
 	t.Helper()
 

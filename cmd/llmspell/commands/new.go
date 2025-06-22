@@ -12,7 +12,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/template"
 )
 
-// NewCmd creates a new spell from a template
+// NewCmd creates a new spell from a template.
+// It generates scaffolding for spell projects with various
+// template types and configuration options.
 type NewCmd struct {
 	BaseCommand
 	Name        string `arg:"" name:"name" help:"Name of the spell to create"`
@@ -26,7 +28,9 @@ type NewCmd struct {
 	List        bool   `help:"List available templates"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It generates a new spell project from the specified template
+// with the provided configuration options.
 func (c *NewCmd) Run(ctx context.Context) error {
 	// Create generator
 	gen := template.NewGenerator()
@@ -85,7 +89,9 @@ func (c *NewCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-// listTemplates lists available templates
+// listTemplates lists available templates.
+// It displays all available template types with descriptions
+// and usage examples.
 func (c *NewCmd) listTemplates(gen *template.Generator) error {
 	templates := gen.ListTemplates()
 
@@ -108,7 +114,9 @@ func (c *NewCmd) listTemplates(gen *template.Generator) error {
 	return nil
 }
 
-// getGitAuthor attempts to get author name from git config
+// getGitAuthor attempts to get author name from git config.
+// Falls back to USER environment variable or "Unknown Author"
+// if git config is not available.
 func (c *NewCmd) getGitAuthor() string {
 	// Try to get from git config
 	if output, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".gitconfig")); err == nil {
@@ -129,7 +137,8 @@ func (c *NewCmd) getGitAuthor() string {
 	return "Unknown Author"
 }
 
-// getExtension returns the file extension for the current engine
+// getExtension returns the file extension for the current engine.
+// Maps engine names to their corresponding file extensions.
 func (c *NewCmd) getExtension() string {
 	switch c.Engine {
 	case "javascript", "js":
@@ -141,7 +150,8 @@ func (c *NewCmd) getExtension() string {
 	}
 }
 
-// splitLines splits a string into lines
+// splitLines splits a string into lines.
+// Helper function for parsing multi-line text.
 func splitLines(s string) []string {
 	if s == "" {
 		return []string{}

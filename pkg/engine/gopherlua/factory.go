@@ -10,10 +10,12 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// WarmupFunc is a function that warms up a newly created LState
+// WarmupFunc is a function that warms up a newly created LState.
+// It can be used to precompile commonly used scripts or initialize caches.
 type WarmupFunc func(L *lua.LState) error
 
-// FactoryConfig configures how LStates are created
+// FactoryConfig configures how LStates are created.
+// It controls security settings, VM options, and initialization behavior.
 type FactoryConfig struct {
 	// SecurityManager determines which libraries and functions are available
 	SecurityManager *SecurityManager
@@ -34,13 +36,15 @@ type FactoryConfig struct {
 	WarmupFunc WarmupFunc
 }
 
-// LStateFactory creates configured Lua VM instances
+// LStateFactory creates configured Lua VM instances.
+// It ensures consistent configuration and initialization across all LState instances.
 type LStateFactory struct {
 	mu     sync.RWMutex
 	config FactoryConfig
 }
 
-// NewLStateFactory creates a new factory with the given configuration
+// NewLStateFactory creates a new factory with the given configuration.
+// If no SecurityManager is provided, a default standard-level manager is used.
 func NewLStateFactory(config FactoryConfig) *LStateFactory {
 	// Apply defaults
 	if config.RegistrySize > 0 {

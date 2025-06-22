@@ -1,6 +1,9 @@
 // ABOUTME: Security profiles implementation for controlling script execution permissions and resource limits.
 // ABOUTME: Provides sandbox, development, and production profiles with configurable restrictions.
 
+// Package security provides security profiles and permission management.
+// It implements sandboxing, resource limits, and access controls for
+// safe script execution across different environments.
 package security
 
 import (
@@ -10,7 +13,9 @@ import (
 	"time"
 )
 
-// Permission represents a specific permission type
+// Permission represents a specific permission type.
+// Each permission controls access to a different system resource
+// or capability.
 type Permission string
 
 const (
@@ -21,7 +26,9 @@ const (
 	PermissionUnsafe      Permission = "unsafe"
 )
 
-// SecurityProfile defines security constraints for script execution
+// SecurityProfile defines security constraints for script execution.
+// It specifies permissions, resource limits, module restrictions,
+// and path access controls for safe script execution.
 type SecurityProfile struct {
 	Name        string `json:"name" yaml:"name"`
 	Description string `json:"description" yaml:"description"`
@@ -47,7 +54,9 @@ type SecurityProfile struct {
 	ForbiddenPaths []string `json:"forbidden_paths" yaml:"forbidden_paths"`
 }
 
-// SandboxProfile returns a highly restrictive security profile
+// SandboxProfile returns a highly restrictive security profile.
+// It denies all system access and enforces tight resource limits,
+// suitable for running untrusted scripts.
 func SandboxProfile() *SecurityProfile {
 	return &SecurityProfile{
 		Name:        "sandbox",
@@ -84,7 +93,9 @@ func SandboxProfile() *SecurityProfile {
 	}
 }
 
-// DevelopmentProfile returns a moderately permissive profile for development
+// DevelopmentProfile returns a moderately permissive profile for development.
+// It allows filesystem and network access with reasonable resource limits,
+// suitable for development and testing environments.
 func DevelopmentProfile() *SecurityProfile {
 	return &SecurityProfile{
 		Name:        "development",
@@ -124,7 +135,9 @@ func DevelopmentProfile() *SecurityProfile {
 	}
 }
 
-// ProductionProfile returns a production-ready security profile
+// ProductionProfile returns a production-ready security profile.
+// It allows network access but restricts filesystem access, with
+// production-appropriate resource limits.
 func ProductionProfile() *SecurityProfile {
 	return &SecurityProfile{
 		Name:        "production",
@@ -159,7 +172,9 @@ func ProductionProfile() *SecurityProfile {
 	}
 }
 
-// Validate checks if the security profile is valid
+// Validate checks if the security profile is valid.
+// It ensures all resource limits are within acceptable ranges
+// and required fields are present.
 func (p *SecurityProfile) Validate() error {
 	if p.Name == "" {
 		return fmt.Errorf("profile name is required")
@@ -183,7 +198,9 @@ func (p *SecurityProfile) Validate() error {
 	return nil
 }
 
-// CheckPermission checks if a permission is allowed
+// CheckPermission checks if a permission is allowed.
+// It returns true if the profile grants the specified permission,
+// false otherwise.
 func (p *SecurityProfile) CheckPermission(perm Permission) bool {
 	switch perm {
 	case PermissionNetwork:
@@ -201,7 +218,9 @@ func (p *SecurityProfile) CheckPermission(perm Permission) bool {
 	}
 }
 
-// IsModuleAllowed checks if a module is allowed
+// IsModuleAllowed checks if a module is allowed.
+// It returns true if the module is in the allowed modules list,
+// false otherwise.
 func (p *SecurityProfile) IsModuleAllowed(module string) bool {
 	for _, allowed := range p.AllowedModules {
 		if allowed == module {
@@ -211,7 +230,9 @@ func (p *SecurityProfile) IsModuleAllowed(module string) bool {
 	return false
 }
 
-// IsFunctionForbidden checks if a function is forbidden
+// IsFunctionForbidden checks if a function is forbidden.
+// It returns true if the function is in the forbidden functions list,
+// preventing its use in scripts.
 func (p *SecurityProfile) IsFunctionForbidden(function string) bool {
 	for _, forbidden := range p.ForbiddenFunctions {
 		if forbidden == function {
@@ -221,7 +242,9 @@ func (p *SecurityProfile) IsFunctionForbidden(function string) bool {
 	return false
 }
 
-// IsPathAllowed checks if a path is allowed
+// IsPathAllowed checks if a path is allowed.
+// It first checks forbidden paths, then allowed paths,
+// implementing a deny-first security model.
 func (p *SecurityProfile) IsPathAllowed(path string) bool {
 	// First check forbidden paths
 	for _, forbidden := range p.ForbiddenPaths {
@@ -245,13 +268,17 @@ func (p *SecurityProfile) IsPathAllowed(path string) bool {
 	return false
 }
 
-// ProfileManager manages security profiles
+// ProfileManager manages security profiles.
+// It provides thread-safe storage and retrieval of security profiles,
+// including default profiles for common use cases.
 type ProfileManager struct {
 	mu       sync.RWMutex
 	profiles map[string]*SecurityProfile
 }
 
-// NewProfileManager creates a new profile manager with default profiles
+// NewProfileManager creates a new profile manager with default profiles.
+// It automatically registers sandbox, development, and production profiles
+// for immediate use.
 func NewProfileManager() *ProfileManager {
 	pm := &ProfileManager{
 		profiles: make(map[string]*SecurityProfile),
@@ -265,7 +292,8 @@ func NewProfileManager() *ProfileManager {
 	return pm
 }
 
-// GetProfile retrieves a security profile by name
+// GetProfile retrieves a security profile by name.
+// It returns an error if the profile doesn't exist.
 func (pm *ProfileManager) GetProfile(name string) (*SecurityProfile, error) {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
@@ -278,7 +306,9 @@ func (pm *ProfileManager) GetProfile(name string) (*SecurityProfile, error) {
 	return profile, nil
 }
 
-// RegisterProfile registers a new security profile
+// RegisterProfile registers a new security profile.
+// It validates the profile and ensures no duplicate names exist
+// before adding it to the manager.
 func (pm *ProfileManager) RegisterProfile(profile *SecurityProfile) error {
 	if err := profile.Validate(); err != nil {
 		return fmt.Errorf("invalid profile: %w", err)
@@ -295,7 +325,9 @@ func (pm *ProfileManager) RegisterProfile(profile *SecurityProfile) error {
 	return nil
 }
 
-// RemoveProfile removes a security profile
+// RemoveProfile removes a security profile.
+// Default profiles (sandbox, development, production) cannot be removed
+// to ensure basic security options are always available.
 func (pm *ProfileManager) RemoveProfile(name string) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
@@ -313,7 +345,8 @@ func (pm *ProfileManager) RemoveProfile(name string) error {
 	return nil
 }
 
-// ListProfiles returns a list of all profile names
+// ListProfiles returns a list of all profile names.
+// The order of returned names is not guaranteed.
 func (pm *ProfileManager) ListProfiles() []string {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
@@ -325,21 +358,27 @@ func (pm *ProfileManager) ListProfiles() []string {
 	return names
 }
 
-// SecurityViolation represents a security policy violation
+// SecurityViolation represents a security policy violation.
+// It records the type of violation, description, and when it occurred
+// for security auditing and monitoring.
 type SecurityViolation struct {
 	Type        string    `json:"type"`
 	Description string    `json:"description"`
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-// SecurityContext tracks security state during execution
+// SecurityContext tracks security state during execution.
+// It maintains the active security profile and records any
+// security violations that occur during script execution.
 type SecurityContext struct {
 	Profile    *SecurityProfile
 	Violations []SecurityViolation
 	mu         sync.Mutex
 }
 
-// NewSecurityContext creates a new security context
+// NewSecurityContext creates a new security context.
+// It initializes the context with the specified security profile
+// and an empty violations list.
 func NewSecurityContext(profile *SecurityProfile) *SecurityContext {
 	return &SecurityContext{
 		Profile:    profile,
@@ -347,7 +386,9 @@ func NewSecurityContext(profile *SecurityProfile) *SecurityContext {
 	}
 }
 
-// RecordViolation records a security violation
+// RecordViolation records a security violation.
+// It adds a new violation entry with the current timestamp
+// for audit trail purposes.
 func (ctx *SecurityContext) RecordViolation(violationType, description string) {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
@@ -359,7 +400,9 @@ func (ctx *SecurityContext) RecordViolation(violationType, description string) {
 	})
 }
 
-// CheckAndRecord checks a permission and records a violation if denied
+// CheckAndRecord checks a permission and records a violation if denied.
+// It returns true if the permission is allowed, false otherwise,
+// and automatically records violations for denied permissions.
 func (ctx *SecurityContext) CheckAndRecord(perm Permission, description string) bool {
 	allowed := ctx.Profile.CheckPermission(perm)
 	if !allowed {
@@ -368,14 +411,18 @@ func (ctx *SecurityContext) CheckAndRecord(perm Permission, description string) 
 	return allowed
 }
 
-// HasViolations returns true if any violations have been recorded
+// HasViolations returns true if any violations have been recorded.
+// This can be used to determine if script execution should be terminated
+// due to security policy violations.
 func (ctx *SecurityContext) HasViolations() bool {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
 	return len(ctx.Violations) > 0
 }
 
-// GetViolationSummary returns a summary of recorded violations
+// GetViolationSummary returns a summary of recorded violations.
+// It groups violations by type and provides a count of each,
+// useful for security reporting and debugging.
 func (ctx *SecurityContext) GetViolationSummary() string {
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()

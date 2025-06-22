@@ -11,13 +11,16 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ScriptValueConverter handles conversion between ScriptValue and lua.LValue
+// ScriptValueConverter handles conversion between ScriptValue and lua.LValue.
+// It provides bidirectional conversion with circular reference detection
+// and maintains type fidelity across the ScriptValue abstraction.
 type ScriptValueConverter struct {
 	maxDepth  int
 	converter *LuaTypeConverter // Reference to existing converter for custom types
 }
 
-// NewScriptValueConverter creates a new ScriptValue converter
+// NewScriptValueConverter creates a new ScriptValue converter.
+// It requires a reference to the main LuaTypeConverter for handling custom types.
 func NewScriptValueConverter(converter *LuaTypeConverter) *ScriptValueConverter {
 	return &ScriptValueConverter{
 		maxDepth:  32,
@@ -25,7 +28,8 @@ func NewScriptValueConverter(converter *LuaTypeConverter) *ScriptValueConverter 
 	}
 }
 
-// LValueToScriptValue converts a lua.LValue to a ScriptValue
+// LValueToScriptValue converts a lua.LValue to a ScriptValue.
+// It handles all Lua types including tables with circular reference detection.
 func (c *ScriptValueConverter) LValueToScriptValue(L *lua.LState, lv lua.LValue) (engine.ScriptValue, error) {
 	return c.lValueToScriptValueWithDepth(L, lv, 0, make(map[uintptr]bool))
 }

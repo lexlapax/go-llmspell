@@ -1,6 +1,9 @@
 // ABOUTME: This file defines standard error types, categories, and exit codes for the go-llmspell CLI.
 // ABOUTME: It provides user-friendly error formatting with context and suggestions for common issues.
 
+// Package errors provides comprehensive error handling for go-llmspell.
+// It defines standard error types, categories, exit codes, and user-friendly
+// error formatting with context and recovery suggestions.
 package errors
 
 import (
@@ -28,7 +31,8 @@ const (
 	ExitInterrupted     = 130
 )
 
-// ErrorCategory represents the category of an error
+// ErrorCategory represents the category of an error.
+// Categories help classify errors for appropriate handling and user messaging.
 type ErrorCategory string
 
 const (
@@ -47,7 +51,9 @@ const (
 	CategoryInterrupted ErrorCategory = "interrupted"
 )
 
-// SpellError is the base error type for go-llmspell
+// SpellError is the base error type for go-llmspell.
+// It provides rich error information including category, exit code,
+// context data, recovery suggestions, and optional stack traces.
 type SpellError struct {
 	Category    ErrorCategory
 	Code        int
@@ -58,14 +64,16 @@ type SpellError struct {
 	StackTrace  []StackFrame
 }
 
-// StackFrame represents a single frame in the stack trace
+// StackFrame represents a single frame in the stack trace.
+// It captures function name, file path, and line number for debugging.
 type StackFrame struct {
 	Function string
 	File     string
 	Line     int
 }
 
-// Error implements the error interface
+// Error implements the error interface.
+// It returns a formatted error message including the cause if present.
 func (e *SpellError) Error() string {
 	if e == nil {
 		return ""
@@ -76,7 +84,8 @@ func (e *SpellError) Error() string {
 	return e.Message
 }
 
-// Unwrap returns the underlying error
+// Unwrap returns the underlying error.
+// This enables compatibility with Go's standard error wrapping.
 func (e *SpellError) Unwrap() error {
 	if e == nil {
 		return nil
@@ -84,7 +93,8 @@ func (e *SpellError) Unwrap() error {
 	return e.Cause
 }
 
-// Is implements errors.Is support
+// Is implements errors.Is support.
+// It matches errors by category and code, enabling error type checking.
 func (e *SpellError) Is(target error) bool {
 	if e == nil || target == nil {
 		return false
@@ -98,7 +108,8 @@ func (e *SpellError) Is(target error) bool {
 	return errors.Is(e.Cause, target)
 }
 
-// ExitCode returns the appropriate exit code for this error
+// ExitCode returns the appropriate exit code for this error.
+// It uses the explicitly set code or determines one based on the error category.
 func (e *SpellError) ExitCode() int {
 	if e == nil {
 		return 0

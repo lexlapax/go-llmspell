@@ -11,7 +11,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// SecurityLevel defines the security restrictions level
+// SecurityLevel defines the security restrictions level.
+// Each level provides progressively more restrictive sandboxing.
 type SecurityLevel int
 
 const (

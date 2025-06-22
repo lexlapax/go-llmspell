@@ -1,6 +1,9 @@
 // ABOUTME: This file defines the core Runner interface for executing scripts with different engines.
 // ABOUTME: It provides lifecycle management, metrics tracking, and execution options.
 
+// Package runner provides script execution management for go-llmspell.
+// It handles script lifecycle, engine selection, execution options,
+// and metrics tracking across different script engines.
 package runner
 
 import (
@@ -9,7 +12,9 @@ import (
 	"time"
 )
 
-// Runner defines the interface for script execution
+// Runner defines the interface for script execution.
+// It provides methods for initializing, executing, validating scripts,
+// and managing the runner lifecycle with metrics tracking.
 type Runner interface {
 	// Initialize prepares the runner for execution
 	Initialize(ctx context.Context) error
@@ -30,7 +35,9 @@ type Runner interface {
 	GetMetrics() *RunnerMetrics
 }
 
-// RunnerConfig configures the behavior of a runner
+// RunnerConfig configures the behavior of a runner.
+// It specifies execution settings, feature toggles, engine configurations,
+// and security profiles for script execution.
 type RunnerConfig struct {
 	// Execution settings
 	Timeout              time.Duration     `json:"timeout" yaml:"timeout"`
@@ -53,7 +60,8 @@ type RunnerConfig struct {
 	SecurityProfiles       map[string]interface{} `json:"security_profiles" yaml:"security_profiles"`
 }
 
-// Validate checks if the configuration is valid
+// Validate checks if the configuration is valid.
+// It ensures timeout and concurrency limits are positive values.
 func (c *RunnerConfig) Validate() error {
 	if c.Timeout <= 0 {
 		return fmt.Errorf("timeout must be positive, got %v", c.Timeout)
@@ -64,7 +72,9 @@ func (c *RunnerConfig) Validate() error {
 	return nil
 }
 
-// DefaultRunnerConfig returns a configuration with sensible defaults
+// DefaultRunnerConfig returns a configuration with sensible defaults.
+// It provides reasonable settings for timeout, concurrency, engine selection,
+// and security profiles suitable for most use cases.
 func DefaultRunnerConfig() *RunnerConfig {
 	return &RunnerConfig{
 		Timeout:                30 * time.Second,
@@ -81,7 +91,9 @@ func DefaultRunnerConfig() *RunnerConfig {
 	}
 }
 
-// RunnerOptions contains options for a single execution
+// RunnerOptions contains options for a single execution.
+// It allows overriding default settings on a per-execution basis
+// including timeout, engine, security profile, and parameters.
 type RunnerOptions struct {
 	// Timeout overrides the default timeout for this execution
 	Timeout time.Duration
@@ -102,45 +114,55 @@ type RunnerOptions struct {
 	Debug bool
 }
 
-// RunnerOption is a function that configures RunnerOptions
+// RunnerOption is a function that configures RunnerOptions.
+// It follows the functional options pattern for flexible configuration.
 type RunnerOption func(*RunnerOptions)
 
-// WithTimeout sets a custom timeout for the execution
+// WithTimeout sets a custom timeout for the execution.
+// This overrides the default timeout from the runner configuration.
 func WithTimeout(timeout time.Duration) RunnerOption {
 	return func(opts *RunnerOptions) {
 		opts.Timeout = timeout
 	}
 }
 
-// WithParameters sets the parameters for the execution
+// WithParameters sets the parameters for the execution.
+// These parameters are passed to the script and can be accessed
+// within the script context.
 func WithParameters(params map[string]interface{}) RunnerOption {
 	return func(opts *RunnerOptions) {
 		opts.Parameters = params
 	}
 }
 
-// WithEngine sets a specific engine for the execution
+// WithEngine sets a specific engine for the execution.
+// This overrides the default engine specified in the runner configuration.
 func WithEngine(engine string) RunnerOption {
 	return func(opts *RunnerOptions) {
 		opts.Engine = engine
 	}
 }
 
-// WithSecurityProfile sets a specific security profile for the execution
+// WithSecurityProfile sets a specific security profile for the execution.
+// This determines the sandboxing and access controls applied to the script.
 func WithSecurityProfile(profile string) RunnerOption {
 	return func(opts *RunnerOptions) {
 		opts.SecurityProfile = profile
 	}
 }
 
-// WithProgressHandler sets a progress handler for the execution
+// WithProgressHandler sets a progress handler for the execution.
+// The handler receives progress updates during script execution,
+// useful for displaying progress bars or status updates.
 func WithProgressHandler(handler func(Progress)) RunnerOption {
 	return func(opts *RunnerOptions) {
 		opts.ProgressHandler = handler
 	}
 }
 
-// Progress represents the progress of script execution
+// Progress represents the progress of script execution.
+// It provides detailed information about the current execution stage,
+// progress percentage, and timing information.
 type Progress struct {
 	Stage       string    // Current stage (e.g., "parsing", "executing", "cleanup")
 	Message     string    // Human-readable message
@@ -150,7 +172,9 @@ type Progress struct {
 	StartTime   time.Time // When this stage started
 }
 
-// RunnerMetrics tracks execution statistics
+// RunnerMetrics tracks execution statistics.
+// It maintains counters for successful and failed executions,
+// timing information, and per-engine metrics.
 type RunnerMetrics struct {
 	ScriptsExecuted   int64                    `json:"scripts_executed"`
 	TotalDuration     time.Duration            `json:"total_duration"`
@@ -161,14 +185,18 @@ type RunnerMetrics struct {
 	EngineMetrics     map[string]*EngineMetric `json:"engine_metrics"`
 }
 
-// EngineMetric tracks statistics for a specific engine
+// EngineMetric tracks statistics for a specific engine.
+// It records execution count, total duration, and errors
+// for performance monitoring and optimization.
 type EngineMetric struct {
 	ExecutionCount int64         `json:"execution_count"`
 	TotalDuration  time.Duration `json:"total_duration"`
 	ErrorCount     int64         `json:"error_count"`
 }
 
-// SuccessRate calculates the success rate as a percentage
+// SuccessRate calculates the success rate as a percentage.
+// Returns 0.0 if no scripts have been executed, otherwise
+// returns the percentage of successful executions.
 func (m *RunnerMetrics) SuccessRate() float64 {
 	total := m.SuccessCount + m.ErrorCount
 	if total == 0 {
@@ -177,7 +205,9 @@ func (m *RunnerMetrics) SuccessRate() float64 {
 	return float64(m.SuccessCount) / float64(total)
 }
 
-// ExecutionResult contains the result of a script execution
+// ExecutionResult contains the result of a script execution.
+// It includes the return value, error status, timing information,
+// engine used, and additional metadata about the execution.
 type ExecutionResult struct {
 	Value     interface{}            // The return value from the script
 	Error     error                  // Any error that occurred
@@ -188,12 +218,14 @@ type ExecutionResult struct {
 	Metadata  map[string]interface{} // Additional metadata
 }
 
-// IsSuccess returns true if the execution was successful
+// IsSuccess returns true if the execution was successful.
+// An execution is considered successful if no error occurred.
 func (r *ExecutionResult) IsSuccess() bool {
 	return r.Error == nil
 }
 
-// IsError returns true if the execution resulted in an error
+// IsError returns true if the execution resulted in an error.
+// This is the opposite of IsSuccess and indicates execution failure.
 func (r *ExecutionResult) IsError() bool {
 	return r.Error != nil
 }

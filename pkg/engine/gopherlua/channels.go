@@ -14,7 +14,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ChannelManager manages Go channels and their Lua LChannel counterparts
+// ChannelManager manages Go channels and their Lua LChannel counterparts.
+// It provides bridging between Go's channel system and Lua's channel implementation
+// with support for select operations and deadlock detection.
 type ChannelManager struct {
 	maxChannels int
 	channels    map[string]*channelInfo
@@ -23,7 +25,8 @@ type ChannelManager struct {
 	closeOnce   sync.Once
 }
 
-// channelInfo tracks channel state and metadata
+// channelInfo tracks channel state and metadata.
+// It maintains the mapping between Go channels and Lua LChannels.
 type channelInfo struct {
 	ID         string
 	GoChan     chan lua.LValue
@@ -33,7 +36,8 @@ type channelInfo struct {
 	Closed     bool
 }
 
-// SelectOperation defines the type of operation for select
+// SelectOperation defines the type of operation for select.
+// It specifies whether the operation is a send or receive on a channel.
 type SelectOperation int
 
 const (

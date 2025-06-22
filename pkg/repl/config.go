@@ -11,7 +11,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/config"
 )
 
-// NewREPLConfigFromConfig creates a REPL configuration from the main config
+// NewREPLConfigFromConfig creates a REPL configuration from the main config.
+// It maps settings from the main application configuration to REPL-specific
+// settings, applying defaults and expanding paths as needed.
 func NewREPLConfigFromConfig(cfg *config.Config, engine string) REPLConfig {
 	replCfg := REPLConfig{
 		Engine:          engine,
@@ -44,7 +46,9 @@ func NewREPLConfigFromConfig(cfg *config.Config, engine string) REPLConfig {
 	return replCfg
 }
 
-// expandPath expands ~ to the user's home directory
+// expandPath expands ~ to the user's home directory.
+// Returns the original path if expansion fails or if the path
+// doesn't start with ~/.
 func expandPath(path string) string {
 	if path == "" {
 		return ""
@@ -61,8 +65,9 @@ func expandPath(path string) string {
 	return path
 }
 
-// ApplyREPLSettings applies additional REPL settings from the main config
-// This can be used to update REPL behavior based on config settings
+// ApplyREPLSettings applies additional REPL settings from the main config.
+// This can be used to update REPL behavior based on config settings.
+// Currently reserved for future extensions that may require runtime updates.
 func ApplyREPLSettings(replInstance REPL, cfg *config.Config) {
 	// Additional settings can be applied here in the future
 	// For now, most settings are handled during creation

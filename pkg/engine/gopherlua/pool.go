@@ -14,7 +14,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// PoolConfig configures the LState pool behavior
+// PoolConfig configures the LState pool behavior.
+// It controls pool sizing, health monitoring, and cleanup intervals.
 type PoolConfig struct {
 	// MinSize is the minimum number of states to keep in the pool
 	MinSize int
@@ -32,7 +33,8 @@ type PoolConfig struct {
 	CleanupInterval time.Duration
 }
 
-// PoolMetrics provides insight into pool performance and usage
+// PoolMetrics provides insight into pool performance and usage.
+// All fields are updated atomically for thread-safe access.
 type PoolMetrics struct {
 	// Available is the number of states available in the pool
 	Available int64
@@ -62,7 +64,9 @@ type pooledState struct {
 	mu        sync.Mutex    // protects executing flag
 }
 
-// LStatePool manages a pool of Lua VM instances
+// LStatePool manages a pool of Lua VM instances.
+// It provides efficient reuse of LState instances, automatic scaling,
+// health monitoring, and graceful shutdown capabilities.
 type LStatePool struct {
 	factory       *LStateFactory
 	config        PoolConfig
@@ -76,7 +80,9 @@ type LStatePool struct {
 	cleanupTicker *time.Ticker
 }
 
-// NewLStatePool creates a new pool with the given factory and configuration
+// NewLStatePool creates a new pool with the given factory and configuration.
+// The pool will be pre-populated with MinSize states and automatically scale up to MaxSize.
+// A cleanup goroutine will periodically remove idle and unhealthy states.
 func NewLStatePool(factory *LStateFactory, config PoolConfig) (*LStatePool, error) {
 	if factory == nil {
 		return nil, fmt.Errorf("factory cannot be nil")
@@ -128,7 +134,9 @@ func NewLStatePool(factory *LStateFactory, config PoolConfig) (*LStatePool, erro
 	return pool, nil
 }
 
-// Get retrieves a state from the pool or creates a new one if needed
+// Get retrieves a state from the pool or creates a new one if needed.
+// The state must be returned to the pool using Put() when no longer needed.
+// If the pool is at capacity, Get will block until a state becomes available or the context is cancelled.
 func (p *LStatePool) Get(ctx context.Context) (*lua.LState, error) {
 	select {
 	case <-p.shutdown:
@@ -212,7 +220,9 @@ func (p *LStatePool) Get(ctx context.Context) (*lua.LState, error) {
 	}
 }
 
-// Put returns a state to the pool after use
+// Put returns a state to the pool after use.
+// The state will be reset and health-checked before being made available for reuse.
+// Unhealthy states are automatically recycled.
 func (p *LStatePool) Put(state *lua.LState) {
 	if state == nil {
 		return
@@ -261,8 +271,9 @@ func (p *LStatePool) Put(state *lua.LState) {
 	}
 }
 
-// AbandonState marks a state as abandoned due to timeout
-// The state is removed from tracking but not closed immediately
+// AbandonState marks a state as abandoned due to timeout.
+// The state is removed from tracking but not closed immediately to avoid
+// interrupting ongoing execution. It will be garbage collected when execution completes.
 func (p *LStatePool) AbandonState(state *lua.LState) {
 	if state == nil {
 		return
@@ -291,7 +302,8 @@ func (p *LStatePool) AbandonState(state *lua.LState) {
 	// Don't return to pool, don't close - let it be GC'd when execution completes
 }
 
-// GetMetrics returns current pool metrics
+// GetMetrics returns current pool metrics.
+// The returned metrics are a snapshot and safe to read without locks.
 func (p *LStatePool) GetMetrics() PoolMetrics {
 	p.mu.RLock()
 	inUseCount := int64(len(p.inUse))
@@ -306,7 +318,9 @@ func (p *LStatePool) GetMetrics() PoolMetrics {
 	}
 }
 
-// Shutdown gracefully shuts down the pool
+// Shutdown gracefully shuts down the pool.
+// It waits for all in-use states to be returned or for the context to be cancelled.
+// States still executing when shutdown completes are allowed to finish naturally.
 func (p *LStatePool) Shutdown(ctx context.Context) error {
 	var shutdownErr error
 	p.shutdownOnce.Do(func() {

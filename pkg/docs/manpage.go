@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-// ManPage represents a manual page
+// ManPage represents a manual page.
+// It contains all the sections typically found in a UNIX manual page
+// including name, synopsis, description, options, and examples.
 type ManPage struct {
 	Name        string
 	Section     int
@@ -27,7 +29,9 @@ type ManPage struct {
 	Bugs        string
 }
 
-// Option represents a command-line option
+// Option represents a command-line option.
+// It includes both short and long forms, argument specifications,
+// descriptions, and default values.
 type Option struct {
 	Short       string
 	Long        string
@@ -36,7 +40,9 @@ type Option struct {
 	Default     string
 }
 
-// Command represents a subcommand
+// Command represents a subcommand.
+// It contains the subcommand's name, description,
+// specific options, and usage examples.
 type Command struct {
 	Name        string
 	Description string
@@ -44,13 +50,17 @@ type Command struct {
 	Examples    []Example
 }
 
-// Example represents a usage example
+// Example represents a usage example.
+// It provides a command line example with
+// a description of what it demonstrates.
 type Example struct {
 	Command     string
 	Description string
 }
 
-// NewManPage creates a new man page
+// NewManPage creates a new man page.
+// It initializes the man page with the given name, section number,
+// and version, setting the date to the current month and year.
 func NewManPage(name string, section int, version string) *ManPage {
 	return &ManPage{
 		Name:    name,
@@ -61,7 +71,9 @@ func NewManPage(name string, section int, version string) *ManPage {
 	}
 }
 
-// Generate generates the man page in troff format
+// Generate generates the man page in troff format.
+// It produces a complete manual page following standard UNIX man page
+// conventions with all configured sections properly formatted.
 func (m *ManPage) Generate() string {
 	var b strings.Builder
 
@@ -172,7 +184,9 @@ func (m *ManPage) Generate() string {
 	return b.String()
 }
 
-// writeOption writes a single option to the man page
+// writeOption writes a single option to the man page.
+// It formats the option with proper troff macros for both
+// short and long forms, including argument specifications.
 func (m *ManPage) writeOption(b *strings.Builder, opt Option) {
 	b.WriteString(".TP\n")
 
@@ -198,7 +212,9 @@ func (m *ManPage) writeOption(b *strings.Builder, opt Option) {
 	b.WriteString("\n")
 }
 
-// formatDescription formats description text for man pages
+// formatDescription formats description text for man pages.
+// It converts multi-paragraph descriptions to proper troff format
+// by inserting .PP macros between paragraphs.
 func (m *ManPage) formatDescription(desc string) string {
 	// Replace multiple newlines with .PP for paragraph breaks
 	paragraphs := strings.Split(desc, "\n\n")

@@ -8,7 +8,9 @@ import (
 	"strconv"
 )
 
-// ToFloat64 safely converts various numeric types to float64
+// ToFloat64 safely converts various numeric types to float64.
+// It handles all standard numeric types and string parsing.
+// Returns an error for unsupported types.
 func ToFloat64(v interface{}) (float64, error) {
 	switch val := v.(type) {
 	case float64:

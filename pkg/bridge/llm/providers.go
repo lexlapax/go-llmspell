@@ -14,7 +14,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// ProviderTemplate defines a template for creating providers
+// ProviderTemplate defines a template for creating providers.
+// It specifies required configuration, environment variables,
+// and default settings for different provider types.
 type ProviderTemplate struct {
 	Type            string
 	Description     string
@@ -23,7 +25,9 @@ type ProviderTemplate struct {
 	DefaultConfig   map[string]interface{}
 }
 
-// MultiProvider manages multiple providers with a selection strategy
+// MultiProvider manages multiple providers with a selection strategy.
+// It supports strategies like fastest response, primary fallback,
+// and consensus-based decision making.
 type MultiProvider struct {
 	Name      string
 	Providers []MultiProviderEntry
@@ -31,7 +35,9 @@ type MultiProvider struct {
 	Config    MultiProviderConfig
 }
 
-// MultiProviderEntry represents a provider in a multi-provider setup
+// MultiProviderEntry represents a provider in a multi-provider setup.
+// It includes the provider instance, weight for weighted strategies,
+// and primary designation for fallback scenarios.
 type MultiProviderEntry struct {
 	Name     string
 	Provider bridge.Provider
@@ -39,14 +45,18 @@ type MultiProviderEntry struct {
 	Primary  bool
 }
 
-// MultiProviderConfig holds configuration for multi-provider
+// MultiProviderConfig holds configuration for multi-provider.
+// It defines consensus thresholds, timeouts, and retry behavior
+// for multi-provider strategies.
 type MultiProviderConfig struct {
 	ConsensusThreshold float64       // For consensus strategy
 	Timeout            time.Duration // For fastest strategy
 	RetryOnFailure     bool
 }
 
-// ProvidersBridge manages provider creation and configuration
+// ProvidersBridge manages provider creation and configuration.
+// It handles dynamic provider creation, multi-provider setups,
+// template management, and provider metadata tracking.
 type ProvidersBridge struct {
 	mu             sync.RWMutex
 	initialized    bool
@@ -57,7 +67,9 @@ type ProvidersBridge struct {
 	llmBridge      *LLMBridge // Reference to main LLM bridge
 }
 
-// NewProvidersBridge creates a new providers bridge
+// NewProvidersBridge creates a new providers bridge.
+// It initializes provider registries, templates, and metadata storage
+// with a reference to the main LLM bridge.
 func NewProvidersBridge(llmBridge *LLMBridge) *ProvidersBridge {
 	return &ProvidersBridge{
 		providers:      make(map[string]bridge.Provider),
@@ -68,7 +80,9 @@ func NewProvidersBridge(llmBridge *LLMBridge) *ProvidersBridge {
 	}
 }
 
-// initializeTemplates creates default provider templates
+// initializeTemplates creates default provider templates.
+// It returns templates for common providers like OpenAI, Anthropic,
+// and mock providers with their configuration requirements.
 func initializeTemplates() map[string]*ProviderTemplate {
 	return map[string]*ProviderTemplate{
 		"openai": {

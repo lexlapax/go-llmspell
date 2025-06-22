@@ -16,7 +16,9 @@ import (
 	"github.com/lexlapax/go-llms/pkg/util/types"
 )
 
-// DefaultEventBus implements EventBus using go-llms event infrastructure
+// DefaultEventBus implements EventBus using go-llms event infrastructure.
+// It provides a priority-based event subscription and publishing system
+// for engine-level events.
 type DefaultEventBus struct {
 	mu            sync.RWMutex
 	eventBus      *events.EventBus
@@ -32,7 +34,7 @@ type eventSubscription struct {
 	created  time.Time
 }
 
-// NewDefaultEventBus creates a new event bus
+// NewDefaultEventBus creates a new event bus with a buffer size of 100 events.
 func NewDefaultEventBus() *DefaultEventBus {
 	return &DefaultEventBus{
 		eventBus:      events.NewEventBus(events.WithBufferSize(100)),
@@ -41,7 +43,8 @@ func NewDefaultEventBus() *DefaultEventBus {
 	}
 }
 
-// Subscribe implements EventBus
+// Subscribe adds a new event handler for the given pattern.
+// Returns a subscription ID that can be used to unsubscribe.
 func (eb *DefaultEventBus) Subscribe(pattern string, handler EventHandler) (string, error) {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
@@ -154,14 +157,16 @@ func (eb *DefaultEventBus) Clear() error {
 	return nil
 }
 
-// DefaultTypeRegistry implements TypeRegistry using go-llms type infrastructure
+// DefaultTypeRegistry implements TypeRegistry using go-llms type infrastructure.
+// It manages type converters and supports multi-hop type conversions with caching.
 type DefaultTypeRegistry struct {
 	registry   *types.Registry
 	converters map[string]map[string]TypeConverterFunc // fromType -> toType -> converter
 	mu         sync.RWMutex
 }
 
-// NewDefaultTypeRegistry creates a new type registry
+// NewDefaultTypeRegistry creates a new type registry with caching enabled
+// and support for up to 3-hop conversions.
 func NewDefaultTypeRegistry() *DefaultTypeRegistry {
 	return &DefaultTypeRegistry{
 		registry: types.NewRegistry(
@@ -302,7 +307,8 @@ func (w *converterWrapper) Priority() int {
 	return 1 // Default priority
 }
 
-// DefaultEngineProfiler implements engine profiling using go-llms profiling
+// DefaultEngineProfiler implements engine profiling using go-llms profiling.
+// It collects CPU, memory, and performance metrics for script execution.
 type DefaultEngineProfiler struct {
 	profiler  *profiling.Profiler
 	config    ProfilingConfig
@@ -312,7 +318,7 @@ type DefaultEngineProfiler struct {
 	metrics   map[string]interface{}
 }
 
-// NewDefaultEngineProfiler creates a new engine profiler
+// NewDefaultEngineProfiler creates a new engine profiler.
 func NewDefaultEngineProfiler() *DefaultEngineProfiler {
 	return &DefaultEngineProfiler{
 		profiler: profiling.NewProfiler("engine"),
@@ -446,12 +452,13 @@ func (ep *DefaultEngineProfiler) generateOptimizationHints(report *ProfilingRepo
 	return hints
 }
 
-// DefaultAPIExporter implements API export functionality
+// DefaultAPIExporter implements API export functionality.
+// It can export engine APIs in various formats including OpenAPI, Markdown, and JSON.
 type DefaultAPIExporter struct {
 	mu sync.RWMutex
 }
 
-// NewDefaultAPIExporter creates a new API exporter
+// NewDefaultAPIExporter creates a new API exporter.
 func NewDefaultAPIExporter() *DefaultAPIExporter {
 	return &DefaultAPIExporter{}
 }

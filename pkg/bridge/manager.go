@@ -1,6 +1,11 @@
 // ABOUTME: Bridge manager handles lifecycle management of language-agnostic bridges.
 // ABOUTME: Provides thread-safe registration, dependency resolution, and hot-reloading functionality.
 
+// Package bridge provides centralized management for script engine bridges.
+// The BridgeManager handles registration, initialization, dependency resolution,
+// event tracking, metrics collection, and documentation generation for all bridges.
+// It ensures proper lifecycle management and thread-safe operations across multiple
+// script engines.
 package bridge
 
 import (
@@ -16,6 +21,9 @@ import (
 )
 
 // BridgeManager manages the lifecycle of bridges across all script engines.
+// It provides centralized registration, initialization with dependency resolution,
+// metrics tracking, event publishing, and documentation generation. The manager
+// ensures thread-safe operations and proper cleanup of bridge resources.
 type BridgeManager struct {
 	mu           sync.RWMutex
 	bridges      map[string]engine.Bridge
@@ -34,7 +42,9 @@ type BridgeManager struct {
 	metrics map[string]*BridgeMetrics
 }
 
-// BridgeMetrics tracks performance and usage metrics for a bridge
+// BridgeMetrics tracks performance and usage metrics for a bridge.
+// It records initialization times, success/failure counts, and error details
+// for monitoring and debugging bridge behavior.
 type BridgeMetrics struct {
 	InitializationTime  time.Duration
 	InitializationCount int64
@@ -45,11 +55,15 @@ type BridgeMetrics struct {
 }
 
 // NewBridgeManager creates a new bridge manager.
+// It initializes with default event bus and in-memory event storage.
+// For custom event handling, use NewBridgeManagerWithEvents.
 func NewBridgeManager() *BridgeManager {
 	return NewBridgeManagerWithEvents(nil, nil)
 }
 
 // NewBridgeManagerWithEvents creates a new bridge manager with event system support.
+// If eventBus or eventStore are nil, defaults are created. The manager generates
+// a unique session ID for tracking and publishes bridge lifecycle events.
 func NewBridgeManagerWithEvents(eventBus *events.EventBus, eventStore events.EventStorage) *BridgeManager {
 	// Create event bus if not provided
 	if eventBus == nil {
@@ -86,6 +100,9 @@ func NewBridgeManagerWithEvents(eventBus *events.EventBus, eventStore events.Eve
 }
 
 // RegisterBridge registers a bridge with the manager.
+// It validates the bridge, stores its metadata and dependencies, initializes
+// metrics tracking, and publishes a registration event. Returns error if the
+// bridge is nil, has empty ID, or is already registered.
 func (m *BridgeManager) RegisterBridge(bridge engine.Bridge) error {
 	if bridge == nil {
 		return fmt.Errorf("cannot register nil bridge")
@@ -132,6 +149,9 @@ func (m *BridgeManager) RegisterBridge(bridge engine.Bridge) error {
 }
 
 // InitializeBridge initializes a specific bridge.
+// It checks dependencies are met, prevents concurrent initialization, tracks
+// metrics, and publishes initialization events. Returns immediately if already
+// initialized. Thread-safe for concurrent calls.
 func (m *BridgeManager) InitializeBridge(ctx context.Context, bridgeID string) error {
 	m.mu.Lock()
 	bridge, exists := m.bridges[bridgeID]
@@ -211,6 +231,9 @@ func (m *BridgeManager) InitializeBridge(ctx context.Context, bridgeID string) e
 }
 
 // InitializeAll initializes all registered bridges.
+// Bridges are initialized in registration order, not dependency order.
+// For dependency-aware initialization, use InitializeWithDependencies.
+// Returns on first initialization error.
 func (m *BridgeManager) InitializeAll(ctx context.Context) error {
 	m.mu.RLock()
 	bridgeIDs := make([]string, 0, len(m.bridges))
@@ -229,6 +252,8 @@ func (m *BridgeManager) InitializeAll(ctx context.Context) error {
 }
 
 // CleanupBridge cleans up a specific bridge.
+// It calls the bridge's Cleanup method and marks it as not initialized.
+// Safe to call multiple times. Returns error if bridge not found.
 func (m *BridgeManager) CleanupBridge(ctx context.Context, bridgeID string) error {
 	m.mu.Lock()
 	bridge, exists := m.bridges[bridgeID]
@@ -251,6 +276,8 @@ func (m *BridgeManager) CleanupBridge(ctx context.Context, bridgeID string) erro
 }
 
 // CleanupAll cleans up all registered bridges.
+// Attempts to cleanup all bridges even if some fail. Returns the first
+// error encountered but continues cleanup for remaining bridges.
 func (m *BridgeManager) CleanupAll(ctx context.Context) error {
 	m.mu.RLock()
 	bridgeIDs := make([]string, 0, len(m.bridges))
@@ -270,6 +297,9 @@ func (m *BridgeManager) CleanupAll(ctx context.Context) error {
 }
 
 // InitializeWithDependencies initializes a bridge and all its dependencies.
+// It performs topological sort to determine initialization order, detects
+// circular dependencies, and initializes bridges from leaves to root.
+// Thread-safe and idempotent.
 func (m *BridgeManager) InitializeWithDependencies(ctx context.Context, bridgeID string) error {
 	// Build dependency graph and check for cycles
 	visited := make(map[string]bool)
@@ -291,6 +321,8 @@ func (m *BridgeManager) InitializeWithDependencies(ctx context.Context, bridgeID
 }
 
 // resolveDependencies performs topological sort with cycle detection.
+// It uses depth-first search to build dependency order and detect cycles.
+// Returns error if circular dependency found or dependency not registered.
 func (m *BridgeManager) resolveDependencies(bridgeID string, visited, recStack map[string]bool, order *[]string) error {
 	visited[bridgeID] = true
 	recStack[bridgeID] = true
@@ -320,6 +352,8 @@ func (m *BridgeManager) resolveDependencies(bridgeID string, visited, recStack m
 }
 
 // ReloadBridge reloads a bridge by cleaning it up and reinitializing.
+// It also recursively reloads all bridges that depend on this bridge.
+// Useful for hot-reloading configuration or recovering from errors.
 func (m *BridgeManager) ReloadBridge(ctx context.Context, bridgeID string) error {
 	// Check if bridge exists
 	m.mu.RLock()
@@ -366,6 +400,9 @@ func (m *BridgeManager) ReloadBridge(ctx context.Context, bridgeID string) error
 }
 
 // WatchBridge starts watching a bridge for changes.
+// The callback is invoked when NotifyChange is called for the bridge.
+// Watching continues until the context is cancelled. Multiple watchers
+// per bridge are supported.
 func (m *BridgeManager) WatchBridge(ctx context.Context, bridgeID string, interval time.Duration, callback func(string)) error {
 	m.mu.RLock()
 	_, exists := m.bridges[bridgeID]
@@ -407,6 +444,8 @@ func (m *BridgeManager) WatchBridge(ctx context.Context, bridgeID string, interv
 }
 
 // NotifyChange notifies watchers of a bridge change.
+// Non-blocking - skips watchers that aren't ready to receive.
+// Typically called by bridges when their configuration changes.
 func (m *BridgeManager) NotifyChange(bridgeID string) {
 	m.mu.RLock()
 	watchers := m.watchers[bridgeID]
@@ -422,6 +461,8 @@ func (m *BridgeManager) NotifyChange(bridgeID string) {
 }
 
 // GetBridge retrieves a bridge by ID.
+// Returns the bridge interface and nil error if found,
+// or nil and error if not found. Thread-safe for concurrent access.
 func (m *BridgeManager) GetBridge(bridgeID string) (engine.Bridge, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -435,6 +476,7 @@ func (m *BridgeManager) GetBridge(bridgeID string) (engine.Bridge, error) {
 }
 
 // ListBridges returns a list of all registered bridge IDs.
+// The returned slice is a copy and safe to modify. Order is not guaranteed.
 func (m *BridgeManager) ListBridges() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -448,6 +490,7 @@ func (m *BridgeManager) ListBridges() []string {
 }
 
 // IsBridgeInitialized checks if a bridge is initialized.
+// Returns false if bridge not found or not initialized. Thread-safe.
 func (m *BridgeManager) IsBridgeInitialized(bridgeID string) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -456,6 +499,8 @@ func (m *BridgeManager) IsBridgeInitialized(bridgeID string) bool {
 }
 
 // GetBridgeMetadata retrieves metadata for a bridge.
+// Returns a copy of the bridge metadata including name, version,
+// description, and dependencies. Returns error if bridge not found.
 func (m *BridgeManager) GetBridgeMetadata(bridgeID string) (engine.BridgeMetadata, error) {
 	m.mu.RLock()
 	bridge, exists := m.bridges[bridgeID]
@@ -469,6 +514,8 @@ func (m *BridgeManager) GetBridgeMetadata(bridgeID string) (engine.BridgeMetadat
 }
 
 // RegisterBridgesWithEngine registers all bridges with a script engine.
+// This is typically called when initializing a new script engine to make
+// all available bridges accessible. Returns on first registration error.
 func (m *BridgeManager) RegisterBridgesWithEngine(scriptEngine engine.ScriptEngine) error {
 	m.mu.RLock()
 	bridges := make([]engine.Bridge, 0, len(m.bridges))
@@ -487,6 +534,8 @@ func (m *BridgeManager) RegisterBridgesWithEngine(scriptEngine engine.ScriptEngi
 }
 
 // RegisterSpecificBridgesWithEngine registers specific bridges with a script engine.
+// Useful when you want to limit which bridges are available to a particular
+// engine instance. Returns error if any bridge ID not found.
 func (m *BridgeManager) RegisterSpecificBridgesWithEngine(scriptEngine engine.ScriptEngine, bridgeIDs []string) error {
 	for _, id := range bridgeIDs {
 		m.mu.RLock()
@@ -507,17 +556,23 @@ func (m *BridgeManager) RegisterSpecificBridgesWithEngine(scriptEngine engine.Sc
 
 // Event System Methods
 
-// GetEventBus returns the event bus for external subscription
+// GetEventBus returns the event bus for external subscription.
+// External systems can use this to subscribe to bridge lifecycle events.
+// The event bus is shared across all bridges managed by this instance.
 func (m *BridgeManager) GetEventBus() *events.EventBus {
 	return m.eventBus
 }
 
-// GetEventStore returns the event store for querying bridge events
+// GetEventStore returns the event store for querying bridge events.
+// Provides access to historical bridge events for debugging and analysis.
+// The store implementation depends on how the manager was initialized.
 func (m *BridgeManager) GetEventStore() events.EventStorage {
 	return m.eventStore
 }
 
-// SubscribeToBridgeEvents subscribes to bridge events with optional filtering
+// SubscribeToBridgeEvents subscribes to bridge events with optional filtering.
+// If no patterns provided, subscribes to all bridge events (bridge.*).
+// Returns subscription IDs that can be used to unsubscribe later.
 func (m *BridgeManager) SubscribeToBridgeEvents(handler events.EventHandlerFunc, patterns ...string) []string {
 	if m.eventBus == nil {
 		return nil
@@ -538,7 +593,9 @@ func (m *BridgeManager) SubscribeToBridgeEvents(handler events.EventHandlerFunc,
 	return subscriptionIDs
 }
 
-// UnsubscribeFromBridgeEvents unsubscribes from bridge events
+// UnsubscribeFromBridgeEvents unsubscribes from bridge events.
+// Pass the subscription IDs returned from SubscribeToBridgeEvents.
+// Safe to call with nil or empty slice.
 func (m *BridgeManager) UnsubscribeFromBridgeEvents(subscriptionIDs []string) {
 	if m.eventBus == nil {
 		return
@@ -551,7 +608,9 @@ func (m *BridgeManager) UnsubscribeFromBridgeEvents(subscriptionIDs []string) {
 
 // Metrics and Monitoring Methods
 
-// GetBridgeMetrics returns metrics for a specific bridge
+// GetBridgeMetrics returns metrics for a specific bridge.
+// Returns a copy of metrics to prevent race conditions.
+// Includes initialization times, counts, and error information.
 func (m *BridgeManager) GetBridgeMetrics(bridgeID string) (*BridgeMetrics, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -565,7 +624,9 @@ func (m *BridgeManager) GetBridgeMetrics(bridgeID string) (*BridgeMetrics, error
 	return nil, fmt.Errorf("bridge %s not found", bridgeID)
 }
 
-// GetAllBridgeMetrics returns metrics for all bridges
+// GetAllBridgeMetrics returns metrics for all bridges.
+// Returns copies of all metrics indexed by bridge ID.
+// Useful for monitoring and reporting on bridge health.
 func (m *BridgeManager) GetAllBridgeMetrics() map[string]*BridgeMetrics {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -580,7 +641,9 @@ func (m *BridgeManager) GetAllBridgeMetrics() map[string]*BridgeMetrics {
 	return result
 }
 
-// GenerateBridgeReport generates a comprehensive report of all bridge activity
+// GenerateBridgeReport generates a comprehensive report of all bridge activity.
+// Includes session info, bridge counts, initialization status, and detailed
+// metrics for each bridge. Useful for debugging and operational monitoring.
 func (m *BridgeManager) GenerateBridgeReport() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -632,20 +695,26 @@ func (m *BridgeManager) GenerateBridgeReport() map[string]interface{} {
 
 // Performance Profiling Methods
 
-// StartProfiling enables performance profiling for bridge operations
+// StartProfiling enables performance profiling for bridge operations.
+// Currently collects basic metrics. Can be extended for more detailed
+// profiling such as memory usage and goroutine tracking.
 func (m *BridgeManager) StartProfiling() {
 	// This method can be extended to add more detailed profiling
 	// For now, we're already collecting basic metrics in the existing methods
 }
 
-// StopProfiling disables performance profiling
+// StopProfiling disables performance profiling.
+// Placeholder for future profiling control. Basic metrics collection
+// continues regardless of profiling state.
 func (m *BridgeManager) StopProfiling() {
 	// This method can be extended to stop detailed profiling
 }
 
 // Documentation Generation Methods
 
-// BridgeDocumentable implements docs.Documentable for bridges
+// BridgeDocumentable implements docs.Documentable for bridges.
+// It wraps bridge metadata and methods to provide documentation
+// generation capabilities through the go-llms docs system.
 type BridgeDocumentable struct {
 	ID           string
 	Name         string
@@ -657,7 +726,9 @@ type BridgeDocumentable struct {
 	Dependencies []string
 }
 
-// GetDocumentation returns the documentation for this bridge
+// GetDocumentation returns the documentation for this bridge.
+// Implements docs.Documentable interface. Generates documentation
+// including methods, examples, dependencies, and permissions.
 func (bd *BridgeDocumentable) GetDocumentation() docs.Documentation {
 	// Create examples from methods
 	examples := make([]docs.Example, 0, len(bd.Methods))
@@ -686,7 +757,9 @@ func (bd *BridgeDocumentable) GetDocumentation() docs.Documentation {
 	}
 }
 
-// GenerateDocumentation generates comprehensive documentation for all bridges
+// GenerateDocumentation generates comprehensive documentation for all bridges.
+// Supports multiple formats: openapi, markdown, json. Creates appropriate
+// generator based on format and returns format-specific documentation.
 func (m *BridgeManager) GenerateDocumentation(ctx context.Context, format string) (interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -737,7 +810,9 @@ func (m *BridgeManager) GenerateDocumentation(ctx context.Context, format string
 	}
 }
 
-// GenerateOpenAPIDocumentation generates OpenAPI specification for all bridges
+// GenerateOpenAPIDocumentation generates OpenAPI specification for all bridges.
+// Returns a complete OpenAPI spec that can be used for API documentation,
+// client generation, or integration with API gateways.
 func (m *BridgeManager) GenerateOpenAPIDocumentation(ctx context.Context) (*docs.OpenAPISpec, error) {
 	result, err := m.GenerateDocumentation(ctx, "openapi")
 	if err != nil {
@@ -752,7 +827,9 @@ func (m *BridgeManager) GenerateOpenAPIDocumentation(ctx context.Context) (*docs
 	return spec, nil
 }
 
-// GenerateMarkdownDocumentation generates Markdown documentation for all bridges
+// GenerateMarkdownDocumentation generates Markdown documentation for all bridges.
+// Returns formatted Markdown suitable for documentation sites, README files,
+// or integration with documentation systems.
 func (m *BridgeManager) GenerateMarkdownDocumentation(ctx context.Context) (string, error) {
 	result, err := m.GenerateDocumentation(ctx, "markdown")
 	if err != nil {
@@ -767,7 +844,9 @@ func (m *BridgeManager) GenerateMarkdownDocumentation(ctx context.Context) (stri
 	return markdown, nil
 }
 
-// GenerateJSONDocumentation generates JSON documentation for all bridges
+// GenerateJSONDocumentation generates JSON documentation for all bridges.
+// Returns structured JSON that can be processed by documentation tools
+// or used for programmatic documentation access.
 func (m *BridgeManager) GenerateJSONDocumentation(ctx context.Context) ([]byte, error) {
 	result, err := m.GenerateDocumentation(ctx, "json")
 	if err != nil {
@@ -782,7 +861,9 @@ func (m *BridgeManager) GenerateJSONDocumentation(ctx context.Context) ([]byte, 
 	return jsonData, nil
 }
 
-// GenerateBridgeDocumentation generates documentation for a specific bridge
+// GenerateBridgeDocumentation generates documentation for a specific bridge.
+// Supports same formats as GenerateDocumentation but for a single bridge.
+// Useful for bridge-specific documentation pages or debugging.
 func (m *BridgeManager) GenerateBridgeDocumentation(ctx context.Context, bridgeID string, format string) (interface{}, error) {
 	m.mu.RLock()
 	bridge, exists := m.bridges[bridgeID]
@@ -831,7 +912,9 @@ func (m *BridgeManager) GenerateBridgeDocumentation(ctx context.Context, bridgeI
 	}
 }
 
-// ExportAPISchema exports the API schema for all bridges with type mappings
+// ExportAPISchema exports the API schema for all bridges with type mappings.
+// Returns a comprehensive schema including methods, types, permissions, and
+// current runtime state. Useful for tooling and IDE integration.
 func (m *BridgeManager) ExportAPISchema() map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -897,7 +980,9 @@ func (m *BridgeManager) ExportAPISchema() map[string]interface{} {
 
 // Bridge State Serialization
 
-// SerializableBridgeState represents the state of the bridge manager in serializable format
+// SerializableBridgeState represents the state of the bridge manager in serializable format.
+// Used for state persistence, backup/restore, and cluster synchronization.
+// Does not include bridge instances, only metadata and runtime state.
 type SerializableBridgeState struct {
 	Version      string                               `json:"version"`
 	SessionID    string                               `json:"session_id"`
@@ -909,7 +994,9 @@ type SerializableBridgeState struct {
 	Metadata     map[string]interface{}               `json:"metadata,omitempty"`
 }
 
-// SerializableBridgeInfo represents bridge information in serializable format
+// SerializableBridgeInfo represents bridge information in serializable format.
+// Contains only metadata that can be safely serialized and restored.
+// Bridge instances must be re-registered after state import.
 type SerializableBridgeInfo struct {
 	ID           string                 `json:"id"`
 	Name         string                 `json:"name"`
@@ -919,7 +1006,9 @@ type SerializableBridgeInfo struct {
 	Metadata     map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// SerializableBridgeMetrics represents bridge metrics in serializable format
+// SerializableBridgeMetrics represents bridge metrics in serializable format.
+// Converts time.Duration to string for JSON compatibility. Preserves all
+// metric data for accurate state restoration.
 type SerializableBridgeMetrics struct {
 	InitializationTime  string    `json:"initialization_time"`
 	InitializationCount int64     `json:"initialization_count"`
@@ -929,7 +1018,9 @@ type SerializableBridgeMetrics struct {
 	LastFailure         time.Time `json:"last_failure"`
 }
 
-// ExportState exports the current state of the bridge manager
+// ExportState exports the current state of the bridge manager.
+// Returns a serializable representation of all bridge metadata, initialization
+// state, dependencies, and metrics. Bridge instances are not included.
 func (m *BridgeManager) ExportState() (*SerializableBridgeState, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -992,7 +1083,9 @@ func (m *BridgeManager) ExportState() (*SerializableBridgeState, error) {
 	return state, nil
 }
 
-// ImportState imports bridge manager state from serializable format
+// ImportState imports bridge manager state from serializable format.
+// Validates version compatibility and state integrity before importing.
+// Only imports metadata and state; bridges must be re-registered separately.
 func (m *BridgeManager) ImportState(state *SerializableBridgeState) error {
 	if state == nil {
 		return fmt.Errorf("state cannot be nil")
@@ -1055,7 +1148,9 @@ func (m *BridgeManager) ImportState(state *SerializableBridgeState) error {
 	return nil
 }
 
-// ExportStateToJSON exports state as JSON bytes
+// ExportStateToJSON exports state as JSON bytes.
+// If pretty is true, formats with indentation for readability.
+// Useful for state persistence or debugging.
 func (m *BridgeManager) ExportStateToJSON(pretty bool) ([]byte, error) {
 	state, err := m.ExportState()
 	if err != nil {
@@ -1068,7 +1163,9 @@ func (m *BridgeManager) ExportStateToJSON(pretty bool) ([]byte, error) {
 	return json.Marshal(state)
 }
 
-// ImportStateFromJSON imports state from JSON bytes
+// ImportStateFromJSON imports state from JSON bytes.
+// Unmarshals JSON and validates before importing. Returns error
+// if JSON invalid or state validation fails.
 func (m *BridgeManager) ImportStateFromJSON(data []byte) error {
 	var state SerializableBridgeState
 	if err := json.Unmarshal(data, &state); err != nil {
@@ -1078,7 +1175,9 @@ func (m *BridgeManager) ImportStateFromJSON(data []byte) error {
 	return m.ImportState(&state)
 }
 
-// UpdateStateIncremental performs an incremental state update
+// UpdateStateIncremental performs an incremental state update.
+// Updates specific fields for a bridge without full state replacement.
+// Currently supports metrics and initialization state updates.
 func (m *BridgeManager) UpdateStateIncremental(bridgeID string, updates map[string]interface{}) error {
 	if bridgeID == "" {
 		return fmt.Errorf("bridge ID cannot be empty")
@@ -1125,7 +1224,9 @@ func (m *BridgeManager) UpdateStateIncremental(bridgeID string, updates map[stri
 	return nil
 }
 
-// validateStateVersion checks if the state version is compatible
+// validateStateVersion checks if the state version is compatible.
+// Ensures imported state can be correctly interpreted. Currently
+// only supports version 1.0.
 func (m *BridgeManager) validateStateVersion(version string) error {
 	switch version {
 	case "1.0":
@@ -1135,7 +1236,9 @@ func (m *BridgeManager) validateStateVersion(version string) error {
 	}
 }
 
-// validateStateIntegrity performs basic integrity checks on the state
+// validateStateIntegrity performs basic integrity checks on the state.
+// Ensures all references are valid and state is internally consistent.
+// Checks dependencies, metrics, and initialization state references.
 func (m *BridgeManager) validateStateIntegrity(state *SerializableBridgeState) error {
 	if state.SessionID == "" {
 		return fmt.Errorf("session ID cannot be empty")
@@ -1174,12 +1277,15 @@ func (m *BridgeManager) validateStateIntegrity(state *SerializableBridgeState) e
 	return nil
 }
 
-// GetStateVersion returns the current state format version
+// GetStateVersion returns the current state format version.
+// Used for versioning exported state. Current version is 1.0.
 func (m *BridgeManager) GetStateVersion() string {
 	return "1.0"
 }
 
-// Cleanup method to properly close event system resources
+// Cleanup method to properly close event system resources.
+// Should be called when shutting down the bridge manager to ensure
+// proper cleanup of event bus and storage resources.
 func (m *BridgeManager) Cleanup() error {
 	if m.eventBus != nil {
 		m.eventBus.Close()

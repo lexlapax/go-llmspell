@@ -13,7 +13,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// AsyncRuntime manages coroutines and async operations in the Lua engine
+// AsyncRuntime manages coroutines and async operations in the Lua engine.
+// It provides promise-based async execution with context cancellation and resource limits.
 type AsyncRuntime struct {
 	maxCoroutines  int
 	activeRoutines map[string]*coroutineInfo
@@ -23,7 +24,8 @@ type AsyncRuntime struct {
 	closeOnce      sync.Once
 }
 
-// coroutineInfo tracks active coroutine state
+// coroutineInfo tracks active coroutine state.
+// It includes timing information and cancellation support for resource management.
 type coroutineInfo struct {
 	ID        string
 	StartTime time.Time
@@ -32,19 +34,22 @@ type coroutineInfo struct {
 	Done      chan struct{}
 }
 
-// coroutineResult stores completed coroutine results
+// coroutineResult stores completed coroutine results.
+// It holds either a successful value or an error from the coroutine execution.
 type coroutineResult struct {
 	Value lua.LValue
 	Error error
 }
 
-// Promise represents an async operation backed by a coroutine
+// Promise represents an async operation backed by a coroutine.
+// It provides a handle to check status and retrieve results from async operations.
 type Promise struct {
 	coroID  string
 	runtime *AsyncRuntime
 }
 
-// AsyncExecutionContext provides context for async operations
+// AsyncExecutionContext provides context for async operations.
+// It tracks execution metadata and supports cancellation and timeouts.
 type AsyncExecutionContext struct {
 	ID        string
 	StartTime time.Time

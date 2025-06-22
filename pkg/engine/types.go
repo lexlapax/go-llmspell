@@ -13,19 +13,28 @@ import (
 
 // BaseTypeConverter provides a default implementation of TypeConverter interface.
 // Engine-specific converters can embed this and override specific methods.
+// It handles common type conversions between Go types and script engine types.
 type BaseTypeConverter struct {
 	engineName string
 	adapters   map[string]TypeAdapter
 }
 
 // TypeAdapter handles conversion for specific types.
+// Implement this interface to add custom type conversion support
+// for types not handled by the BaseTypeConverter.
 type TypeAdapter interface {
+	// ToNative converts from an engine-specific type to a Go native type.
 	ToNative(v interface{}) (interface{}, error)
+	
+	// FromNative converts from a Go native type to an engine-specific type.
 	FromNative(v interface{}) (interface{}, error)
+	
+	// SupportsType returns true if this adapter can handle the given type name.
 	SupportsType(typeName string) bool
 }
 
-// NewBaseTypeConverter creates a new base type converter.
+// NewBaseTypeConverter creates a new base type converter for the specified engine.
+// The engineName is used in error messages and type information.
 func NewBaseTypeConverter(engineName string) *BaseTypeConverter {
 	return &BaseTypeConverter{
 		engineName: engineName,
@@ -34,11 +43,14 @@ func NewBaseTypeConverter(engineName string) *BaseTypeConverter {
 }
 
 // RegisterAdapter registers a type adapter for specific types.
+// The adapter will be used when converting values of the specified type.
 func (c *BaseTypeConverter) RegisterAdapter(typeName string, adapter TypeAdapter) {
 	c.adapters[typeName] = adapter
 }
 
 // ToBoolean converts a value to boolean.
+// Nil values return false. String values "true", "yes", "1", "on" return true.
+// Numeric values return true if non-zero. Other types return an error.
 func (c *BaseTypeConverter) ToBoolean(v interface{}) (bool, error) {
 	if v == nil {
 		return false, nil
@@ -550,6 +562,8 @@ func (c *BaseTypeConverter) setFieldValue(source interface{}, target reflect.Val
 }
 
 // ValidateType validates that a value conforms to the expected type.
+// It attempts to convert the value to the expected type and returns an error if conversion fails.
+// Nil values are considered valid for any type.
 func (c *BaseTypeConverter) ValidateType(value interface{}, expectedType string) error {
 	if value == nil {
 		return nil // nil is valid for any type
@@ -584,6 +598,8 @@ func (c *BaseTypeConverter) ValidateType(value interface{}, expectedType string)
 }
 
 // GetConversionPath returns the conversion path between two types.
+// It returns a slice of type names representing the conversion steps needed
+// to convert from fromType to toType. Returns an error if no conversion path exists.
 func (c *BaseTypeConverter) GetConversionPath(fromType, toType string) ([]string, error) {
 	// Simple direct conversions
 	directConversions := map[string][]string{

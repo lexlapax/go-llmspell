@@ -1,6 +1,35 @@
 // ABOUTME: LuaEngine implements the ScriptEngine interface for Lua script execution using gopher-lua
 // ABOUTME: Integrates LStatePool, TypeConverter, SecurityManager for comprehensive Lua scripting support
 
+// Package gopherlua provides a Lua scripting engine implementation for go-llmspell.
+// It wraps the gopher-lua library to provide a complete Lua 5.1 compatible scripting
+// environment with support for bridges, async operations, debugging, and security sandboxing.
+//
+// The package includes:
+//   - Full Lua 5.1 compatibility via gopher-lua
+//   - Bridge system for exposing Go functionality to Lua
+//   - Async/coroutine support with channels
+//   - Script validation and security sandboxing
+//   - Performance profiling and optimization
+//   - Comprehensive standard library
+//
+// Example usage:
+//
+//	engine := gopherlua.NewEngine()
+//	err := engine.Initialize(engine.EngineConfig{
+//	    SandboxMode: true,
+//	    MemoryLimit: 100 * 1024 * 1024, // 100MB
+//	})
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	defer engine.Shutdown()
+//
+//	result, err := engine.Execute(ctx, "return 'Hello from Lua!'", nil)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println(result) // Output: Hello from Lua!
 package gopherlua
 
 import (
@@ -17,7 +46,9 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
-// LuaEngine implements the engine.ScriptEngine interface for Lua scripting
+// LuaEngine implements the engine.ScriptEngine interface for Lua scripting.
+// It provides a complete Lua 5.1 environment with extensions for async operations,
+// bridge integration, and resource management.
 type LuaEngine struct {
 	// Core components
 	pool         *LStatePool
@@ -54,7 +85,8 @@ type LuaEngine struct {
 	profiler ProfilerInterface
 }
 
-// EngineMetrics tracks Lua engine performance
+// EngineMetrics tracks Lua engine performance metrics.
+// All fields use atomic operations for thread-safe updates.
 type EngineMetrics struct {
 	scriptsExecuted  int64
 	totalExecTime    int64 // nanoseconds, use atomic operations
@@ -68,7 +100,8 @@ type EngineMetrics struct {
 	gcCollections    int64
 }
 
-// NewLuaEngine creates a new Lua script engine
+// NewLuaEngine creates a new Lua script engine with default configuration.
+// The engine must be initialized with Initialize() before use.
 func NewLuaEngine() *LuaEngine {
 	converter := NewLuaTypeConverter()
 	return &LuaEngine{
@@ -83,21 +116,24 @@ func NewLuaEngine() *LuaEngine {
 	}
 }
 
-// SetProfiler sets the profiler for the engine
+// SetProfiler sets the profiler for the engine.
+// This should be called before initialization if custom profiling is needed.
 func (e *LuaEngine) SetProfiler(profiler ProfilerInterface) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.profiler = profiler
 }
 
-// GetProfiler returns the current profiler
+// GetProfiler returns the current profiler instance.
 func (e *LuaEngine) GetProfiler() ProfilerInterface {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.profiler
 }
 
-// Initialize initializes the Lua engine with the given configuration
+// Initialize initializes the Lua engine with the given configuration.
+// This must be called before any script execution. It sets up the LState pool,
+// security manager, and loads the standard library.
 func (e *LuaEngine) Initialize(config engine.EngineConfig) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()

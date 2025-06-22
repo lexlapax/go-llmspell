@@ -3,7 +3,9 @@
 
 package repl
 
-// highlightLua applies Lua-specific syntax highlighting
+// highlightLua applies Lua-specific syntax highlighting.
+// It recognizes Lua keywords, built-in functions, standard libraries,
+// and single-line comments starting with --.
 func (h *SyntaxHighlighter) highlightLua(input string) string {
 	// Lua keywords
 	luaKeywords := []string{

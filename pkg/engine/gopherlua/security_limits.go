@@ -1,6 +1,9 @@
 // ABOUTME: ResourceLimitEnforcer implements resource limits for Lua script execution
 // ABOUTME: Uses context timeouts, memory monitoring, and stack limits since SetHook is unavailable
 
+// Package gopherlua provides a Lua engine implementation for go-llmspell.
+// This file implements resource limit enforcement for Lua script execution,
+// using context timeouts, memory monitoring, and execution controls.
 package gopherlua
 
 import (
@@ -12,12 +15,16 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-// ResourceLimitEnforcer manages resource limits for Lua execution
+// ResourceLimitEnforcer manages resource limits for Lua execution.
+// It enforces memory, CPU time, and execution constraints to prevent
+// resource exhaustion and ensure safe script execution.
 type ResourceLimitEnforcer struct {
 	limits ResourceLimits
 }
 
-// ResourceStats tracks current resource usage
+// ResourceStats tracks current resource usage.
+// It provides real-time information about memory consumption,
+// execution time, and stack depth during script execution.
 type ResourceStats struct {
 	MemoryUsed    int64
 	ExecutionTime time.Duration
@@ -28,7 +35,7 @@ type ResourceStats struct {
 // ResourceMonitorLimits extends ResourceMonitor for limit enforcement
 // Uses the ResourceMonitor from security.go
 
-// NewResourceLimitEnforcer creates a new resource limit enforcer
+// NewResourceLimitEnforcer creates a new resource limit enforcer.
 func NewResourceLimitEnforcer(limits ResourceLimits) *ResourceLimitEnforcer {
 	// Apply defaults if needed
 	if limits.CheckInterval == 0 {
@@ -43,7 +50,7 @@ func NewResourceLimitEnforcer(limits ResourceLimits) *ResourceLimitEnforcer {
 	}
 }
 
-// ExecuteWithLimits executes a Lua script with resource limits enforced
+// ExecuteWithLimits executes a Lua script with resource limits enforced.
 func (rle *ResourceLimitEnforcer) ExecuteWithLimits(ctx context.Context, L *lua.LState, script string) error {
 	// Create execution context with timeout
 	execCtx := ctx
@@ -119,7 +126,7 @@ func (rle *ResourceLimitEnforcer) ExecuteWithLimits(ctx context.Context, L *lua.
 	}
 }
 
-// CreateMonitor creates a new resource monitor
+// CreateMonitor creates a new resource monitor.
 func (rle *ResourceLimitEnforcer) CreateMonitor() *ResourceMonitor {
 	return &ResourceMonitor{
 		limits:           rle.limits,
@@ -129,7 +136,7 @@ func (rle *ResourceLimitEnforcer) CreateMonitor() *ResourceMonitor {
 	}
 }
 
-// checkResourceUsage performs periodic resource usage checks
+// checkResourceUsage performs periodic resource usage checks.
 func (rle *ResourceLimitEnforcer) checkResourceUsage(monitor *ResourceMonitor) error {
 	monitor.mu.Lock()
 	defer monitor.mu.Unlock()
@@ -158,14 +165,14 @@ func (rle *ResourceLimitEnforcer) checkResourceUsage(monitor *ResourceMonitor) e
 	return nil
 }
 
-// UpdateMemoryUsage updates the current memory usage
+// UpdateMemoryUsage updates the current memory usage.
 func (rm *ResourceMonitor) UpdateMemoryUsage(bytes int64) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 	rm.memUsed = bytes
 }
 
-// GetStats returns current resource usage statistics
+// GetStats returns current resource usage statistics.
 func (rm *ResourceMonitor) GetStats() ResourceStats {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
@@ -177,21 +184,23 @@ func (rm *ResourceMonitor) GetStats() ResourceStats {
 	}
 }
 
-// GetMemoryUsage returns current memory usage
+// GetMemoryUsage returns current memory usage.
 func (rm *ResourceMonitor) GetMemoryUsage() int64 {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 	return rm.memUsed
 }
 
-// GetExecutionTime returns elapsed execution time
+// GetExecutionTime returns elapsed execution time.
 func (rm *ResourceMonitor) GetExecutionTime() time.Duration {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 	return time.Since(rm.startTime)
 }
 
-// CreateResourceLimitProfile creates predefined resource limit profiles
+// CreateResourceLimitProfile creates predefined resource limit profiles.
+// Available profiles: "minimal", "standard", "strict".
+// Returns strict profile if the specified profile is not found.
 func CreateResourceLimitProfile(profile string) ResourceLimits {
 	profiles := map[string]ResourceLimits{
 		"minimal": {
@@ -225,7 +234,9 @@ func CreateResourceLimitProfile(profile string) ResourceLimits {
 	return profiles["strict"]
 }
 
-// ApplyResourceLimitsToState configures Lua state with resource limits
+// ApplyResourceLimitsToState configures Lua state with resource limits.
+// Note: Some limits must be set during lua.NewState() creation and cannot
+// be modified after the state is created.
 func ApplyResourceLimitsToState(L *lua.LState, limits ResourceLimits) {
 	// Configure VM options that can be set
 	// Note: Some limits must be set during lua.NewState() creation
@@ -234,7 +245,9 @@ func ApplyResourceLimitsToState(L *lua.LState, limits ResourceLimits) {
 	// The stack depth limit should be set in lua.Options.CallStackSize
 }
 
-// ValidateResourceLimits checks if resource limits are reasonable
+// ValidateResourceLimits checks if resource limits are reasonable.
+// It validates that limits are not negative and are within practical ranges
+// for safe script execution.
 func ValidateResourceLimits(limits ResourceLimits) error {
 	if limits.MaxMemory < 0 {
 		return fmt.Errorf("MaxMemory cannot be negative: %d", limits.MaxMemory)

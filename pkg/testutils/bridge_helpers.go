@@ -12,7 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// SetupTestBridge initializes a bridge and returns a cleanup function
+// SetupTestBridge initializes a bridge and returns a cleanup function.
+// It ensures proper initialization and cleanup of bridges in tests.
 // Usage:
 //
 //	cleanup := SetupTestBridge(t, bridge)
@@ -32,7 +33,8 @@ func SetupTestBridge(t *testing.T, bridge engine.Bridge) func() {
 	}
 }
 
-// SetupTestBridgeWithEngine initializes a bridge with a mock engine and returns both
+// SetupTestBridgeWithEngine initializes a bridge with a mock engine and returns both.
+// It creates a mock engine, registers the bridge, and ensures proper cleanup.
 // Usage:
 //
 //	engine, cleanup := SetupTestBridgeWithEngine(t, bridge)

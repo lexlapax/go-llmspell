@@ -13,13 +13,17 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
 
-// ValidateCmd validates a spell or script
+// ValidateCmd validates a spell or script.
+// It supports both spell.yaml files and script files,
+// performing syntax validation and basic checks.
 type ValidateCmd struct {
 	BaseCommand
 	Path string `arg:"" help:"Path to spell.yaml or script file" type:"existingfile"`
 }
 
-// Run executes the command
+// Run executes the command.
+// It determines the file type based on extension,
+// then validates using the appropriate validator.
 func (c *ValidateCmd) Run(ctx context.Context) error {
 	// Get engine registry from context
 	engineRegistryInterface := GetEngineRegistry(ctx)

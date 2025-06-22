@@ -254,3 +254,209 @@ Once these features are available in go-llms, go-llmspell will implement corresp
 - [ ] Integration testing
 - [ ] Documentation updates
 - [ ] Phase 1.4.6 completion
+
+---
+
+## 11. Script Documentation Generation Extensions
+
+**Context**: Task 2.4.3.3 - Documentation Generator capabilities  
+**Status**: Partially exists in go-llms (tools only)  
+**Priority**: High  
+**Date Added**: 2025-06-21
+
+### 11.1 Script-Aware Documentation Support
+
+go-llms already has excellent documentation generation for tools, but needs extensions for script-based systems:
+
+- [ ] Extend `Documentable` interface to support script metadata
+- [ ] Add language-specific documentation extraction
+- [ ] Support for script-specific schemas (input/output parameters)
+- [ ] Script example extraction and validation
+- [ ] Multi-language script support (Lua, JavaScript, Tengo)
+
+### 11.2 Suggested Implementation Location
+- **Package**: `pkg/docs/` (extend existing)
+- **Files**:
+  - `script_documentable.go` - Script-aware Documentable implementation
+  - `script_extractor.go` - Extract documentation from script files
+  - `language_analyzer.go` - Language-specific analysis
+  - `example_validator.go` - Validate script examples
+
+### 11.3 Interface Design
+```go
+// ScriptDocumentable extends Documentable for script systems
+type ScriptDocumentable interface {
+    Documentable
+    GetScriptLanguage() string
+    GetScriptSource() string
+    GetScriptParameters() []Parameter
+    GetScriptExamples() []ScriptExample
+}
+
+// ScriptDocumentationExtractor extracts docs from scripts
+type ScriptDocumentationExtractor interface {
+    ExtractFromScript(path string, language string) (Documentation, error)
+    ExtractFromSource(source string, language string) (Documentation, error)
+    ValidateExamples(doc Documentation) ([]ValidationResult, error)
+}
+```
+
+### 11.4 go-llmspell Usage
+
+Once implemented in go-llms, go-llmspell would:
+
+1. **Bridge the ScriptDocumentable interface**
+   ```go
+   // In pkg/bridge/docs/
+   type ScriptDocumentableBridge struct {
+       script *runner.Script
+       engine engine.Engine
+   }
+   
+   func (s *ScriptDocumentableBridge) GetDocumentation() docs.Documentation {
+       // Convert script to go-llms Documentation format
+   }
+   ```
+
+2. **Use go-llms generators directly**
+   ```go
+   // Generate documentation using go-llms infrastructure
+   generator := docs.NewMarkdownGenerator(config)
+   markdown, _ := generator.GenerateMarkdown(ctx, documentables)
+   ```
+
+3. **Language-specific extractors remain in go-llmspell**
+   - Keep `gendocs_lua.go`, `gendocs_javascript.go`, etc.
+   - These implement the extraction logic for each language
+   - Feed extracted data into go-llms documentation system
+
+---
+
+## 12. Man Page Generation System
+
+**Context**: Task 3.3 - Shell completion and man page generation  
+**Status**: Not in go-llms  
+**Priority**: Medium  
+**Date Added**: 2025-06-21
+
+### 12.1 Unix Man Page Generation
+
+The man page generation system in go-llmspell's `pkg/docs/manpage.go` is generic and could benefit other go-llms tools:
+
+- [ ] Implement structured man page data model
+- [ ] Add troff format generation
+- [ ] Support man page sections (1-8)
+- [ ] Generate man pages from command metadata
+- [ ] Support sub-command documentation
+- [ ] Include examples and cross-references
+
+### 12.2 Suggested Implementation Location
+- **Package**: `pkg/util/docs/manpage/`
+- **Files**:
+  - `manpage.go` - Core man page types and generator
+  - `troff.go` - Troff format generation
+  - `command_extractor.go` - Extract from CLI commands
+  - `formatter.go` - Format conversions (HTML, text)
+
+### 12.3 Interface Design
+```go
+// ManPage represents a complete man page
+type ManPage struct {
+    Name        string
+    Section     int
+    Version     string
+    Date        string
+    Description string
+    Synopsis    string
+    Options     []Option
+    Commands    []Command
+    Examples    []Example
+    Files       []string
+    SeeAlso     []string
+    Authors     []string
+    Bugs        string
+}
+
+// ManPageGenerator generates man pages
+type ManPageGenerator interface {
+    GenerateManPage(cmd Command) (*ManPage, error)
+    GenerateTroff(man *ManPage) string
+    GenerateHTML(man *ManPage) string
+    GenerateText(man *ManPage) string
+}
+```
+
+### 12.4 Integration with CLI Tools
+
+This would integrate with Kong-based CLIs (like go-llms tools):
+
+```go
+// Extract from Kong CLI structure
+type KongManPageExtractor interface {
+    ExtractFromKongApp(app *kong.Application) ([]*ManPage, error)
+    ExtractFromKongCommand(cmd *kong.Command) (*ManPage, error)
+}
+```
+
+### 12.5 go-llmspell Usage
+
+Once upstreamed, go-llmspell would:
+
+1. **Remove local manpage.go implementation**
+2. **Bridge go-llms man page generator**
+3. **Use for all man page generation needs**
+
+---
+
+## 13. Enhanced Documentation Integration
+
+**Context**: Unified documentation system for go-llms ecosystem  
+**Status**: Design consideration  
+**Priority**: High  
+**Date Added**: 2025-06-21
+
+### 13.1 Unified Documentation Pipeline
+
+Create a comprehensive documentation pipeline that supports:
+
+- [ ] Tools (existing)
+- [ ] Scripts (new - Section 11)
+- [ ] CLI commands (via man pages - Section 12)
+- [ ] APIs and bridges
+- [ ] Examples and tutorials
+
+### 13.2 Benefits of Upstream Implementation
+
+1. **Consistency**: All go-llms-based tools use same documentation format
+2. **Reusability**: Man page generation benefits all CLI tools
+3. **Maintenance**: Single implementation to maintain
+4. **Integration**: Documentation can cross-reference between tools/scripts
+5. **Export**: Unified export to various formats
+
+### 13.3 Migration Path for go-llmspell
+
+1. **Phase 1**: Upstream man page generation
+2. **Phase 2**: Extend Documentable for scripts
+3. **Phase 3**: Migrate go-llmspell to use go-llms docs
+4. **Phase 4**: Remove duplicate implementation
+
+---
+
+## 14. Implementation Priority for Documentation Features
+
+**Recommended Order**:
+
+1. **Man Page Generation** (Section 12)
+   - Self-contained feature
+   - Immediately useful for go-llms CLI tools
+   - No breaking changes
+
+2. **Script Documentation Extensions** (Section 11)
+   - Builds on existing documentation system
+   - Extends interfaces without breaking changes
+   - Enables go-llmspell migration
+
+3. **Enhanced Integration** (Section 13)
+   - Long-term vision
+   - Requires both previous features
+   - Provides unified documentation experience
