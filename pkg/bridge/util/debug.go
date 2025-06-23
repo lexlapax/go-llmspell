@@ -46,7 +46,7 @@ func NewDebugBridge() *DebugBridge {
 // GetID returns the bridge identifier.
 // It implements the types.Bridge interface.
 func (db *DebugBridge) GetID() string {
-	return "debug"
+	return "util_debug"
 }
 
 // GetMetadata returns bridge metadata.
@@ -54,7 +54,7 @@ func (db *DebugBridge) GetID() string {
 // version, description, and supported debug features.
 func (db *DebugBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:         "debug",
+		Name:         "util_debug",
 		Version:      "v1.0.0",
 		Description:  "Bridge for go-llms debug logging system with component-based control and conditional compilation",
 		Author:       "go-llmspell",
@@ -234,13 +234,13 @@ func (db *DebugBridge) RequiredPermissions() []types.Permission {
 	return []types.Permission{
 		{
 			Type:        types.PermissionStorage,
-			Resource:    "debug.logging",
+			Resource:    "util_debug.logging",
 			Actions:     []string{"read", "write"},
 			Description: "Access debug logging configuration",
 		},
 		{
 			Type:        types.PermissionMemory,
-			Resource:    "debug.components",
+			Resource:    "util_debug.components",
 			Actions:     []string{"read", "write"},
 			Description: "Manage debug component state",
 		},

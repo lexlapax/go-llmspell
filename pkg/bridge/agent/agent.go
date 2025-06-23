@@ -60,9 +60,9 @@ func NewAgentBridge() *AgentBridge {
 }
 
 // GetID returns the bridge identifier.
-// Always returns "agent" for this bridge.
+// Always returns "agent_core" for this bridge.
 func (b *AgentBridge) GetID() string {
-	return "agent"
+	return "agent_core"
 }
 
 // GetMetadata returns bridge metadata.
@@ -70,7 +70,7 @@ func (b *AgentBridge) GetID() string {
 // description, author, and license for documentation and discovery.
 func (b *AgentBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "agent",
+		Name:        "agent_core",
 		Version:     "2.0.0",
 		Description: "Agent system bridge with state serialization, event replay, and performance profiling",
 		Author:      "go-llmspell",
@@ -1548,7 +1548,7 @@ func (b *AgentBridge) RequiredPermissions() []types.Permission {
 	return []types.Permission{
 		{
 			Type:        types.PermissionNetwork,
-			Resource:    "agent",
+			Resource:    "agent_core",
 			Actions:     []string{"create", "execute", "manage"},
 			Description: "Access to agent system",
 		},

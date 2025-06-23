@@ -15,7 +15,7 @@ import (
 func TestScriptLoggerBridgeInitialization(t *testing.T) {
 	bridge := NewScriptLoggerBridge()
 	assert.NotNil(t, bridge)
-	assert.Equal(t, "script_logger", bridge.GetID())
+	assert.Equal(t, "util_script_logger", bridge.GetID())
 	assert.False(t, bridge.IsInitialized())
 
 	ctx := context.Background()
@@ -41,7 +41,7 @@ func TestScriptLoggerBridgeMetadata(t *testing.T) {
 	bridge := NewScriptLoggerBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "script_logger", metadata.Name)
+	assert.Equal(t, "util_script_logger", metadata.Name)
 	assert.Equal(t, "v1.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "Unified script-friendly logging")
 	assert.Equal(t, "go-llmspell", metadata.Author)
@@ -413,12 +413,12 @@ func TestScriptLoggerBridgeRequiredPermissions(t *testing.T) {
 	hasStorage := false
 
 	for _, perm := range permissions {
-		if perm.Type == engine.PermissionMemory && perm.Resource == "script_logger.context" {
+		if perm.Type == engine.PermissionMemory && perm.Resource == "util_script_logger.context" {
 			hasMemory = true
 			assert.Contains(t, perm.Actions, "read")
 			assert.Contains(t, perm.Actions, "write")
 		}
-		if perm.Type == engine.PermissionStorage && perm.Resource == "script_logger.output" {
+		if perm.Type == engine.PermissionStorage && perm.Resource == "util_script_logger.output" {
 			hasStorage = true
 			assert.Contains(t, perm.Actions, "write")
 		}

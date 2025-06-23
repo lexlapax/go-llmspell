@@ -20,14 +20,14 @@ func TestAgentBridge_Initialize(t *testing.T) {
 
 func TestAgentBridge_GetID(t *testing.T) {
 	bridge := NewAgentBridge()
-	assert.Equal(t, "agent", bridge.GetID())
+	assert.Equal(t, "agent_core", bridge.GetID())
 }
 
 func TestAgentBridge_GetMetadata(t *testing.T) {
 	bridge := NewAgentBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "agent", metadata.Name)
+	assert.Equal(t, "agent_core", metadata.Name)
 	assert.Equal(t, "2.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "Agent system bridge")
 	assert.Equal(t, "go-llmspell", metadata.Author)
@@ -300,7 +300,7 @@ func TestAgentBridge_RequiredPermissions(t *testing.T) {
 	// Check for expected permission types
 	hasAgentPermission := false
 	for _, perm := range permissions {
-		if perm.Resource == "agent" {
+		if perm.Resource == "agent_core" {
 			hasAgentPermission = true
 			break
 		}

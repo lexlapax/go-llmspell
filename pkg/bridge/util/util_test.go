@@ -18,14 +18,14 @@ import (
 func TestNewUtilBridge(t *testing.T) {
 	bridge := NewUtilBridge()
 	assert.NotNil(t, bridge)
-	assert.Equal(t, "util", bridge.GetID())
+	assert.Equal(t, "util_core", bridge.GetID())
 }
 
 func TestUtilBridgeMetadata(t *testing.T) {
 	bridge := NewUtilBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "util", metadata.Name)
+	assert.Equal(t, "util_core", metadata.Name)
 	assert.Equal(t, "1.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "miscellaneous helper functions")
 	assert.Equal(t, "go-llmspell", metadata.Author)
@@ -152,7 +152,7 @@ func TestUtilBridgeRequiredPermissions(t *testing.T) {
 	hasProcessPerm := false
 
 	for _, perm := range permissions {
-		if perm.Type == "memory" && perm.Resource == "util" {
+		if perm.Type == "memory" && perm.Resource == "util_core" {
 			hasMemoryPerm = true
 			assert.Contains(t, perm.Actions, "read")
 		}

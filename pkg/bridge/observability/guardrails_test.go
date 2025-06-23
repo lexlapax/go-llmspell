@@ -33,7 +33,7 @@ func TestGuardrailsBridge(t *testing.T) {
 				assert.True(t, bridge.IsInitialized())
 
 				metadata := bridge.GetMetadata()
-				assert.Equal(t, "guardrails", metadata.Name)
+				assert.Equal(t, "observability_guardrails", metadata.Name)
 				assert.Equal(t, "v1.0.0", metadata.Version)
 				assert.Contains(t, metadata.Description, "safety system")
 			},

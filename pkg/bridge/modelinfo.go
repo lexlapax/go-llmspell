@@ -35,9 +35,9 @@ func NewModelInfoBridge() *ModelInfoBridge {
 }
 
 // GetID returns the bridge ID.
-// Always returns "modelinfo" for this bridge.
+// Always returns "llm_modelinfo" for this bridge.
 func (b *ModelInfoBridge) GetID() string {
-	return "modelinfo"
+	return "llm_modelinfo"
 }
 
 // GetMetadata returns bridge metadata.
@@ -45,7 +45,7 @@ func (b *ModelInfoBridge) GetID() string {
 // and description for documentation and discovery.
 func (b *ModelInfoBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "Model Info Bridge",
+		Name:        "llm_modelinfo",
 		Version:     "1.0.0",
 		Description: "Provides access to go-llms ModelRegistry for model discovery",
 		Author:      "go-llmspell",
@@ -171,7 +171,7 @@ func (b *ModelInfoBridge) RequiredPermissions() []types.Permission {
 	return []types.Permission{
 		{
 			Type:        types.PermissionMemory,
-			Resource:    "modelinfo",
+			Resource:    "llm_modelinfo",
 			Actions:     []string{"read"},
 			Description: "Access to model information",
 		},

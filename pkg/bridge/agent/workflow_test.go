@@ -20,14 +20,14 @@ func TestWorkflowBridge_Initialize(t *testing.T) {
 
 func TestWorkflowBridge_GetID(t *testing.T) {
 	bridge := NewWorkflowBridge()
-	assert.Equal(t, "workflow", bridge.GetID())
+	assert.Equal(t, "agent_workflow", bridge.GetID())
 }
 
 func TestWorkflowBridge_GetMetadata(t *testing.T) {
 	bridge := NewWorkflowBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "Workflow Bridge", metadata.Name)
+	assert.Equal(t, "agent_workflow", metadata.Name)
 	assert.Equal(t, "2.1.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "workflow")
 	assert.Equal(t, "go-llmspell", metadata.Author)

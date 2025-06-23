@@ -20,11 +20,11 @@ func TestPoolBridge_Initialization(t *testing.T) {
 
 	// Test initial state
 	assert.False(t, bridge.IsInitialized())
-	assert.Equal(t, "pool", bridge.GetID())
+	assert.Equal(t, "llm_pool", bridge.GetID())
 
 	// Test metadata
 	metadata := bridge.GetMetadata()
-	assert.Equal(t, "Pool Bridge", metadata.Name)
+	assert.Equal(t, "llm_pool", metadata.Name)
 	assert.NotEmpty(t, metadata.Version)
 	assert.NotEmpty(t, metadata.Description)
 

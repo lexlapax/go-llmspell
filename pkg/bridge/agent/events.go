@@ -86,7 +86,7 @@ func NewEventBridge() *EventBridge {
 // GetID returns the bridge identifier.
 // It implements the types.Bridge interface.
 func (b *EventBridge) GetID() string {
-	return "events"
+	return "agent_events"
 }
 
 // GetMetadata returns bridge metadata.
@@ -94,7 +94,7 @@ func (b *EventBridge) GetID() string {
 // description, and supported features.
 func (b *EventBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "events",
+		Name:        "agent_events",
 		Version:     "2.0.0",
 		Description: "Event system bridge v2.0.0 with go-llms v0.3.5 integration: bus, storage, filtering, serialization, aggregation, and replay",
 		Author:      "go-llmspell",

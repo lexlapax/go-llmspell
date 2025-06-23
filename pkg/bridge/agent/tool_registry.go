@@ -33,9 +33,9 @@ func NewToolsRegistryBridge() *ToolsRegistryBridge {
 }
 
 // GetID returns the bridge identifier.
-// Always returns "tools_registry" for this bridge.
+// Always returns "agent_tools_registry" for this bridge.
 func (tb *ToolsRegistryBridge) GetID() string {
-	return "tools_registry"
+	return "agent_tools_registry"
 }
 
 // GetMetadata returns bridge metadata.
@@ -43,7 +43,7 @@ func (tb *ToolsRegistryBridge) GetID() string {
 // dependencies on go-llms tools package.
 func (tb *ToolsRegistryBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:         "tools_registry",
+		Name:         "agent_tools_registry",
 		Version:      "v1.0.0",
 		Description:  "Bridge for go-llms built-in tools registry with discovery, versioning, and MCP export",
 		Author:       "go-llmspell",

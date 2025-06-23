@@ -20,14 +20,14 @@ func TestToolsRegistryBridge_Initialize(t *testing.T) {
 
 func TestToolsRegistryBridge_GetID(t *testing.T) {
 	bridge := NewToolsRegistryBridge()
-	assert.Equal(t, "tools_registry", bridge.GetID())
+	assert.Equal(t, "agent_tools_registry", bridge.GetID())
 }
 
 func TestToolsRegistryBridge_GetMetadata(t *testing.T) {
 	bridge := NewToolsRegistryBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "tools_registry", metadata.Name)
+	assert.Equal(t, "agent_tools_registry", metadata.Name)
 	assert.Equal(t, "v1.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "tools registry")
 	assert.Equal(t, "go-llmspell", metadata.Author)

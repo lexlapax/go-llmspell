@@ -15,7 +15,7 @@ import (
 func TestDebugBridgeInitialization(t *testing.T) {
 	bridge := NewDebugBridge()
 	assert.NotNil(t, bridge)
-	assert.Equal(t, "debug", bridge.GetID())
+	assert.Equal(t, "util_debug", bridge.GetID())
 	assert.False(t, bridge.IsInitialized())
 
 	ctx := context.Background()
@@ -37,7 +37,7 @@ func TestDebugBridgeMetadata(t *testing.T) {
 	bridge := NewDebugBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "debug", metadata.Name)
+	assert.Equal(t, "util_debug", metadata.Name)
 	assert.NotEmpty(t, metadata.Version)
 	assert.NotEmpty(t, metadata.Description)
 	assert.NotEmpty(t, metadata.Author)
@@ -384,12 +384,12 @@ func TestDebugBridgeRequiredPermissions(t *testing.T) {
 	hasMemory := false
 
 	for _, perm := range permissions {
-		if perm.Type == engine.PermissionStorage && perm.Resource == "debug.logging" {
+		if perm.Type == engine.PermissionStorage && perm.Resource == "util_debug.logging" {
 			hasStorage = true
 			assert.Contains(t, perm.Actions, "read")
 			assert.Contains(t, perm.Actions, "write")
 		}
-		if perm.Type == engine.PermissionMemory && perm.Resource == "debug.components" {
+		if perm.Type == engine.PermissionMemory && perm.Resource == "util_debug.components" {
 			hasMemory = true
 			assert.Contains(t, perm.Actions, "read")
 			assert.Contains(t, perm.Actions, "write")

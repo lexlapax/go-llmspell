@@ -97,7 +97,7 @@ func TestCreateCoreBridges(t *testing.T) {
 	// Should contain modelinfo bridge
 	found := false
 	for _, bridge := range bridges {
-		if bridge.GetID() == "modelinfo" {
+		if bridge.GetID() == "llm_modelinfo" {
 			found = true
 			break
 		}
@@ -118,9 +118,9 @@ func TestCreateLLMBridges(t *testing.T) {
 		bridgeIDs[bridge.GetID()] = true
 	}
 	
-	assert.True(t, bridgeIDs["llm"], "Should have llm bridge")
-	assert.True(t, bridgeIDs["providers"], "Should have providers bridge")
-	assert.True(t, bridgeIDs["pool"], "Should have pool bridge")
+	assert.True(t, bridgeIDs["llm_core"], "Should have llm bridge")
+	assert.True(t, bridgeIDs["llm_providers"], "Should have providers bridge")
+	assert.True(t, bridgeIDs["llm_pool"], "Should have pool bridge")
 }
 
 func TestCreateUtilityBridges(t *testing.T) {
@@ -149,9 +149,9 @@ func TestCreateAgentBridges(t *testing.T) {
 		bridgeIDs[bridge.GetID()] = true
 	}
 	
-	assert.True(t, bridgeIDs["agent"], "Should have agent bridge")
-	assert.True(t, bridgeIDs["events"], "Should have events bridge")
-	assert.True(t, bridgeIDs["tools"], "Should have tools bridge")
+	assert.True(t, bridgeIDs["agent_core"], "Should have agent bridge")
+	assert.True(t, bridgeIDs["agent_events"], "Should have events bridge")
+	assert.True(t, bridgeIDs["agent_tools"], "Should have tools bridge")
 }
 
 func TestCreateObservabilityBridges(t *testing.T) {
@@ -167,9 +167,9 @@ func TestCreateObservabilityBridges(t *testing.T) {
 		bridgeIDs[bridge.GetID()] = true
 	}
 	
-	assert.True(t, bridgeIDs["metrics"], "Should have metrics bridge")
-	assert.True(t, bridgeIDs["tracing"], "Should have tracing bridge")
-	assert.True(t, bridgeIDs["guardrails"], "Should have guardrails bridge")
+	assert.True(t, bridgeIDs["observability_metrics"], "Should have metrics bridge")
+	assert.True(t, bridgeIDs["observability_tracing"], "Should have tracing bridge")
+	assert.True(t, bridgeIDs["observability_guardrails"], "Should have guardrails bridge")
 }
 
 func TestCreateStateBridges(t *testing.T) {
@@ -198,7 +198,7 @@ func TestCreateStructuredBridges(t *testing.T) {
 	// Check for schema bridge
 	found := false
 	for _, bridge := range bridges {
-		if bridge.GetID() == "schema" {
+		if bridge.GetID() == "structured_schema" {
 			found = true
 			break
 		}

@@ -118,13 +118,13 @@ func initializeTemplates() map[string]*ProviderTemplate {
 
 // GetID returns the bridge ID
 func (b *ProvidersBridge) GetID() string {
-	return "providers"
+	return "llm_providers"
 }
 
 // GetMetadata returns bridge metadata
 func (b *ProvidersBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "providers",
+		Name:        "llm_providers",
 		Version:     "1.0.0",
 		Description: "Provider management and configuration bridge",
 		Author:      "go-llmspell",

@@ -20,14 +20,14 @@ func TestHooksBridge_Initialize(t *testing.T) {
 
 func TestHooksBridge_GetID(t *testing.T) {
 	bridge := NewHooksBridge()
-	assert.Equal(t, "hooks", bridge.GetID())
+	assert.Equal(t, "agent_hooks", bridge.GetID())
 }
 
 func TestHooksBridge_GetMetadata(t *testing.T) {
 	bridge := NewHooksBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "Hooks Bridge", metadata.Name)
+	assert.Equal(t, "agent_hooks", metadata.Name)
 	assert.Equal(t, "1.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "go-llms agent hook system")
 	assert.Equal(t, "go-llmspell", metadata.Author)

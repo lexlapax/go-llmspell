@@ -257,53 +257,56 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [ ] Test CLI responsiveness for engine listing commands
 
   - [ ] **Task 2.4.4.5.6: Bridge Architecture Naming Standardization**
-    - [ ] **Phase 1: Bridge Layer Naming Updates** (`/pkg/bridge/*`)
-      - [ ] Update LLM bridges:
-        - [ ] Change `GetID() "llm"` → `"llm_core"` in `llm/llm.go`
-        - [ ] Change `GetID() "providers"` → `"llm_providers"` in `llm/providers.go`
-        - [ ] Change `GetID() "pool"` → `"llm_pool"` in `llm/pool.go`
-        - [ ] Update corresponding tests in `llm/*_test.go`
-        - [ ] Rename test files to match the implementation file names if they've changed.
-        - [ ] Run `go test ./pkg/bridge/llm/...` to verify
-      - [ ] Update Util bridges:
-        - [ ] Change `GetID() "slog"` → `"util_slog"` in `util/slog.go`
-        - [ ] Change `GetID() "script_logger"` → `"util_script_logger"` in `util/script_logger.go`  
-        - [ ] Change `GetID() "debug"` → `"util_debug"` in `util/debug.go`
-        - [ ] Change `GetID() "util"` → `"util_core"` in `util/util.go`
-        - [ ] Keep `"util_auth"`, `"util_llm"`, `"util_json"`, `"util_errors"` as-is (already consistent)
-        - [ ] Rename test files to match the implementation file names if they've changed.
-        - [ ] Update corresponding tests in `util/*_test.go`
-        - [ ] Run `go test ./pkg/bridge/util/...` to verify
-      - [ ] Update Agent bridges:
-        - [ ] Change `GetID() "agent"` → `"agent_core"` in `agent/agent.go`
-        - [ ] Change `GetID() "tools"` → `"agent_tools"` in `agent/tools.go`
-        - [ ] Change `GetID() "tools_registry"` → `"agent_tools_registry"` in `agent/tool_registry.go`
-        - [ ] Change `GetID() "events"` → `"agent_events"` in `agent/events.go`
-        - [ ] Change `GetID() "workflow"` → `"agent_workflow"` in `agent/workflow.go`
-        - [ ] Change `GetID() "hooks"` → `"agent_hooks"` in `agent/hooks.go`
-        - [ ] Rename test files to match the implementation file names if they've changed.
-        - [ ] Update corresponding tests in `agent/*_test.go`
-        - [ ] Run `go test ./pkg/bridge/agent/...` to verify
-      - [ ] Update Observability bridges:
-        - [ ] Change `GetID() "metrics"` → `"observability_metrics"` in `observability/metrics.go`
-        - [ ] Change `GetID() "tracing"` → `"observability_tracing"` in `observability/tracing.go`
-        - [ ] Change `GetID() "guardrails"` → `"observability_guardrails"` in `observability/guardrails.go`
-        - [ ] Rename test files to match the implementation file names if they've changed.
-        - [ ] Update corresponding tests in `observability/*_test.go`
-        - [ ] Run `go test ./pkg/bridge/observability/...` to verify
-      - [ ] Update State bridges:
-        - [ ] Keep `"state_context"` and `"state_manager"` as-is (already namespaced)
-        - [ ] Run `go test ./pkg/bridge/state/...` to verify nothing broke
-      - [ ] Update Structured bridges:
-        - [ ] Change `GetID() "schema"` → `"structured_schema"` in `structured/schema.go`
-        - [ ] Rename test files to match the implementation file names if they've changed.
-        - [ ] Update corresponding tests in `structured/*_test.go`
-        - [ ] Run `go test ./pkg/bridge/structured/...` to verify
-      - [ ] Update root bridges:
-        - [ ] Change `GetID() "modelinfo"` → `"llm_modelinfo"` in `bridge/modelinfo.go`
-        - [ ] Rename test files to match the implementation file names if they've changed.
-        - [ ] Update corresponding tests
-        - [ ] Run `go test ./pkg/bridge/...` to verify
+    - [x] **Phase 1: Bridge Layer Naming Updates** (`/pkg/bridge/*`) **[COMPLETED - 2025-06-23]**
+      - [x] Update LLM bridges:
+        - [x] Change `GetID() "llm"` → `"llm_core"` in `llm/llm.go`
+        - [x] Change `GetID() "providers"` → `"llm_providers"` in `llm/providers.go`
+        - [x] Change `GetID() "pool"` → `"llm_pool"` in `llm/pool.go`
+        - [x] Update corresponding tests in `llm/*_test.go`
+        - [x] Rename test files to match the implementation file names if they've changed.
+        - [x] Run `go test ./pkg/bridge/llm/...` to verify
+      - [x] Update Util bridges:
+        - [x] Change `GetID() "slog"` → `"util_slog"` in `util/slog.go`
+        - [x] Change `GetID() "script_logger"` → `"util_script_logger"` in `util/script_logger.go`  
+        - [x] Change `GetID() "debug"` → `"util_debug"` in `util/debug.go`
+        - [x] Change `GetID() "util"` → `"util_core"` in `util/util.go`
+        - [x] Keep `"util_auth"`, `"util_llm"`, `"util_json"`, `"util_errors"` as-is (already consistent)
+        - [x] Rename test files to match the implementation file names if they've changed.
+        - [x] Update corresponding tests in `util/*_test.go`
+        - [x] Run `go test ./pkg/bridge/util/...` to verify
+      - [x] Update Agent bridges:
+        - [x] Change `GetID() "agent"` → `"agent_core"` in `agent/agent.go`
+        - [x] Change `GetID() "tools"` → `"agent_tools"` in `agent/tools.go`
+        - [x] Change `GetID() "tools_registry"` → `"agent_tools_registry"` in `agent/tool_registry.go`
+        - [x] Change `GetID() "events"` → `"agent_events"` in `agent/events.go`
+        - [x] Change `GetID() "workflow"` → `"agent_workflow"` in `agent/workflow.go`
+        - [x] Change `GetID() "hooks"` → `"agent_hooks"` in `agent/hooks.go`
+        - [x] Rename test files to match the implementation file names if they've changed.
+        - [x] Update corresponding tests in `agent/*_test.go`
+        - [x] Run `go test ./pkg/bridge/agent/...` to verify
+      - [x] Update Observability bridges:
+        - [x] Change `GetID() "metrics"` → `"observability_metrics"` in `observability/metrics.go`
+        - [x] Change `GetID() "tracing"` → `"observability_tracing"` in `observability/tracing.go`
+        - [x] Change `GetID() "guardrails"` → `"observability_guardrails"` in `observability/guardrails.go`
+        - [x] Rename test files to match the implementation file names if they've changed.
+        - [x] Update corresponding tests in `observability/*_test.go`
+        - [x] Run `go test ./pkg/bridge/observability/...` to verify
+      - [x] Update State bridges:
+        - [x] Keep `"state_context"` and `"state_manager"` as-is (already namespaced)
+        - [x] Run `go test ./pkg/bridge/state/...` to verify nothing broke
+      - [x] Update Structured bridges:
+        - [x] Change `GetID() "schema"` → `"structured_schema"` in `structured/schema.go`
+        - [x] Rename test files to match the implementation file names if they've changed.
+        - [x] Update corresponding tests in `structured/*_test.go`
+        - [x] Run `go test ./pkg/bridge/structured/...` to verify
+      - [x] Update root bridges:
+        - [x] Change `GetID() "modelinfo"` → `"llm_modelinfo"` in `bridge/modelinfo.go`
+        - [x] Rename test files to match the implementation file names if they've changed.
+        - [x] Update corresponding tests
+        - [x] Run `go test ./pkg/bridge/...` to verify
+      - [x] Fix bridge registry tests that expect old bridge IDs
+      - [x] Update permission resources to match new bridge IDs in RequiredPermissions()
+      - [x] Update REPL tests to use new bridge names (bridges.util → bridges.util_core)
     
     - [ ] **Phase 2: Bridge Adapter Updates** (`/pkg/engine/gopherlua/adapters/*`)
       - [ ] Update adapter registrations to match new bridge IDs:

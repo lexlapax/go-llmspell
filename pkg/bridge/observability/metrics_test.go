@@ -32,7 +32,7 @@ func TestMetricsBridge(t *testing.T) {
 				assert.True(t, bridge.IsInitialized())
 
 				metadata := bridge.GetMetadata()
-				assert.Equal(t, "metrics", metadata.Name)
+				assert.Equal(t, "observability_metrics", metadata.Name)
 				assert.Equal(t, "v1.0.0", metadata.Version)
 				assert.Contains(t, metadata.Description, "performance metrics")
 			},

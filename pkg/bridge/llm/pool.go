@@ -151,7 +151,7 @@ type Token struct {
 // GetID returns the bridge ID.
 // It implements the types.Bridge interface.
 func (b *PoolBridge) GetID() string {
-	return "pool"
+	return "llm_pool"
 }
 
 // GetMetadata returns bridge metadata.
@@ -159,7 +159,7 @@ func (b *PoolBridge) GetID() string {
 // version, description, and supported features.
 func (b *PoolBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "Pool Bridge",
+		Name:        "llm_pool",
 		Version:     "2.0.0",
 		Description: "Provider pooling with load balancing strategies",
 		Author:      "go-llmspell",

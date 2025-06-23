@@ -85,9 +85,9 @@ func NewSchemaBridge() *SchemaBridge {
 }
 
 // GetID returns the bridge ID.
-// Always returns "schema" for this bridge.
+// Always returns "structured_schema" for this bridge.
 func (b *SchemaBridge) GetID() string {
-	return "schema"
+	return "structured_schema"
 }
 
 // GetMetadata returns bridge metadata.
@@ -95,7 +95,7 @@ func (b *SchemaBridge) GetID() string {
 // dependencies on go-llms schema packages.
 func (b *SchemaBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "Schema Bridge",
+		Name:        "structured_schema",
 		Version:     "2.0.0",
 		Description: "Provides access to go-llms schema validation, generation, versioning, and migration system",
 		Author:      "go-llmspell",

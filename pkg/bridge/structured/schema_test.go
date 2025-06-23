@@ -81,11 +81,11 @@ func TestSchemaBridge_BasicOperations(t *testing.T) {
 	bridge := NewSchemaBridge()
 
 	// Test GetID
-	assert.Equal(t, "schema", bridge.GetID())
+	assert.Equal(t, "structured_schema", bridge.GetID())
 
 	// Test GetMetadata
 	metadata := bridge.GetMetadata()
-	assert.Equal(t, "Schema Bridge", metadata.Name)
+	assert.Equal(t, "structured_schema", metadata.Name)
 	assert.Equal(t, "2.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "schema validation")
 	assert.Equal(t, "go-llmspell", metadata.Author)

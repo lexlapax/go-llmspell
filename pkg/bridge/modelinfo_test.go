@@ -13,14 +13,14 @@ import (
 func TestNewModelInfoBridge(t *testing.T) {
 	bridge := NewModelInfoBridge()
 	assert.NotNil(t, bridge)
-	assert.Equal(t, "modelinfo", bridge.GetID())
+	assert.Equal(t, "llm_modelinfo", bridge.GetID())
 }
 
 func TestModelInfoBridgeMetadata(t *testing.T) {
 	bridge := NewModelInfoBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "Model Info Bridge", metadata.Name)
+	assert.Equal(t, "llm_modelinfo", metadata.Name)
 	assert.Equal(t, "1.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "ModelRegistry")
 	assert.Equal(t, "go-llmspell", metadata.Author)
@@ -91,7 +91,7 @@ func TestModelInfoBridgeRequiredPermissions(t *testing.T) {
 
 	assert.Len(t, permissions, 1)
 	assert.Equal(t, "memory", string(permissions[0].Type))
-	assert.Equal(t, "modelinfo", permissions[0].Resource)
+	assert.Equal(t, "llm_modelinfo", permissions[0].Resource)
 	assert.Contains(t, permissions[0].Actions, "read")
 }
 

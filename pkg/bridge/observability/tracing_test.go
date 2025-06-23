@@ -33,7 +33,7 @@ func TestTracingBridge(t *testing.T) {
 				assert.True(t, bridge.IsInitialized())
 
 				metadata := bridge.GetMetadata()
-				assert.Equal(t, "tracing", metadata.Name)
+				assert.Equal(t, "observability_tracing", metadata.Name)
 				assert.Equal(t, "v1.0.0", metadata.Version)
 				assert.Contains(t, metadata.Description, "distributed tracing")
 			},

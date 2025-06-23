@@ -20,11 +20,11 @@ func TestProvidersBridge_Initialization(t *testing.T) {
 
 	// Test initial state
 	assert.False(t, bridge.IsInitialized())
-	assert.Equal(t, "providers", bridge.GetID())
+	assert.Equal(t, "llm_providers", bridge.GetID())
 
 	// Test metadata
 	metadata := bridge.GetMetadata()
-	assert.Equal(t, "providers", metadata.Name)
+	assert.Equal(t, "llm_providers", metadata.Name)
 	assert.NotEmpty(t, metadata.Version)
 	assert.NotEmpty(t, metadata.Description)
 

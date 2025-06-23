@@ -21,14 +21,14 @@ func TestEventsBridge_Initialize(t *testing.T) {
 
 func TestEventsBridge_GetID(t *testing.T) {
 	bridge := NewEventBridge()
-	assert.Equal(t, "events", bridge.GetID())
+	assert.Equal(t, "agent_events", bridge.GetID())
 }
 
 func TestEventsBridge_GetMetadata(t *testing.T) {
 	bridge := NewEventBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "events", metadata.Name)
+	assert.Equal(t, "agent_events", metadata.Name)
 	assert.Equal(t, "2.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "Event system bridge")
 	assert.Equal(t, "go-llmspell", metadata.Author)

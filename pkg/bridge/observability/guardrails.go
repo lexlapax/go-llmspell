@@ -46,9 +46,9 @@ func NewGuardrailsBridge() *GuardrailsBridge {
 }
 
 // GetID returns the bridge identifier.
-// Always returns "guardrails" for this bridge.
+// Always returns "observability_guardrails" for this bridge.
 func (gb *GuardrailsBridge) GetID() string {
-	return "guardrails"
+	return "observability_guardrails"
 }
 
 // GetMetadata returns bridge metadata.
@@ -56,7 +56,7 @@ func (gb *GuardrailsBridge) GetID() string {
 // including version, dependencies, and capabilities.
 func (gb *GuardrailsBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:         "guardrails",
+		Name:         "observability_guardrails",
 		Version:      "v1.0.0",
 		Description:  "Bridge for go-llms safety system with content filtering and behavioral constraints",
 		Author:       "go-llmspell",

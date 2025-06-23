@@ -58,9 +58,9 @@ func NewLLMBridge() *LLMBridge {
 }
 
 // GetID returns the bridge ID.
-// Always returns "llm" for this bridge.
+// Always returns "llm_core" for this bridge.
 func (b *LLMBridge) GetID() string {
-	return "llm"
+	return "llm_core"
 }
 
 // GetMetadata returns bridge metadata.
@@ -68,7 +68,7 @@ func (b *LLMBridge) GetID() string {
 // on go-llms LLM domain package.
 func (b *LLMBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "llm",
+		Name:        "llm_core",
 		Version:     "1.0.0",
 		Description: "Language model provider bridge for text generation",
 		Author:      "go-llmspell",

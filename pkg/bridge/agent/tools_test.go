@@ -23,14 +23,14 @@ func TestToolsBridge_Initialize(t *testing.T) {
 
 func TestToolsBridge_GetID(t *testing.T) {
 	bridge := NewToolsBridge()
-	assert.Equal(t, "tools", bridge.GetID())
+	assert.Equal(t, "agent_tools", bridge.GetID())
 }
 
 func TestToolsBridge_GetMetadata(t *testing.T) {
 	bridge := NewToolsBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "Tools Bridge", metadata.Name)
+	assert.Equal(t, "agent_tools", metadata.Name)
 	assert.Contains(t, metadata.Description, "tools bridge")
 	assert.NotEmpty(t, metadata.Version)
 }

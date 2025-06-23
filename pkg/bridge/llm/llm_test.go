@@ -19,11 +19,11 @@ func TestLLMBridge_Initialization(t *testing.T) {
 
 	// Test initial state
 	assert.False(t, bridge.IsInitialized())
-	assert.Equal(t, "llm", bridge.GetID())
+	assert.Equal(t, "llm_core", bridge.GetID())
 
 	// Test metadata
 	metadata := bridge.GetMetadata()
-	assert.Equal(t, "llm", metadata.Name)
+	assert.Equal(t, "llm_core", metadata.Name)
 	assert.NotEmpty(t, metadata.Version)
 	assert.NotEmpty(t, metadata.Description)
 

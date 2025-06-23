@@ -52,7 +52,7 @@ func NewSlogBridge() *SlogBridge {
 // GetID returns the bridge identifier.
 // It implements the types.Bridge interface.
 func (sb *SlogBridge) GetID() string {
-	return "slog"
+	return "util_slog"
 }
 
 // GetMetadata returns bridge metadata.
@@ -60,7 +60,7 @@ func (sb *SlogBridge) GetID() string {
 // version, description, and dependencies on slog and go-llms.
 func (sb *SlogBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:         "slog",
+		Name:         "util_slog",
 		Version:      "v2.0.0",
 		Description:  "Bridge for go-llms structured logging with slog integration, emoji enhancement, and key-value logging",
 		Author:       "go-llmspell",

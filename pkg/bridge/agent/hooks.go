@@ -104,7 +104,7 @@ func NewHooksBridge() *HooksBridge {
 // GetID returns the bridge identifier.
 // It implements the types.Bridge interface.
 func (b *HooksBridge) GetID() string {
-	return "hooks"
+	return "agent_hooks"
 }
 
 // GetMetadata returns bridge metadata.
@@ -112,7 +112,7 @@ func (b *HooksBridge) GetID() string {
 // name, version, description, and author.
 func (b *HooksBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "Hooks Bridge",
+		Name:        "agent_hooks",
 		Version:     "1.0.0",
 		Description: "Bridge for go-llms agent hook system",
 		Author:      "go-llmspell",

@@ -65,7 +65,7 @@ func NewScriptLoggerBridge() *ScriptLoggerBridge {
 // GetID returns the bridge identifier.
 // It implements the types.Bridge interface.
 func (sl *ScriptLoggerBridge) GetID() string {
-	return "script_logger"
+	return "util_script_logger"
 }
 
 // GetMetadata returns bridge metadata.
@@ -73,7 +73,7 @@ func (sl *ScriptLoggerBridge) GetID() string {
 // version, description, and dependencies on debug and slog bridges.
 func (sl *ScriptLoggerBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "script_logger",
+		Name:        "util_script_logger",
 		Version:     "v1.0.0",
 		Description: "Unified script-friendly logging interface combining debug and structured logging with context propagation",
 		Author:      "go-llmspell",
@@ -352,13 +352,13 @@ func (sl *ScriptLoggerBridge) RequiredPermissions() []types.Permission {
 	return []types.Permission{
 		{
 			Type:        types.PermissionMemory,
-			Resource:    "script_logger.context",
+			Resource:    "util_script_logger.context",
 			Actions:     []string{"read", "write"},
 			Description: "Manage logging context and global attributes",
 		},
 		{
 			Type:        types.PermissionStorage,
-			Resource:    "script_logger.output",
+			Resource:    "util_script_logger.output",
 			Actions:     []string{"write"},
 			Description: "Write log output to configured targets",
 		},

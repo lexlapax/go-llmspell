@@ -15,7 +15,7 @@ import (
 func TestSlogBridgeInitialization(t *testing.T) {
 	bridge := NewSlogBridge()
 	assert.NotNil(t, bridge)
-	assert.Equal(t, "slog", bridge.GetID())
+	assert.Equal(t, "util_slog", bridge.GetID())
 	assert.False(t, bridge.IsInitialized())
 
 	ctx := context.Background()
@@ -37,7 +37,7 @@ func TestSlogBridgeMetadata(t *testing.T) {
 	bridge := NewSlogBridge()
 	metadata := bridge.GetMetadata()
 
-	assert.Equal(t, "slog", metadata.Name)
+	assert.Equal(t, "util_slog", metadata.Name)
 	assert.Equal(t, "v2.0.0", metadata.Version)
 	assert.Contains(t, metadata.Description, "structured logging")
 	assert.Equal(t, "go-llmspell", metadata.Author)

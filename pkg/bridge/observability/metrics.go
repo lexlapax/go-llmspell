@@ -45,9 +45,9 @@ func NewMetricsBridge() *MetricsBridge {
 }
 
 // GetID returns the bridge identifier.
-// Always returns "metrics" for this bridge.
+// Always returns "observability_metrics" for this bridge.
 func (mb *MetricsBridge) GetID() string {
-	return "metrics"
+	return "observability_metrics"
 }
 
 // GetMetadata returns bridge metadata.
@@ -55,7 +55,7 @@ func (mb *MetricsBridge) GetID() string {
 // including version, dependencies, and capabilities.
 func (mb *MetricsBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:         "metrics",
+		Name:         "observability_metrics",
 		Version:      "v1.0.0",
 		Description:  "Bridge for go-llms performance metrics system with counters, gauges, timers, and aggregation",
 		Author:       "go-llmspell",

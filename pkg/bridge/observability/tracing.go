@@ -41,9 +41,9 @@ func NewTracingBridge() *TracingBridge {
 }
 
 // GetID returns the bridge identifier.
-// Always returns "tracing" for this bridge.
+// Always returns "observability_tracing" for this bridge.
 func (tb *TracingBridge) GetID() string {
-	return "tracing"
+	return "observability_tracing"
 }
 
 // GetMetadata returns bridge metadata.
@@ -51,7 +51,7 @@ func (tb *TracingBridge) GetID() string {
 // including version, dependencies, and OpenTelemetry compatibility.
 func (tb *TracingBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:         "tracing",
+		Name:         "observability_tracing",
 		Version:      "v1.0.0",
 		Description:  "Bridge for go-llms distributed tracing and OpenTelemetry-compatible span management",
 		Author:       "go-llmspell",

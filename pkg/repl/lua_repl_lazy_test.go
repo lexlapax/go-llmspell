@@ -100,7 +100,7 @@ func TestLuaREPLWithLazyBridgeLoading(t *testing.T) {
 	}
 
 	// Test 5: Verify specific bridge is accessible
-	result, err = repl.Evaluate(context.Background(), "return type(bridges.util)")
+	result, err = repl.Evaluate(context.Background(), "return type(bridges.util_core)")
 	if err != nil {
 		t.Errorf("Failed to check util bridge type: %v", err)
 	}
@@ -225,29 +225,29 @@ func TestLuaREPLBridgeUsage(t *testing.T) {
 		}
 	}
 
-	// Debug: Check what's available in bridges.util
+	// Debug: Check what's available in bridges.util_core
 	result, err := repl.Evaluate(context.Background(), `
-		if bridges and bridges.util then
+		if bridges and bridges.util_core then
 			local methods = {}
-			for k, v in pairs(bridges.util) do
+			for k, v in pairs(bridges.util_core) do
 				table.insert(methods, k .. "=" .. type(v))
 			end
 			if #methods > 0 then
-				return "bridges.util has: " .. table.concat(methods, ", ")
+				return "bridges.util_core has: " .. table.concat(methods, ", ")
 			else
-				return "bridges.util is empty table"
+				return "bridges.util_core is empty table"
 			end
 		else
-			return "bridges.util not found"
+			return "bridges.util_core not found"
 		end
 	`)
 	if err != nil {
-		t.Errorf("Failed to check bridges.util: %v", err)
+		t.Errorf("Failed to check bridges.util_core: %v", err)
 	}
-	t.Logf("Debug: bridges.util check result: %s", result)
+	t.Logf("Debug: bridges.util_core check result: %s", result)
 
 	// Test util bridge usage - use generateUUID which actually exists
-	result, err = repl.Evaluate(context.Background(), "return bridges.util.generateUUID()")
+	result, err = repl.Evaluate(context.Background(), "return bridges.util_core.generateUUID()")
 	if err != nil {
 		t.Errorf("Failed to use util bridge: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestLuaREPLBridgeUsage(t *testing.T) {
 
 	// Test multi-line operations with actual methods
 	script := `
-local util = bridges.util
+local util = bridges.util_core
 local str = "This is a very long string that should be truncated"
 local truncated = util.truncateString(str, 10)
 return truncated

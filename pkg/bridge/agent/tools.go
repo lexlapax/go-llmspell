@@ -87,7 +87,7 @@ func NewToolsBridge() *ToolsBridge {
 // GetID returns the bridge ID.
 // It implements the types.Bridge interface.
 func (b *ToolsBridge) GetID() string {
-	return "tools"
+	return "agent_tools"
 }
 
 // GetMetadata returns bridge metadata.
@@ -95,7 +95,7 @@ func (b *ToolsBridge) GetID() string {
 // version, description, and supported features.
 func (b *ToolsBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "Tools Bridge",
+		Name:        "agent_tools",
 		Version:     "2.1.0",
 		Description: "Enhanced tools bridge with schema validation, documentation generation, and execution analytics (v0.3.5)",
 		Author:      "go-llmspell",

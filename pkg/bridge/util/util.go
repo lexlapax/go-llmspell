@@ -48,9 +48,9 @@ func NewUtilBridge() *UtilBridge {
 }
 
 // GetID returns the bridge identifier.
-// Always returns "util" for this bridge.
+// Always returns "util_core" for this bridge.
 func (b *UtilBridge) GetID() string {
-	return "util"
+	return "util_core"
 }
 
 // GetMetadata returns bridge metadata.
@@ -58,7 +58,7 @@ func (b *UtilBridge) GetID() string {
 // description, author, and license for documentation and discovery.
 func (b *UtilBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "util",
+		Name:        "util_core",
 		Version:     "1.0.0",
 		Description: "General utilities bridge for miscellaneous helper functions",
 		Author:      "go-llmspell",
@@ -276,7 +276,7 @@ func (b *UtilBridge) RequiredPermissions() []types.Permission {
 	return []types.Permission{
 		{
 			Type:        types.PermissionMemory,
-			Resource:    "util",
+			Resource:    "util_core",
 			Actions:     []string{"read"},
 			Description: "Access to utility functions",
 		},

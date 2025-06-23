@@ -75,7 +75,7 @@ func NewWorkflowBridge() *WorkflowBridge {
 // GetID returns the bridge identifier.
 // It implements the types.Bridge interface.
 func (b *WorkflowBridge) GetID() string {
-	return "workflow"
+	return "agent_workflow"
 }
 
 // GetMetadata returns bridge metadata.
@@ -83,7 +83,7 @@ func (b *WorkflowBridge) GetID() string {
 // including version, description, and supported features.
 func (b *WorkflowBridge) GetMetadata() types.BridgeMetadata {
 	return types.BridgeMetadata{
-		Name:        "Workflow Bridge",
+		Name:        "agent_workflow",
 		Version:     "2.1.0",
 		Description: "Enhanced workflow engine bridge with serialization, script steps, and templates (v0.3.5)",
 		Author:      "go-llmspell",
