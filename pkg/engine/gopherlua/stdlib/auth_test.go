@@ -246,8 +246,6 @@ func setupAuthLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("util_auth", authTable)
-
 	// Set up optional mock security manager
 	securityTable := L.NewTable()
 
@@ -283,7 +281,14 @@ func setupAuthLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("security", securityTable)
+	// Set up mock bridges in bridges table
+	bridgesTable := L.GetGlobal("bridges")
+	if bridgesTable == lua.LNil {
+		bridgesTable = L.NewTable()
+		L.SetGlobal("bridges", bridgesTable)
+	}
+	bridgesTable.(*lua.LTable).RawSetString("util_auth", authTable)
+	bridgesTable.(*lua.LTable).RawSetString("security", securityTable)
 
 	// Load the auth library
 	authPath := filepath.Join(".", "auth.lua")
@@ -1138,15 +1143,19 @@ func TestAuthErrorHandling(t *testing.T) {
 			name: "missing_bridge_graceful_handling",
 			script: `
 				-- Temporarily remove bridge
-				local original_bridge = _G.util_auth
-				_G.util_auth = nil
+				local original_bridge = bridges and bridges.util_auth
+				if bridges then
+					bridges.util_auth = nil
+				end
 				
 				local success, err = pcall(function()
 					auth.create_config("api_key", {token = "test"})
 				end)
 				
 				-- Restore bridge
-				_G.util_auth = original_bridge
+				if bridges and original_bridge then
+					bridges.util_auth = original_bridge
+				end
 				
 				return not success and type(err) == "string"
 			`,

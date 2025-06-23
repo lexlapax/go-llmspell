@@ -192,11 +192,16 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 		return 1
 	}))
 
-	// Set up mock bridges as globals
-	L.SetGlobal("llm_bridge", llmBridge)
-	L.SetGlobal("provider_bridge", llmBridge) // Same for simplicity
-	L.SetGlobal("pool_bridge", llmBridge)     // Same for simplicity
-	L.SetGlobal("llm_util_bridge", llmBridge) // Same for simplicity
+	// Set up mock bridges in bridges table
+	bridgesTable := L.GetGlobal("bridges")
+	if bridgesTable == lua.LNil {
+		bridgesTable = L.NewTable()
+		L.SetGlobal("bridges", bridgesTable)
+	}
+	bridgesTable.(*lua.LTable).RawSetString("llm_bridge", llmBridge)
+	bridgesTable.(*lua.LTable).RawSetString("provider_bridge", llmBridge) // Same for simplicity
+	bridgesTable.(*lua.LTable).RawSetString("pool_bridge", llmBridge)     // Same for simplicity
+	bridgesTable.(*lua.LTable).RawSetString("llm_util_bridge", llmBridge) // Same for simplicity
 }
 
 // setupLLMLibrary loads the LLM library and sets it as global

@@ -212,7 +212,7 @@ function spell.params(name, config)
     else
         -- Get parameter value with validation
         local param_config = spell_params[name]
-        local value = _G.params and _G.params[name]
+        local value = params and params[name]
 
         -- Apply default if value is nil
         if value == nil and param_config and param_config.default ~= nil then

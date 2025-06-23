@@ -41,13 +41,13 @@ end
 
 -- Helper function to get appropriate bridge
 local function get_bridge(bridge_type)
-    local bridges = {
-        debug = _G.util_debug,
-        slog = _G.util_slog,
-        script_logger = _G.util_script_logger,
+    local bridge_map = {
+        debug = bridges and bridges.util_debug,
+        slog = bridges and bridges.util_slog,
+        script_logger = bridges and bridges.util_script_logger,
     }
 
-    local bridge = bridges[bridge_type]
+    local bridge = bridge_map[bridge_type]
     if not bridge then
         error(bridge_type .. " bridge not available. Ensure go-llmspell is properly initialized.")
     end
@@ -727,9 +727,9 @@ function logging.get_system_info()
     return {
         lua_version = _VERSION,
         bridges_available = {
-            debug = _G.util_debug ~= nil,
-            slog = _G.util_slog ~= nil,
-            script_logger = _G.util_script_logger ~= nil,
+            debug = bridges and bridges.util_debug ~= nil,
+            slog = bridges and bridges.util_slog ~= nil,
+            script_logger = bridges and bridges.util_script_logger ~= nil,
         },
         loggers = loggers,
         global_config = global_config,

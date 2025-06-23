@@ -24,10 +24,10 @@ end
 
 -- Helper function to get error utilities bridge
 local function get_error_bridge()
-    if not _G.util_errors then
+    if not bridges or not bridges.util_errors then
         error("Error utilities bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return _G.util_errors
+    return bridges.util_errors
 end
 
 -- Enhanced Error Handling
@@ -603,7 +603,7 @@ function errors.get_system_info()
     return {
         lua_version = _VERSION,
         bridges_available = {
-            errors = _G.util_errors ~= nil,
+            errors = bridges and bridges.util_errors ~= nil,
         },
         error_categories = error_categories,
         active_circuit_breakers = #circuit_breakers,

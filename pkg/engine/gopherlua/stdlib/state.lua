@@ -20,18 +20,18 @@ end
 
 -- Helper function to get state manager bridge
 local function get_state_manager()
-    if not _G.state_manager then
+    if not bridges or not bridges.state_manager then
         error("State manager bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return _G.state_manager
+    return bridges.state_manager
 end
 
 -- Helper function to get state context bridge
 local function get_state_context()
-    if not _G.state_context then
+    if not bridges or not bridges.state_context then
         error("State context bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return _G.state_context
+    return bridges.state_context
 end
 
 -- Helper function to generate unique state ID

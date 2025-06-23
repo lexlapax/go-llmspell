@@ -702,7 +702,7 @@ events.bridge = {}
 
 -- Use bridge event system if available
 function events.bridge.emit(event_type, data)
-    if _G.events then
+    if bridges and bridges.events then
         -- Create event object
         local event = {
             type = event_type,
@@ -711,7 +711,7 @@ function events.bridge.emit(event_type, data)
         }
 
         -- Publish through bridge
-        return _G.events:publishEvent(event)
+        return bridges.events:publishEvent(event)
     else
         -- Fallback to local emission
         return events.emit(event_type, data)
@@ -720,8 +720,8 @@ end
 
 -- Subscribe through bridge if available
 function events.bridge.subscribe(pattern, handler)
-    if _G.events then
-        return _G.events:subscribe(pattern, handler)
+    if bridges and bridges.events then
+        return bridges.events:subscribe(pattern, handler)
     else
         -- Fallback to local subscription with pattern support
         return events.filter(pattern, handler)

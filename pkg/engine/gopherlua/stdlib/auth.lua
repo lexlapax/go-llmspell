@@ -21,16 +21,16 @@ end
 
 -- Helper function to get auth bridge
 local function get_auth_bridge()
-    if not _G.util_auth then
+    if not bridges or not bridges.util_auth then
         error("Authentication bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return _G.util_auth
+    return bridges.util_auth
 end
 
 -- Helper function to get security manager (if available)
 local function get_security_manager()
     -- Security manager is optional, return nil if not available
-    return _G.security
+    return bridges and bridges.security or nil
 end
 
 -- Authentication Configuration
@@ -1046,8 +1046,8 @@ function auth.get_system_info()
         resource_limits = auth.get_resource_limits(),
         allowed_libraries = auth.get_allowed_libraries(),
         bridges_available = {
-            auth = _G.util_auth ~= nil,
-            security = _G.security ~= nil,
+            auth = bridges and bridges.util_auth ~= nil,
+            security = bridges and bridges.security ~= nil,
         },
         active_sessions = #auth.list_sessions(),
         security_policies = #auth.list_policies(),

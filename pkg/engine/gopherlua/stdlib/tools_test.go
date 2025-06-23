@@ -105,7 +105,13 @@ func setupToolsLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("tools", toolsTable)
+	// Set up mock bridges in bridges table
+	bridgesTable := L.GetGlobal("bridges")
+	if bridgesTable == lua.LNil {
+		bridgesTable = L.NewTable()
+		L.SetGlobal("bridges", bridgesTable)
+	}
+	bridgesTable.(*lua.LTable).RawSetString("tools", toolsTable)
 
 	// Load the tools library
 	toolsPath := filepath.Join(".", "tools.lua")

@@ -56,7 +56,9 @@ func setupLoggingLibrary(t *testing.T, L *lua.LState) {
 		return 0
 	}))
 
-	L.SetGlobal("util_debug", debugTable)
+	// Create bridges table and add debug bridge to it
+	bridgesTable := L.NewTable()
+	bridgesTable.RawSetString("util_debug", debugTable)
 
 	// Set up mock slog bridge
 	slogTable := L.NewTable()
@@ -115,7 +117,8 @@ func setupLoggingLibrary(t *testing.T, L *lua.LState) {
 		return 0
 	}))
 
-	L.SetGlobal("util_slog", slogTable)
+	// Add slog bridge to bridges table
+	bridgesTable.RawSetString("util_slog", slogTable)
 
 	// Set up mock script logger bridge
 	scriptLoggerTable := L.NewTable()
@@ -189,7 +192,11 @@ func setupLoggingLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("util_script_logger", scriptLoggerTable)
+	// Add script logger bridge to bridges table
+	bridgesTable.RawSetString("util_script_logger", scriptLoggerTable)
+
+	// Set the bridges table as a global
+	L.SetGlobal("bridges", bridgesTable)
 
 	// Load the logging library
 	libPath := filepath.Join(".", "logging.lua")
@@ -982,7 +989,7 @@ func TestIntegrationHelpers(t *testing.T) {
 		{
 			name: "logger_from_bridge",
 			script: `
-				local bridge_logger = logging.from_bridge(_G.util_script_logger)
+				local bridge_logger = logging.from_bridge(_G.bridges.util_script_logger)
 				return type(bridge_logger) == "table" and
 				       type(bridge_logger.info) == "function"
 			`,
@@ -1167,8 +1174,8 @@ func TestLoggingValidation(t *testing.T) {
 				logging.cleanup()
 				
 				-- Temporarily remove bridge
-				local original_bridge = _G.util_script_logger
-				_G.util_script_logger = nil
+				local original_bridge = _G.bridges.util_script_logger
+				_G.bridges.util_script_logger = nil
 				
 				local success, err = pcall(function()
 					-- Use a unique logger name to avoid cache
@@ -1176,7 +1183,7 @@ func TestLoggingValidation(t *testing.T) {
 				end)
 				
 				-- Restore bridge
-				_G.util_script_logger = original_bridge
+				_G.bridges.util_script_logger = original_bridge
 				
 				return success == false and type(err) == "string"
 			`,
@@ -1487,7 +1494,10 @@ func setupBenchmarkBridges(L *lua.LState) {
 		return 1
 	}))
 	debugTable.RawSetString("debugPrintf", L.NewFunction(func(L *lua.LState) int { return 0 }))
-	L.SetGlobal("util_debug", debugTable)
+
+	// Create bridges table and add debug bridge to it
+	bridgesTable := L.NewTable()
+	bridgesTable.RawSetString("util_debug", debugTable)
 
 	// Minimal slog bridge
 	slogTable := L.NewTable()
@@ -1495,7 +1505,9 @@ func setupBenchmarkBridges(L *lua.LState) {
 	slogTable.RawSetString("warn", L.NewFunction(func(L *lua.LState) int { return 0 }))
 	slogTable.RawSetString("error", L.NewFunction(func(L *lua.LState) int { return 0 }))
 	slogTable.RawSetString("debug", L.NewFunction(func(L *lua.LState) int { return 0 }))
-	L.SetGlobal("util_slog", slogTable)
+
+	// Add slog bridge to bridges table
+	bridgesTable.RawSetString("util_slog", slogTable)
 
 	// Minimal script logger bridge
 	scriptLoggerTable := L.NewTable()
@@ -1505,7 +1517,12 @@ func setupBenchmarkBridges(L *lua.LState) {
 	scriptLoggerTable.RawSetString("info", L.NewFunction(func(L *lua.LState) int { return 0 }))
 	scriptLoggerTable.RawSetString("warn", L.NewFunction(func(L *lua.LState) int { return 0 }))
 	scriptLoggerTable.RawSetString("error", L.NewFunction(func(L *lua.LState) int { return 0 }))
-	L.SetGlobal("util_script_logger", scriptLoggerTable)
+
+	// Add script logger bridge to bridges table
+	bridgesTable.RawSetString("util_script_logger", scriptLoggerTable)
+
+	// Set the bridges table as a global
+	L.SetGlobal("bridges", bridgesTable)
 
 	// Load the logging library
 	libPath := filepath.Join(".", "logging.lua")

@@ -4,6 +4,7 @@
 package stdlib
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -12,7 +13,9 @@ import (
 
 // setupObservabilityLibrary loads the observability library and sets up required bridges
 func setupObservabilityLibrary(t *testing.T, L *lua.LState) {
-	t.Helper()
+	if t != nil {
+		t.Helper()
+	}
 
 	// Set up mock metrics bridge
 	metricsTable := L.NewTable()
@@ -152,7 +155,7 @@ func setupObservabilityLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("metrics", metricsTable)
+	// Will be set in bridges table below
 
 	// Set up mock tracing bridge
 	tracingTable := L.NewTable()
@@ -200,7 +203,7 @@ func setupObservabilityLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("tracing", tracingTable)
+	// Will be set in bridges table below
 
 	// Set up mock slog bridge
 	slogTable := L.NewTable()
@@ -229,7 +232,7 @@ func setupObservabilityLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("slog", slogTable)
+	// Will be set in bridges table below
 
 	// Set up mock events bridge
 	eventsTable := L.NewTable()
@@ -247,7 +250,7 @@ func setupObservabilityLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("events", eventsTable)
+	// Will be set in bridges table below
 
 	// Set up optional mock guardrails bridge
 	guardrailsTable := L.NewTable()
@@ -278,13 +281,24 @@ func setupObservabilityLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	L.SetGlobal("guardrails", guardrailsTable)
+	// Create and set up bridges table
+	bridgesTable := L.NewTable()
+	bridgesTable.RawSetString("metrics", metricsTable)
+	bridgesTable.RawSetString("tracing", tracingTable)
+	bridgesTable.RawSetString("slog", slogTable)
+	bridgesTable.RawSetString("events", eventsTable)
+	bridgesTable.RawSetString("guardrails", guardrailsTable)
+	L.SetGlobal("bridges", bridgesTable)
 
 	// Load the observability library
 	observabilityPath := filepath.Join(".", "observability.lua")
 	err := L.DoFile(observabilityPath)
 	if err != nil {
-		t.Fatalf("Failed to load observability library: %v", err)
+		if t != nil {
+			t.Fatalf("Failed to load observability library: %v", err)
+		} else {
+			panic(fmt.Sprintf("Failed to load observability library: %v", err))
+		}
 	}
 	observability := L.Get(-1)
 	L.SetGlobal("observability", observability)
@@ -762,7 +776,7 @@ func TestGuardrails(t *testing.T) {
 			name: "local_guardrail_fallback",
 			script: `
 				-- Test with guardrails bridge disabled
-				_G.guardrails = nil
+				_G.bridges.guardrails = nil
 				
 				local guardrail = observability.guardrail("local_filter", function(data)
 					return data.value > 0
@@ -871,16 +885,16 @@ func TestObservabilityErrorHandling(t *testing.T) {
 		{
 			name: "missing_bridge_error",
 			script: `
-				-- Temporarily remove bridge
-				local original_bridge = _G.metrics
-				_G.metrics = nil
+				-- Temporarily remove bridge from bridges table
+				local original_bridge = _G.bridges.metrics
+				_G.bridges.metrics = nil
 				
 				local success, err = pcall(function()
 					observability.counter("test")
 				end)
 				
 				-- Restore bridge
-				_G.metrics = original_bridge
+				_G.bridges.metrics = original_bridge
 				
 				return not success and type(err) == "string"
 			`,
@@ -1068,7 +1082,10 @@ func BenchmarkObservabilityOperations(b *testing.B) {
 				if err != nil {
 					b.Fatalf("Benchmark failed: %v", err)
 				}
-				L.Pop(1) // Clean stack
+				// Clean stack if there's something to pop
+				if L.GetTop() > 0 {
+					L.Pop(1)
+				}
 			}
 		})
 	}

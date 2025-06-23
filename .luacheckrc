@@ -9,7 +9,8 @@ cache = true
 globals = {
     "_G",
     -- Bridge globals that are injected by go-llmspell
-    "llm_bridge",
+    "bridges",        -- New centralized bridge table
+    "llm_bridge",     -- Legacy bridge globals (for backward compatibility)
     "provider_bridge", 
     "pool_bridge",
     "llm_util_bridge",
@@ -83,7 +84,8 @@ files["pkg/engine/gopherlua/stdlib/*.lua"] = {
     -- Additional globals for stdlib
     globals = {
         "_G",
-        "llm_bridge",
+        "bridges",        -- New centralized bridge table
+        "llm_bridge",     -- Legacy bridge globals (for backward compatibility)
         "provider_bridge", 
         "pool_bridge",
         "llm_util_bridge",

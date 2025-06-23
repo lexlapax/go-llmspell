@@ -240,8 +240,13 @@ func setupErrorsLibrary(t *testing.T, L *lua.LState) {
 		return 1
 	}))
 
-	// Set the bridge as global
-	L.SetGlobal("util_errors", errorsTable)
+	// Set the bridge in bridges table
+	bridgesTable := L.GetGlobal("bridges")
+	if bridgesTable == lua.LNil {
+		bridgesTable = L.NewTable()
+		L.SetGlobal("bridges", bridgesTable)
+	}
+	bridgesTable.(*lua.LTable).RawSetString("util_errors", errorsTable)
 
 	// Load the errors library
 	libPath := filepath.Join(".", "errors.lua")
@@ -859,15 +864,19 @@ func TestErrorsValidation(t *testing.T) {
 			name: "missing_bridge_graceful_handling",
 			script: `
 				-- Temporarily remove bridge
-				local original_bridge = _G.util_errors
-				_G.util_errors = nil
+				local original_bridge = bridges and bridges.util_errors
+				if bridges then
+					bridges.util_errors = nil
+				end
 				
 				local success, err = pcall(function()
 					errors.create("test", "TEST")
 				end)
 				
 				-- Restore bridge
-				_G.util_errors = original_bridge
+				if bridges and original_bridge then
+					bridges.util_errors = original_bridge
+				end
 				
 				return success == false and type(err) == "string"
 			`,

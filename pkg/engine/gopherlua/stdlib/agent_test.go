@@ -262,9 +262,14 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 		return 1
 	}))
 
-	// Set up mock bridges as globals
-	L.SetGlobal("agent_bridge", agentBridgeTable)
-	L.SetGlobal("workflow_bridge", workflowBridgeTable)
+	// Set up mock bridges in bridges table
+	bridgesTable := L.GetGlobal("bridges")
+	if bridgesTable == lua.LNil {
+		bridgesTable = L.NewTable()
+		L.SetGlobal("bridges", bridgesTable)
+	}
+	bridgesTable.(*lua.LTable).RawSetString("agent", agentBridgeTable)
+	bridgesTable.(*lua.LTable).RawSetString("workflow", workflowBridgeTable)
 }
 
 // setupAgentLibrary loads the agent library and its dependencies

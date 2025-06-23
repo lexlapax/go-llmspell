@@ -280,6 +280,17 @@ func setupStateLibrary(t testing.TB, L *lua.LState) {
 	setupMockStateManager(L)
 	setupMockStateContext(L)
 
+	// Set up mock bridges in bridges table
+	bridgesTable := L.GetGlobal("bridges")
+	if bridgesTable == lua.LNil {
+		bridgesTable = L.NewTable()
+		L.SetGlobal("bridges", bridgesTable)
+	}
+	stateManager := L.GetGlobal("state_manager")
+	stateContext := L.GetGlobal("state_context")
+	bridgesTable.(*lua.LTable).RawSetString("state_manager", stateManager)
+	bridgesTable.(*lua.LTable).RawSetString("state_context", stateContext)
+
 	// Load promise library (dependency)
 	promisePath := filepath.Join(".", "promise.lua")
 	err := L.DoFile(promisePath)

@@ -81,7 +81,7 @@ func TestResourceLimitEnforcer_ContextTimeout(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				if tt.contains != "" {
+				if tt.contains != "" && err != nil {
 					assert.Contains(t, err.Error(), tt.contains)
 				}
 			} else {
@@ -147,7 +147,7 @@ func TestResourceLimitEnforcer_MemoryMonitoring(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				if tt.contains != "" {
+				if tt.contains != "" && err != nil {
 					assert.Contains(t, err.Error(), tt.contains)
 				}
 			} else {
@@ -216,7 +216,7 @@ func TestResourceLimitEnforcer_StackDepthLimits(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				if tt.contains != "" {
+				if tt.contains != "" && err != nil {
 					assert.Contains(t, err.Error(), tt.contains)
 				}
 			} else {
@@ -233,8 +233,8 @@ func TestResourceLimitEnforcer_CombinedLimits(t *testing.T) {
 	}
 
 	limits := ResourceLimits{
-		MaxDuration:   200 * time.Millisecond, // Increased for stability
-		MaxMemory:     5 * 1024 * 1024,        // 5MB - increased to handle Lua VM overhead
+		MaxDuration:   500 * time.Millisecond, // Increased for stability but script should still exceed
+		MaxMemory:     20 * 1024 * 1024,       // 20MB - increased to handle race detector overhead
 		MaxStackDepth: 20,
 		CheckInterval: 100,
 	}
@@ -262,8 +262,12 @@ func TestResourceLimitEnforcer_CombinedLimits(t *testing.T) {
 			name: "fails_time_limit",
 			script: `
 				local count = 0
-				while count < 1000000 do
+				while count < 10000000 do
 					count = count + 1
+					-- Add some string operations to make it slower
+					local s = "test" .. count
+					local len = string.len(s)
+					if len < 0 then break end
 				end
 			`,
 			expectError: true,
@@ -291,7 +295,7 @@ func TestResourceLimitEnforcer_CombinedLimits(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				if tt.contains != "" {
+				if tt.contains != "" && err != nil {
 					assert.Contains(t, err.Error(), tt.contains)
 				}
 			} else {

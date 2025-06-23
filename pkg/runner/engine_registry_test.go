@@ -47,9 +47,15 @@ type mockEngine struct {
 
 func (e *mockEngine) Initialize(config engine.EngineConfig) error { return nil }
 func (e *mockEngine) Execute(ctx context.Context, script string, params map[string]interface{}) (engine.ScriptValue, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return engine.NewStringValue("mock result"), nil
 }
 func (e *mockEngine) ExecuteFile(ctx context.Context, filepath string, params map[string]interface{}) (engine.ScriptValue, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return engine.NewStringValue("mock file result"), nil
 }
 func (e *mockEngine) Shutdown() error { return nil }
@@ -84,6 +90,9 @@ func (e *mockEngine) CreateContext(options engine.ContextOptions) (engine.Script
 }
 func (e *mockEngine) DestroyContext(ctx engine.ScriptContext) error { return nil }
 func (e *mockEngine) ExecuteScript(ctx context.Context, script string, options engine.ExecutionOptions) (*engine.ExecutionResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return &engine.ExecutionResult{}, nil
 }
 
