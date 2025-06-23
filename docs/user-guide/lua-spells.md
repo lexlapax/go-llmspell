@@ -115,15 +115,63 @@ Lua spells have access to several global objects:
 
 ### 2. Parameters
 
-Spells can receive parameters:
+Spells can receive parameters in two ways for maximum flexibility:
+
+#### Using the params table (Recommended)
 
 ```lua
--- Access parameters passed to the spell
+-- Access parameters using the params table
 local model = params.model or "gpt-3.5-turbo"
 local temperature = tonumber(params.temperature) or 0.7
+local output_dir = params.output_dir or "./output"
 
--- Parameters are always strings from CLI, convert as needed
-local max_tokens = tonumber(params.max_tokens) or 1000
+-- Check if parameter exists
+if params.debug then
+    log.set_level("debug")
+end
+
+-- Handle complex parameters
+local agent_config = {
+    name = params.agent_name or "Assistant",
+    model = params.model or "gpt-4",
+    temperature = tonumber(params.temperature) or 0.7,
+    max_tokens = tonumber(params.max_tokens) or 1000
+}
+```
+
+#### Using global variables (Backward compatibility)
+
+```lua
+-- Parameters are also available as global variables
+local model = model or "gpt-3.5-turbo"  -- Same as params.model
+local temperature = tonumber(temperature) or 0.7  -- Same as params.temperature
+
+-- This approach is maintained for backward compatibility
+-- but using params.key is preferred for clarity
+```
+
+#### Parameter Types and Conversion
+
+```lua
+-- String parameters (default from CLI)
+local text = params.text or "default text"
+
+-- Numeric parameters (convert from string)
+local count = tonumber(params.count) or 10
+local price = tonumber(params.price) or 0.0
+
+-- Boolean parameters
+local debug_mode = params.debug == "true" or params.debug == true
+local enabled = params.enabled ~= "false" and params.enabled ~= false
+
+-- Default value patterns
+local config = {
+    model = params.model or "gpt-3.5-turbo",
+    temperature = tonumber(params.temperature) or 0.7,
+    max_tokens = tonumber(params.max_tokens) or 1000,
+    output_dir = params.output_dir or "./output",
+    debug = params.debug == "true"
+}
 ```
 
 ### 3. Return Values
@@ -553,10 +601,10 @@ end)
 
 ## Best Practices
 
-### 1. Parameter Validation
+### 1. Parameter Validation and Access Patterns
 
 ```lua
--- Always validate parameters
+-- Always validate required parameters using params table
 local function validate_params()
     assert(params.api_key, "API key is required")
     assert(params.model, "Model parameter is required")
@@ -564,9 +612,43 @@ local function validate_params()
     local temperature = tonumber(params.temperature)
     assert(temperature and temperature >= 0 and temperature <= 2, 
            "Temperature must be between 0 and 2")
+    
+    -- Validate file paths if provided
+    if params.output_dir then
+        assert(type(params.output_dir) == "string", "output_dir must be a string")
+    end
+    
+    -- Validate boolean parameters
+    if params.debug then
+        assert(params.debug == "true" or params.debug == "false" or type(params.debug) == "boolean",
+               "debug must be 'true', 'false', or boolean")
+    end
 end
 
 validate_params()
+
+-- Access pattern with comprehensive defaults
+local config = {
+    -- Required parameters (validated above)
+    api_key = params.api_key,
+    model = params.model,
+    
+    -- Optional parameters with defaults
+    temperature = tonumber(params.temperature) or 0.7,
+    max_tokens = tonumber(params.max_tokens) or 1000,
+    output_dir = params.output_dir or "./output",
+    debug = params.debug == "true",
+    
+    -- Complex parameter handling
+    retry_count = math.max(1, tonumber(params.retry_count) or 3),
+    timeout = math.max(5, tonumber(params.timeout) or 30),
+    
+    -- Array-like parameters (comma-separated strings)
+    tools = params.tools and string.split(params.tools, ",") or {"web_search", "calculator"}
+}
+
+-- Use backward-compatible global access when needed
+local legacy_model = model or params.model or "gpt-3.5-turbo"
 ```
 
 ### 2. Resource Cleanup

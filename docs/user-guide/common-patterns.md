@@ -4,6 +4,7 @@ This guide covers common patterns and idiomatic ways to structure Lua spells in 
 
 ## Table of Contents
 
+- [Parameter Handling Patterns](#parameter-handling-patterns)
 - [Spell Structure Patterns](#spell-structure-patterns)
 - [LLM Interaction Patterns](#llm-interaction-patterns)
 - [Agent Orchestration Patterns](#agent-orchestration-patterns)
@@ -14,6 +15,240 @@ This guide covers common patterns and idiomatic ways to structure Lua spells in 
 - [Testing Patterns](#testing-patterns)
 - [Performance Patterns](#performance-patterns)
 - [Security Patterns](#security-patterns)
+
+## Parameter Handling Patterns
+
+### Configuration Object Pattern
+
+```lua
+-- Create a centralized configuration object from parameters
+local function build_config()
+    return {
+        -- Core LLM settings
+        model = params.model or "gpt-3.5-turbo",
+        temperature = tonumber(params.temperature) or 0.7,
+        max_tokens = tonumber(params.max_tokens) or 1000,
+        
+        -- Behavioral flags
+        debug = params.debug == "true",
+        verbose = params.verbose == "true",
+        dry_run = params.dry_run == "true",
+        
+        -- File and output settings
+        input_file = params.input_file,
+        output_dir = params.output_dir or "./output",
+        log_level = params.log_level or "info",
+        
+        -- Advanced settings with validation
+        retry_count = math.max(1, math.min(10, tonumber(params.retry_count) or 3)),
+        timeout = math.max(5, tonumber(params.timeout) or 30),
+        
+        -- Array parameters (comma-separated)
+        tools = params.tools and split_string(params.tools, ",") or {},
+        models = params.models and split_string(params.models, ",") or {params.model or "gpt-3.5-turbo"}
+    }
+end
+
+-- Helper function for splitting strings
+local function split_string(str, delimiter)
+    local result = {}
+    for item in string.gmatch(str, "([^" .. delimiter .. "]+)") do
+        table.insert(result, item:match("^%s*(.-)%s*$"))  -- trim whitespace
+    end
+    return result
+end
+
+local config = build_config()
+```
+
+### Validation Pattern with Defaults
+
+```lua
+-- Comprehensive parameter validation with helpful error messages
+local function validate_and_normalize_params()
+    local errors = {}
+    
+    -- Required parameters
+    if not params.api_key and not os.getenv("OPENAI_API_KEY") then
+        table.insert(errors, "API key required: set OPENAI_API_KEY env var or pass -p api_key=<key>")
+    end
+    
+    if not params.input_file and not params.prompt then
+        table.insert(errors, "Either input_file or prompt parameter is required")
+    end
+    
+    -- Validate numeric parameters
+    if params.temperature then
+        local temp = tonumber(params.temperature)
+        if not temp or temp < 0 or temp > 2 then
+            table.insert(errors, "temperature must be a number between 0 and 2")
+        end
+    end
+    
+    if params.max_tokens then
+        local tokens = tonumber(params.max_tokens)
+        if not tokens or tokens < 1 or tokens > 32000 then
+            table.insert(errors, "max_tokens must be between 1 and 32000")
+        end
+    end
+    
+    -- Validate file paths
+    if params.input_file and not file_exists(params.input_file) then
+        table.insert(errors, "input_file does not exist: " .. params.input_file)
+    end
+    
+    if params.output_dir and not is_valid_directory(params.output_dir) then
+        table.insert(errors, "output_dir is not a valid directory: " .. params.output_dir)
+    end
+    
+    -- Report all errors at once
+    if #errors > 0 then
+        error("Parameter validation failed:\n  " .. table.concat(errors, "\n  "))
+    end
+    
+    -- Return normalized parameters
+    return {
+        api_key = params.api_key or os.getenv("OPENAI_API_KEY"),
+        model = params.model or "gpt-3.5-turbo", 
+        temperature = tonumber(params.temperature) or 0.7,
+        max_tokens = tonumber(params.max_tokens) or 1000,
+        input_file = params.input_file,
+        output_dir = params.output_dir or "./output",
+        debug = params.debug == "true"
+    }
+end
+
+local validated_params = validate_and_normalize_params()
+```
+
+### Environment Integration Pattern
+
+```lua
+-- Combine parameters with environment variables and config files
+local function get_effective_config()
+    local config = {}
+    
+    -- 1. Start with defaults
+    config.model = "gpt-3.5-turbo"
+    config.temperature = 0.7
+    config.output_dir = "./output"
+    
+    -- 2. Override with environment variables
+    config.api_key = os.getenv("OPENAI_API_KEY")
+    config.log_level = os.getenv("LOG_LEVEL") or "info"
+    config.debug = os.getenv("DEBUG") == "true"
+    
+    -- 3. Override with config file (if it exists)
+    local config_file = params.config_file or os.getenv("LLMSPELL_CONFIG") or "./config.json"
+    if file_exists(config_file) then
+        local file_config = load_json_config(config_file)
+        for key, value in pairs(file_config) do
+            config[key] = value
+        end
+    end
+    
+    -- 4. Finally, override with command-line parameters (highest priority)
+    for key, value in pairs(params) do
+        if key ~= "config_file" then  -- Don't override the config file path itself
+            config[key] = value
+        end
+    end
+    
+    -- 5. Type conversion and validation
+    config.temperature = tonumber(config.temperature) or 0.7
+    config.max_tokens = tonumber(config.max_tokens) or 1000
+    config.debug = config.debug == "true" or config.debug == true
+    
+    return config
+end
+```
+
+### Backward Compatibility Pattern
+
+```lua
+-- Support both new (params table) and old (global variables) parameter access
+local function get_param(new_name, old_name, default)
+    -- Try new params table first
+    if params[new_name] ~= nil then
+        return params[new_name]
+    end
+    
+    -- Fall back to old global variable
+    if old_name and _G[old_name] ~= nil then
+        return _G[old_name]
+    end
+    
+    -- Use default
+    return default
+end
+
+-- Usage examples
+local model = get_param("model", "model_name", "gpt-3.5-turbo")
+local temperature = tonumber(get_param("temperature", "temp", "0.7"))
+local output = get_param("output_dir", "output", "./output")
+
+-- Or create a compatibility layer
+local compat_params = {
+    model = get_param("model", "model_name", "gpt-3.5-turbo"),
+    temperature = tonumber(get_param("temperature", "temp", "0.7")),
+    output_dir = get_param("output_dir", "output", "./output"),
+    debug = get_param("debug", "debug_mode", "false") == "true"
+}
+```
+
+### Parameter Documentation Pattern
+
+```lua
+-- Self-documenting parameter handling
+local function setup_parameters()
+    local param_docs = {
+        -- Required parameters
+        required = {
+            "prompt - The text prompt to send to the LLM",
+            "model - LLM model to use (e.g., gpt-4, claude-3-opus)"
+        },
+        
+        -- Optional parameters with defaults
+        optional = {
+            "temperature=0.7 - Randomness (0.0-2.0)",
+            "max_tokens=1000 - Maximum response length",
+            "output_dir=./output - Directory for output files",
+            "debug=false - Enable debug logging",
+            "retry_count=3 - Number of retries on failure"
+        }
+    }
+    
+    -- Show help if requested
+    if params.help == "true" or params.h == "true" then
+        print("Spell Parameters:")
+        print("\nRequired:")
+        for _, desc in ipairs(param_docs.required) do
+            print("  " .. desc)
+        end
+        print("\nOptional:")
+        for _, desc in ipairs(param_docs.optional) do
+            print("  " .. desc)
+        end
+        print("\nExample usage:")
+        print("  llmspell run my-spell.lua -p prompt='Hello world' -p model=gpt-4")
+        os.exit(0)
+    end
+    
+    -- Build configuration with validation
+    local config = validate_and_normalize_params()
+    
+    -- Debug output showing effective parameters
+    if config.debug then
+        print("=== Effective Configuration ===")
+        for key, value in pairs(config) do
+            print(string.format("  %s = %s", key, tostring(value)))
+        end
+        print("===============================")
+    end
+    
+    return config
+end
+```
 
 ## Spell Structure Patterns
 

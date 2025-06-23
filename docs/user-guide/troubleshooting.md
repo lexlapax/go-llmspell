@@ -115,6 +115,124 @@ end
 local temperature = ensure_type(params.temperature, "number", 0.7)
 ```
 
+## Parameter Issues
+
+### Parameter Not Found
+
+**Problem**: Your spell can't access expected parameters.
+
+**Common Causes & Solutions**:
+
+1. **Using the wrong access method**
+   ```lua
+   -- BAD: Accessing undefined variable
+   local model = model_name  -- Will be nil if not passed
+   
+   -- GOOD: Use params table with default
+   local model = params.model_name or "gpt-3.5-turbo"
+   ```
+
+2. **Parameter name mismatch**
+   ```bash
+   # CLI command
+   llmspell run my-spell.lua -p model=gpt-4
+   ```
+   ```lua
+   -- BAD: Wrong parameter name
+   local model = params.model_name  -- Will be nil
+   
+   -- GOOD: Correct parameter name
+   local model = params.model  -- Gets "gpt-4"
+   ```
+
+3. **Case sensitivity**
+   ```bash
+   # CLI command uses lowercase
+   llmspell run my-spell.lua -p debug=true
+   ```
+   ```lua
+   -- BAD: Wrong case
+   local debug = params.Debug  -- Will be nil
+   
+   -- GOOD: Correct case
+   local debug = params.debug == "true"
+   ```
+
+### Parameter Type Conversion Issues
+
+**Problem**: Parameters have unexpected types or values.
+
+**Common Causes & Solutions**:
+
+1. **CLI parameters are always strings**
+   ```lua
+   -- BAD: Assuming numeric type
+   local count = params.count + 1  -- Error if params.count is "5"
+   
+   -- GOOD: Convert to number first
+   local count = tonumber(params.count) or 0
+   local new_count = count + 1
+   ```
+
+2. **Boolean parameter handling**
+   ```lua
+   -- BAD: String "false" is truthy in Lua
+   if params.enabled then  -- Always true if param is passed
+       -- This runs even for -p enabled=false
+   end
+   
+   -- GOOD: Proper boolean conversion
+   local enabled = params.enabled == "true"
+   if enabled then
+       -- Only runs for -p enabled=true
+   end
+   ```
+
+3. **Empty vs missing parameters**
+   ```lua
+   -- Handle both empty and missing parameters
+   local output_dir = params.output_dir
+   if not output_dir or output_dir == "" then
+       output_dir = "./default-output"
+   end
+   
+   -- Or use a one-liner
+   local output_dir = (params.output_dir and params.output_dir ~= "") and params.output_dir or "./default-output"
+   ```
+
+### Backward Compatibility Issues
+
+**Problem**: Old scripts using global variables stop working.
+
+**Solution**: Both access methods are supported:
+```lua
+-- Old way (still works)
+local model = model or "gpt-3.5-turbo"
+
+-- New way (recommended)
+local model = params.model or "gpt-3.5-turbo"
+
+-- Best practice: Use params for new code
+local config = {
+    model = params.model or "gpt-3.5-turbo",
+    temperature = tonumber(params.temperature) or 0.7
+}
+```
+
+### Debug Parameter Access
+
+**Technique**: Print all available parameters:
+```lua
+-- Debug: Show all parameters
+if params.debug == "true" then
+    print("=== All Parameters ===")
+    for key, value in pairs(params) do
+        print(key .. " = " .. tostring(value))
+    end
+    print("======================")
+end
+```
+
 ## Debugging Techniques
 
 ### 1. Debug Output

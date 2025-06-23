@@ -176,11 +176,13 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Verify all example spells work with new parameter injection **[COMPLETED - 2025-06-23]**
     - [x] Test CLI parameter passing works end-to-end **[COMPLETED - 2025-06-23]**
     - [x] Verify `params.output_dir`, `params.model`, etc. work correctly **[COMPLETED - 2025-06-23]**
-    - [ ] Test all 13 example spells (blocked by bridge initialization issue)
-  - [ ] Update documentation for parameter usage
-    - [ ] Document `params` table in user guide
-    - [ ] Add examples of parameter access patterns
-    - [ ] Update troubleshooting guide for parameter issues
+    - [x] Test all 13 example spells **[COMPLETED - 2025-06-23]**
+      - [x] Fixed CLI "engine registry not found in context" error by updating run.go to use Runner interface **[COMPLETED - 2025-06-23]**
+      - [x] Verified parameter injection works for both params table and global variables across all spell simulations **[COMPLETED - 2025-06-23]**
+  - [x] Update documentation for parameter usage **[COMPLETED - 2025-06-23]**
+    - [x] Document `params` table in user guide **[COMPLETED - 2025-06-23]**
+    - [x] Add examples of parameter access patterns **[COMPLETED - 2025-06-23]**
+    - [x] Update troubleshooting guide for parameter issues **[COMPLETED - 2025-06-23]**
 
 - [ ] **Task 2.4.4.5: Bridge Initialization Optimization** (Refactor for lazy loading and multi-engine support)
   - [x] Update `LoadBridgeModules` to set individual globals for stdlib compatibility **[COMPLETED - 2025-06-23]**

@@ -6,19 +6,19 @@ This directory contains example Lua spells demonstrating various features and pa
 
 ### Basic Examples
 
-1. **[01-basic-llm.lua](01-basic-llm.lua)** - Basic LLM interaction
-   - Simple completions
-   - Streaming responses
-   - Multi-turn conversations
-   - Error handling
-   - Multiple models
-
-2. **[02-tools-usage.lua](02-tools-usage.lua)** - Using built-in tools
+2. **[01-tools-usage.lua](01-tools-usage.lua)** - Using built-in tools
    - File operations
    - Web fetching
    - Date/time utilities
    - Calculator
    - Tool discovery
+
+1. **[02-basic-llm.lua](02-basic-llm.lua)** - Basic LLM interaction
+   - Simple completions
+   - Streaming responses
+   - Multi-turn conversations
+   - Error handling
+   - Multiple models
 
 3. **[03-agent-plain.lua](03-agent-plain.lua)** - Agent without tools
    - Creating agents

@@ -6,7 +6,6 @@ package commands
 import (
 	"context"
 	"os"
-	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
@@ -24,43 +23,19 @@ type RunCmd struct {
 }
 
 // Run executes the command.
-// It initializes the script executor, loads the script,
-// and executes it with the provided parameters and timeout.
+// It gets the script runner from context and executes the script
+// with the provided parameters and timeout.
 func (c *RunCmd) Run(ctx context.Context) error {
-	// Get engine registry from context
-	engineRegistryInterface := GetEngineRegistry(ctx)
-	if engineRegistryInterface == nil {
-		return errors.New(errors.CategoryConfig, "engine registry not found in context")
+	// Get script runner from context
+	runnerInterface := GetRunner(ctx)
+	if runnerInterface == nil {
+		return errors.New(errors.CategoryConfig, "script runner not found in context")
 	}
 
-	engineRegistry, ok := engineRegistryInterface.(*runner.EngineRegistryManager)
+	scriptRunner, ok := runnerInterface.(runner.Runner)
 	if !ok {
-		return errors.New(errors.CategoryConfig, "invalid engine registry type")
+		return errors.New(errors.CategoryConfig, "invalid script runner type")
 	}
-
-	// Create runner config
-	runnerConfig := &runner.RunnerConfig{
-		MaxConcurrentScripts: 1,
-		Timeout:              time.Duration(c.Timeout) * time.Second,
-		EngineConfigs:        make(map[string]map[string]interface{}),
-		DefaultEngine:        "lua",
-	}
-
-	// Create engine selector
-	selector := runner.NewEngineSelector(engineRegistry)
-
-	// Create script executor
-	executor := runner.NewScriptExecutor(runnerConfig, engineRegistry, selector)
-
-	// Initialize executor
-	if err := executor.Initialize(ctx); err != nil {
-		return errors.Wrap(err, errors.CategoryEngine, "failed to initialize executor")
-	}
-	defer func() {
-		if err := executor.Shutdown(); err != nil {
-			c.Errorf("failed to shutdown executor: %v\n", err)
-		}
-	}()
 
 	// Convert string parameters to interface{}
 	params := make(map[string]interface{})
@@ -71,7 +46,7 @@ func (c *RunCmd) Run(ctx context.Context) error {
 	// Execute the script
 	c.Debug(ctx, "Executing script: %s", c.Script)
 
-	// If engine is specified, we need to read the file and use ExecuteWithOptions
+	// If engine is specified, we need to read the file and use Execute
 	if c.Engine != "" {
 		// Read the script file
 		scriptContent, err := os.ReadFile(c.Script)
@@ -79,31 +54,19 @@ func (c *RunCmd) Run(ctx context.Context) error {
 			return errors.Wrap(err, errors.CategoryIO, "failed to read script file")
 		}
 
-		// Create runner options with specified engine
-		runnerOptions := &runner.RunnerOptions{
-			Engine:     c.Engine,
-			Parameters: params,
-			Timeout:    time.Duration(c.Timeout) * time.Second,
-		}
-
-		// Execute with options
-		execResult, err := executor.ExecuteWithOptions(ctx, string(scriptContent), runnerOptions)
+		// Execute the script content directly
+		result, err := scriptRunner.Execute(ctx, string(scriptContent), params)
 		if err != nil {
 			return errors.Wrap(err, errors.CategoryScript, "failed to execute script")
 		}
 
-		// Handle execution result
-		if execResult.IsError() {
-			return errors.Wrap(execResult.Error, errors.CategoryScript, "script execution failed")
-		}
-
 		// Print result if not nil
-		if execResult.Value != nil {
-			c.Printf("%v\n", execResult.Value)
+		if result != nil {
+			c.Printf("%v\n", result)
 		}
 	} else {
 		// Use ExecuteFile which will auto-detect the engine
-		result, err := executor.ExecuteFile(ctx, c.Script, params)
+		result, err := scriptRunner.ExecuteFile(ctx, c.Script, params)
 		if err != nil {
 			return errors.Wrap(err, errors.CategoryScript, "failed to execute script")
 		}
