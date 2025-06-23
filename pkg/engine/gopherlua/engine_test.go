@@ -655,3 +655,231 @@ func TestLuaEngine_BridgeManagement(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestLuaEngine_StdlibModules(t *testing.T) {
+	t.Run("DefaultStdlibLoading", func(t *testing.T) {
+		eng := NewLuaEngine()
+		config := engine.EngineConfig{
+			MemoryLimit:  64 * 1024 * 1024,
+			TimeoutLimit: 30 * time.Second,
+		}
+
+		// Initialize engine (should load stdlib by default)
+		err := eng.Initialize(config)
+		require.NoError(t, err)
+		defer func() {
+			_ = eng.Shutdown()
+		}()
+
+		// Test script that uses stdlib modules
+		script := `
+			local log = require("log")
+			local core = require("core")
+			local data = require("data")
+			
+			-- Verify modules are loaded
+			assert(log ~= nil, "log module not loaded")
+			assert(core ~= nil, "core module not loaded") 
+			assert(data ~= nil, "data module not loaded")
+			
+			-- Return success
+			return {success = true, modules_loaded = 3}
+		`
+
+		ctx := context.Background()
+		result, err := eng.Execute(ctx, script, nil)
+		require.NoError(t, err)
+
+		// Check result
+		resultMap, ok := result.ToGo().(map[string]interface{})
+		require.True(t, ok, "Result should be a map")
+
+		success, ok := resultMap["success"].(bool)
+		assert.True(t, ok)
+		assert.True(t, success, "Script should return success")
+
+		count, ok := resultMap["modules_loaded"].(float64)
+		assert.True(t, ok)
+		assert.Equal(t, float64(3), count, "Should load 3 modules")
+	})
+
+	t.Run("DisableStdlib", func(t *testing.T) {
+		eng := NewLuaEngine()
+		config := engine.EngineConfig{
+			MemoryLimit:  64 * 1024 * 1024,
+			TimeoutLimit: 30 * time.Second,
+			EngineOptions: map[string]interface{}{
+				"disable_stdlib": true,
+			},
+		}
+
+		// Initialize engine with stdlib explicitly disabled
+		err := eng.Initialize(config)
+		require.NoError(t, err)
+		defer func() {
+			_ = eng.Shutdown()
+		}()
+
+		// Test script that tries to use stdlib modules
+		script := `
+			local success, log = pcall(require, "log")
+			return {module_found = success}
+		`
+
+		ctx := context.Background()
+		result, err := eng.Execute(ctx, script, nil)
+		require.NoError(t, err)
+
+		// Check result - module should not be found
+		resultMap, ok := result.ToGo().(map[string]interface{})
+		require.True(t, ok, "Result should be a map")
+
+		found, ok := resultMap["module_found"].(bool)
+		assert.True(t, ok)
+		assert.False(t, found, "Module should not be found when stdlib is disabled")
+	})
+
+	t.Run("ModuleInterdependencies", func(t *testing.T) {
+		eng := NewLuaEngine()
+		config := engine.EngineConfig{
+			MemoryLimit:  64 * 1024 * 1024,
+			TimeoutLimit: 30 * time.Second,
+		}
+
+		err := eng.Initialize(config)
+		require.NoError(t, err)
+		defer func() {
+			_ = eng.Shutdown()
+		}()
+
+		// Test that modules can use each other
+		script := `
+			-- These modules might have interdependencies
+			local errors = require("errors")
+			local logging = require("logging")
+			local agent = require("agent")
+			local llm = require("llm")
+			
+			-- Verify all loaded successfully
+			local loaded = 0
+			if errors then loaded = loaded + 1 end
+			if logging then loaded = loaded + 1 end
+			if agent then loaded = loaded + 1 end
+			if llm then loaded = loaded + 1 end
+			
+			return {modules_loaded = loaded}
+		`
+
+		ctx := context.Background()
+		result, err := eng.Execute(ctx, script, nil)
+		require.NoError(t, err)
+
+		resultMap, ok := result.ToGo().(map[string]interface{})
+		require.True(t, ok, "Result should be a map")
+
+		count, ok := resultMap["modules_loaded"].(float64)
+		assert.True(t, ok)
+		assert.Equal(t, float64(4), count, "Should load 4 modules")
+	})
+
+	t.Run("ErrorInModule", func(t *testing.T) {
+		eng := NewLuaEngine()
+		config := engine.EngineConfig{
+			MemoryLimit:  64 * 1024 * 1024,
+			TimeoutLimit: 30 * time.Second,
+		}
+
+		err := eng.Initialize(config)
+		require.NoError(t, err)
+		defer func() {
+			_ = eng.Shutdown()
+		}()
+
+		// Test error handling when requiring non-existent module
+		script := `
+			local success, err = pcall(require, "nonexistent_module")
+			return {
+				success = success,
+				error_msg = tostring(err)
+			}
+		`
+
+		ctx := context.Background()
+		result, err := eng.Execute(ctx, script, nil)
+		require.NoError(t, err)
+
+		resultMap, ok := result.ToGo().(map[string]interface{})
+		require.True(t, ok, "Result should be a map")
+
+		success, ok := resultMap["success"].(bool)
+		assert.True(t, ok)
+		assert.False(t, success, "Requiring non-existent module should fail")
+
+		errMsg, ok := resultMap["error_msg"].(string)
+		assert.True(t, ok)
+		assert.NotEmpty(t, errMsg, "Should have error message")
+	})
+
+	t.Run("ConcurrentModuleLoading", func(t *testing.T) {
+		eng := NewLuaEngine()
+		config := engine.EngineConfig{
+			MemoryLimit:  64 * 1024 * 1024,
+			TimeoutLimit: 30 * time.Second,
+		}
+
+		err := eng.Initialize(config)
+		require.NoError(t, err)
+		defer func() {
+			_ = eng.Shutdown()
+		}()
+
+		// Run multiple scripts concurrently that load modules
+		script := `
+			local modules = {"core", "logging", "data", "errors"}
+			local loaded = {}
+			
+			for _, name in ipairs(modules) do
+				local success, mod = pcall(require, name)
+				if success then
+					table.insert(loaded, name)
+				end
+			end
+			
+			return {count = #loaded}
+		`
+
+		// Run concurrently
+		const numGoroutines = 10
+		results := make(chan error, numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
+			go func() {
+				ctx := context.Background()
+				result, err := eng.Execute(ctx, script, nil)
+				if err != nil {
+					results <- err
+					return
+				}
+
+				resultMap, ok := result.ToGo().(map[string]interface{})
+				if !ok {
+					results <- fmt.Errorf("result is not a map")
+					return
+				}
+
+				if count, ok := resultMap["count"].(float64); !ok || count != 4 {
+					results <- fmt.Errorf("expected 4 modules, got %v", count)
+					return
+				}
+
+				results <- nil
+			}()
+		}
+
+		// Check results
+		for i := 0; i < numGoroutines; i++ {
+			err := <-results
+			assert.NoError(t, err, "Concurrent execution %d should succeed", i)
+		}
+	})
+}

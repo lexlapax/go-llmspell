@@ -124,6 +124,65 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Create error reporting (formatter with color, debug modes, chain handling) **[COMPLETED - 2025-06-23]**
   - [x] Add error metrics (counters, rates, recent errors buffer) **[COMPLETED - 2025-06-23]**
 
+- [x] **Task 2.4.4.3: Stdlib Module Loading Fix** (Option 1: Embed and Preload) **[COMPLETED - 2025-06-23]**
+  - [x] Create `/pkg/engine/gopherlua/stdlib/embed.go` to embed all .lua files
+    - [x] Use `go:embed` directive to embed *.lua files
+    - [x] Create exported variable with embedded filesystem
+    - [x] Add function to list all embedded modules
+    - [x] Update Makefile targets if we need to. (No changes needed)
+  - [x] Create `/pkg/engine/gopherlua/stdlib/loader.go` for module loading
+    - [x] Implement `LoadEmbeddedModule(name string) (lua.LGFunction, error)`
+    - [x] Create `GetAllStdlibLoaders() map[string]lua.LGFunction`
+    - [x] Add module caching to prevent re-parsing
+    - [x] Handle module dependencies and load order
+    - [x] Added module aliases (log -> logging) for compatibility
+  - [x] Update `/pkg/engine/gopherlua/factory.go`
+    - [x] Import stdlib loader package
+    - [x] Add stdlib modules to PreloadModules in FactoryConfig
+    - [x] Ensure modules are available before init script runs
+    - [x] Added DisableStdlib flag to FactoryConfig
+    - [x] Fixed NewLStateFactory to load stdlib by default
+  - [x] Update `/pkg/engine/gopherlua/engine.go`
+    - [x] Modify Initialize() to load stdlib modules
+    - [x] Pass loaded modules to factory config
+    - [x] Add configuration option to disable stdlib loading
+    - [x] Fixed security compatibility: auto-add "package" library when stdlib enabled
+  - [x] Add comprehensive tests
+    - [x] Test embedded file access (embed_test.go)
+    - [x] Test module loading in isolated Lua state (loader_test.go)
+    - [x] Test require() functionality for all modules (loader_test.go)
+    - [x] Test module interdependencies (loader_test.go, engine_test.go)
+    - [x] Test error cases (missing modules, load failures) (all test files)
+    - [x] Updated factory_test.go with comprehensive stdlib tests
+    - [x] Fixed all test failures and compatibility issues
+  - [x] Update example spells
+    - [x] Verify all example spells work with embedded modules **[COMPLETED - 2025-06-23]**
+    - [x] Remove any workarounds for module loading **[COMPLETED - 2025-06-23]**
+  - [ ] Documentation updates
+    - [ ] Document embedded module system
+    - [ ] Update troubleshooting guide
+    - [ ] Add notes about deployment considerations
+
+- [ ] **Task 2.4.4.4: Parameter Injection Fix** (Option 1: Create params table)
+  - [x] Update `injectParameters` method in `engine_execute.go` **[COMPLETED - 2025-06-23]**
+    - [x] Create global `params` table instead of individual global variables **[COMPLETED - 2025-06-23]**
+    - [x] Support both `params.key` and individual `key` globals for backward compatibility **[COMPLETED - 2025-06-23]**
+    - [x] Maintain proper type conversion and error handling **[COMPLETED - 2025-06-23]**
+  - [ ] Add comprehensive tests for parameter injection
+    - [x] Test `params` table creation and access **[COMPLETED - 2025-06-23]**
+    - [x] Test individual global variable fallback **[COMPLETED - 2025-06-23]**
+    - [ ] Test complex parameter types (nested tables, arrays)
+    - [ ] Test parameter type conversion edge cases
+  - [ ] Verify all example spells work with new parameter injection
+    - [ ] Test all 13 example spells in examples/spells/lua/
+    - [ ] Verify `params.output_dir`, `params.model`, etc. work correctly
+    - [ ] Check that CLI parameter passing works end-to-end
+  - [ ] Update documentation for parameter usage
+    - [ ] Document `params` table in user guide
+    - [ ] Add examples of parameter access patterns
+    - [ ] Update troubleshooting guide for parameter issues
+
+
 #### 2.4.5: Documentation & Examples
 - [x] **Task 2.4.5.1: CODE documentation** **[COMPLETED - 2025-06-22]**
 
@@ -135,8 +194,8 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Migration from pure Lua (`migration-from-pure-lua.md`) **[COMPLETED - 2025-06-22]**
 
 - [x] **Task 2.4.5.2: Example Spells** (`/examples/spells/lua/`) **[COMPLETED - 2025-06-22]**
-  - [x] Basic LLM interaction (`01-basic-llm.lua`) **[COMPLETED - 2025-06-22]**
-  - [x] Calling builtin tools by themselves (`02-tools-usage.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Calling builtin tools by themselves (`01-tools-usage.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] Basic LLM interaction (`02-basic-llm.lua`) **[COMPLETED - 2025-06-22]**
   - [x] Agent without tools (plain llm) (`03-agent-plain.lua`) **[COMPLETED - 2025-06-22]**
   - [x] Agent with tools (`04-agent-with-tools.lua`) **[COMPLETED - 2025-06-22]**
   - [x] Agent with tools, one of which is an agent wrapped as a tool (`05-agent-as-tool.lua`) **[COMPLETED - 2025-06-22]**

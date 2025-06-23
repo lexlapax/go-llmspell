@@ -180,6 +180,19 @@ func (e *LuaEngine) Initialize(config engine.EngineConfig) error {
 
 	if config.AllowedModules != nil {
 		securityConfig.AllowedLibraries = config.AllowedModules
+		// If stdlib is enabled (default) and package is not explicitly allowed, add it
+		if disableStdlib, ok := config.EngineOptions["disable_stdlib"].(bool); !ok || !disableStdlib {
+			hasPackage := false
+			for _, lib := range securityConfig.AllowedLibraries {
+				if lib == "package" {
+					hasPackage = true
+					break
+				}
+			}
+			if !hasPackage {
+				securityConfig.AllowedLibraries = append(securityConfig.AllowedLibraries, "package")
+			}
+		}
 	}
 	// Note: DisabledModules would need to be handled differently
 	// since SecurityConfig doesn't have DeniedLibraries field
@@ -195,6 +208,13 @@ func (e *LuaEngine) Initialize(config engine.EngineConfig) error {
 		},
 	}
 
+	// Check if stdlib loading is disabled
+	if val, ok := config.EngineOptions["disable_stdlib"].(bool); ok && val {
+		// User explicitly disabled stdlib
+		factoryConfig.DisableStdlib = true
+	}
+
+	// Create factory (stdlib is loaded by default unless disabled)
 	e.factory = NewLStateFactory(factoryConfig)
 
 	// Create pool configuration from engine options

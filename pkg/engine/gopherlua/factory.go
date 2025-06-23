@@ -5,8 +5,10 @@ package gopherlua
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
+	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua/stdlib"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -34,6 +36,9 @@ type FactoryConfig struct {
 
 	// WarmupFunc runs after initialization to optimize performance
 	WarmupFunc WarmupFunc
+
+	// DisableStdlib prevents loading of stdlib modules
+	DisableStdlib bool
 }
 
 // LStateFactory creates configured Lua VM instances.
@@ -45,6 +50,7 @@ type LStateFactory struct {
 
 // NewLStateFactory creates a new factory with the given configuration.
 // If no SecurityManager is provided, a default standard-level manager is used.
+// Stdlib modules are loaded by default unless explicitly disabled.
 func NewLStateFactory(config FactoryConfig) *LStateFactory {
 	// Apply defaults
 	if config.RegistrySize > 0 {
@@ -56,6 +62,29 @@ func NewLStateFactory(config FactoryConfig) *LStateFactory {
 		config.SecurityManager = NewSecurityManager(SecurityConfig{
 			Level: SecurityLevelStandard,
 		})
+	}
+
+	// Load stdlib modules by default unless explicitly disabled
+	if !config.DisableStdlib {
+		// Get all stdlib loaders
+		stdlibLoaders, err := stdlib.GetAllStdlibLoaders()
+		if err != nil {
+			// Log error but don't fail - factory can still work without stdlib
+			fmt.Fprintf(os.Stderr, "Warning: failed to load stdlib modules: %v\n", err)
+		} else {
+			// Initialize PreloadModules map if nil
+			if config.PreloadModules == nil {
+				config.PreloadModules = make(map[string]lua.LGFunction)
+			}
+
+			// Add stdlib modules to PreloadModules
+			for name, loader := range stdlibLoaders {
+				// Don't override user-provided modules
+				if _, exists := config.PreloadModules[name]; !exists {
+					config.PreloadModules[name] = loader
+				}
+			}
+		}
 	}
 
 	return &LStateFactory{

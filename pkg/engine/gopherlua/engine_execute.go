@@ -167,6 +167,9 @@ func (ep *ExecutionPipeline) loadBridgeModules(execCtx *ExecutionContext) error 
 
 // injectParameters injects script parameters into the Lua state
 func (ep *ExecutionPipeline) injectParameters(execCtx *ExecutionContext) error {
+	// Create params table to hold all parameters
+	paramsTable := execCtx.State.NewTable()
+
 	for key, value := range execCtx.Params {
 		// Convert Go value to ScriptValue first for consistency
 		scriptValue, err := ep.converter.ToScriptValue(value)
@@ -180,8 +183,16 @@ func (ep *ExecutionPipeline) injectParameters(execCtx *ExecutionContext) error {
 			return fmt.Errorf("failed to convert parameter %s to Lua: %w", key, err)
 		}
 
+		// Add to params table
+		paramsTable.RawSetString(key, luaValue)
+
+		// Also set as individual global for backward compatibility
 		execCtx.State.SetGlobal(key, luaValue)
 	}
+
+	// Set the params table as a global
+	execCtx.State.SetGlobal("params", paramsTable)
+
 	return nil
 }
 

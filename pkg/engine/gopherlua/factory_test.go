@@ -207,6 +207,119 @@ func TestLStateFactory_Create(t *testing.T) {
 				assert.Equal(t, lua.LNil, L.GetGlobal("io"))
 			},
 		},
+		{
+			name: "loads_stdlib_modules_by_default",
+			config: FactoryConfig{
+				SecurityManager: NewSecurityManager(SecurityConfig{
+					Level: SecurityLevelStandard,
+				}),
+			},
+			validateState: func(t *testing.T, L *lua.LState) {
+				assert.NotNil(t, L)
+				// Verify stdlib modules are preloaded
+				err := L.DoString(`
+					local core = require("core")
+					assert(core ~= nil, "core module is nil")
+					assert(type(core) == "table", "core module is not a table")
+					
+					local log = require("log") -- Test alias
+					assert(log ~= nil, "log module is nil")
+					assert(type(log) == "table", "log module is not a table")
+					
+					local logging = require("logging") -- Test actual module name
+					assert(logging ~= nil, "logging module is nil")
+					-- Both modules should have the same interface
+					assert(type(log.create) == type(logging.create), "log and logging should have same interface")
+					
+					_G.STDLIB_LOADED = true
+				`)
+				assert.NoError(t, err)
+				assert.Equal(t, lua.LTrue, L.GetGlobal("STDLIB_LOADED"))
+			},
+		},
+		{
+			name: "disables_stdlib_when_configured",
+			config: FactoryConfig{
+				SecurityManager: NewSecurityManager(SecurityConfig{
+					Level: SecurityLevelStandard,
+				}),
+				DisableStdlib: true,
+			},
+			validateState: func(t *testing.T, L *lua.LState) {
+				assert.NotNil(t, L)
+				// Verify stdlib modules are NOT preloaded
+				err := L.DoString(`
+					local success, result = pcall(require, "core")
+					assert(not success, "core module should not be available")
+					assert(string.match(result, "no field package.preload"), "error should mention preload")
+					
+					local success2, result2 = pcall(require, "log")
+					assert(not success2, "log module should not be available")
+					
+					_G.STDLIB_NOT_LOADED = true
+				`)
+				assert.NoError(t, err)
+				assert.Equal(t, lua.LTrue, L.GetGlobal("STDLIB_NOT_LOADED"))
+			},
+		},
+		{
+			name: "user_modules_override_stdlib",
+			config: FactoryConfig{
+				SecurityManager: NewSecurityManager(SecurityConfig{
+					Level: SecurityLevelStandard,
+				}),
+				PreloadModules: map[string]lua.LGFunction{
+					"core": func(L *lua.LState) int {
+						mod := L.NewTable()
+						L.SetField(mod, "custom", lua.LString("user-defined"))
+						L.Push(mod)
+						return 1
+					},
+				},
+			},
+			validateState: func(t *testing.T, L *lua.LState) {
+				assert.NotNil(t, L)
+				// User-provided module should override stdlib
+				err := L.DoString(`
+					local core = require("core")
+					assert(core.custom == "user-defined", "user module should override stdlib")
+					
+					-- Other stdlib modules should still work
+					local log = require("log")
+					assert(log ~= nil, "log module should still be available")
+					
+					_G.USER_OVERRIDE_WORKS = true
+				`)
+				assert.NoError(t, err)
+				assert.Equal(t, lua.LTrue, L.GetGlobal("USER_OVERRIDE_WORKS"))
+			},
+		},
+		{
+			name: "stdlib_modules_preloaded_in_strict_mode",
+			config: FactoryConfig{
+				SecurityManager: NewSecurityManager(SecurityConfig{
+					Level: SecurityLevelStrict,
+				}),
+			},
+			validateState: func(t *testing.T, L *lua.LState) {
+				assert.NotNil(t, L)
+				// In strict mode, require is disabled but stdlib modules are preloaded
+				err := L.DoString(`
+					-- require is disabled in strict mode
+					local success, result = pcall(require, "core")
+					assert(not success, "require should be disabled in strict mode")
+					
+					-- But stdlib modules should be in package.preload
+					assert(package.preload["core"] ~= nil, "core should be preloaded")
+					assert(package.preload["log"] ~= nil, "log should be preloaded")
+					assert(package.preload["logging"] ~= nil, "logging should be preloaded")
+					
+					_G.STRICT_PRELOAD_OK = true
+				`)
+				assert.NoError(t, err)
+				assert.Equal(t, lua.LTrue, L.GetGlobal("STRICT_PRELOAD_OK"))
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -452,4 +565,114 @@ func TestLStateFactory_Reset(t *testing.T) {
 
 	// Verify strict security (no os library)
 	assert.Equal(t, lua.LNil, L2.GetGlobal("os"))
+}
+
+func TestLStateFactory_StdlibWithDifferentConfigs(t *testing.T) {
+	tests := []struct {
+		name   string
+		config FactoryConfig
+		test   string // Lua code to test
+	}{
+		{
+			name: "stdlib_with_init_script",
+			config: FactoryConfig{
+				SecurityManager: NewSecurityManager(SecurityConfig{
+					Level: SecurityLevelStandard,
+				}),
+				InitScript: `
+					-- Init script can use stdlib modules
+					local core = require("core")
+					_G.INIT_CORE_VERSION = core.version or "loaded"
+				`,
+			},
+			test: `
+				assert(_G.INIT_CORE_VERSION == "loaded", "init script should load core module")
+				-- Can still require modules after init
+				local log = require("log")
+				assert(log ~= nil, "log module should be available")
+			`,
+		},
+		{
+			name: "stdlib_with_warmup",
+			config: FactoryConfig{
+				SecurityManager: NewSecurityManager(SecurityConfig{
+					Level: SecurityLevelStandard,
+				}),
+				WarmupFunc: func(L *lua.LState) error {
+					// Warmup can preload commonly used modules
+					return L.DoString(`
+						local core = require("core")
+						local log = require("log")
+						local data = require("data")
+						_G.WARMUP_COMPLETE = true
+					`)
+				},
+			},
+			test: `
+				assert(_G.WARMUP_COMPLETE == true, "warmup should complete")
+				-- Modules loaded during warmup should be cached
+				local core = require("core")
+				local log = require("log")
+				assert(core ~= nil and log ~= nil, "warmed up modules should be available")
+			`,
+		},
+		{
+			name: "stdlib_module_interactions",
+			config: FactoryConfig{
+				SecurityManager: NewSecurityManager(SecurityConfig{
+					Level: SecurityLevelStandard,
+				}),
+			},
+			test: `
+				-- Test that modules can interact with each other
+				local errors = require("errors")
+				local log = require("log")
+				
+				-- Should be able to use errors module
+				assert(type(errors.create) == "function", "errors.create should be a function")
+				
+				-- Should be able to use log module
+				assert(type(log.create) == "function", "log.create should be a function")
+			`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := NewLStateFactory(tt.config)
+			L, err := factory.Create()
+			require.NoError(t, err)
+			require.NotNil(t, L)
+			defer L.Close()
+
+			err = L.DoString(tt.test)
+			assert.NoError(t, err, "test script should execute without errors")
+		})
+	}
+}
+
+func TestLStateFactory_StdlibErrorHandling(t *testing.T) {
+	// Test that the factory handles stdlib loading gracefully when it fails
+	// by testing with an empty PreloadModules that overrides everything
+	emptyModules := make(map[string]lua.LGFunction)
+	for _, name := range []string{"core", "errors", "logging", "data", "auth", "state", "events", "tools", "llm", "agent", "observability", "spell", "promise", "testing", "log"} {
+		emptyModules[name] = nil // This will cause require to fail
+	}
+
+	factory := NewLStateFactory(FactoryConfig{
+		SecurityManager: NewSecurityManager(SecurityConfig{
+			Level: SecurityLevelStandard,
+		}),
+		PreloadModules: emptyModules,
+	})
+
+	L, err := factory.Create()
+	// Factory creation should still succeed even if stdlib loading has issues
+	require.NoError(t, err)
+	require.NotNil(t, L)
+	defer L.Close()
+
+	// But requiring the modules should fail
+	err = L.DoString(`local core = require("core")`)
+	assert.Error(t, err, "requiring overridden module should fail")
 }
