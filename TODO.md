@@ -322,44 +322,42 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
         - [ ] Verify bridge sets still group bridges correctly
         - [ ] Run registry tests: `go test ./pkg/bridge/registry/...`
     
-    - [ ] **Phase 3: Stdlib Module Updates** (`/pkg/engine/gopherlua/stdlib/*.lua`)
-      - [ ] Update bridge references in Lua modules:
-        - [ ] Update `llm.lua`: 
-          - [ ] Change `bridges.llm_bridge` → `bridges.llm_core`
-          - [ ] Change `bridges.llm_util_bridge` → `bridges.util_llm`
-        - [ ] Update `logging.lua`:
-          - [ ] Change `bridges.util_debug` → `bridges.util_debug` (no change)
-          - [ ] Change `bridges.util_script_logger` → `bridges.util_script_logger` (no change)
-          - [ ] Change `bridges.util_slog` → `bridges.util_slog` (no change)
-        - [ ] Update `observability.lua`:
-          - [ ] Change `bridges.metrics` → `bridges.observability_metrics`
-          - [ ] Change `bridges.tracing` → `bridges.observability_tracing`
-          - [ ] Change `bridges.guardrails` → `bridges.observability_guardrails`
-          - [ ] Change `bridges.slog` → `bridges.util_slog`
-          - [ ] Change `bridges.events` → `bridges.agent_events`
-        - [ ] Update `agent.lua`:
-          - [ ] Change `bridges.agent` → `bridges.agent_core`
-          - [ ] Change `bridges.workflow` → `bridges.agent_workflow`
-        - [ ] Update `events.lua`:
-          - [ ] Change `bridges.events` → `bridges.agent_events`
-        - [ ] Update `tools.lua`:
-          - [ ] Change `bridges.tools` → `bridges.agent_tools`
-        - [ ] Update `data.lua`:
-          - [ ] Change `bridges.util` → `bridges.util_core`
-        - [ ] Update `auth.lua`:
-          - [ ] Remove reference to non-existent `bridges.security`
-          - [ ] Keep `bridges.util_auth` as-is
-      - [ ] Run stdlib tests: `go test ./pkg/engine/gopherlua/stdlib/...`
+    - [x] **Phase 3: Stdlib Module Updates** (`/pkg/engine/gopherlua/stdlib/*.lua`) **[COMPLETED - 2025-06-23]**
+      - [x] Update bridge references in Lua modules:
+        - [x] Update `llm.lua`: 
+          - [x] Change `bridges.llm_bridge` → `bridges.llm_core`
+          - [x] Change `bridges.llm_util_bridge` → `bridges.util_llm`
+        - [x] Update `logging.lua`:
+          - [x] Already correct: uses `bridges.util_debug`, `bridges.util_script_logger`, `bridges.util_slog`
+        - [x] Update `observability.lua`:
+          - [x] Change `bridges.metrics` → `bridges.observability_metrics`
+          - [x] Change `bridges.tracing` → `bridges.observability_tracing`
+          - [x] Change `bridges.guardrails` → `bridges.observability_guardrails`
+          - [x] Change `bridges.slog` → `bridges.util_slog`
+          - [x] Change `bridges.events` → `bridges.agent_events`
+        - [x] Update `agent.lua`:
+          - [x] Change `bridges.agent` → `bridges.agent_core`
+          - [x] Change `bridges.workflow` → `bridges.agent_workflow`
+        - [x] Update `events.lua`:
+          - [x] Change `bridges.events` → `bridges.agent_events`
+        - [x] Update `tools.lua`:
+          - [x] Change `bridges.tools` → `bridges.agent_tools`
+        - [x] Update `data.lua`:
+          - [x] Change `bridges.util` → `bridges.util_core`
+        - [x] Update `auth.lua`:
+          - [x] Already correct: uses `bridges.util_auth`, acknowledges `bridges.security` doesn't exist
+      - [x] Run stdlib tests: `go test ./pkg/engine/gopherlua/stdlib/...` **[COMPLETED - 2025-06-23]**
     
-    - [ ] **Phase 4: Add Missing Components**
-      - [ ] Create `structured.lua` stdlib module:
-        - [ ] Create `/pkg/engine/gopherlua/stdlib/structured.lua`
-        - [ ] Implement wrapper functions for `bridges.structured_schema`
-        - [ ] Add unit tests in `structured_test.go`
-        - [ ] Add to stdlib loader configuration
-      - [ ] Decide on missing bridge implementations:
-        - [ ] Determine if `security` bridge is needed for `auth.lua`
-        - [ ] Document decision in code comments
+    - [x] **Phase 4: Add Missing Components** **[COMPLETED - 2025-06-23]**
+      - [x] Create `structured.lua` stdlib module: **[COMPLETED - 2025-06-23]**
+        - [x] Create `/pkg/engine/gopherlua/stdlib/structured.lua` **[COMPLETED - 2025-06-23]**
+        - [x] Implement wrapper functions for `bridges.structured_schema` **[COMPLETED - 2025-06-23]**
+        - [x] Add unit tests in `structured_test.go` **[COMPLETED - 2025-06-23]**
+        - [x] Add to stdlib loader configuration **[COMPLETED - 2025-06-23]**
+      - [x] Decide on missing bridge implementations: **[COMPLETED - 2025-06-23]**
+        - [x] Determine if `security` bridge is needed for `auth.lua` **[COMPLETED - 2025-06-23]**
+        - [x] Document decision in code comments **[COMPLETED - 2025-06-23]**
+          - Decision: Security bridge is NOT needed. auth.lua is designed to work without it.
     
     - [ ] **Phase 5: Fix Security Profile Mapping**
       - [ ] Debug why CLI `--profile` isn't reaching executor:

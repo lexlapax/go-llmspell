@@ -20,7 +20,7 @@ import (
 func TestAgentAdapter_Creation(t *testing.T) {
 	t.Run("create_agent_adapter", func(t *testing.T) {
 		// Create agent bridge mock
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "agent",
@@ -69,7 +69,7 @@ func TestAgentAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("agent_module_structure", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "agent",
@@ -208,7 +208,7 @@ func TestAgentAdapter_Creation(t *testing.T) {
 
 func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 	t.Run("create_basic_agent", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("createAgent", engine.MethodInfo{
 				Name: "createAgent",
@@ -258,7 +258,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 	})
 
 	t.Run("create_llm_agent", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("createLLMAgent", engine.MethodInfo{
 				Name: "createLLMAgent",
@@ -307,7 +307,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 	})
 
 	t.Run("list_and_get_agents", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("listAgents", engine.MethodInfo{
 				Name: "listAgents",
@@ -374,7 +374,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 	})
 
 	t.Run("remove_agent", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("removeAgent", engine.MethodInfo{
 				Name: "removeAgent",
@@ -408,7 +408,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 
 func TestAgentAdapter_AgentCommunication(t *testing.T) {
 	t.Run("run_agent", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("runAgent", engine.MethodInfo{
 				Name: "runAgent",
@@ -450,7 +450,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 	})
 
 	t.Run("run_agent_async", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("runAgentAsync", engine.MethodInfo{
 				Name: "runAgentAsync",
@@ -492,7 +492,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 	})
 
 	t.Run("register_tool", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("registerTool", engine.MethodInfo{
 				Name: "registerTool",
@@ -568,7 +568,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 
 func TestAgentAdapter_StateManagement(t *testing.T) {
 	t.Run("get_and_set_state", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("getAgentState", engine.MethodInfo{
 				Name: "getAgentState",
@@ -627,7 +627,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 	})
 
 	t.Run("export_and_import_state", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("exportAgentState", engine.MethodInfo{
 				Name: "exportAgentState",
@@ -682,7 +682,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 	})
 
 	t.Run("save_and_load_snapshots", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("saveAgentSnapshot", engine.MethodInfo{
 				Name: "saveAgentSnapshot",
@@ -765,7 +765,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 
 func TestAgentAdapter_Events(t *testing.T) {
 	t.Run("emit_and_subscribe_events", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("emitAgentEvent", engine.MethodInfo{
 				Name: "emitAgentEvent",
@@ -834,7 +834,7 @@ func TestAgentAdapter_Events(t *testing.T) {
 	})
 
 	t.Run("event_recording_and_replay", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("startEventRecording", engine.MethodInfo{
 				Name: "startEventRecording",
@@ -924,7 +924,7 @@ func TestAgentAdapter_Events(t *testing.T) {
 
 func TestAgentAdapter_Profiling(t *testing.T) {
 	t.Run("agent_profiling", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("startAgentProfiling", engine.MethodInfo{
 				Name: "startAgentProfiling",
@@ -998,7 +998,7 @@ func TestAgentAdapter_Profiling(t *testing.T) {
 
 func TestAgentAdapter_Workflow(t *testing.T) {
 	t.Run("create_workflow", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("createWorkflow", engine.MethodInfo{
 				Name: "createWorkflow",
@@ -1087,7 +1087,7 @@ func TestAgentAdapter_Workflow(t *testing.T) {
 
 func TestAgentAdapter_Hooks(t *testing.T) {
 	t.Run("set_agent_hooks", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("setAgentHook", engine.MethodInfo{
 				Name: "setAgentHook",
@@ -1127,7 +1127,7 @@ func TestAgentAdapter_Hooks(t *testing.T) {
 
 func TestAgentAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("createAgent", engine.MethodInfo{
 				Name: "createAgent",
@@ -1162,7 +1162,7 @@ func TestAgentAdapter_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("handle_invalid_agent_id", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("getAgent", engine.MethodInfo{
 				Name: "getAgent",
@@ -1196,7 +1196,7 @@ func TestAgentAdapter_ErrorHandling(t *testing.T) {
 
 func TestAgentAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("agent_constants", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("createAgent", engine.MethodInfo{
 				Name: "createAgent",
@@ -1238,7 +1238,7 @@ func TestAgentAdapter_ConvenienceMethods(t *testing.T) {
 	})
 
 	t.Run("metrics_and_utilities", func(t *testing.T) {
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("getAgentMetrics", engine.MethodInfo{
 				Name: "getAgentMetrics",

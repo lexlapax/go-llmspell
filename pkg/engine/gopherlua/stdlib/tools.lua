@@ -20,10 +20,10 @@ end
 
 -- Helper function to get tools bridge
 local function get_tools_bridge()
-    if not bridges or not bridges.tools then
+    if not bridges or not bridges.agent_tools then
         error("Tools bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.tools
+    return bridges.agent_tools
 end
 
 -- Helper function to get registry bridge if available (reserved for future use)

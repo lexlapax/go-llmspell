@@ -30,6 +30,9 @@ end
 -- Helper function to get security manager (if available)
 local function get_security_manager()
     -- Security manager is optional, return nil if not available
+    -- NOTE: The security bridge is not currently implemented in go-llmspell.
+    -- The auth module is designed to work without it, providing local security
+    -- policy evaluation when the bridge is not available.
     return bridges and bridges.security or nil
 end
 

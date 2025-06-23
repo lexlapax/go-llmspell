@@ -17,10 +17,10 @@ end
 
 -- Helper function to get utils bridge for JSON operations
 local function get_utils()
-    if not bridges or not bridges.util then
+    if not bridges or not bridges.util_core then
         error("Utils bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.util
+    return bridges.util_core
 end
 
 -- Helper function to get structured bridge for schema operations (reserved for future use)

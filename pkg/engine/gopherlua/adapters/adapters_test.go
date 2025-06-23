@@ -27,11 +27,11 @@ func TestAllAdaptersIntegration(t *testing.T) {
 		ms := gopherlua.NewModuleSystem()
 
 		// Create mock bridges for all adapters
-		llmBridge := testutils.NewMockBridge("llm").WithInitialized(true)
+		llmBridge := testutils.NewMockBridge("llm_core").WithInitialized(true)
 		stateBridge := testutils.NewMockBridge("state").WithInitialized(true)
 		eventsBridge := testutils.NewMockBridge("events").WithInitialized(true)
 		structuredBridge := testutils.NewMockBridge("structured").WithInitialized(true)
-		agentBridge := testutils.NewMockBridge("agent").WithInitialized(true)
+		agentBridge := testutils.NewMockBridge("agent_core").WithInitialized(true)
 		hooksBridge := testutils.NewMockBridge("hooks").WithInitialized(true)
 		workflowBridge := testutils.NewMockBridge("workflow").WithInitialized(true)
 		toolsBridge := testutils.NewMockBridge("tools").WithInitialized(true)
@@ -138,7 +138,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 		ms := gopherlua.NewModuleSystem()
 
 		// Mock LLM bridge that returns structured data
-		llmBridge := testutils.NewMockBridge("llm").
+		llmBridge := testutils.NewMockBridge("llm_core").
 			WithInitialized(true).
 			WithMethod("generateStructured", engine.MethodInfo{
 				Name: "generateStructured",
@@ -227,7 +227,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 			})
 
 		// Mock agent bridge that uses tools
-		agentBridge := testutils.NewMockBridge("agent").
+		agentBridge := testutils.NewMockBridge("agent_core").
 			WithInitialized(true).
 			WithMethod("createAgent", engine.MethodInfo{
 				Name: "createAgent",
@@ -425,7 +425,7 @@ func TestAdapterErrorPropagation(t *testing.T) {
 		ms := gopherlua.NewModuleSystem()
 
 		// Create bridge that expects specific types
-		typeBridge := testutils.NewMockBridge("llm").
+		typeBridge := testutils.NewMockBridge("llm_core").
 			WithInitialized(true).
 			WithMethod("generate", engine.MethodInfo{
 				Name: "generate",
@@ -654,7 +654,7 @@ func TestAdapterDocumentation(t *testing.T) {
 	}{
 		{"llm", func() error {
 			ms := gopherlua.NewModuleSystem()
-			adapter := NewLLMAdapter(testutils.NewMockBridge("llm").WithInitialized(true), nil, nil)
+			adapter := NewLLMAdapter(testutils.NewMockBridge("llm_core").WithInitialized(true), nil, nil)
 			return adapter.RegisterAsModule(ms, "llm")
 		}},
 		{"state", func() error {
@@ -674,7 +674,7 @@ func TestAdapterDocumentation(t *testing.T) {
 		}},
 		{"agent", func() error {
 			ms := gopherlua.NewModuleSystem()
-			adapter := NewAgentAdapter(testutils.NewMockBridge("agent").WithInitialized(true))
+			adapter := NewAgentAdapter(testutils.NewMockBridge("agent_core").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "agent")
 		}},
 		{"hooks", func() error {

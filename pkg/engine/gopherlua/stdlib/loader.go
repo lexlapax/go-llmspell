@@ -126,6 +126,7 @@ var moduleLoadOrder = []string{
 	"observability",
 	"spell",
 	"promise",
+	"structured",
 	"testing",
 }
 

@@ -19,18 +19,18 @@ end
 
 -- Helper function to get agent bridge
 local function get_agent_bridge()
-    if not bridges or not bridges.agent then
+    if not bridges or not bridges.agent_core then
         error("Agent bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.agent
+    return bridges.agent_core
 end
 
 -- Helper function to get workflow bridge
 local function get_workflow_bridge()
-    if not bridges or not bridges.workflow then
+    if not bridges or not bridges.agent_workflow then
         error("Workflow bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.workflow
+    return bridges.agent_workflow
 end
 
 -- Helper function to merge options with defaults

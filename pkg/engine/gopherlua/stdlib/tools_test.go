@@ -111,7 +111,7 @@ func setupToolsLibrary(t *testing.T, L *lua.LState) {
 		bridgesTable = L.NewTable()
 		L.SetGlobal("bridges", bridgesTable)
 	}
-	bridgesTable.(*lua.LTable).RawSetString("tools", toolsTable)
+	bridgesTable.(*lua.LTable).RawSetString("agent_tools", toolsTable)
 
 	// Load the tools library
 	toolsPath := filepath.Join(".", "tools.lua")

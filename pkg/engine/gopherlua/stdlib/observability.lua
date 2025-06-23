@@ -20,40 +20,40 @@ end
 
 -- Helper function to get metrics bridge
 local function get_metrics_bridge()
-    if not bridges or not bridges.metrics then
+    if not bridges or not bridges.observability_metrics then
         error("Metrics bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.metrics
+    return bridges.observability_metrics
 end
 
 -- Helper function to get tracing bridge
 local function get_tracing_bridge()
-    if not bridges or not bridges.tracing then
+    if not bridges or not bridges.observability_tracing then
         error("Tracing bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.tracing
+    return bridges.observability_tracing
 end
 
 -- Helper function to get slog bridge
 local function get_slog_bridge()
-    if not bridges or not bridges.slog then
+    if not bridges or not bridges.util_slog then
         error("Slog bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.slog
+    return bridges.util_slog
 end
 
 -- Helper function to get events bridge
 local function get_events_bridge()
-    if not bridges or not bridges.events then
+    if not bridges or not bridges.agent_events then
         error("Events bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.events
+    return bridges.agent_events
 end
 
 -- Helper function to get guardrails bridge
 local function get_guardrails_bridge()
     -- Guardrails bridge is optional, return nil if not available
-    return bridges and bridges.guardrails or nil
+    return bridges and bridges.observability_guardrails or nil
 end
 
 -- Helper function to generate unique IDs (reserved for future use)
@@ -866,11 +866,11 @@ function observability.get_system_info()
         lua_version = _VERSION,
         os_time = os.time(),
         bridges_available = {
-            metrics = bridges and bridges.metrics ~= nil,
-            tracing = bridges and bridges.tracing ~= nil,
-            slog = bridges and bridges.slog ~= nil,
-            events = bridges and bridges.events ~= nil,
-            guardrails = bridges and bridges.guardrails ~= nil,
+            metrics = bridges and bridges.observability_metrics ~= nil,
+            tracing = bridges and bridges.observability_tracing ~= nil,
+            slog = bridges and bridges.util_slog ~= nil,
+            events = bridges and bridges.agent_events ~= nil,
+            guardrails = bridges and bridges.observability_guardrails ~= nil,
         },
         active_spans = #active_spans,
         custom_loggers = #custom_loggers,

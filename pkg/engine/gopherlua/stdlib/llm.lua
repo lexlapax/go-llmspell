@@ -37,10 +37,10 @@ end
 
 -- Helper function to get LLM bridge (assumes global access to bridges)
 local function get_llm_bridge()
-    if not bridges or not bridges.llm_bridge then
+    if not bridges or not bridges.llm_core then
         error("LLM bridge not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.llm_bridge
+    return bridges.llm_core
 end
 
 -- High-level LLM operation helpers
@@ -445,7 +445,7 @@ function llm.cost_estimate(operation, model, provider)
     validate_required(operation, "operation")
 
     local bridge = get_llm_bridge()
-    local util_bridge = bridges and bridges.llm_util_bridge
+    local util_bridge = bridges and bridges.util_llm
 
     if not util_bridge then
         error("LLM utilities bridge not available")

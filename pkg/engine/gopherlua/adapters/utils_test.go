@@ -52,7 +52,7 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 				Description: "JSON processing utilities",
 			})
 
-		llmBridge := testutils.NewMockBridge("llm").
+		llmBridge := testutils.NewMockBridge("llm_core").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "LLM Utils Bridge",

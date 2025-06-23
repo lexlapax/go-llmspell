@@ -97,7 +97,7 @@ func setupDataLibrary(t *testing.T, L *lua.LState) {
 		bridgesTable = L.NewTable()
 		L.SetGlobal("bridges", bridgesTable)
 	}
-	bridgesTable.(*lua.LTable).RawSetString("util", utilTable)
+	bridgesTable.(*lua.LTable).RawSetString("util_core", utilTable)
 
 	// Load the data library
 	dataPath := filepath.Join(".", "data.lua")

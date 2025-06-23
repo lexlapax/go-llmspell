@@ -78,7 +78,7 @@ func (aa *AgentAdapter) CreateLuaModule() lua.LGFunction {
 		}
 
 		// Add our own metadata
-		L.SetField(module, "_adapter", lua.LString("agent"))
+		L.SetField(module, "_adapter", lua.LString("agent_core"))
 		L.SetField(module, "_version", lua.LString("2.0.0"))
 
 		// Add agent-specific enhancements
