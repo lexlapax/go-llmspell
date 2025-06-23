@@ -117,12 +117,12 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Add regression test suite (regression_test.go) **[COMPLETED - 2025-06-23]**
   - [x] Fix integration test failures **[COMPLETED - 2025-06-23]**
 
-- [ ] **Task 2.4.4.2: Error Handling Enhancement**
-  - [ ] Standardize error types
-  - [ ] Add error categorization
-  - [ ] Implement error recovery
-  - [ ] Create error reporting
-  - [ ] Add error metrics
+- [x] **Task 2.4.4.2: Error Handling Enhancement** **[COMPLETED - 2025-06-23]**
+  - [x] Standardize error types (SpellError base type with consistent structure) **[COMPLETED - 2025-06-23]**
+  - [x] Add error categorization (13 categories: Usage, Config, Script, Engine, etc.) **[COMPLETED - 2025-06-23]**
+  - [x] Implement error recovery (suggestions, context, recovery handlers) **[COMPLETED - 2025-06-23]**
+  - [x] Create error reporting (formatter with color, debug modes, chain handling) **[COMPLETED - 2025-06-23]**
+  - [x] Add error metrics (counters, rates, recent errors buffer) **[COMPLETED - 2025-06-23]**
 
 #### 2.4.5: Documentation & Examples
 - [x] **Task 2.4.5.1: CODE documentation** **[COMPLETED - 2025-06-22]**
@@ -143,6 +143,11 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [x] Complex workflows (`06-complex-workflows.lua`) **[COMPLETED - 2025-06-22]**
   - [x] Event-driven spells (`07-event-driven.lua`) **[COMPLETED - 2025-06-22]**
   - [x] Performance patterns (`08-performance-patterns.lua`) **[COMPLETED - 2025-06-22]**
+  - [x] State management example (`09-state-management.lua`) **[COMPLETED - 2025-06-23]**
+  - [x] Hooks Example (`10-hooks.lua`) **[COMPLETED - 2025-06-23]**
+  - [x] Debug usage (`11-debug-usage.lua`) **[COMPLETED - 2025-06-23]**
+  - [x] Custom Tool creation and use in lua (`12-custom-tool.lua`) **[COMPLETED - 2025-06-23]**
+  - [x] Agent handoff to another agent example (`13-agent-handoff.lua`) **[COMPLETED - 2025-06-23]**
 
 - [ ] **Task 2.4.5.3: Developer Documentation** (`/docs/technical/`)
   - [ ] Architecture deep dive
