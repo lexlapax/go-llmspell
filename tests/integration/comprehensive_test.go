@@ -84,7 +84,7 @@ func TestBridgeLLMCoverage(t *testing.T) {
 
 				// Test that bridge is properly initialized before cleanup
 				assert.True(t, bridge.IsInitialized())
-				
+
 				// Test cleanup
 				err = bridge.Cleanup(ctx)
 				assert.NoError(t, err)
@@ -135,14 +135,14 @@ func TestGopherLuaEngineCoverage(t *testing.T) {
 				// Test engine name and version
 				name := luaEngine.Name()
 				assert.Equal(t, "lua", name)
-				
+
 				version := luaEngine.Version()
 				assert.NotEmpty(t, version)
 
 				// Initialize with basic config
 				err := luaEngine.Initialize(engine.EngineConfig{
 					TimeoutLimit: 5 * time.Second,
-					MemoryLimit:   1024 * 1024,
+					MemoryLimit:  1024 * 1024,
 				})
 				assert.NoError(t, err)
 
@@ -166,7 +166,7 @@ func TestGopherLuaEngineCoverage(t *testing.T) {
 				// Initialize with very short timeout
 				err := luaEngine.Initialize(engine.EngineConfig{
 					TimeoutLimit: 100 * time.Millisecond,
-					MemoryLimit:   1024 * 1024,
+					MemoryLimit:  1024 * 1024,
 				})
 				assert.NoError(t, err)
 
@@ -197,7 +197,7 @@ func TestGopherLuaEngineCoverage(t *testing.T) {
 
 				err := luaEngine.Initialize(engine.EngineConfig{
 					TimeoutLimit: 5 * time.Second,
-					MemoryLimit:   1024 * 1024,
+					MemoryLimit:  1024 * 1024,
 				})
 				assert.NoError(t, err)
 
@@ -276,7 +276,7 @@ func TestStdlibModuleCoverage(t *testing.T) {
 
 				err := luaEngine.Initialize(engine.EngineConfig{
 					TimeoutLimit: 5 * time.Second,
-					MemoryLimit:   1024 * 1024,
+					MemoryLimit:  1024 * 1024,
 				})
 				require.NoError(t, err)
 

@@ -278,16 +278,16 @@ func TestPerformanceRegression(t *testing.T) {
 	// Test that simple operations complete quickly
 	t.Run("simple_execution_speed", func(t *testing.T) {
 		start := time.Now()
-		
+
 		for i := 0; i < 100; i++ {
 			result, err := luaEngine.Execute(ctx, `return 2 + 2`, nil)
 			assert.NoError(t, err)
 			assert.NotNil(t, result)
 		}
-		
+
 		elapsed := time.Since(start)
 		t.Logf("100 simple executions took %v", elapsed)
-		
+
 		// Simple operations should complete quickly (less than 1 second for 100 ops)
 		assert.Less(t, elapsed, 1*time.Second, "100 simple operations should complete in under 1 second")
 	})
@@ -301,18 +301,18 @@ func TestPerformanceRegression(t *testing.T) {
 			end
 			return sum
 		`
-		
+
 		start := time.Now()
-		
+
 		for i := 0; i < 10; i++ {
 			result, err := luaEngine.Execute(ctx, script, nil)
 			assert.NoError(t, err)
 			assert.NotNil(t, result)
 		}
-		
+
 		elapsed := time.Since(start)
 		t.Logf("10 moderate complexity executions took %v", elapsed)
-		
+
 		// Moderate operations should complete reasonably quickly (less than 5 seconds for 10 ops)
 		assert.Less(t, elapsed, 5*time.Second, "10 moderate complexity operations should complete in under 5 seconds")
 	})
@@ -379,7 +379,7 @@ func TestConcurrencyRegression(t *testing.T) {
 					"worker_id": id,
 					"operation": op,
 				}
-				
+
 				result, err := luaEngine.Execute(ctx, script, params)
 				success := err == nil && result != nil
 				results <- success
@@ -397,9 +397,9 @@ func TestConcurrencyRegression(t *testing.T) {
 
 	totalOps := numWorkers * opsPerWorker
 	successRate := float64(successCount) / float64(totalOps)
-	
+
 	t.Logf("Concurrency test: %d/%d successful (%.2f%%)", successCount, totalOps, successRate*100)
-	
+
 	// At least 95% of concurrent operations should succeed
 	assert.GreaterOrEqual(t, successRate, 0.95, "At least 95%% of concurrent operations should succeed")
 }

@@ -1,6 +1,9 @@
 -- ABOUTME: Example demonstrating agent creation without tools, focusing on reasoning
 -- ABOUTME: Shows agent personalities, chain of thought, and multi-agent conversations
 
+-- Required modules
+local agent = require("agent")
+
 -- Agent Without Tools Example
 -- This spell demonstrates creating and using agents without tool access:
 -- 1. Basic agent creation

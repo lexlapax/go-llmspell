@@ -1,6 +1,11 @@
 -- ABOUTME: Basic LLM interaction example showing simple completions and streaming
 -- ABOUTME: Demonstrates core LLM module usage with different models and parameters
 
+-- Required modules
+local log = require("log")
+local core = require("core")
+local data = require("data")
+
 -- Basic LLM Interaction Example
 -- This spell demonstrates fundamental LLM operations including:
 -- 1. Simple text completion
@@ -148,7 +153,7 @@ local function safe_llm_call(request, max_retries)
             
             -- Wait before retry with exponential backoff
             if attempt < max_retries then
-                core.sleep(math.pow(2, attempt - 1))
+                core.sleep(2 ^ (attempt - 1))
             end
         end
     end

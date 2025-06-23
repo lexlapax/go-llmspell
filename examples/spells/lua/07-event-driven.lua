@@ -1,6 +1,10 @@
 -- ABOUTME: Example demonstrating event-driven programming patterns in spells
 -- ABOUTME: Shows event handling, reactive systems, and asynchronous event flows
 
+-- Required modules
+local core = require("core")
+local agent = require("agent")
+
 -- Event-Driven Spells Example
 -- This spell demonstrates event-driven patterns:
 -- 1. Basic event emission and handling
@@ -22,6 +26,13 @@ print()
 -- Ensure output directory exists
 if not tools.file_exists(output_dir) then
     tools.create_directory(output_dir)
+end
+
+-- Helper function for counting table entries
+local function table_count(t)
+    local count = 0
+    for _ in pairs(t) do count = count + 1 end
+    return count
 end
 
 -- Enhanced Event System
@@ -628,20 +639,13 @@ for event, count in pairs(basic_stats) do
 end
 
 print("\nModeration System Stats:")
-print("  Warnings issued: " .. table.count(moderation_state.user_warnings))
-print("  Users banned: " .. table.count(moderation_state.banned_users))
+print("  Warnings issued: " .. table_count(moderation_state.user_warnings))
+print("  Users banned: " .. table_count(moderation_state.banned_users))
 print("  Content flagged: " .. #moderation_state.flagged_content)
 
 print("\nCascade System Stats:")
 print("  Reports generated: " .. cascade_state.reports_generated)
 print("  Data points processed: " .. #cascade_state.data_points)
-
--- Helper function
-function table.count(t)
-    local count = 0
-    for _ in pairs(t) do count = count + 1 end
-    return count
-end
 
 print()
 

@@ -44,14 +44,14 @@ func TestChaosRandomScriptExecution(t *testing.T) {
 		`return 2 + 2`,
 		`local t = {a=1, b=2}; return t.a + t.b`,
 		`for i=1,100 do end; return "done"`,
-		
+
 		// Scripts with potential issues
 		`error("intentional error")`,
 		`return nil`,
 		`local function recursive() return recursive() end; return recursive()`, // Stack overflow
 		`while true do end`, // Infinite loop (should timeout)
 		`local huge = {}; for i=1,1000000 do huge[i] = i end; return #huge`, // Memory intensive
-		
+
 		// Edge cases
 		`return ""`,
 		`return 0`,
@@ -62,11 +62,11 @@ func TestChaosRandomScriptExecution(t *testing.T) {
 
 	const chaosIterations = 100
 	ctx := context.Background()
-	
+
 	successCount := 0
 	errorCount := 0
 	timeoutCount := 0
-	
+
 	// Use a seeded random generator for reproducible chaos
 	rng := rand.New(rand.NewSource(42))
 
@@ -74,7 +74,7 @@ func TestChaosRandomScriptExecution(t *testing.T) {
 		// Randomly select a script
 		scriptIndex := rng.Intn(len(chaosScripts))
 		script := chaosScripts[scriptIndex]
-		
+
 		// Randomly vary parameters
 		params := map[string]interface{}{}
 		if rng.Float64() < 0.3 { // 30% chance of adding random params
@@ -83,7 +83,7 @@ func TestChaosRandomScriptExecution(t *testing.T) {
 		}
 
 		result, err := luaEngine.Execute(ctx, script, params)
-		
+
 		if err != nil {
 			if fmt.Sprintf("%v", err) == "context deadline exceeded" {
 				timeoutCount++
@@ -93,22 +93,22 @@ func TestChaosRandomScriptExecution(t *testing.T) {
 		} else {
 			successCount++
 		}
-		
+
 		// Randomly introduce delays
 		if rng.Float64() < 0.1 { // 10% chance of small delay
 			time.Sleep(time.Duration(rng.Intn(50)) * time.Millisecond)
 		}
-		
+
 		// Verify result is not nil (even error results should be wrapped)
 		assert.NotNil(t, result, "Result should never be nil, even for errors")
 	}
 
-	t.Logf("Chaos script execution results: %d successes, %d errors, %d timeouts out of %d total", 
+	t.Logf("Chaos script execution results: %d successes, %d errors, %d timeouts out of %d total",
 		successCount, errorCount, timeoutCount, chaosIterations)
 
 	// At least some scripts should succeed
 	assert.Greater(t, successCount, 0, "At least some scripts should succeed")
-	
+
 	// System should remain stable (total should equal iterations)
 	total := successCount + errorCount + timeoutCount
 	assert.Equal(t, chaosIterations, total, "All iterations should be accounted for")
@@ -137,7 +137,7 @@ func TestChaosBridgeFailures(t *testing.T) {
 	for i := 0; i < numChaosOperations; i++ {
 		// Randomly select a bridge
 		bridgeIndex := rng.Intn(len(bridges))
-		
+
 		switch bridge := bridges[bridgeIndex].(type) {
 		case *agent.AgentBridge:
 			// Random operations on agent bridge
@@ -148,7 +148,7 @@ func TestChaosBridgeFailures(t *testing.T) {
 					continue
 				}
 			}
-			
+
 			// Random chance to cleanup
 			if rng.Float64() < 0.3 {
 				err := bridge.Cleanup(ctx)
@@ -157,16 +157,16 @@ func TestChaosBridgeFailures(t *testing.T) {
 					continue
 				}
 			}
-			
+
 			// Always verify metadata access works
 			metadata := bridge.GetMetadata()
 			if metadata.Name == "" {
 				failedOps++
 				continue
 			}
-			
+
 			successfulOps++
-			
+
 		case *llm.LLMBridge:
 			// Random operations on LLM bridge
 			if !bridge.IsInitialized() {
@@ -176,7 +176,7 @@ func TestChaosBridgeFailures(t *testing.T) {
 					continue
 				}
 			}
-			
+
 			// Random chance to cleanup
 			if rng.Float64() < 0.3 {
 				err := bridge.Cleanup(ctx)
@@ -185,16 +185,16 @@ func TestChaosBridgeFailures(t *testing.T) {
 					continue
 				}
 			}
-			
+
 			// Test method listing
 			methods := bridge.Methods()
 			if len(methods) == 0 {
 				failedOps++
 				continue
 			}
-			
+
 			successfulOps++
-			
+
 		case *testutils.MockBridge:
 			// Random operations on mock bridge
 			err := bridge.Initialize(ctx)
@@ -202,7 +202,7 @@ func TestChaosBridgeFailures(t *testing.T) {
 				failedOps++
 				continue
 			}
-			
+
 			// Random chance to cleanup immediately
 			if rng.Float64() < 0.5 {
 				err := bridge.Cleanup(ctx)
@@ -211,7 +211,7 @@ func TestChaosBridgeFailures(t *testing.T) {
 					continue
 				}
 			}
-			
+
 			successfulOps++
 		}
 
@@ -221,7 +221,7 @@ func TestChaosBridgeFailures(t *testing.T) {
 		}
 	}
 
-	t.Logf("Chaos bridge operations: %d successful, %d failed out of %d total", 
+	t.Logf("Chaos bridge operations: %d successful, %d failed out of %d total",
 		successfulOps, failedOps, numChaosOperations)
 
 	// Most operations should succeed
@@ -237,7 +237,7 @@ func TestChaosResourceExhaustion(t *testing.T) {
 
 	// Create engines with varying resource limits
 	configs := []engine.EngineConfig{
-		{TimeoutLimit: 50 * time.Millisecond, MemoryLimit: 1024 * 1024},     // Very constrained
+		{TimeoutLimit: 50 * time.Millisecond, MemoryLimit: 1024 * 1024},      // Very constrained
 		{TimeoutLimit: 200 * time.Millisecond, MemoryLimit: 5 * 1024 * 1024}, // Moderately constrained
 		{TimeoutLimit: 1 * time.Second, MemoryLimit: 20 * 1024 * 1024},       // Reasonable limits
 	}
@@ -247,7 +247,7 @@ func TestChaosResourceExhaustion(t *testing.T) {
 
 	for configIndex, config := range configs {
 		t.Logf("Testing resource exhaustion with config %d", configIndex)
-		
+
 		luaEngine := gopherlua.NewLuaEngine()
 		require.NotNil(t, luaEngine)
 
@@ -258,10 +258,10 @@ func TestChaosResourceExhaustion(t *testing.T) {
 		stressScripts := []string{
 			// Memory stress
 			`local big = {}; for i=1,10000 do big[i] = string.rep("x", 100) end; return #big`,
-			
+
 			// CPU/Time stress
 			`local count = 0; for i=1,1000000 do count = count + 1 end; return count`,
-			
+
 			// Mixed stress
 			`local data = {}; for i=1,1000 do data[i] = {value = string.rep("data", 50)} end; local sum = 0; for i=1,1000 do sum = sum + #data[i].value end; return sum`,
 		}
@@ -272,12 +272,12 @@ func TestChaosResourceExhaustion(t *testing.T) {
 		for i := 0; i < totalTests; i++ {
 			// Randomly select a stress script
 			script := stressScripts[rng.Intn(len(stressScripts))]
-			
+
 			result, err := luaEngine.Execute(ctx, script, nil)
-			
+
 			// After any stress test, verify engine can still execute simple scripts
 			simpleResult, simpleErr := luaEngine.Execute(ctx, `return "recovery_test"`, nil)
-			
+
 			if simpleErr == nil && simpleResult != nil {
 				recoveredCount++
 			}
@@ -293,7 +293,7 @@ func TestChaosResourceExhaustion(t *testing.T) {
 		// Engine should be able to recover from most stress scenarios
 		recoveryRate := float64(recoveredCount) / float64(totalTests)
 		t.Logf("Config %d recovery rate: %.2f (%d/%d)", configIndex, recoveryRate, recoveredCount, totalTests)
-		
+
 		assert.Greater(t, recoveryRate, 0.5, "Engine should recover from at least 50%% of stress scenarios")
 
 		err = luaEngine.Shutdown()
@@ -338,28 +338,28 @@ func TestChaosConcurrentChaos(t *testing.T) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			// Each worker has its own random seed based on worker ID
 			rng := rand.New(rand.NewSource(int64(42 + id)))
-			
+
 			for op := 0; op < operationsPerWorker; op++ {
 				// Random delay before each operation
 				delay := time.Duration(rng.Intn(100)) * time.Millisecond
 				time.Sleep(delay)
-				
+
 				// Select random script
 				script := chaosScripts[rng.Intn(len(chaosScripts))]
-				
+
 				// Add random parameters
 				params := map[string]interface{}{
 					"worker_id": id,
 					"operation": op,
 					"random":    rng.Float64(),
 				}
-				
+
 				result, err := luaEngine.Execute(ctx, script, params)
 				_ = err // Errors are expected in chaos testing
-				
+
 				// Consider any non-nil result as success (even errors are wrapped)
 				success := result != nil
 				results <- success
@@ -381,7 +381,7 @@ func TestChaosConcurrentChaos(t *testing.T) {
 	}
 
 	successRate := float64(successCount) / float64(totalCount)
-	t.Logf("Concurrent chaos test: %d successes out of %d total (%.2f%% success rate)", 
+	t.Logf("Concurrent chaos test: %d successes out of %d total (%.2f%% success rate)",
 		successCount, totalCount, successRate*100)
 
 	// Even with chaos, we should get results for most operations
@@ -401,7 +401,7 @@ func TestChaosEngineRestart(t *testing.T) {
 
 	for cycle := 0; cycle < numRestartCycles; cycle++ {
 		t.Logf("Starting chaos restart cycle %d", cycle)
-		
+
 		luaEngine := gopherlua.NewLuaEngine()
 		require.NotNil(t, luaEngine)
 
@@ -417,7 +417,7 @@ func TestChaosEngineRestart(t *testing.T) {
 		// Execute random number of operations before restart
 		numOps := 5 + rng.Intn(15)
 		successCount := 0
-		
+
 		for op := 0; op < numOps; op++ {
 			// Random script
 			scripts := []string{
@@ -426,15 +426,15 @@ func TestChaosEngineRestart(t *testing.T) {
 				`local x = 1 + 1; return x`,
 				`error("test error")`,
 			}
-			
+
 			script := scripts[rng.Intn(len(scripts))]
 			result, err := luaEngine.Execute(ctx, script, nil)
 			_ = err // Errors are expected in chaos testing
-			
+
 			if result != nil { // Any result (including errors) counts as success
 				successCount++
 			}
-			
+
 			// Random chance of early shutdown
 			if rng.Float64() < 0.1 { // 10% chance
 				t.Logf("Early shutdown in cycle %d after %d operations", cycle, op+1)
@@ -451,7 +451,7 @@ func TestChaosEngineRestart(t *testing.T) {
 		// Verify we got some results
 		if numOps > 0 {
 			successRate := float64(successCount) / float64(numOps)
-			t.Logf("Cycle %d: %d successes out of %d operations (%.2f%%)", 
+			t.Logf("Cycle %d: %d successes out of %d operations (%.2f%%)",
 				cycle, successCount, numOps, successRate*100)
 		}
 

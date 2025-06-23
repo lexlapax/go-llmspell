@@ -57,7 +57,7 @@ func TestEngineConcurrentExecution(t *testing.T) {
 					"goroutine_id": goroutineID,
 					"script_id":    j,
 				})
-				
+
 				if err != nil {
 					results <- err
 				} else if result == nil {
@@ -85,12 +85,12 @@ func TestEngineConcurrentExecution(t *testing.T) {
 	}
 
 	totalTests := numGoroutines * scriptsPerGoroutine
-	t.Logf("Concurrent execution results: %d successes, %d errors out of %d total", 
+	t.Logf("Concurrent execution results: %d successes, %d errors out of %d total",
 		successCount, errorCount, totalTests)
 
 	// Expect at least 90% success rate
 	expectedMinSuccess := int(float64(totalTests) * 0.9)
-	assert.GreaterOrEqual(t, successCount, expectedMinSuccess, 
+	assert.GreaterOrEqual(t, successCount, expectedMinSuccess,
 		"Expected at least 90%% success rate in concurrent execution")
 }
 
@@ -145,7 +145,7 @@ func TestEngineMemoryStress(t *testing.T) {
 	runtime.ReadMemStats(&m2)
 
 	memoryIncrease := m2.Alloc - m1.Alloc
-	t.Logf("Memory increase: %d bytes (%.2f MB)", 
+	t.Logf("Memory increase: %d bytes (%.2f MB)",
 		memoryIncrease, float64(memoryIncrease)/(1024*1024))
 
 	// Memory increase should be reasonable (less than 20MB)
@@ -186,7 +186,7 @@ func TestEngineTimeoutStress(t *testing.T) {
 	ctx := context.Background()
 	for i := 0; i < numTimeoutTests; i++ {
 		result, err := luaEngine.Execute(ctx, timeoutScript, nil)
-		
+
 		if err != nil {
 			timeoutCount++
 			t.Logf("Test %d timed out as expected: %v", i, err)
@@ -196,11 +196,11 @@ func TestEngineTimeoutStress(t *testing.T) {
 		}
 	}
 
-	t.Logf("Timeout stress test results: %d timeouts, %d successes out of %d total", 
+	t.Logf("Timeout stress test results: %d timeouts, %d successes out of %d total",
 		timeoutCount, successCount, numTimeoutTests)
 
 	// Most tests should timeout due to the very short timeout
-	assert.Greater(t, timeoutCount, numTimeoutTests/2, 
+	assert.Greater(t, timeoutCount, numTimeoutTests/2,
 		"Most tests should timeout with very short timeout limit")
 }
 
@@ -280,7 +280,7 @@ func TestEngineRapidScriptSwitching(t *testing.T) {
 	for i := 0; i < iterations; i++ {
 		script := scripts[i%len(scripts)]
 		result, err := luaEngine.Execute(ctx, script, nil)
-		
+
 		assert.NoError(t, err, "Script %d failed: %s", i, script)
 		assert.NotNil(t, result, "Script %d returned nil result", i)
 

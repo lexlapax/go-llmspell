@@ -1,6 +1,11 @@
 -- ABOUTME: Example demonstrating performance optimization patterns for LLM spells
 -- ABOUTME: Shows caching, batching, parallel processing, and resource management
 
+-- Required modules
+local core = require("core")
+local agent = require("agent")
+local data = require("data")
+
 -- Performance Patterns Example
 -- This spell demonstrates performance optimization techniques:
 -- 1. Response caching
@@ -342,6 +347,7 @@ end
 
 -- Ensure final flush
 core.sleep(2.5)
+print("  Completed " .. #batch_results .. " batched requests")
 print()
 
 -- Example 3: Parallel Processing

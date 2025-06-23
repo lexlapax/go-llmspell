@@ -32,24 +32,24 @@ func TestBridgeConcurrentInitialization(t *testing.T) {
 		wg.Add(1)
 		go func(goroutineID int) {
 			defer wg.Done()
-			
+
 			for j := 0; j < bridgesPerGoroutine; j++ {
 				// Test agent bridge
 				agentBridge := agent.NewAgentBridge()
 				ctx := context.Background()
-				
+
 				err := agentBridge.Initialize(ctx)
 				if err != nil {
 					results <- err
 					continue
 				}
-				
+
 				err = agentBridge.Cleanup(ctx)
 				if err != nil {
 					results <- err
 					continue
 				}
-				
+
 				results <- nil
 			}
 		}(i)
@@ -71,7 +71,7 @@ func TestBridgeConcurrentInitialization(t *testing.T) {
 	}
 
 	totalTests := numGoroutines * bridgesPerGoroutine
-	t.Logf("Concurrent bridge initialization: %d successes, %d errors out of %d total", 
+	t.Logf("Concurrent bridge initialization: %d successes, %d errors out of %d total",
 		successCount, errorCount, totalTests)
 
 	assert.Equal(t, 0, errorCount, "All bridge initializations should succeed")
@@ -108,7 +108,7 @@ func TestBridgeRepeatedInitializationCleanup(t *testing.T) {
 
 	// Test LLM bridge cycles
 	llmBridge := llm.NewLLMBridge()
-	
+
 	for i := 0; i < numCycles; i++ {
 		err := llmBridge.Initialize(ctx)
 		assert.NoError(t, err, "LLM bridge initialization %d failed", i)
@@ -138,7 +138,7 @@ func TestMockBridgeStress(t *testing.T) {
 	const operationsPerBridge = 20
 
 	bridges := make([]*testutils.MockBridge, numBridges)
-	
+
 	// Create multiple mock bridges
 	for i := 0; i < numBridges; i++ {
 		bridge := testutils.NewMockBridge("stress-bridge-" + string(rune('A'+i%26)))
@@ -153,9 +153,9 @@ func TestMockBridgeStress(t *testing.T) {
 		wg.Add(1)
 		go func(bridgeID int, b *testutils.MockBridge) {
 			defer wg.Done()
-			
+
 			ctx := context.Background()
-			
+
 			for j := 0; j < operationsPerBridge; j++ {
 				// Test initialization
 				err := b.Initialize(ctx)
@@ -163,21 +163,21 @@ func TestMockBridgeStress(t *testing.T) {
 					results <- err
 					continue
 				}
-				
+
 				// Test metadata access
 				metadata := b.GetMetadata()
 				if metadata.Name == "" {
 					results <- assert.AnError
 					continue
 				}
-				
+
 				// Test cleanup
 				err = b.Cleanup(ctx)
 				if err != nil {
 					results <- err
 					continue
 				}
-				
+
 				results <- nil
 			}
 		}(i, bridge)
@@ -198,7 +198,7 @@ func TestMockBridgeStress(t *testing.T) {
 	}
 
 	totalOperations := numBridges * operationsPerBridge
-	t.Logf("Mock bridge stress test: %d successes, %d errors out of %d total operations", 
+	t.Logf("Mock bridge stress test: %d successes, %d errors out of %d total operations",
 		successCount, errorCount, totalOperations)
 
 	assert.Equal(t, 0, errorCount, "All mock bridge operations should succeed")
@@ -225,30 +225,30 @@ func TestBridgeMetadataStress(t *testing.T) {
 			for j := 0; j < accessesPerBridge; j++ {
 				id := b.GetID()
 				assert.NotEmpty(t, id, "Agent bridge ID should not be empty")
-				
+
 				metadata := b.GetMetadata()
 				assert.NotEmpty(t, metadata.Name, "Agent bridge metadata name should not be empty")
 			}
-			
+
 		case *llm.LLMBridge:
 			for j := 0; j < accessesPerBridge; j++ {
 				id := b.GetID()
 				assert.NotEmpty(t, id, "LLM bridge ID should not be empty")
-				
+
 				metadata := b.GetMetadata()
 				assert.NotEmpty(t, metadata.Name, "LLM bridge metadata name should not be empty")
 			}
-			
+
 		case *testutils.MockBridge:
 			for j := 0; j < accessesPerBridge; j++ {
 				id := b.GetID()
 				assert.NotEmpty(t, id, "Mock bridge ID should not be empty")
-				
+
 				metadata := b.GetMetadata()
 				assert.NotEmpty(t, metadata.Name, "Mock bridge metadata name should not be empty")
 			}
 		}
-		
+
 		t.Logf("Completed %d metadata accesses for bridge %d", accessesPerBridge, i)
 	}
 }
@@ -272,13 +272,13 @@ func TestBridgeMethodListingStress(t *testing.T) {
 	for i := 0; i < methodListingCalls; i++ {
 		methods := llmBridge.Methods()
 		assert.NotEmpty(t, methods, "LLM bridge should have methods")
-		
+
 		// Verify method structure
 		for _, method := range methods {
 			assert.NotEmpty(t, method.Name, "Method name should not be empty")
 			assert.NotEmpty(t, method.Description, "Method description should not be empty")
 		}
-		
+
 		if i%100 == 0 {
 			t.Logf("Completed %d method listing calls", i)
 		}
@@ -295,11 +295,11 @@ func TestBridgeConcurrentAccess(t *testing.T) {
 
 	agentBridge := agent.NewAgentBridge()
 	llmBridge := llm.NewLLMBridge()
-	
+
 	ctx := context.Background()
 	require.NoError(t, agentBridge.Initialize(ctx))
 	require.NoError(t, llmBridge.Initialize(ctx))
-	
+
 	defer func() {
 		agentBridge.Cleanup(ctx)
 		llmBridge.Cleanup(ctx)
@@ -316,7 +316,7 @@ func TestBridgeConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func(goroutineID int) {
 			defer wg.Done()
-			
+
 			for j := 0; j < operationsPerGoroutine; j++ {
 				// Test agent bridge
 				id := agentBridge.GetID()
@@ -325,7 +325,7 @@ func TestBridgeConcurrentAccess(t *testing.T) {
 				} else {
 					results <- nil
 				}
-				
+
 				// Test LLM bridge
 				id = llmBridge.GetID()
 				if id != "llm" {
@@ -352,7 +352,7 @@ func TestBridgeConcurrentAccess(t *testing.T) {
 	}
 
 	totalOperations := numGoroutines * operationsPerGoroutine * 2
-	t.Logf("Concurrent bridge access: %d successes, %d errors out of %d total operations", 
+	t.Logf("Concurrent bridge access: %d successes, %d errors out of %d total operations",
 		successCount, errorCount, totalOperations)
 
 	assert.Equal(t, 0, errorCount, "All concurrent bridge accesses should succeed")

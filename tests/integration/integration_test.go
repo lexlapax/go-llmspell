@@ -48,11 +48,11 @@ func TestIntegrationBasicSpellExecution(t *testing.T) {
 
 	// Create engine registry with default config
 	registryConfig := engine.RegistryConfig{
-		MaxEngines:        10,
-		DefaultTimeout:    30 * time.Second,
-		PoolingEnabled:    true,
-		MaxPoolSize:       5,
-		MetricsEnabled:    true,
+		MaxEngines:     10,
+		DefaultTimeout: 30 * time.Second,
+		PoolingEnabled: true,
+		MaxPoolSize:    5,
+		MetricsEnabled: true,
 	}
 	registry := engine.NewRegistry(registryConfig)
 	err = registry.Initialize()
@@ -213,9 +213,9 @@ func TestIntegrationErrorHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name        string
+		name         string
 		spellContent string
-		expectError bool
+		expectError  bool
 	}{
 		{
 			name: "syntax_error",
@@ -542,7 +542,7 @@ func TestIntegrationSpellValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := validator.ValidateScript(tt.script, "test.lua")
-			
+
 			if tt.expectValid {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
@@ -623,7 +623,7 @@ func TestIntegrationBridgeRegistry(t *testing.T) {
 	// Verify bridge modules loaded
 	resultMap, ok := result.(map[string]interface{})
 	assert.True(t, ok, "Result should be a map")
-	
+
 	// Check that at least some modules loaded
 	// (The actual availability depends on which bridges are registered)
 	loadedCount := 0

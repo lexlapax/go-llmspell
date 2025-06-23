@@ -1,6 +1,9 @@
 -- ABOUTME: Example demonstrating agents with tool access for autonomous task completion
 -- ABOUTME: Shows tool selection, error recovery, and complex multi-step operations
 
+-- Required modules
+local agent = require("agent")
+
 -- Agent With Tools Example
 -- This spell demonstrates creating and using tool-enabled agents:
 -- 1. Basic tool-enabled agent

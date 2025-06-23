@@ -1,6 +1,10 @@
 -- ABOUTME: Example demonstrating complex multi-step workflows with conditions and branching
 -- ABOUTME: Shows state management, parallel execution, error handling, and workflow patterns
 
+-- Required modules
+local agent = require("agent")
+local core = require("core")
+
 -- Complex Workflows Example
 -- This spell demonstrates advanced workflow patterns:
 -- 1. Sequential workflows with state passing
@@ -24,6 +28,19 @@ print()
 -- Ensure output directory exists
 if not tools.file_exists(output_dir) then
     tools.create_directory(output_dir)
+end
+
+-- Table copy helper (defined before use)
+local function table_copy(t)
+    local copy = {}
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            copy[k] = table_copy(v)
+        else
+            copy[k] = v
+        end
+    end
+    return copy
 end
 
 -- Workflow state management
@@ -56,7 +73,7 @@ end
 
 function WorkflowState:checkpoint(name)
     self.checkpoints[name] = {
-        data = table.copy(self.data),
+        data = table_copy(self.data),
         timestamp = os.time()
     }
     print("  ✓ Checkpoint: " .. name)
@@ -65,7 +82,7 @@ end
 function WorkflowState:rollback(checkpoint_name)
     local checkpoint = self.checkpoints[checkpoint_name]
     if checkpoint then
-        self.data = table.copy(checkpoint.data)
+        self.data = table_copy(checkpoint.data)
         print("  ⏪ Rolled back to: " .. checkpoint_name)
         return true
     end
@@ -78,19 +95,6 @@ function WorkflowState:add_error(step, error)
         error = error,
         timestamp = os.time()
     })
-end
-
--- Table copy helper
-function table.copy(t)
-    local copy = {}
-    for k, v in pairs(t) do
-        if type(v) == "table" then
-            copy[k] = table.copy(v)
-        else
-            copy[k] = v
-        end
-    end
-    return copy
 end
 
 -- Example 1: Sequential Workflow with State

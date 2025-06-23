@@ -1,6 +1,9 @@
 -- ABOUTME: Example demonstrating agents wrapped as tools for other agents
 -- ABOUTME: Shows hierarchical agent systems, delegation, and specialized agent tools
 
+-- Required modules
+local agent = require("agent")
+
 -- Agent as Tool Example
 -- This spell demonstrates advanced agent patterns:
 -- 1. Wrapping agents as tools

@@ -1,6 +1,9 @@
 -- ABOUTME: Example demonstrating usage of built-in tools without LLM interaction
 -- ABOUTME: Shows file operations, web fetching, datetime, calculator, and tool discovery
 
+-- Required modules
+local data = require("data")
+
 -- Built-in Tools Usage Example
 -- This spell demonstrates how to use various built-in tools:
 -- 1. File operations (read, write, list, exists, delete)
