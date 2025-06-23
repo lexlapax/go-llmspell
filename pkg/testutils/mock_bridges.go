@@ -425,3 +425,15 @@ func (b *MockAsyncBridge) IsAsyncMethod(method string) bool {
 	defer b.mu.RUnlock()
 	return b.asyncMethods[method]
 }
+
+// MockStateManager provides a mock implementation of the StateManager interface for testing
+type MockStateManager struct {
+	states map[string]interface{}
+}
+
+// NewMockStateManager creates a new mock state manager
+func NewMockStateManager() *MockStateManager {
+	return &MockStateManager{
+		states: make(map[string]interface{}),
+	}
+}
