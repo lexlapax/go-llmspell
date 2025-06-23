@@ -38,36 +38,6 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 - 🚧 Phase 6: Integration and Examples - NOT STARTED
 
 ---
-## DEFERRED TASKS from different Phases - For Revisit 
-- See `TODO-DONE-ARCHIVE.md` for completed tasks history
-
-### Section 1.3.
-  - [ ] **Task 1.3.20: Support for async/promise-based tool execution** (**[DEFERRED]** to script engine implementation)
-  - [ ] **Task 1.3.21: Test cross-engine compatibility** (**[DEFERRED]** to script engine implementation)
-
-#### ⏸️ 1.4.6 Model Info Bridge Intelligence **[DEFERRED]** - Features not in go-llms
-**Status**: Tasks deferred - missing features documented in `go-llms-upstream-request.md`
-
-- [ ] **Task 1.4.6.1: Add Model Performance Analytics** ⏸️ **[DEFERRED]**
-  - Missing from go-llms: Model performance tracking, analytics, metrics
-  - Documented in upstream request #1
-
-- [ ] **Task 1.4.6.2: Add Model Recommendation Engine** ⏸️ **[DEFERRED]**  
-  - Missing from go-llms: Recommendation algorithms, model selection
-  - Documented in upstream request #2
-
-- [ ] **Task 1.4.6.3: Add Model Catalog Export** ⏸️ **[DEFERRED]**
-  - Missing from go-llms: Catalog export, OpenAPI generation for models
-  - Documented in upstream request #3
-- [ ] **Task 1.5.8: Memory Bridge** ⏸️ **[DEFERRED]** - Not in go-llms yet
-  - [ ] Will implement when available in go-llms
-
-### Section 1.5
-- [ ] **Task 1.5.9: Conversation Bridge** ⏸️ **[DEFERRED]** - Not in go-llms yet
-  - [ ] Will implement when available in go-llms
-
-
----
 
 ## Phase 2: Lua Engine Implementation
 ### 2.1 Lua Engine Research and Planning
@@ -140,8 +110,8 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 #### 2.4.4: Production Readiness
 - [ ] **Task 2.4.4.1: Comprehensive Testing**
-  - [ ] Achieve 90%+ test coverage
-  - [ ] Add integration test suite
+  - [x] Achieve 90%+ test coverage (comprehensive_test.go created) **[COMPLETED - 2025-06-22]**
+  - [x] Add integration test suite (integration_test.go created) **[COMPLETED - 2025-06-22]**
   - [ ] Create stress tests
   - [ ] Implement chaos testing 
   - [ ] Add regression test suite
@@ -278,7 +248,7 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Hook-based customization spell
 
 ### 6.2 Testing
-- [ ] **Task 6.2.1: Cross-Engine Tests**
+- [ ] **Task 6.2.1: Cross-Engine Tests** **[DEFERRED from 1.3.21]**
   - [ ] Create conformance test suite
   - [ ] Verify API compatibility
   - [ ] Test performance characteristics
@@ -291,20 +261,46 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 ---
 
 
-## Phase 7: More Production Readiness
-- [ ] **Task 7.1: Monitoring & Metrics** **DEFERRED from  2.4.4.3**
+## Phase 7: Deferred Tasks from Previous Phases
+**DEFERRED TASKS from different Phases - For Revisit from previous Phases**
+- See `TODO-DONE-ARCHIVE.md` for completed tasks history
+
+### 7.1 More Production Readiness
+- [ ] **Task 7.1.1: Monitoring & Metrics** **DEFERRED from  2.4.4.3**
   - [ ] Add Prometheus metrics
   - [ ] Implement health checks
   - [ ] Create performance dashboards
   - [ ] Add distributed tracing
   - [ ] Implement alerting rules
 
-- [ ] **Task 7.2: Security Hardening** **DEFERRED from 2.4.4.4**
+- [ ] **Task 7.1.2: Security Hardening** **DEFERRED from 2.4.4.4**
   - [ ] Conduct security audit
   - [ ] Add input validation
   - [ ] Implement rate limiting
   - [ ] Create security benchmarks
   - [ ] Add CVE scanning
+
+### 7.2 Model Info Bridge Intelligence **[DEFERRED from  1.4.6 ]** - Features not in go-llms
+
+- [ ] **Task 7.2.1: Add Model Performance Analytics** ⏸️ **[DEFERRED from 1.4.6.1]**
+  - Missing from go-llms: Model performance tracking, analytics, metrics
+  - Documented in upstream request #1
+
+- [ ] **Task 7.2.2: Add Model Recommendation Engine** ⏸️ **[DEFERRED from 1.4.6.2]**  
+  - Missing from go-llms: Recommendation algorithms, model selection
+  - Documented in upstream request #2
+
+- [ ] **Task 7.2.3: Add Model Catalog Export** ⏸️ **[DEFERRED from 1.4.6.3]**
+  - Missing from go-llms: Catalog export, OpenAPI generation for models
+  - Documented in upstream request #3
+
+### 7.3 Additional bridgest from go-llms 
+
+- [ ] **Task 7.3.1: Memory Bridge** ⏸️ **[DEFERRED from 1.5.8]** - Not in go-llms yet
+  - [ ] Will implement when available in go-llms
+
+- [ ] **Task 7.3.2: Conversation Bridge** ⏸️ **[DEFERRED from 1.5.9]** - Not in go-llms yet
+  - [ ] Will implement when available in go-llms
 
 ---
 ## Documentation

@@ -37,7 +37,7 @@ func TestREPLCmd_UnsupportedEngine(t *testing.T) {
 	err := cmd.Run(ctx)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported engine: javascript")
+	assert.Contains(t, err.Error(), "JavaScript engine not yet implemented")
 }
 
 func TestREPLCmd_DefaultHistoryPath(t *testing.T) {

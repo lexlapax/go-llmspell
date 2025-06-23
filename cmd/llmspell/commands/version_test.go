@@ -59,7 +59,8 @@ func TestVersionCmd_Run_Full(t *testing.T) {
 	}()
 
 	cmd := &VersionCmd{
-		Short: false,
+		Short:     false,
+		BuildInfo: true,
 	}
 
 	// Set up output capture
@@ -75,8 +76,8 @@ func TestVersionCmd_Run_Full(t *testing.T) {
 	// Full version should show all info
 	output := stdout.String()
 	assert.Contains(t, output, "llmspell version 1.0.0")
-	assert.Contains(t, output, "Commit: abc123")
-	assert.Contains(t, output, "Built: 2024-01-01")
+	assert.Contains(t, output, "commit: abc123")
+	assert.Contains(t, output, "built: 2024-01-01")
 }
 
 func TestVersionCmd_Run_MinimalInfo(t *testing.T) {
