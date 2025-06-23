@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 
 	// go-llms imports for schema functionality
 	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
@@ -93,8 +93,8 @@ func (b *SchemaBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // Provides comprehensive information about the bridge including
 // dependencies on go-llms schema packages.
-func (b *SchemaBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *SchemaBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "Schema Bridge",
 		Version:     "2.0.0",
 		Description: "Provides access to go-llms schema validation, generation, versioning, and migration system",
@@ -162,10 +162,12 @@ func (b *SchemaBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // Delegates to the engine's RegisterBridge method for integration.
-func (b *SchemaBridge) RegisterWithEngine(e engine.ScriptEngine) error {
-	return e.RegisterBridge(b)
+func (b *SchemaBridge) RegisterWithEngine(e types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns all available methods.
@@ -175,67 +177,67 @@ func (b *SchemaBridge) RegisterWithEngine(e engine.ScriptEngine) error {
 //   - Tag-based generation
 //   - Import/export in multiple formats
 //   - Custom validation registration
-func (b *SchemaBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *SchemaBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Core Schema Operations
-		{Name: "createSchema", Description: "Create a new schema object", Parameters: []engine.ParameterInfo{{Name: "schemaData", Type: "object", Required: true, Description: "Schema definition object"}}, ReturnType: "object"},
-		{Name: "createProperty", Description: "Create a property definition", Parameters: []engine.ParameterInfo{{Name: "propertyType", Type: "string", Required: true, Description: "Property type"}, {Name: "constraints", Type: "object", Required: false, Description: "Property constraints"}}, ReturnType: "object"},
-		{Name: "validateJSON", Description: "Validate JSON data against a schema", Parameters: []engine.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to validate against"}, {Name: "data", Type: "object", Required: true, Description: "Data to validate"}}, ReturnType: "object"},
-		{Name: "validateStruct", Description: "Validate a struct against a schema", Parameters: []engine.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to validate against"}, {Name: "data", Type: "object", Required: true, Description: "Struct data to validate"}}, ReturnType: "object"},
-		{Name: "generateSchemaFromType", Description: "Generate schema from a type definition", Parameters: []engine.ParameterInfo{{Name: "typeInfo", Type: "object", Required: true, Description: "Type information"}}, ReturnType: "object"},
-		{Name: "convertJSONSchema", Description: "Convert JSON Schema string to schema object", Parameters: []engine.ParameterInfo{{Name: "jsonSchema", Type: "string", Required: true, Description: "JSON Schema string"}}, ReturnType: "object"},
+		{Name: "createSchema", Description: "Create a new schema object", Parameters: []types.ParameterInfo{{Name: "schemaData", Type: "object", Required: true, Description: "Schema definition object"}}, ReturnType: "object"},
+		{Name: "createProperty", Description: "Create a property definition", Parameters: []types.ParameterInfo{{Name: "propertyType", Type: "string", Required: true, Description: "Property type"}, {Name: "constraints", Type: "object", Required: false, Description: "Property constraints"}}, ReturnType: "object"},
+		{Name: "validateJSON", Description: "Validate JSON data against a schema", Parameters: []types.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to validate against"}, {Name: "data", Type: "object", Required: true, Description: "Data to validate"}}, ReturnType: "object"},
+		{Name: "validateStruct", Description: "Validate a struct against a schema", Parameters: []types.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to validate against"}, {Name: "data", Type: "object", Required: true, Description: "Struct data to validate"}}, ReturnType: "object"},
+		{Name: "generateSchemaFromType", Description: "Generate schema from a type definition", Parameters: []types.ParameterInfo{{Name: "typeInfo", Type: "object", Required: true, Description: "Type information"}}, ReturnType: "object"},
+		{Name: "convertJSONSchema", Description: "Convert JSON Schema string to schema object", Parameters: []types.ParameterInfo{{Name: "jsonSchema", Type: "string", Required: true, Description: "JSON Schema string"}}, ReturnType: "object"},
 
 		// Repository Operations
-		{Name: "saveSchema", Description: "Save a schema to the repository", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "schema", Type: "object", Required: true, Description: "Schema object"}}, ReturnType: "void"},
-		{Name: "getSchema", Description: "Get a schema from the repository", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}}, ReturnType: "object"},
-		{Name: "deleteSchema", Description: "Delete a schema from the repository", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}}, ReturnType: "void"},
+		{Name: "saveSchema", Description: "Save a schema to the repository", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "schema", Type: "object", Required: true, Description: "Schema object"}}, ReturnType: "void"},
+		{Name: "getSchema", Description: "Get a schema from the repository", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}}, ReturnType: "object"},
+		{Name: "deleteSchema", Description: "Delete a schema from the repository", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}}, ReturnType: "void"},
 
 		// Versioning and Migration
-		{Name: "initializeFileRepository", Description: "Initialize file-based repository for schema persistence", Parameters: []engine.ParameterInfo{{Name: "directory", Type: "string", Required: true, Description: "Repository directory path"}}, ReturnType: "void"},
-		{Name: "saveSchemaVersion", Description: "Save a specific version of a schema", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "schema", Type: "object", Required: true, Description: "Schema object"}, {Name: "version", Type: "number", Required: true, Description: "Version number"}}, ReturnType: "void"},
-		{Name: "getSchemaVersion", Description: "Get a specific version of a schema", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "version", Type: "number", Required: true, Description: "Version number"}}, ReturnType: "object"},
-		{Name: "listSchemaVersions", Description: "List all versions of a schema", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}}, ReturnType: "array"},
-		{Name: "setCurrentSchemaVersion", Description: "Set the current version of a schema", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "version", Type: "number", Required: true, Description: "Version number"}}, ReturnType: "void"},
-		{Name: "registerMigrator", Description: "Register a schema migrator", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Migrator name"}, {Name: "migrator", Type: "object", Required: true, Description: "Migrator configuration"}}, ReturnType: "void"},
-		{Name: "migrateSchema", Description: "Migrate a schema between versions", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "fromVersion", Type: "number", Required: true, Description: "Source version"}, {Name: "toVersion", Type: "number", Required: true, Description: "Target version"}}, ReturnType: "object"},
-		{Name: "exportRepository", Description: "Export entire repository to JSON", Parameters: []engine.ParameterInfo{}, ReturnType: "string"},
-		{Name: "importRepository", Description: "Import repository from JSON", Parameters: []engine.ParameterInfo{{Name: "data", Type: "object", Required: true, Description: "Repository data"}}, ReturnType: "object"},
+		{Name: "initializeFileRepository", Description: "Initialize file-based repository for schema persistence", Parameters: []types.ParameterInfo{{Name: "directory", Type: "string", Required: true, Description: "Repository directory path"}}, ReturnType: "void"},
+		{Name: "saveSchemaVersion", Description: "Save a specific version of a schema", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "schema", Type: "object", Required: true, Description: "Schema object"}, {Name: "version", Type: "number", Required: true, Description: "Version number"}}, ReturnType: "void"},
+		{Name: "getSchemaVersion", Description: "Get a specific version of a schema", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "version", Type: "number", Required: true, Description: "Version number"}}, ReturnType: "object"},
+		{Name: "listSchemaVersions", Description: "List all versions of a schema", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}}, ReturnType: "array"},
+		{Name: "setCurrentSchemaVersion", Description: "Set the current version of a schema", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "version", Type: "number", Required: true, Description: "Version number"}}, ReturnType: "void"},
+		{Name: "registerMigrator", Description: "Register a schema migrator", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Migrator name"}, {Name: "migrator", Type: "object", Required: true, Description: "Migrator configuration"}}, ReturnType: "void"},
+		{Name: "migrateSchema", Description: "Migrate a schema between versions", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Schema name"}, {Name: "fromVersion", Type: "number", Required: true, Description: "Source version"}, {Name: "toVersion", Type: "number", Required: true, Description: "Target version"}}, ReturnType: "object"},
+		{Name: "exportRepository", Description: "Export entire repository to JSON", Parameters: []types.ParameterInfo{}, ReturnType: "string"},
+		{Name: "importRepository", Description: "Import repository from JSON", Parameters: []types.ParameterInfo{{Name: "data", Type: "object", Required: true, Description: "Repository data"}}, ReturnType: "object"},
 
 		// Tag-Based Schema Generation
-		{Name: "generateFromTags", Description: "Generate schema from struct tags", Parameters: []engine.ParameterInfo{{Name: "structData", Type: "object", Required: true, Description: "Struct with tags"}}, ReturnType: "object"},
-		{Name: "setTagPriority", Description: "Set the order in which tags are processed", Parameters: []engine.ParameterInfo{{Name: "tags", Type: "array", Required: true, Description: "Ordered list of tag names"}}, ReturnType: "void"},
-		{Name: "registerTagParser", Description: "Register a custom tag parser", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Parser name"}, {Name: "parser", Type: "object", Required: true, Description: "Parser configuration"}}, ReturnType: "void"},
-		{Name: "extractValidationRules", Description: "Extract validation rules from struct tags", Parameters: []engine.ParameterInfo{{Name: "structData", Type: "object", Required: true, Description: "Struct with validation tags"}}, ReturnType: "object"},
-		{Name: "generateWithDocumentation", Description: "Generate schema with embedded documentation from tags", Parameters: []engine.ParameterInfo{{Name: "structData", Type: "object", Required: true, Description: "Struct with doc tags"}, {Name: "includeExamples", Type: "boolean", Required: false, Description: "Include example values"}}, ReturnType: "object"},
+		{Name: "generateFromTags", Description: "Generate schema from struct tags", Parameters: []types.ParameterInfo{{Name: "structData", Type: "object", Required: true, Description: "Struct with tags"}}, ReturnType: "object"},
+		{Name: "setTagPriority", Description: "Set the order in which tags are processed", Parameters: []types.ParameterInfo{{Name: "tags", Type: "array", Required: true, Description: "Ordered list of tag names"}}, ReturnType: "void"},
+		{Name: "registerTagParser", Description: "Register a custom tag parser", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Parser name"}, {Name: "parser", Type: "object", Required: true, Description: "Parser configuration"}}, ReturnType: "void"},
+		{Name: "extractValidationRules", Description: "Extract validation rules from struct tags", Parameters: []types.ParameterInfo{{Name: "structData", Type: "object", Required: true, Description: "Struct with validation tags"}}, ReturnType: "object"},
+		{Name: "generateWithDocumentation", Description: "Generate schema with embedded documentation from tags", Parameters: []types.ParameterInfo{{Name: "structData", Type: "object", Required: true, Description: "Struct with doc tags"}, {Name: "includeExamples", Type: "boolean", Required: false, Description: "Include example values"}}, ReturnType: "object"},
 
 		// Import/Export Operations
-		{Name: "exportToJSONSchema", Description: "Export schema to JSON Schema format", Parameters: []engine.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to export"}}, ReturnType: "string"},
-		{Name: "exportToOpenAPI", Description: "Export schema to OpenAPI schema format", Parameters: []engine.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to export"}}, ReturnType: "string"},
-		{Name: "importFromFile", Description: "Import schema from file", Parameters: []engine.ParameterInfo{{Name: "filePath", Type: "string", Required: true, Description: "File path"}, {Name: "format", Type: "string", Required: false, Description: "File format"}}, ReturnType: "object"},
-		{Name: "importFromString", Description: "Import schema from string content", Parameters: []engine.ParameterInfo{{Name: "content", Type: "string", Required: true, Description: "Schema content"}, {Name: "format", Type: "string", Required: false, Description: "Content format"}}, ReturnType: "object"},
-		{Name: "convertFormat", Description: "Convert schema between different formats", Parameters: []engine.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Source schema"}, {Name: "fromFormat", Type: "string", Required: true, Description: "Source format"}, {Name: "toFormat", Type: "string", Required: true, Description: "Target format"}}, ReturnType: "object"},
-		{Name: "mergeSchemas", Description: "Merge multiple schemas into one", Parameters: []engine.ParameterInfo{{Name: "schemas", Type: "array", Required: true, Description: "Array of schemas"}, {Name: "strategy", Type: "string", Required: false, Description: "Merge strategy"}}, ReturnType: "object"},
-		{Name: "generateDiff", Description: "Generate diff between two schemas", Parameters: []engine.ParameterInfo{{Name: "oldSchema", Type: "object", Required: true, Description: "Original schema"}, {Name: "newSchema", Type: "object", Required: true, Description: "Updated schema"}}, ReturnType: "object"},
-		{Name: "exportCollection", Description: "Export multiple schemas as a collection", Parameters: []engine.ParameterInfo{{Name: "schemaIds", Type: "array", Required: true, Description: "List of schema IDs"}, {Name: "format", Type: "string", Required: false, Description: "Export format"}}, ReturnType: "object"},
-		{Name: "importCollection", Description: "Import a collection of schemas", Parameters: []engine.ParameterInfo{{Name: "collection", Type: "object", Required: true, Description: "Schema collection"}, {Name: "overwrite", Type: "boolean", Required: false, Description: "Overwrite existing schemas"}}, ReturnType: "array"},
+		{Name: "exportToJSONSchema", Description: "Export schema to JSON Schema format", Parameters: []types.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to export"}}, ReturnType: "string"},
+		{Name: "exportToOpenAPI", Description: "Export schema to OpenAPI schema format", Parameters: []types.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to export"}}, ReturnType: "string"},
+		{Name: "importFromFile", Description: "Import schema from file", Parameters: []types.ParameterInfo{{Name: "filePath", Type: "string", Required: true, Description: "File path"}, {Name: "format", Type: "string", Required: false, Description: "File format"}}, ReturnType: "object"},
+		{Name: "importFromString", Description: "Import schema from string content", Parameters: []types.ParameterInfo{{Name: "content", Type: "string", Required: true, Description: "Schema content"}, {Name: "format", Type: "string", Required: false, Description: "Content format"}}, ReturnType: "object"},
+		{Name: "convertFormat", Description: "Convert schema between different formats", Parameters: []types.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Source schema"}, {Name: "fromFormat", Type: "string", Required: true, Description: "Source format"}, {Name: "toFormat", Type: "string", Required: true, Description: "Target format"}}, ReturnType: "object"},
+		{Name: "mergeSchemas", Description: "Merge multiple schemas into one", Parameters: []types.ParameterInfo{{Name: "schemas", Type: "array", Required: true, Description: "Array of schemas"}, {Name: "strategy", Type: "string", Required: false, Description: "Merge strategy"}}, ReturnType: "object"},
+		{Name: "generateDiff", Description: "Generate diff between two schemas", Parameters: []types.ParameterInfo{{Name: "oldSchema", Type: "object", Required: true, Description: "Original schema"}, {Name: "newSchema", Type: "object", Required: true, Description: "Updated schema"}}, ReturnType: "object"},
+		{Name: "exportCollection", Description: "Export multiple schemas as a collection", Parameters: []types.ParameterInfo{{Name: "schemaIds", Type: "array", Required: true, Description: "List of schema IDs"}, {Name: "format", Type: "string", Required: false, Description: "Export format"}}, ReturnType: "object"},
+		{Name: "importCollection", Description: "Import a collection of schemas", Parameters: []types.ParameterInfo{{Name: "collection", Type: "object", Required: true, Description: "Schema collection"}, {Name: "overwrite", Type: "boolean", Required: false, Description: "Overwrite existing schemas"}}, ReturnType: "array"},
 
 		// Custom Validation
-		{Name: "registerCustomValidator", Description: "Register a custom validation function", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Validator name"}, {Name: "validator", Type: "object", Required: true, Description: "Validator configuration"}}, ReturnType: "void"},
-		{Name: "unregisterCustomValidator", Description: "Unregister a custom validator", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Validator name"}}, ReturnType: "void"},
-		{Name: "listCustomValidators", Description: "List all registered custom validators", Parameters: []engine.ParameterInfo{}, ReturnType: "array"},
-		{Name: "validateWithCustom", Description: "Validate data using custom validators", Parameters: []engine.ParameterInfo{{Name: "data", Type: "object", Required: true, Description: "Data to validate"}, {Name: "validatorName", Type: "string", Required: true, Description: "Custom validator name"}}, ReturnType: "object"},
-		{Name: "validateAsync", Description: "Perform asynchronous validation", Parameters: []engine.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to validate against"}, {Name: "data", Type: "object", Required: true, Description: "Data to validate"}, {Name: "callback", Type: "object", Required: false, Description: "Callback configuration"}}, ReturnType: "object"},
-		{Name: "getValidationMetrics", Description: "Get validation performance metrics", Parameters: []engine.ParameterInfo{}, ReturnType: "object"},
-		{Name: "clearValidationCache", Description: "Clear validation cache entries", Parameters: []engine.ParameterInfo{}, ReturnType: "void"},
-		{Name: "registerConditionalValidator", Description: "Register a conditional validator", Parameters: []engine.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Validator name"}, {Name: "validator", Type: "object", Required: true, Description: "Conditional validator configuration"}}, ReturnType: "void"},
-		{Name: "validateConditional", Description: "Validate data with conditional validators", Parameters: []engine.ParameterInfo{{Name: "data", Type: "object", Required: true, Description: "Data to validate"}, {Name: "validatorName", Type: "string", Required: true, Description: "Conditional validator name"}}, ReturnType: "object"},
+		{Name: "registerCustomValidator", Description: "Register a custom validation function", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Validator name"}, {Name: "validator", Type: "object", Required: true, Description: "Validator configuration"}}, ReturnType: "void"},
+		{Name: "unregisterCustomValidator", Description: "Unregister a custom validator", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Validator name"}}, ReturnType: "void"},
+		{Name: "listCustomValidators", Description: "List all registered custom validators", Parameters: []types.ParameterInfo{}, ReturnType: "array"},
+		{Name: "validateWithCustom", Description: "Validate data using custom validators", Parameters: []types.ParameterInfo{{Name: "data", Type: "object", Required: true, Description: "Data to validate"}, {Name: "validatorName", Type: "string", Required: true, Description: "Custom validator name"}}, ReturnType: "object"},
+		{Name: "validateAsync", Description: "Perform asynchronous validation", Parameters: []types.ParameterInfo{{Name: "schema", Type: "object", Required: true, Description: "Schema to validate against"}, {Name: "data", Type: "object", Required: true, Description: "Data to validate"}, {Name: "callback", Type: "object", Required: false, Description: "Callback configuration"}}, ReturnType: "object"},
+		{Name: "getValidationMetrics", Description: "Get validation performance metrics", Parameters: []types.ParameterInfo{}, ReturnType: "object"},
+		{Name: "clearValidationCache", Description: "Clear validation cache entries", Parameters: []types.ParameterInfo{}, ReturnType: "void"},
+		{Name: "registerConditionalValidator", Description: "Register a conditional validator", Parameters: []types.ParameterInfo{{Name: "name", Type: "string", Required: true, Description: "Validator name"}, {Name: "validator", Type: "object", Required: true, Description: "Conditional validator configuration"}}, ReturnType: "void"},
+		{Name: "validateConditional", Description: "Validate data with conditional validators", Parameters: []types.ParameterInfo{{Name: "data", Type: "object", Required: true, Description: "Data to validate"}, {Name: "validatorName", Type: "string", Required: true, Description: "Conditional validator name"}}, ReturnType: "object"},
 	}
 }
 
 // ValidateMethod validates method parameters.
 // Checks if the bridge is initialized and validates parameter counts
 // against method definitions.
-func (b *SchemaBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *SchemaBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	if !b.IsInitialized() {
 		return fmt.Errorf("schema bridge not initialized")
 	}
@@ -265,9 +267,9 @@ func (b *SchemaBridge) ValidateMethod(name string, args []engine.ScriptValue) er
 // ExecuteMethod executes a bridge method with ScriptValue support.
 // Routes method calls to appropriate implementations and converts
 // between script values and go-llms domain objects.
-func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod(name, args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	switch name {
@@ -366,7 +368,7 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 		return b.validateConditional(ctx, args)
 
 	default:
-		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
 	}
 }
 
@@ -377,17 +379,17 @@ func (b *SchemaBridge) ExecuteMethod(ctx context.Context, name string, args []en
 // createSchema creates a new schema from the provided schema data.
 // The schema data should be an object containing type, properties, and constraints.
 // Returns the created schema with timestamp and creation status.
-func (b *SchemaBridge) createSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeObject {
-		return engine.NewErrorValue(fmt.Errorf("expected object for schema data, got %s", args[0].Type())), nil
+func (b *SchemaBridge) createSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeObject {
+		return types.NewErrorValue(fmt.Errorf("expected object for schema data, got %s", args[0].Type())), nil
 	}
 
-	schemaData := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
+	schemaData := args[0].(types.ObjectValue).ToGo().(map[string]interface{})
 
 	// Create schema using script conversion
 	schema, err := scriptToSchema(schemaData)
 	if err != nil {
-		return engine.NewErrorValue(fmt.Errorf("failed to create schema: %w", err)), nil
+		return types.NewErrorValue(fmt.Errorf("failed to create schema: %w", err)), nil
 	}
 
 	result := map[string]interface{}{
@@ -396,19 +398,19 @@ func (b *SchemaBridge) createSchema(ctx context.Context, args []engine.ScriptVal
 		"timestamp": time.Now(),
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *SchemaBridge) createProperty(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeString {
-		return engine.NewErrorValue(fmt.Errorf("expected string for property type, got %s", args[0].Type())), nil
+func (b *SchemaBridge) createProperty(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeString {
+		return types.NewErrorValue(fmt.Errorf("expected string for property type, got %s", args[0].Type())), nil
 	}
 
-	propertyType := args[0].(engine.StringValue).Value()
+	propertyType := args[0].(types.StringValue).Value()
 
 	var constraints map[string]interface{}
-	if len(args) > 1 && args[1].Type() == engine.TypeObject {
-		constraints = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+	if len(args) > 1 && args[1].Type() == types.TypeObject {
+		constraints = args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 	}
 
 	// Create property definition
@@ -418,35 +420,35 @@ func (b *SchemaBridge) createProperty(ctx context.Context, args []engine.ScriptV
 		"created":     time.Now(),
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(property)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(property)), nil
 }
 
-func (b *SchemaBridge) validateJSON(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeObject {
-		return engine.NewErrorValue(fmt.Errorf("expected object for schema, got %s", args[0].Type())), nil
+func (b *SchemaBridge) validateJSON(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeObject {
+		return types.NewErrorValue(fmt.Errorf("expected object for schema, got %s", args[0].Type())), nil
 	}
-	if args[1].Type() != engine.TypeObject {
-		return engine.NewErrorValue(fmt.Errorf("expected object for data, got %s", args[1].Type())), nil
+	if args[1].Type() != types.TypeObject {
+		return types.NewErrorValue(fmt.Errorf("expected object for data, got %s", args[1].Type())), nil
 	}
 
-	schemaData := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
-	data := args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+	schemaData := args[0].(types.ObjectValue).ToGo().(map[string]interface{})
+	data := args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 
 	// Convert to go-llms schema
 	schema, err := scriptToSchema(schemaData)
 	if err != nil {
-		return engine.NewErrorValue(fmt.Errorf("invalid schema: %w", err)), nil
+		return types.NewErrorValue(fmt.Errorf("invalid schema: %w", err)), nil
 	}
 
 	// Convert data to JSON string for validation
 	dataJSON, err := json.Marshal(data)
 	if err != nil {
-		return engine.NewErrorValue(fmt.Errorf("failed to marshal data to JSON: %w", err)), nil
+		return types.NewErrorValue(fmt.Errorf("failed to marshal data to JSON: %w", err)), nil
 	}
 
 	result, err := b.validator.Validate(schema, string(dataJSON))
 	if err != nil {
-		return engine.NewErrorValue(fmt.Errorf("validation failed: %w", err)), nil
+		return types.NewErrorValue(fmt.Errorf("validation failed: %w", err)), nil
 	}
 
 	validationResult := map[string]interface{}{
@@ -456,20 +458,20 @@ func (b *SchemaBridge) validateJSON(ctx context.Context, args []engine.ScriptVal
 		"data":   data,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(validationResult)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(validationResult)), nil
 }
 
-func (b *SchemaBridge) validateStruct(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) validateStruct(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Similar to validateJSON but for struct validation
 	return b.validateJSON(ctx, args)
 }
 
-func (b *SchemaBridge) generateSchemaFromType(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeObject {
-		return engine.NewErrorValue(fmt.Errorf("expected object for type info, got %s", args[0].Type())), nil
+func (b *SchemaBridge) generateSchemaFromType(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeObject {
+		return types.NewErrorValue(fmt.Errorf("expected object for type info, got %s", args[0].Type())), nil
 	}
 
-	typeInfo := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
+	typeInfo := args[0].(types.ObjectValue).ToGo().(map[string]interface{})
 
 	// For testing purposes, we'll create a simple schema based on the type info
 	// In a real implementation, this would use reflection on actual Go types
@@ -497,19 +499,19 @@ func (b *SchemaBridge) generateSchemaFromType(ctx context.Context, args []engine
 		"source":    "type",
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *SchemaBridge) convertJSONSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeString {
-		return engine.NewErrorValue(fmt.Errorf("expected string for JSON schema, got %s", args[0].Type())), nil
+func (b *SchemaBridge) convertJSONSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeString {
+		return types.NewErrorValue(fmt.Errorf("expected string for JSON schema, got %s", args[0].Type())), nil
 	}
 
-	jsonSchema := args[0].(engine.StringValue).Value()
+	jsonSchema := args[0].(types.StringValue).Value()
 
 	var schemaData map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonSchema), &schemaData); err != nil {
-		return engine.NewErrorValue(fmt.Errorf("invalid JSON schema: %w", err)), nil
+		return types.NewErrorValue(fmt.Errorf("invalid JSON schema: %w", err)), nil
 	}
 
 	// Convert JSON schema data to domain schema
@@ -539,7 +541,7 @@ func (b *SchemaBridge) convertJSONSchema(ctx context.Context, args []engine.Scri
 		"source":    "json",
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
 // Repository Operations
@@ -547,20 +549,20 @@ func (b *SchemaBridge) convertJSONSchema(ctx context.Context, args []engine.Scri
 // saveSchema saves a schema to the repository with the specified name.
 // The schema is stored both in memory and in the persistent repository if available.
 // Returns nil on success or an error if the save operation fails.
-func (b *SchemaBridge) saveSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeString {
-		return engine.NewErrorValue(fmt.Errorf("expected string for schema name, got %s", args[0].Type())), nil
+func (b *SchemaBridge) saveSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeString {
+		return types.NewErrorValue(fmt.Errorf("expected string for schema name, got %s", args[0].Type())), nil
 	}
-	if args[1].Type() != engine.TypeObject {
-		return engine.NewErrorValue(fmt.Errorf("expected object for schema, got %s", args[1].Type())), nil
+	if args[1].Type() != types.TypeObject {
+		return types.NewErrorValue(fmt.Errorf("expected object for schema, got %s", args[1].Type())), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
-	schemaData := args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+	name := args[0].(types.StringValue).Value()
+	schemaData := args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 
 	schema, err := scriptToSchema(schemaData)
 	if err != nil {
-		return engine.NewErrorValue(fmt.Errorf("invalid schema: %w", err)), nil
+		return types.NewErrorValue(fmt.Errorf("invalid schema: %w", err)), nil
 	}
 
 	b.mu.Lock()
@@ -570,19 +572,19 @@ func (b *SchemaBridge) saveSchema(ctx context.Context, args []engine.ScriptValue
 	// Also save to repository if available
 	if b.repository != nil {
 		if err := b.repository.Save(name, schema); err != nil {
-			return engine.NewErrorValue(fmt.Errorf("failed to save to repository: %w", err)), nil
+			return types.NewErrorValue(fmt.Errorf("failed to save to repository: %w", err)), nil
 		}
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) getSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeString {
-		return engine.NewErrorValue(fmt.Errorf("expected string for schema name, got %s", args[0].Type())), nil
+func (b *SchemaBridge) getSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeString {
+		return types.NewErrorValue(fmt.Errorf("expected string for schema name, got %s", args[0].Type())), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	schema, exists := b.schemas[name]
@@ -594,10 +596,10 @@ func (b *SchemaBridge) getSchema(ctx context.Context, args []engine.ScriptValue)
 			var err error
 			schema, err = b.repository.Get(name)
 			if err != nil {
-				return engine.NewErrorValue(fmt.Errorf("schema not found: %s", name)), nil
+				return types.NewErrorValue(fmt.Errorf("schema not found: %s", name)), nil
 			}
 		} else {
-			return engine.NewErrorValue(fmt.Errorf("schema not found: %s", name)), nil
+			return types.NewErrorValue(fmt.Errorf("schema not found: %s", name)), nil
 		}
 	}
 
@@ -607,15 +609,15 @@ func (b *SchemaBridge) getSchema(ctx context.Context, args []engine.ScriptValue)
 		"found":  true,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *SchemaBridge) deleteSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeString {
-		return engine.NewErrorValue(fmt.Errorf("expected string for schema name, got %s", args[0].Type())), nil
+func (b *SchemaBridge) deleteSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeString {
+		return types.NewErrorValue(fmt.Errorf("expected string for schema name, got %s", args[0].Type())), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	delete(b.schemas, name)
@@ -624,22 +626,22 @@ func (b *SchemaBridge) deleteSchema(ctx context.Context, args []engine.ScriptVal
 	// Also delete from repository if available
 	if b.repository != nil {
 		if err := b.repository.Delete(name); err != nil {
-			return engine.NewErrorValue(fmt.Errorf("failed to delete from repository: %w", err)), nil
+			return types.NewErrorValue(fmt.Errorf("failed to delete from repository: %w", err)), nil
 		}
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // initializeFileRepository sets up a file-based schema repository.
 // Creates a repository that persists schemas to the specified directory,
 // enabling schema versioning and recovery across application restarts.
-func (b *SchemaBridge) initializeFileRepository(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeString {
-		return engine.NewErrorValue(fmt.Errorf("expected string for directory path, got %s", args[0].Type())), nil
+func (b *SchemaBridge) initializeFileRepository(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeString {
+		return types.NewErrorValue(fmt.Errorf("expected string for directory path, got %s", args[0].Type())), nil
 	}
 
-	directory := args[0].(engine.StringValue).Value()
+	directory := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -647,149 +649,149 @@ func (b *SchemaBridge) initializeFileRepository(ctx context.Context, args []engi
 	// Create file repository
 	fileRepo, err := repository.NewFileSchemaRepository(directory)
 	if err != nil {
-		return engine.NewErrorValue(fmt.Errorf("failed to initialize file repository: %w", err)), nil
+		return types.NewErrorValue(fmt.Errorf("failed to initialize file repository: %w", err)), nil
 	}
 
 	b.fileRepo = fileRepo
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) saveSchemaVersion(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) saveSchemaVersion(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) getSchemaVersion(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) getSchemaVersion(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) listSchemaVersions(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) listSchemaVersions(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewArrayValue([]engine.ScriptValue{}), nil
+	return types.NewArrayValue([]types.ScriptValue{}), nil
 }
 
-func (b *SchemaBridge) setCurrentSchemaVersion(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) setCurrentSchemaVersion(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) registerMigrator(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) registerMigrator(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) migrateSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) migrateSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) exportRepository(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) exportRepository(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) importRepository(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) importRepository(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) generateFromTags(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) generateFromTags(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) setTagPriority(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) setTagPriority(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) registerTagParser(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) registerTagParser(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) extractValidationRules(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) extractValidationRules(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) generateWithDocumentation(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) generateWithDocumentation(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) exportToJSONSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) exportToJSONSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) exportToOpenAPI(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) exportToOpenAPI(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) importFromFile(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) importFromFile(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) importFromString(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) importFromString(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) convertFormat(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) convertFormat(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) mergeSchemas(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) mergeSchemas(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) generateDiff(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) generateDiff(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) exportCollection(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) exportCollection(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) importCollection(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) importCollection(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) registerCustomValidator(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) registerCustomValidator(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) unregisterCustomValidator(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) unregisterCustomValidator(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) listCustomValidators(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) listCustomValidators(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewArrayValue([]engine.ScriptValue{}), nil
+	return types.NewArrayValue([]types.ScriptValue{}), nil
 }
 
-func (b *SchemaBridge) validateWithCustom(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) validateWithCustom(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) validateAsync(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) validateAsync(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) getValidationMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) getValidationMetrics(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.validationMetrics.mutex.RLock()
 	defer b.validationMetrics.mutex.RUnlock()
 
@@ -803,22 +805,22 @@ func (b *SchemaBridge) getValidationMetrics(ctx context.Context, args []engine.S
 		"asyncValidations":      b.validationMetrics.AsyncValidations,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(metrics)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(metrics)), nil
 }
 
-func (b *SchemaBridge) clearValidationCache(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) clearValidationCache(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.validationCache = sync.Map{}
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) registerConditionalValidator(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) registerConditionalValidator(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *SchemaBridge) validateConditional(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *SchemaBridge) validateConditional(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation would go here
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // Helper functions
@@ -1031,8 +1033,8 @@ func validationErrorsToScript(errors []string) []interface{} {
 // TypeMappings returns type conversion hints.
 // Maps go-llms schema types to script-compatible types for
 // proper data conversion during method execution.
-func (b *SchemaBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *SchemaBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"schema": {
 			GoType:     "*schemaDomain.Schema",
 			ScriptType: "object",
@@ -1049,16 +1051,16 @@ func (b *SchemaBridge) TypeMappings() map[string]engine.TypeMapping {
 // RequiredPermissions returns required permissions.
 // Requires file system access for schema persistence and
 // memory access for validation result caching.
-func (b *SchemaBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *SchemaBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionFileSystem,
+			Type:        types.PermissionFileSystem,
 			Resource:    "schema.files",
 			Actions:     []string{"read", "write"},
 			Description: "Access to schema files for persistence",
 		},
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "schema.cache",
 			Actions:     []string{"read", "write"},
 			Description: "Cache for validation results",

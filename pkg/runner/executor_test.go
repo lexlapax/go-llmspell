@@ -22,7 +22,7 @@ func TestScriptExecutor(t *testing.T) {
 	t.Run("new_executor", func(t *testing.T) {
 		config := DefaultRunnerConfig()
 		registry := engine.NewRegistry(engine.RegistryConfig{})
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		executor := NewScriptExecutor(config, manager, selector)
@@ -167,7 +167,7 @@ func TestScriptExecutor(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 		executor := NewScriptExecutor(config, manager, selector)
 
@@ -348,7 +348,7 @@ func createTestExecutor(t *testing.T) *ScriptExecutor {
 	err = registry.Register(factory)
 	require.NoError(t, err)
 
-	manager := NewEngineRegistryManager(registry)
+	manager := NewEngineRegistryManager(registry, nil)
 	selector := NewEngineSelector(manager)
 
 	return NewScriptExecutor(config, manager, selector)

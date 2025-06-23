@@ -474,7 +474,7 @@ func TestLLMBridge_TypeMappings(t *testing.T) {
 
 	// Verify mapping structure
 	providerMapping := mappings["provider"]
-	assert.Equal(t, "bridge.Provider", providerMapping.GoType)
+	assert.Equal(t, "types.Provider", providerMapping.GoType)
 	assert.Equal(t, "object", providerMapping.ScriptType)
 }
 

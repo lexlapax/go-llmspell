@@ -10,8 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 
 	// go-llms imports for LLM utilities
 	agentDomain "github.com/lexlapax/go-llms/pkg/agent/domain"
@@ -92,7 +91,7 @@ func NewUtilLLMBridgeWithEventEmitter(eventEmitter agentDomain.EventEmitter) *Ut
 }
 
 // GetID returns the bridge identifier.
-// It implements the engine.Bridge interface.
+// It implements the types.Bridge interface.
 func (b *UtilLLMBridge) GetID() string {
 	return "util_llm"
 }
@@ -100,8 +99,8 @@ func (b *UtilLLMBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // It provides information about the LLM utilities bridge including
 // version, description, and supported LLM features.
-func (b *UtilLLMBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *UtilLLMBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "util_llm",
 		Version:     "2.0.0",
 		Description: "Enhanced LLM utilities with provider capabilities, model discovery, response parsing, streaming events, and cost tracking",
@@ -160,22 +159,24 @@ func (b *UtilLLMBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // It enables the script engine to access LLM utilities through this bridge.
-func (b *UtilLLMBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+func (b *UtilLLMBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
 // It provides metadata about all LLM-related methods available to scripts,
 // including provider management, generation, model discovery, and cost tracking.
-func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *UtilLLMBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Provider creation utilities
 		{
 			Name:        "createProvider",
 			Description: "Create an LLM provider from configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "config", Type: "object", Description: "Provider configuration", Required: true},
 			},
 			ReturnType: "Provider",
@@ -183,7 +184,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createProviderFromEnv",
 			Description: "Create an LLM provider from environment variables",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "providerName", Type: "string", Description: "Provider name", Required: true},
 			},
 			ReturnType: "Provider",
@@ -191,7 +192,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "withProviderOptions",
 			Description: "Create provider-specific options",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
 				{Name: "options", Type: "object", Description: "Provider-specific options", Required: true},
 			},
@@ -202,7 +203,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateTyped",
 			Description: "Generate a typed/structured response",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "Provider", Description: "LLM provider", Required: true},
 				{Name: "prompt", Type: "string", Description: "Generation prompt", Required: true},
 				{Name: "schema", Type: "object", Description: "JSON schema for output", Required: true},
@@ -213,7 +214,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateStructuredOutput",
 			Description: "Validate structured output against schema",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "output", Type: "object", Description: "Output to validate", Required: true},
 				{Name: "schema", Type: "object", Description: "JSON schema", Required: true},
 			},
@@ -224,7 +225,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createProviderPool",
 			Description: "Create a provider pool for load balancing/failover",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "providers", Type: "array", Description: "Array of providers", Required: true},
 				{Name: "strategy", Type: "string", Description: "Pool strategy (roundrobin/failover/fastest)", Required: true},
 			},
@@ -233,7 +234,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "addProviderToPool",
 			Description: "Add a provider to an existing pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "pool", Type: "ProviderPool", Description: "Provider pool", Required: true},
 				{Name: "provider", Type: "Provider", Description: "Provider to add", Required: true},
 				{Name: "weight", Type: "number", Description: "Provider weight", Required: false},
@@ -245,7 +246,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createModelInventory",
 			Description: "Create a model inventory service",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "fetchers", Type: "object", Description: "Provider fetchers configuration", Required: false},
 			},
 			ReturnType: "ModelInventory",
@@ -253,7 +254,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "fetchModelInfo",
 			Description: "Fetch model information for a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "inventory", Type: "ModelInventory", Description: "Model inventory", Required: true},
 				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
 			},
@@ -262,7 +263,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "cacheModelInfo",
 			Description: "Cache model information to file",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "inventory", Type: "ModelInventory", Description: "Model inventory", Required: true},
 				{Name: "cachePath", Type: "string", Description: "Cache file path", Required: true},
 			},
@@ -273,7 +274,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createModelConfig",
 			Description: "Create a model configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
 				{Name: "model", Type: "string", Description: "Model name", Required: true},
 				{Name: "options", Type: "object", Description: "Model options", Required: false},
@@ -283,7 +284,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "mergeProviderOptions",
 			Description: "Merge multiple provider options",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "options1", Type: "object", Description: "First options", Required: true},
 				{Name: "options2", Type: "object", Description: "Second options", Required: true},
 			},
@@ -294,7 +295,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProviderCapabilities",
 			Description: "Get provider capability metadata",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "providerName", Type: "string", Description: "Provider name", Required: true},
 			},
 			ReturnType: "object",
@@ -302,7 +303,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "discoverModels",
 			Description: "Discover available models for a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "providerName", Type: "string", Description: "Provider name", Required: true},
 				{Name: "refresh", Type: "boolean", Description: "Force refresh from API", Required: false},
 			},
@@ -311,7 +312,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "parseResponseWithRecovery",
 			Description: "Parse LLM response with recovery for malformed output",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "response", Type: "string", Description: "LLM response", Required: true},
 				{Name: "format", Type: "string", Description: "Expected format (json/xml/yaml)", Required: false},
 				{Name: "schema", Type: "object", Description: "Optional schema for validation", Required: false},
@@ -321,7 +322,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "streamWithEvents",
 			Description: "Stream LLM response with event emission",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "Provider", Description: "LLM provider", Required: true},
 				{Name: "prompt", Type: "string", Description: "Generation prompt", Required: true},
 				{Name: "eventHandler", Type: "function", Description: "Event handler function", Required: true},
@@ -331,7 +332,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "trackRequestCost",
 			Description: "Track cost for an LLM request",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "requestID", Type: "string", Description: "Request identifier", Required: true},
 				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
 				{Name: "model", Type: "string", Description: "Model name", Required: true},
@@ -342,7 +343,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getCostReport",
 			Description: "Get cost tracking report",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "filter", Type: "object", Description: "Filter criteria", Required: false},
 			},
 			ReturnType: "object",
@@ -350,7 +351,7 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createProviderOptions",
 			Description: "Create provider-specific options with advanced features",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "providerType", Type: "string", Description: "Provider type", Required: true},
 				{Name: "config", Type: "object", Description: "Configuration options", Required: true},
 			},
@@ -362,8 +363,8 @@ func (b *UtilLLMBridge) Methods() []engine.MethodInfo {
 // TypeMappings returns type conversion mappings.
 // It defines how Go LLM types are mapped to script types
 // for pools, inventory, configurations, and costs.
-func (b *UtilLLMBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *UtilLLMBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"ProviderPool": {
 			GoType:     "ProviderPool",
 			ScriptType: "object",
@@ -389,7 +390,7 @@ func (b *UtilLLMBridge) TypeMappings() map[string]engine.TypeMapping {
 
 // ValidateMethod validates method calls.
 // It delegates validation to the engine based on Methods() metadata.
-func (b *UtilLLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *UtilLLMBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -397,22 +398,22 @@ func (b *UtilLLMBridge) ValidateMethod(name string, args []engine.ScriptValue) e
 // RequiredPermissions returns required permissions.
 // It specifies permissions for LLM provider access, cache operations,
 // and metadata storage.
-func (b *UtilLLMBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *UtilLLMBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionNetwork,
+			Type:        types.PermissionNetwork,
 			Resource:    "llm",
 			Actions:     []string{"create", "access"},
 			Description: "Create and access LLM providers",
 		},
 		{
-			Type:        engine.PermissionFileSystem,
+			Type:        types.PermissionFileSystem,
 			Resource:    "cache",
 			Actions:     []string{"read", "write"},
 			Description: "Cache model information",
 		},
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "metadata",
 			Actions:     []string{"read", "write"},
 			Description: "Store provider metadata and cost tracking",
@@ -421,9 +422,9 @@ func (b *UtilLLMBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
-// It implements the engine.Bridge interface, routing method calls
+// It implements the types.Bridge interface, routing method calls
 // to the appropriate LLM operations.
-func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -438,20 +439,20 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		}
 
 		// Get providers array
-		if args[0] == nil || args[0].Type() != engine.TypeArray {
+		if args[0] == nil || args[0].Type() != types.TypeArray {
 			return nil, fmt.Errorf("providers must be an array")
 		}
-		providersArg := args[0].(engine.ArrayValue).Elements()
+		providersArg := args[0].(types.ArrayValue).Elements()
 
 		// Convert to domain.Provider slice
-		providers := make([]bridge.Provider, 0, len(providersArg))
+		providers := make([]types.Provider, 0, len(providersArg))
 		for i, p := range providersArg {
 			// For now, we'll need custom handling for Provider types
-			if p.Type() != engine.TypeCustom {
+			if p.Type() != types.TypeCustom {
 				return nil, fmt.Errorf("provider at index %d must be a Provider", i)
 			}
-			customVal := p.(engine.CustomValue)
-			provider, ok := customVal.Value().(bridge.Provider)
+			customVal := p.(types.CustomValue)
+			provider, ok := customVal.Value().(types.Provider)
 			if !ok {
 				return nil, fmt.Errorf("provider at index %d must be a Provider", i)
 			}
@@ -459,10 +460,10 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		}
 
 		// Get strategy
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("strategy must be string")
 		}
-		strategyStr := args[1].(engine.StringValue).Value()
+		strategyStr := args[1].(types.StringValue).Value()
 
 		// Convert strategy string to enum
 		var strategy llmutil.PoolStrategy
@@ -481,33 +482,33 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		pool := llmutil.NewProviderPool(providers, strategy)
 
 		// Return as custom value since pool is a complex type
-		return engine.NewCustomValue("ProviderPool", pool), nil
+		return types.NewCustomValue("ProviderPool", pool), nil
 
 	case "createModelInventory":
 		// Create model info service to fetch model inventory
 		// Using the modelinfo package's service to aggregate models
 		// Note: The actual model inventory is returned by the service's AggregateModels method
 		// For now, return a placeholder as the service requires provider-specific fetchers
-		result := map[string]engine.ScriptValue{
-			"type": engine.NewStringValue("ModelInventory"),
-			"id":   engine.NewStringValue("inventory_1"),
-			"note": engine.NewStringValue("Use fetchModelInfo to retrieve actual model data"),
+		result := map[string]types.ScriptValue{
+			"type": types.NewStringValue("ModelInventory"),
+			"id":   types.NewStringValue("inventory_1"),
+			"note": types.NewStringValue("Use fetchModelInfo to retrieve actual model data"),
 		}
-		return engine.NewObjectValue(result), nil
+		return types.NewObjectValue(result), nil
 
 	case "createModelConfig":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("createModelConfig requires provider and model parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("provider must be string")
 		}
-		provider := args[0].(engine.StringValue).Value()
+		provider := args[0].(types.StringValue).Value()
 
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("model must be string")
 		}
-		model := args[1].(engine.StringValue).Value()
+		model := args[1].(types.StringValue).Value()
 
 		// Create model config
 		config := llmutil.ModelConfig{
@@ -516,30 +517,30 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		}
 
 		// Add options if provided
-		if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		if len(args) > 2 && args[2] != nil && args[2].Type() == types.TypeObject {
 			options := make(map[string]interface{})
-			for k, v := range args[2].(engine.ObjectValue).Fields() {
+			for k, v := range args[2].(types.ObjectValue).Fields() {
 				options[k] = v.ToGo()
 			}
 			// Options will be applied when go-llms ModelConfig supports additional fields
 			_ = options
 		}
 
-		result := map[string]engine.ScriptValue{
-			"provider": engine.NewStringValue(config.Provider),
-			"model":    engine.NewStringValue(config.Model),
+		result := map[string]types.ScriptValue{
+			"provider": types.NewStringValue(config.Provider),
+			"model":    types.NewStringValue(config.Model),
 		}
-		return engine.NewObjectValue(result), nil
+		return types.NewObjectValue(result), nil
 
 	// Enhanced v0.3.5 features
 	case "getProviderCapabilities":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("getProviderCapabilities requires providerName")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("providerName must be string")
 		}
-		providerName := args[0].(engine.StringValue).Value()
+		providerName := args[0].(types.StringValue).Value()
 
 		// Check if we have cached metadata
 		if metadata, exists := b.metadataRegistry[providerName]; exists {
@@ -548,36 +549,36 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 
 		// TODO: Load metadata from provider when available in go-llms
 		// For now, return basic capabilities based on provider type
-		capabilities := map[string]engine.ScriptValue{
-			"provider": engine.NewStringValue(providerName),
-			"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"streaming":       engine.NewBoolValue(true),
-				"functionCalling": engine.NewBoolValue(providerName == "openai" || providerName == "anthropic"),
-				"vision":          engine.NewBoolValue(providerName == "openai" || providerName == "anthropic"),
-				"embeddings":      engine.NewBoolValue(providerName == "openai"),
+		capabilities := map[string]types.ScriptValue{
+			"provider": types.NewStringValue(providerName),
+			"capabilities": types.NewObjectValue(map[string]types.ScriptValue{
+				"streaming":       types.NewBoolValue(true),
+				"functionCalling": types.NewBoolValue(providerName == "openai" || providerName == "anthropic"),
+				"vision":          types.NewBoolValue(providerName == "openai" || providerName == "anthropic"),
+				"embeddings":      types.NewBoolValue(providerName == "openai"),
 			}),
-			"constraints": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"maxTokens":     engine.NewNumberValue(4096),
-				"rateLimit":     engine.NewNumberValue(60),
-				"contextWindow": engine.NewNumberValue(8192),
+			"constraints": types.NewObjectValue(map[string]types.ScriptValue{
+				"maxTokens":     types.NewNumberValue(4096),
+				"rateLimit":     types.NewNumberValue(60),
+				"contextWindow": types.NewNumberValue(8192),
 			}),
 		}
 
-		return engine.NewObjectValue(capabilities), nil
+		return types.NewObjectValue(capabilities), nil
 
 	case "discoverModels":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("discoverModels requires providerName")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("providerName must be string")
 		}
-		providerName := args[0].(engine.StringValue).Value()
+		providerName := args[0].(types.StringValue).Value()
 
 		// Check refresh flag (not used in current implementation)
 		// refresh := false
-		// if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeBool {
-		// 	refresh = args[1].(engine.BoolValue).Value()
+		// if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeBool {
+		// 	refresh = args[1].(types.BoolValue).Value()
 		// }
 
 		// Use model service to aggregate models from all providers
@@ -599,48 +600,48 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		}
 
 		// Convert models to script-friendly format
-		result := make([]engine.ScriptValue, 0, len(models))
+		result := make([]types.ScriptValue, 0, len(models))
 		for _, model := range models {
-			modelInfo := map[string]engine.ScriptValue{
-				"id":            engine.NewStringValue(model.Name), // Use Name as ID
-				"name":          engine.NewStringValue(model.DisplayName),
-				"description":   engine.NewStringValue(model.Description),
-				"inputCost":     engine.NewNumberValue(model.Pricing.InputPer1kTokens),
-				"outputCost":    engine.NewNumberValue(model.Pricing.OutputPer1kTokens),
-				"maxTokens":     engine.NewNumberValue(float64(model.MaxOutputTokens)),
-				"contextWindow": engine.NewNumberValue(float64(model.ContextWindow)),
-				"capabilities": engine.NewObjectValue(map[string]engine.ScriptValue{
-					"streaming":       engine.NewBoolValue(model.Capabilities.Streaming),
-					"functionCalling": engine.NewBoolValue(model.Capabilities.FunctionCalling),
-					"vision":          engine.NewBoolValue(model.Capabilities.Image.Read),
-					"jsonMode":        engine.NewBoolValue(model.Capabilities.JSONMode),
+			modelInfo := map[string]types.ScriptValue{
+				"id":            types.NewStringValue(model.Name), // Use Name as ID
+				"name":          types.NewStringValue(model.DisplayName),
+				"description":   types.NewStringValue(model.Description),
+				"inputCost":     types.NewNumberValue(model.Pricing.InputPer1kTokens),
+				"outputCost":    types.NewNumberValue(model.Pricing.OutputPer1kTokens),
+				"maxTokens":     types.NewNumberValue(float64(model.MaxOutputTokens)),
+				"contextWindow": types.NewNumberValue(float64(model.ContextWindow)),
+				"capabilities": types.NewObjectValue(map[string]types.ScriptValue{
+					"streaming":       types.NewBoolValue(model.Capabilities.Streaming),
+					"functionCalling": types.NewBoolValue(model.Capabilities.FunctionCalling),
+					"vision":          types.NewBoolValue(model.Capabilities.Image.Read),
+					"jsonMode":        types.NewBoolValue(model.Capabilities.JSONMode),
 				}),
 			}
-			result = append(result, engine.NewObjectValue(modelInfo))
+			result = append(result, types.NewObjectValue(modelInfo))
 		}
 
-		return engine.NewArrayValue(result), nil
+		return types.NewArrayValue(result), nil
 
 	case "parseResponseWithRecovery":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("parseResponseWithRecovery requires response")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("response must be string")
 		}
-		response := args[0].(engine.StringValue).Value()
+		response := args[0].(types.StringValue).Value()
 
 		// Get optional format
 		format := ""
-		if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
-			format = args[1].(engine.StringValue).Value()
+		if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeString {
+			format = args[1].(types.StringValue).Value()
 		}
 
 		// Get optional schema
 		var schema *schemaDomain.Schema
-		if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
+		if len(args) > 2 && args[2] != nil && args[2].Type() == types.TypeObject {
 			schemaMap := make(map[string]interface{})
-			for k, v := range args[2].(engine.ObjectValue).Fields() {
+			for k, v := range args[2].(types.ObjectValue).Fields() {
 				schemaMap[k] = v.ToGo()
 			}
 			// Convert to schema
@@ -689,7 +690,7 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		}
 
 		// Convert result to ScriptValue
-		return engine.NewCustomValue("ParsedResponse", result), nil
+		return types.NewCustomValue("ParsedResponse", result), nil
 
 	case "streamWithEvents":
 		if len(args) < 3 {
@@ -697,22 +698,22 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		}
 
 		// Get provider from custom value
-		if args[0] == nil || args[0].Type() != engine.TypeCustom {
+		if args[0] == nil || args[0].Type() != types.TypeCustom {
 			return nil, fmt.Errorf("provider must be Provider")
 		}
-		customVal := args[0].(engine.CustomValue)
-		_, ok := customVal.Value().(bridge.Provider)
+		customVal := args[0].(types.CustomValue)
+		_, ok := customVal.Value().(types.Provider)
 		if !ok {
 			return nil, fmt.Errorf("provider must be Provider")
 		}
 
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("prompt must be string")
 		}
-		_ = args[1].(engine.StringValue).Value()
+		_ = args[1].(types.StringValue).Value()
 
 		// Get event handler function from custom value
-		if args[2] == nil || args[2].Type() != engine.TypeFunction {
+		if args[2] == nil || args[2].Type() != types.TypeFunction {
 			return nil, fmt.Errorf("eventHandler must be function")
 		}
 		// For now, we'll need custom handling for function types
@@ -721,9 +722,9 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		return nil, fmt.Errorf("function callbacks not yet implemented for ScriptValue")
 
 		// TODO: The rest of this method would need engine-specific function callback support
-		// return map[string]engine.ScriptValue{
-		// 	"content":    engine.NewStringValue(fullContent.String()),
-		// 	"tokenCount": engine.NewNumberValue(float64(tokenCount)),
+		// return map[string]types.ScriptValue{
+		// 	"content":    types.NewStringValue(fullContent.String()),
+		// 	"tokenCount": types.NewNumberValue(float64(tokenCount)),
 		// }, nil
 
 	case "trackRequestCost":
@@ -731,25 +732,25 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 			return nil, fmt.Errorf("trackRequestCost requires requestID, provider, model, and usage")
 		}
 
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("requestID must be string")
 		}
-		requestID := args[0].(engine.StringValue).Value()
+		requestID := args[0].(types.StringValue).Value()
 
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("provider must be string")
 		}
-		provider := args[1].(engine.StringValue).Value()
+		provider := args[1].(types.StringValue).Value()
 
-		if args[2] == nil || args[2].Type() != engine.TypeString {
+		if args[2] == nil || args[2].Type() != types.TypeString {
 			return nil, fmt.Errorf("model must be string")
 		}
-		model := args[2].(engine.StringValue).Value()
+		model := args[2].(types.StringValue).Value()
 
-		if args[3] == nil || args[3].Type() != engine.TypeObject {
+		if args[3] == nil || args[3].Type() != types.TypeObject {
 			return nil, fmt.Errorf("usage must be object")
 		}
-		usageObj := args[3].(engine.ObjectValue).Fields()
+		usageObj := args[3].(types.ObjectValue).Fields()
 		usage := make(map[string]interface{})
 		for k, v := range usageObj {
 			usage[k] = v.ToGo()
@@ -811,21 +812,21 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 			})
 		}
 
-		return engine.NewObjectValue(map[string]engine.ScriptValue{
-			"requestID": engine.NewStringValue(cost.RequestID),
-			"totalCost": engine.NewNumberValue(cost.TotalCost),
-			"breakdown": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"inputCost":    engine.NewNumberValue(cost.InputCost),
-				"outputCost":   engine.NewNumberValue(cost.OutputCost),
-				"inputTokens":  engine.NewNumberValue(float64(cost.InputTokens)),
-				"outputTokens": engine.NewNumberValue(float64(cost.OutputTokens)),
+		return types.NewObjectValue(map[string]types.ScriptValue{
+			"requestID": types.NewStringValue(cost.RequestID),
+			"totalCost": types.NewNumberValue(cost.TotalCost),
+			"breakdown": types.NewObjectValue(map[string]types.ScriptValue{
+				"inputCost":    types.NewNumberValue(cost.InputCost),
+				"outputCost":   types.NewNumberValue(cost.OutputCost),
+				"inputTokens":  types.NewNumberValue(float64(cost.InputTokens)),
+				"outputTokens": types.NewNumberValue(float64(cost.OutputTokens)),
 			}),
 		}), nil
 
 	case "getCostReport":
 		filter := make(map[string]interface{})
-		if len(args) > 0 && args[0] != nil && args[0].Type() == engine.TypeObject {
-			filterObj := args[0].(engine.ObjectValue).Fields()
+		if len(args) > 0 && args[0] != nil && args[0].Type() == types.TypeObject {
+			filterObj := args[0].(types.ObjectValue).Fields()
 			for k, v := range filterObj {
 				filter[k] = v.ToGo()
 			}
@@ -835,13 +836,13 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 		defer b.costTracker.mu.RUnlock()
 
 		// Convert totals to ScriptValue
-		totalCosts := make(map[string]engine.ScriptValue)
+		totalCosts := make(map[string]types.ScriptValue)
 		for provider, cost := range b.costTracker.totals {
-			totalCosts[provider] = engine.NewNumberValue(cost)
+			totalCosts[provider] = types.NewNumberValue(cost)
 		}
 
 		// Build report
-		requests := make([]engine.ScriptValue, 0)
+		requests := make([]types.ScriptValue, 0)
 		providers := make(map[string]int)
 
 		// Filter and aggregate
@@ -855,96 +856,96 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 			}
 
 			// Add to report
-			requestInfo := map[string]engine.ScriptValue{
-				"requestID": engine.NewStringValue(cost.RequestID),
-				"provider":  engine.NewStringValue(cost.Provider),
-				"model":     engine.NewStringValue(cost.Model),
-				"totalCost": engine.NewNumberValue(cost.TotalCost),
-				"timestamp": engine.NewStringValue(cost.Timestamp.Format(time.RFC3339)),
+			requestInfo := map[string]types.ScriptValue{
+				"requestID": types.NewStringValue(cost.RequestID),
+				"provider":  types.NewStringValue(cost.Provider),
+				"model":     types.NewStringValue(cost.Model),
+				"totalCost": types.NewNumberValue(cost.TotalCost),
+				"timestamp": types.NewStringValue(cost.Timestamp.Format(time.RFC3339)),
 			}
-			requests = append(requests, engine.NewObjectValue(requestInfo))
+			requests = append(requests, types.NewObjectValue(requestInfo))
 
 			// Update summary
 			providers[cost.Provider]++
 		}
 
 		// Convert providers count to ScriptValue
-		providersCount := make(map[string]engine.ScriptValue)
+		providersCount := make(map[string]types.ScriptValue)
 		for provider, count := range providers {
-			providersCount[provider] = engine.NewNumberValue(float64(count))
+			providersCount[provider] = types.NewNumberValue(float64(count))
 		}
 
-		report := map[string]engine.ScriptValue{
-			"totalCosts": engine.NewObjectValue(totalCosts),
-			"requests":   engine.NewArrayValue(requests),
-			"summary": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"totalRequests": engine.NewNumberValue(float64(len(b.costTracker.costs))),
-				"providers":     engine.NewObjectValue(providersCount),
+		report := map[string]types.ScriptValue{
+			"totalCosts": types.NewObjectValue(totalCosts),
+			"requests":   types.NewArrayValue(requests),
+			"summary": types.NewObjectValue(map[string]types.ScriptValue{
+				"totalRequests": types.NewNumberValue(float64(len(b.costTracker.costs))),
+				"providers":     types.NewObjectValue(providersCount),
 			}),
 		}
 
-		return engine.NewObjectValue(report), nil
+		return types.NewObjectValue(report), nil
 
 	case "createProviderOptions":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("createProviderOptions requires providerType and config")
 		}
 
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("providerType must be string")
 		}
-		providerType := args[0].(engine.StringValue).Value()
+		providerType := args[0].(types.StringValue).Value()
 
-		if args[1] == nil || args[1].Type() != engine.TypeObject {
+		if args[1] == nil || args[1].Type() != types.TypeObject {
 			return nil, fmt.Errorf("config must be object")
 		}
-		configObj := args[1].(engine.ObjectValue).Fields()
+		configObj := args[1].(types.ObjectValue).Fields()
 		config := make(map[string]interface{})
 		for k, v := range configObj {
 			config[k] = v.ToGo()
 		}
 
 		// Create provider-specific options based on type
-		options := map[string]engine.ScriptValue{
-			"type": engine.NewStringValue(providerType),
+		options := map[string]types.ScriptValue{
+			"type": types.NewStringValue(providerType),
 		}
 
 		// Extract common options
 		if baseURL, ok := config["baseURL"].(string); ok {
-			options["baseURL"] = engine.NewStringValue(baseURL)
+			options["baseURL"] = types.NewStringValue(baseURL)
 		}
 		if apiKey, ok := config["apiKey"].(string); ok {
-			options["apiKey"] = engine.NewStringValue(apiKey)
+			options["apiKey"] = types.NewStringValue(apiKey)
 		}
 		if timeout, ok := config["timeout"].(float64); ok {
-			options["timeout"] = engine.NewNumberValue(float64(int(timeout)))
+			options["timeout"] = types.NewNumberValue(float64(int(timeout)))
 		}
 
 		// Add provider-specific options
 		switch providerType {
 		case "openai":
 			if org, ok := config["organization"].(string); ok {
-				options["organization"] = engine.NewStringValue(org)
+				options["organization"] = types.NewStringValue(org)
 			}
 			if apiVersion, ok := config["apiVersion"].(string); ok {
-				options["apiVersion"] = engine.NewStringValue(apiVersion)
+				options["apiVersion"] = types.NewStringValue(apiVersion)
 			}
 
 		case "anthropic":
 			if apiVersion, ok := config["anthropicVersion"].(string); ok {
-				options["anthropicVersion"] = engine.NewStringValue(apiVersion)
+				options["anthropicVersion"] = types.NewStringValue(apiVersion)
 			}
 
 		case "gemini":
 			if location, ok := config["location"].(string); ok {
-				options["location"] = engine.NewStringValue(location)
+				options["location"] = types.NewStringValue(location)
 			}
 			if projectID, ok := config["projectID"].(string); ok {
-				options["projectID"] = engine.NewStringValue(projectID)
+				options["projectID"] = types.NewStringValue(projectID)
 			}
 		}
 
-		return engine.NewObjectValue(options), nil
+		return types.NewObjectValue(options), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
@@ -953,38 +954,38 @@ func (b *UtilLLMBridge) ExecuteMethod(ctx context.Context, name string, args []e
 
 // convertProviderMetadataToScriptValue converts ProviderMetadata to ScriptValue.
 // It extracts capabilities and constraints into a script-friendly format.
-func convertProviderMetadataToScriptValue(metadata provider.ProviderMetadata) engine.ScriptValue {
+func convertProviderMetadataToScriptValue(metadata provider.ProviderMetadata) types.ScriptValue {
 	// Get capabilities
 	capabilities := metadata.GetCapabilities()
-	capMap := make(map[string]engine.ScriptValue)
+	capMap := make(map[string]types.ScriptValue)
 	for _, cap := range capabilities {
 		switch cap {
 		case provider.CapabilityStreaming:
-			capMap["streaming"] = engine.NewBoolValue(true)
+			capMap["streaming"] = types.NewBoolValue(true)
 		case provider.CapabilityFunctionCalling:
-			capMap["functionCalling"] = engine.NewBoolValue(true)
+			capMap["functionCalling"] = types.NewBoolValue(true)
 		case provider.CapabilityVision:
-			capMap["vision"] = engine.NewBoolValue(true)
+			capMap["vision"] = types.NewBoolValue(true)
 		case provider.CapabilityEmbeddings:
-			capMap["embeddings"] = engine.NewBoolValue(true)
+			capMap["embeddings"] = types.NewBoolValue(true)
 		case provider.CapabilityStructuredOutput:
-			capMap["structured"] = engine.NewBoolValue(true)
+			capMap["structured"] = types.NewBoolValue(true)
 		}
 	}
 
 	// Get constraints
 	constraints := metadata.GetConstraints()
 
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"name":         engine.NewStringValue(metadata.Name()),
-		"description":  engine.NewStringValue(metadata.Description()),
-		"capabilities": engine.NewObjectValue(capMap),
-		"constraints": engine.NewObjectValue(map[string]engine.ScriptValue{
-			"maxBatchSize":    engine.NewNumberValue(float64(constraints.MaxBatchSize)),
-			"maxConcurrency":  engine.NewNumberValue(float64(constraints.MaxConcurrency)),
-			"rateLimit":       engine.NewNumberValue(0), // TODO: Extract rate limit value when available
-			"minRequestDelay": engine.NewNumberValue(constraints.MinRequestDelay.Seconds()),
-			"maxRetries":      engine.NewNumberValue(float64(constraints.MaxRetries)),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"name":         types.NewStringValue(metadata.Name()),
+		"description":  types.NewStringValue(metadata.Description()),
+		"capabilities": types.NewObjectValue(capMap),
+		"constraints": types.NewObjectValue(map[string]types.ScriptValue{
+			"maxBatchSize":    types.NewNumberValue(float64(constraints.MaxBatchSize)),
+			"maxConcurrency":  types.NewNumberValue(float64(constraints.MaxConcurrency)),
+			"rateLimit":       types.NewNumberValue(0), // TODO: Extract rate limit value when available
+			"minRequestDelay": types.NewNumberValue(constraints.MinRequestDelay.Seconds()),
+			"maxRetries":      types.NewNumberValue(float64(constraints.MaxRetries)),
 		}),
 	})
 }

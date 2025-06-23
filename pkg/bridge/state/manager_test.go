@@ -18,49 +18,48 @@ import (
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
 	"github.com/lexlapax/go-llms/pkg/testutils/fixtures"
 	"github.com/lexlapax/go-llms/pkg/testutils/helpers"
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
 // Test helper functions using go-llms testutils patterns
 
 // toScriptValue converts test values to ScriptValue for testing, preserving state objects
-func toScriptValue(v interface{}) engine.ScriptValue {
+func toScriptValue(v interface{}) types.ScriptValue {
 	// Check if this is an array that might contain state objects
 	if arr, ok := v.([]interface{}); ok {
-		scriptArray := make([]engine.ScriptValue, len(arr))
+		scriptArray := make([]types.ScriptValue, len(arr))
 		for i, item := range arr {
 			scriptArray[i] = toScriptValue(item) // Recursive call to handle state objects in array
 		}
-		return engine.NewArrayValue(scriptArray)
+		return types.NewArrayValue(scriptArray)
 	}
 
 	// Check if this is a state object (map with __state field)
 	if m, ok := v.(map[string]interface{}); ok {
 		if _, hasState := m["__state"]; hasState {
 			// This is a state object - need to preserve the __state field as a custom value
-			scriptMap := make(map[string]engine.ScriptValue)
+			scriptMap := make(map[string]types.ScriptValue)
 			for k, val := range m {
 				if k == "__state" {
 					// Preserve the state object as a custom value
-					scriptMap[k] = engine.NewCustomValue("State", val)
+					scriptMap[k] = types.NewCustomValue("State", val)
 				} else {
 					// Convert other fields normally
-					scriptMap[k] = engine.ConvertToScriptValue(val)
+					scriptMap[k] = types.ConvertToScriptValue(val)
 				}
 			}
-			return engine.NewObjectValue(scriptMap)
+			return types.NewObjectValue(scriptMap)
 		}
 	}
 
 	// For non-state objects, use normal conversion
-	return engine.ConvertToScriptValue(v)
+	return types.ConvertToScriptValue(v)
 }
 
 // toScriptValues converts multiple test values to ScriptValue slice
-func toScriptValues(values ...interface{}) []engine.ScriptValue {
-	result := make([]engine.ScriptValue, len(values))
+func toScriptValues(values ...interface{}) []types.ScriptValue {
+	result := make([]types.ScriptValue, len(values))
 	for i, v := range values {
 		result[i] = toScriptValue(v)
 	}
@@ -88,16 +87,22 @@ func setupTestBridgeWithEngine(t *testing.T) (*StateManagerBridge, context.Conte
 
 	bridge, ctx := setupTestBridge(t)
 	eng := newStateTestEngine()
-	err := eng.Initialize(engine.EngineConfig{})
+	err := eng.Initialize(types.EngineConfig{})
 	require.NoError(t, err)
-	err = bridge.RegisterWithEngine(eng)
+	
+	// Register the MockScriptEngine directly by casting to the interface  
+	var scriptEngine types.ScriptEngine = eng.MockScriptEngine
+	err = bridge.RegisterWithEngine(scriptEngine)
 	require.NoError(t, err)
+	
+	// Store bridge reference for CallFunction to use
+	eng.bridge = bridge
 
 	return bridge, ctx, eng
 }
 
 // createTestStateManager creates a go-llms StateManager for testing
-func createTestStateManager() bridge.StateManager {
+func createTestStateManager() types.StateManager {
 	return core.NewStateManager()
 }
 
@@ -262,7 +267,7 @@ func TestStateManagerBridge_Methods(t *testing.T) {
 		"mergeStates", "get", "set", "has", "keys", "values",
 	}
 
-	methodMap := make(map[string]engine.MethodInfo)
+	methodMap := make(map[string]types.MethodInfo)
 	for _, m := range methods {
 		methodMap[m.Name] = m
 	}
@@ -308,7 +313,7 @@ func TestStateManagerBridge_Permissions(t *testing.T) {
 	// Check for memory permission
 	hasMemoryPermission := false
 	for _, perm := range permissions {
-		if perm.Type == engine.PermissionMemory {
+		if perm.Type == types.PermissionMemory {
 			hasMemoryPermission = true
 			break
 		}
@@ -960,52 +965,52 @@ func TestStateManagerBridge_StateLifecycleDirect(t *testing.T) {
 	bridge, ctx := setupTestBridge(t)
 
 	// Test createState directly through ExecuteMethod
-	stateValue, err := bridge.ExecuteMethod(ctx, "createState", []engine.ScriptValue{})
+	stateValue, err := bridge.ExecuteMethod(ctx, "createState", []types.ScriptValue{})
 	require.NoError(t, err)
-	require.Equal(t, engine.TypeObject, stateValue.Type(), "createState should return object")
+	require.Equal(t, types.TypeObject, stateValue.Type(), "createState should return object")
 
-	stateObj := stateValue.(engine.ObjectValue)
+	stateObj := stateValue.(types.ObjectValue)
 	stateFields := stateObj.Fields()
 	assert.Contains(t, stateFields, "id", "Created state should have ID")
 	assert.Contains(t, stateFields, "__state", "Created state should have __state field")
 
 	// Test state.set
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		stateValue,
-		engine.NewStringValue("test_key"),
-		engine.NewStringValue("test_value"),
+		types.NewStringValue("test_key"),
+		types.NewStringValue("test_value"),
 	})
 	require.NoError(t, err, "state.set should succeed")
 
 	// Test state.get
-	getValue, err := bridge.ExecuteMethod(ctx, "get", []engine.ScriptValue{
+	getValue, err := bridge.ExecuteMethod(ctx, "get", []types.ScriptValue{
 		stateValue,
-		engine.NewStringValue("test_key"),
+		types.NewStringValue("test_key"),
 	})
 	require.NoError(t, err, "state.get should succeed")
-	require.Equal(t, engine.TypeObject, getValue.Type(), "get should return object")
+	require.Equal(t, types.TypeObject, getValue.Type(), "get should return object")
 
-	getResult := getValue.(engine.ObjectValue).Fields()
-	assert.Equal(t, "test_value", getResult["value"].(engine.StringValue).Value(), "get should return correct value")
-	assert.True(t, getResult["exists"].(engine.BoolValue).Value(), "get should return exists=true")
+	getResult := getValue.(types.ObjectValue).Fields()
+	assert.Equal(t, "test_value", getResult["value"].(types.StringValue).Value(), "get should return correct value")
+	assert.True(t, getResult["exists"].(types.BoolValue).Value(), "get should return exists=true")
 
 	// Test state.has
-	hasValue, err := bridge.ExecuteMethod(ctx, "has", []engine.ScriptValue{
+	hasValue, err := bridge.ExecuteMethod(ctx, "has", []types.ScriptValue{
 		stateValue,
-		engine.NewStringValue("test_key"),
+		types.NewStringValue("test_key"),
 	})
 	require.NoError(t, err, "state.has should succeed")
-	require.Equal(t, engine.TypeBool, hasValue.Type(), "has should return bool")
-	assert.True(t, hasValue.(engine.BoolValue).Value(), "has should return true for existing key")
+	require.Equal(t, types.TypeBool, hasValue.Type(), "has should return bool")
+	assert.True(t, hasValue.(types.BoolValue).Value(), "has should return true for existing key")
 
 	// Test state.keys
-	keysValue, err := bridge.ExecuteMethod(ctx, "keys", []engine.ScriptValue{stateValue})
+	keysValue, err := bridge.ExecuteMethod(ctx, "keys", []types.ScriptValue{stateValue})
 	require.NoError(t, err, "state.keys should succeed")
-	require.Equal(t, engine.TypeArray, keysValue.Type(), "keys should return array")
+	require.Equal(t, types.TypeArray, keysValue.Type(), "keys should return array")
 
-	keysArray := keysValue.(engine.ArrayValue).Elements()
+	keysArray := keysValue.(types.ArrayValue).Elements()
 	require.Len(t, keysArray, 1, "keys should return one key")
-	assert.Equal(t, "test_key", keysArray[0].(engine.StringValue).Value(), "keys should return correct key")
+	assert.Equal(t, "test_key", keysArray[0].(types.StringValue).Value(), "keys should return correct key")
 }
 
 func TestStateManagerBridge_Performance(t *testing.T) {
@@ -1048,11 +1053,13 @@ func TestStateManagerBridge_Performance(t *testing.T) {
 
 // Helper functions for testing
 
-// stateTestEngine extends MockScriptEngine with state-specific functionality
+// stateTestEngine implements types.ScriptEngine with state-specific functionality
 type stateTestEngine struct {
 	*testutils.MockScriptEngine
 	functions map[string]interface{}
+	bridge    types.Bridge
 }
+
 
 func newStateTestEngine() *stateTestEngine {
 	return &stateTestEngine{
@@ -1065,7 +1072,7 @@ func (e *stateTestEngine) RegisterFunction(name string, fn interface{}) {
 	e.functions[name] = fn
 }
 
-func (e *stateTestEngine) RegisterBridge(bridge engine.Bridge) error {
+func (e *stateTestEngine) RegisterBridge(bridge types.Bridge) error {
 	// First register with the base mock
 	if err := e.MockScriptEngine.RegisterBridge(bridge); err != nil {
 		return err
@@ -1074,18 +1081,15 @@ func (e *stateTestEngine) RegisterBridge(bridge engine.Bridge) error {
 	// For state_manager bridge, also register its methods as functions
 	if bridge.GetID() == "state_manager" {
 		methods := bridge.Methods()
-		// Debug: Print available methods
-		// fmt.Printf("Registering %d methods for state_manager bridge\n", len(methods))
 		for _, method := range methods {
 			methodName := method.Name
 			// Capture methodName in the closure properly
 			capturedMethodName := methodName
 			// Create a function that calls bridge ExecuteMethod
 			funcName := "state." + methodName
-			// fmt.Printf("Registering function: %s\n", funcName)
 			e.functions[funcName] = func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 				// Convert params to ScriptValues based on method signature
-				var args []engine.ScriptValue
+				var args []types.ScriptValue
 
 				// Handle methods that expect individual parameters
 				switch capturedMethodName {
@@ -1223,7 +1227,7 @@ func (e *stateTestEngine) RegisterBridge(bridge engine.Bridge) error {
 							}
 							// If no specific params found, pass the whole map as one argument
 							if len(args) == 0 {
-								args = []engine.ScriptValue{toScriptValue(params)}
+								args = []types.ScriptValue{toScriptValue(params)}
 							}
 						}
 					}
@@ -1246,19 +1250,19 @@ func (e *stateTestEngine) RegisterBridge(bridge engine.Bridge) error {
 }
 
 // convertResultToGo converts ScriptValue to Go value while preserving state objects
-func (e *stateTestEngine) convertResultToGo(result engine.ScriptValue) interface{} {
+func (e *stateTestEngine) convertResultToGo(result types.ScriptValue) interface{} {
 	if result == nil {
 		return nil
 	}
 
 	switch result.Type() {
-	case engine.TypeObject:
-		obj := result.(engine.ObjectValue)
+	case types.TypeObject:
+		obj := result.(types.ObjectValue)
 		fields := obj.Fields()
 		converted := make(map[string]interface{})
 
 		// Check if this is a state object (has __state field)
-		if stateField, hasState := fields["__state"]; hasState && stateField.Type() == engine.TypeCustom {
+		if stateField, hasState := fields["__state"]; hasState && stateField.Type() == types.TypeCustom {
 			// This is a state object - preserve all fields including __state
 			for k, v := range fields {
 				if k == "__state" {
@@ -1277,8 +1281,8 @@ func (e *stateTestEngine) convertResultToGo(result engine.ScriptValue) interface
 		}
 		return converted
 
-	case engine.TypeArray:
-		arr := result.(engine.ArrayValue)
+	case types.TypeArray:
+		arr := result.(types.ArrayValue)
 		elements := arr.Elements()
 		converted := make([]interface{}, len(elements))
 		for i, elem := range elements {
@@ -1293,22 +1297,83 @@ func (e *stateTestEngine) convertResultToGo(result engine.ScriptValue) interface
 }
 
 func (e *stateTestEngine) CallFunction(name string, ctx context.Context, params map[string]interface{}) (interface{}, error) {
-	// fmt.Printf("CallFunction called with name: %s, available functions: %d\n", name, len(e.functions))
+	// Handle state.* functions through bridge
+	if strings.HasPrefix(name, "state.") && e.bridge != nil {
+		methodName := strings.TrimPrefix(name, "state.")
+		
+		// Convert params to ScriptValues based on method signature
+		var args []types.ScriptValue
+		
+		// Handle methods that expect individual parameters
+		switch methodName {
+		case "set":
+			// set expects: state, key, value
+			if state, ok := params["state"]; ok {
+				args = append(args, toScriptValue(state))
+			}
+			if key, ok := params["key"]; ok {
+				args = append(args, toScriptValue(key))
+			}
+			if value, ok := params["value"]; ok {
+				args = append(args, toScriptValue(value))
+			}
+		case "get", "has", "delete":
+			// These expect: state, key
+			if state, ok := params["state"]; ok {
+				args = append(args, toScriptValue(state))
+			}
+			if key, ok := params["key"]; ok {
+				args = append(args, toScriptValue(key))
+			}
+		case "loadState", "deleteState":
+			// These expect: id
+			if id, ok := params["id"]; ok {
+				args = append(args, toScriptValue(id))
+			}
+		case "saveState":
+			// saveState expects: state
+			if state, ok := params["state"]; ok {
+				args = append(args, toScriptValue(state))
+			}
+		case "mergeStates":
+			// mergeStates expects: states, strategy
+			if states, ok := params["states"]; ok {
+				args = append(args, toScriptValue(states))
+			}
+			if strategy, ok := params["strategy"]; ok {
+				args = append(args, toScriptValue(strategy))
+			}
+		default:
+			// For other methods, convert all params as a single object or no params
+			if len(params) == 0 {
+				// No parameters
+			} else {
+				// Convert all params as individual arguments
+				for _, v := range params {
+					args = append(args, toScriptValue(v))
+				}
+			}
+		}
+		
+		// Call bridge method
+		result, err := e.bridge.ExecuteMethod(ctx, methodName, args)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Convert result back to Go type
+		return e.convertResultToGo(result), nil
+	}
+	
+	// Check functions map for non-state functions
 	fn, exists := e.functions[name]
 	if !exists {
-		// Print available functions
-		// fmt.Printf("Available functions:\n")
-		// for fname := range e.functions {
-		// 	fmt.Printf("  - %s\n", fname)
-		// }
 		return nil, fmt.Errorf("function not found: %s", name)
 	}
 
-	// For state methods, call the function
-	if strings.HasPrefix(name, "state.") {
-		if callFn, ok := fn.(func(context.Context, map[string]interface{}) (interface{}, error)); ok {
-			return callFn(ctx, params)
-		}
+	// For other functions, use the function map
+	if callFn, ok := fn.(func(context.Context, map[string]interface{}) (interface{}, error)); ok {
+		return callFn(ctx, params)
 	}
 
 	// Simple mock - just check if function exists and return test data
@@ -1453,8 +1518,8 @@ func TestStateManagerBridge_DirectStateOperations(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.NotNil(t, result, "createState should return result")
-		assert.Equal(t, engine.TypeObject, result.Type(), "createState should return object")
-		stateObj := result.(engine.ObjectValue).Fields()
+		assert.Equal(t, types.TypeObject, result.Type(), "createState should return object")
+		stateObj := result.(types.ObjectValue).Fields()
 		stateId, exists := stateObj["id"]
 		assert.True(t, exists, "Created state should have ID field")
 		assert.NotNil(t, stateId, "Created state ID should not be nil")
@@ -1466,8 +1531,8 @@ func TestStateManagerBridge_DirectStateOperations(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.NotNil(t, result, "listStates should return result")
-		assert.Equal(t, engine.TypeArray, result.Type(), "listStates should return array")
-		states := result.(engine.ArrayValue).Elements()
+		assert.Equal(t, types.TypeArray, result.Type(), "listStates should return array")
+		states := result.(types.ArrayValue).Elements()
 		assert.Empty(t, states, "Initial state list should be empty")
 	})
 }

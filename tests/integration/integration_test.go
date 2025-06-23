@@ -73,7 +73,7 @@ func TestIntegrationBasicSpellExecution(t *testing.T) {
 	}
 
 	// Create engine manager and selector
-	engineManager := runner.NewEngineRegistryManager(registry)
+	engineManager := runner.NewEngineRegistryManager(registry, runnerConfig)
 	engineSelector := runner.NewEngineSelector(engineManager)
 
 	// Create and configure runner
@@ -160,7 +160,7 @@ func TestIntegrationSpellWithBridges(t *testing.T) {
 	}
 
 	// Create engine manager and selector
-	engineManager := runner.NewEngineRegistryManager(registry)
+	engineManager := runner.NewEngineRegistryManager(registry, runnerConfig)
 	engineSelector := runner.NewEngineSelector(engineManager)
 
 	// Create runner
@@ -206,7 +206,7 @@ func TestIntegrationErrorHandling(t *testing.T) {
 		DefaultEngine:        "lua",
 	}
 
-	engineManager := runner.NewEngineRegistryManager(registry)
+	engineManager := runner.NewEngineRegistryManager(registry, runnerConfig)
 	engineSelector := runner.NewEngineSelector(engineManager)
 	scriptRunner := runner.NewScriptExecutor(runnerConfig, engineManager, engineSelector)
 	err = scriptRunner.Initialize(ctx)
@@ -322,7 +322,7 @@ func TestIntegrationSecurityProfiles(t *testing.T) {
 		DefaultEngine:        "lua",
 	}
 
-	engineManager := runner.NewEngineRegistryManager(registry)
+	engineManager := runner.NewEngineRegistryManager(registry, runnerConfig)
 	engineSelector := runner.NewEngineSelector(engineManager)
 	scriptRunner := runner.NewScriptExecutor(runnerConfig, engineManager, engineSelector)
 	err = scriptRunner.Initialize(ctx)
@@ -382,7 +382,7 @@ func TestIntegrationParameterPassing(t *testing.T) {
 		DefaultEngine:        "lua",
 	}
 
-	engineManager := runner.NewEngineRegistryManager(registry)
+	engineManager := runner.NewEngineRegistryManager(registry, runnerConfig)
 	engineSelector := runner.NewEngineSelector(engineManager)
 	scriptRunner := runner.NewScriptExecutor(runnerConfig, engineManager, engineSelector)
 	err = scriptRunner.Initialize(ctx)
@@ -451,7 +451,7 @@ func TestIntegrationConcurrentExecution(t *testing.T) {
 		DefaultEngine:        "lua",
 	}
 
-	engineManager := runner.NewEngineRegistryManager(registry)
+	engineManager := runner.NewEngineRegistryManager(registry, runnerConfig)
 	engineSelector := runner.NewEngineSelector(engineManager)
 	scriptRunner := runner.NewScriptExecutor(runnerConfig, engineManager, engineSelector)
 	err = scriptRunner.Initialize(ctx)
@@ -610,7 +610,7 @@ func TestIntegrationBridgeRegistry(t *testing.T) {
 		DefaultEngine:        "lua",
 	}
 
-	engineManager := runner.NewEngineRegistryManager(registry)
+	engineManager := runner.NewEngineRegistryManager(registry, runnerConfig)
 	engineSelector := runner.NewEngineSelector(engineManager)
 	scriptRunner := runner.NewScriptExecutor(runnerConfig, engineManager, engineSelector)
 	err = scriptRunner.Initialize(ctx)

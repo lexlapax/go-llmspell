@@ -10,10 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
-
-	// Bridge imports
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 )
 
 // PoolStrategy defines the strategy for selecting providers from a pool.
@@ -99,7 +96,7 @@ type TokenPool struct {
 // It reuses channels for streaming responses to minimize
 // channel allocation overhead.
 type ChannelPool struct {
-	channels map[string]chan bridge.ResponseStream
+	channels map[string]chan types.ResponseStream
 	mu       sync.RWMutex
 }
 
@@ -125,7 +122,7 @@ func NewPoolBridge(llmBridge *LLMBridge) *PoolBridge {
 		responsePool: &ResponsePool{
 			pool: sync.Pool{
 				New: func() interface{} {
-					return &bridge.Response{}
+					return &types.Response{}
 				},
 			},
 		},
@@ -137,7 +134,7 @@ func NewPoolBridge(llmBridge *LLMBridge) *PoolBridge {
 			},
 		},
 		channelPool: &ChannelPool{
-			channels: make(map[string]chan bridge.ResponseStream),
+			channels: make(map[string]chan types.ResponseStream),
 		},
 		llmBridge: llmBridge,
 	}
@@ -152,7 +149,7 @@ type Token struct {
 }
 
 // GetID returns the bridge ID.
-// It implements the engine.Bridge interface.
+// It implements the types.Bridge interface.
 func (b *PoolBridge) GetID() string {
 	return "pool"
 }
@@ -160,8 +157,8 @@ func (b *PoolBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // It provides information about the pool bridge including
 // version, description, and supported features.
-func (b *PoolBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *PoolBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "Pool Bridge",
 		Version:     "2.0.0",
 		Description: "Provider pooling with load balancing strategies",
@@ -197,7 +194,7 @@ func (b *PoolBridge) Cleanup(ctx context.Context) error {
 	for _, ch := range b.channelPool.channels {
 		close(ch)
 	}
-	b.channelPool.channels = make(map[string]chan bridge.ResponseStream)
+	b.channelPool.channels = make(map[string]chan types.ResponseStream)
 
 	b.initialized = false
 	return nil
@@ -211,22 +208,24 @@ func (b *PoolBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // It enables the script engine to access pool functionality through this bridge.
-func (b *PoolBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+func (b *PoolBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
 // It provides metadata about all pool-related methods available to scripts,
 // including pool creation, management, metrics, and load-balanced generation.
-func (b *PoolBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *PoolBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Pool Management
 		{
 			Name:        "createPool",
 			Description: "Create a new provider pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Pool name"},
 				{Name: "providers", Type: "array", Required: true, Description: "Array of provider names"},
 				{Name: "strategy", Type: "string", Required: true, Description: "Pool strategy (round_robin, failover, fastest)"},
@@ -236,7 +235,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getPool",
 			Description: "Get pool information",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "object",
@@ -244,13 +243,13 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listPools",
 			Description: "List all pools",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 		},
 		{
 			Name:        "removePool",
 			Description: "Remove a pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "void",
@@ -259,7 +258,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getPoolMetrics",
 			Description: "Get metrics for a pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "object",
@@ -267,7 +266,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProviderHealth",
 			Description: "Get health status of providers in pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "array",
@@ -275,7 +274,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "resetPoolMetrics",
 			Description: "Reset metrics for a pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "void",
@@ -284,7 +283,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateWithPool",
 			Description: "Generate text using a pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 				{Name: "prompt", Type: "string", Required: true, Description: "Prompt text"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
@@ -294,7 +293,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateMessageWithPool",
 			Description: "Generate from messages using a pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 				{Name: "messages", Type: "array", Required: true, Description: "Array of messages"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
@@ -304,7 +303,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "streamWithPool",
 			Description: "Stream generation using a pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 				{Name: "prompt", Type: "string", Required: true, Description: "Prompt text"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
@@ -315,13 +314,13 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getResponseFromPool",
 			Description: "Get a response object from pool",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "object",
 		},
 		{
 			Name:        "returnResponseToPool",
 			Description: "Return a response object to pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "response", Type: "object", Required: true, Description: "Response object to return"},
 			},
 			ReturnType: "void",
@@ -329,13 +328,13 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getTokenFromPool",
 			Description: "Get a token object from pool",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "object",
 		},
 		{
 			Name:        "returnTokenToPool",
 			Description: "Return a token object to pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "token", Type: "object", Required: true, Description: "Token object to return"},
 			},
 			ReturnType: "void",
@@ -343,13 +342,13 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getChannelFromPool",
 			Description: "Get a channel from pool",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "object",
 		},
 		{
 			Name:        "returnChannelToPool",
 			Description: "Return a channel to pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "channelID", Type: "string", Required: true, Description: "Channel identifier"},
 			},
 			ReturnType: "void",
@@ -358,7 +357,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "setPoolConfiguration",
 			Description: "Set pool configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 				{Name: "config", Type: "object", Required: true, Description: "Configuration object"},
 			},
@@ -367,7 +366,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getPoolConfiguration",
 			Description: "Get pool configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "object",
@@ -376,7 +375,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "setProviderWeight",
 			Description: "Set weight for a provider in weighted strategy",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 				{Name: "weight", Type: "number", Required: true, Description: "Weight value"},
@@ -386,7 +385,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "rebalancePool",
 			Description: "Rebalance providers in pool",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "void",
@@ -394,7 +393,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "performHealthCheck",
 			Description: "Perform health check on pool providers",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "poolName", Type: "string", Required: true, Description: "Pool name"},
 			},
 			ReturnType: "object",
@@ -403,7 +402,7 @@ func (b *PoolBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method parameters
-func (b *PoolBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *PoolBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	if !b.IsInitialized() {
 		return fmt.Errorf("pool bridge not initialized")
 	}
@@ -449,11 +448,11 @@ func (b *PoolBridge) ValidateMethod(name string, args []engine.ScriptValue) erro
 }
 
 // ExecuteMethod executes a bridge method with ScriptValue parameters
-func (b *PoolBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	if !b.initialized {
 		b.mu.RUnlock()
-		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
+		return types.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
 	}
 	b.mu.RUnlock()
 
@@ -513,13 +512,13 @@ func (b *PoolBridge) ExecuteMethod(ctx context.Context, name string, args []engi
 		return b.performHealthCheck(ctx, args)
 
 	default:
-		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
 	}
 }
 
 // TypeMappings returns type conversion mappings
-func (b *PoolBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *PoolBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"ProviderPool": {
 			GoType:     "llm.ProviderPool",
 			ScriptType: "object",
@@ -536,10 +535,10 @@ func (b *PoolBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // RequiredPermissions returns required permissions
-func (b *PoolBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *PoolBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "pool",
 			Actions:     []string{"read", "write"},
 			Description: "Manage provider pools",
@@ -549,14 +548,14 @@ func (b *PoolBridge) RequiredPermissions() []engine.Permission {
 
 // Pool Management Methods
 
-func (b *PoolBridge) createPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) createPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("createPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 	providersArray := args[1].ToGo().([]interface{})
-	strategyStr := args[2].(engine.StringValue).Value()
+	strategyStr := args[2].(types.StringValue).Value()
 
 	// Convert providers array
 	providers := make([]string, 0, len(providersArray))
@@ -572,7 +571,7 @@ func (b *PoolBridge) createPool(ctx context.Context, args []engine.ScriptValue) 
 	case StrategyRoundRobin, StrategyFailover, StrategyFastest, StrategyWeighted, StrategyLeastUsed:
 		// Valid strategy
 	default:
-		return engine.NewErrorValue(fmt.Errorf("invalid strategy: %s", strategyStr)), nil
+		return types.NewErrorValue(fmt.Errorf("invalid strategy: %s", strategyStr)), nil
 	}
 
 	// Create pool
@@ -611,151 +610,151 @@ func (b *PoolBridge) createPool(ctx context.Context, args []engine.ScriptValue) 
 	return b.poolToScriptValue(pool), nil
 }
 
-func (b *PoolBridge) getPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) getPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[name]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", name)), nil
 	}
 
 	return b.poolToScriptValue(pool), nil
 }
 
-func (b *PoolBridge) listPools(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) listPools(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	pools := make([]engine.ScriptValue, 0, len(b.pools))
+	pools := make([]types.ScriptValue, 0, len(b.pools))
 	for name := range b.pools {
-		pools = append(pools, engine.NewStringValue(name))
+		pools = append(pools, types.NewStringValue(name))
 	}
 
-	return engine.NewArrayValue(pools), nil
+	return types.NewArrayValue(pools), nil
 }
 
-func (b *PoolBridge) removePool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) removePool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("removePool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	delete(b.pools, name)
 	b.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // Pool Metrics Methods
 
-func (b *PoolBridge) getPoolMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) getPoolMetrics(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getPoolMetrics", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[poolName]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	pool.Metrics.mu.RLock()
 	defer pool.Metrics.mu.RUnlock()
 
 	// Build metrics object
-	providerMetrics := make(map[string]engine.ScriptValue)
+	providerMetrics := make(map[string]types.ScriptValue)
 	for provider, metrics := range pool.Metrics.ProviderMetrics {
-		providerMetrics[provider] = engine.NewObjectValue(map[string]engine.ScriptValue{
-			"requests":       engine.NewNumberValue(float64(metrics.Requests)),
-			"successes":      engine.NewNumberValue(float64(metrics.Successes)),
-			"failures":       engine.NewNumberValue(float64(metrics.Failures)),
-			"averageLatency": engine.NewNumberValue(metrics.AverageLatency.Seconds()),
-			"healthStatus":   engine.NewStringValue(metrics.HealthStatus),
+		providerMetrics[provider] = types.NewObjectValue(map[string]types.ScriptValue{
+			"requests":       types.NewNumberValue(float64(metrics.Requests)),
+			"successes":      types.NewNumberValue(float64(metrics.Successes)),
+			"failures":       types.NewNumberValue(float64(metrics.Failures)),
+			"averageLatency": types.NewNumberValue(metrics.AverageLatency.Seconds()),
+			"healthStatus":   types.NewStringValue(metrics.HealthStatus),
 		})
 	}
 
-	metricsData := map[string]engine.ScriptValue{
-		"totalRequests":   engine.NewNumberValue(float64(pool.Metrics.TotalRequests)),
-		"successfulCalls": engine.NewNumberValue(float64(pool.Metrics.SuccessfulCalls)),
-		"failedCalls":     engine.NewNumberValue(float64(pool.Metrics.FailedCalls)),
-		"retryCount":      engine.NewNumberValue(float64(pool.Metrics.RetryCount)),
-		"providerMetrics": engine.NewObjectValue(providerMetrics),
+	metricsData := map[string]types.ScriptValue{
+		"totalRequests":   types.NewNumberValue(float64(pool.Metrics.TotalRequests)),
+		"successfulCalls": types.NewNumberValue(float64(pool.Metrics.SuccessfulCalls)),
+		"failedCalls":     types.NewNumberValue(float64(pool.Metrics.FailedCalls)),
+		"retryCount":      types.NewNumberValue(float64(pool.Metrics.RetryCount)),
+		"providerMetrics": types.NewObjectValue(providerMetrics),
 	}
 
-	return engine.NewObjectValue(metricsData), nil
+	return types.NewObjectValue(metricsData), nil
 }
 
-func (b *PoolBridge) getProviderHealth(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) getProviderHealth(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getProviderHealth", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[poolName]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
-	healthArray := make([]engine.ScriptValue, 0, len(pool.Providers))
+	healthArray := make([]types.ScriptValue, 0, len(pool.Providers))
 
 	pool.Metrics.mu.RLock()
 	defer pool.Metrics.mu.RUnlock()
 
 	for _, provider := range pool.Providers {
 		metrics := pool.Metrics.ProviderMetrics[provider]
-		healthData := map[string]engine.ScriptValue{
-			"provider":    engine.NewStringValue(provider),
-			"status":      engine.NewStringValue(metrics.HealthStatus),
-			"lastError":   engine.NewNilValue(),
-			"successRate": engine.NewNumberValue(0),
+		healthData := map[string]types.ScriptValue{
+			"provider":    types.NewStringValue(provider),
+			"status":      types.NewStringValue(metrics.HealthStatus),
+			"lastError":   types.NewNilValue(),
+			"successRate": types.NewNumberValue(0),
 		}
 
 		if metrics.LastError != nil {
-			healthData["lastError"] = engine.NewStringValue(metrics.LastError.Error())
-			healthData["lastErrorTime"] = engine.NewStringValue(metrics.LastErrorTime.Format(time.RFC3339))
+			healthData["lastError"] = types.NewStringValue(metrics.LastError.Error())
+			healthData["lastErrorTime"] = types.NewStringValue(metrics.LastErrorTime.Format(time.RFC3339))
 		}
 
 		if metrics.Requests > 0 {
 			successRate := float64(metrics.Successes) / float64(metrics.Requests)
-			healthData["successRate"] = engine.NewNumberValue(successRate)
+			healthData["successRate"] = types.NewNumberValue(successRate)
 		}
 
-		healthArray = append(healthArray, engine.NewObjectValue(healthData))
+		healthArray = append(healthArray, types.NewObjectValue(healthData))
 	}
 
-	return engine.NewArrayValue(healthArray), nil
+	return types.NewArrayValue(healthArray), nil
 }
 
-func (b *PoolBridge) resetPoolMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) resetPoolMetrics(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("resetPoolMetrics", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[poolName]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	pool.Metrics.mu.Lock()
@@ -775,18 +774,18 @@ func (b *PoolBridge) resetPoolMetrics(ctx context.Context, args []engine.ScriptV
 		metrics.AverageLatency = 0
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // Pool Generation Methods
 
-func (b *PoolBridge) generateWithPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) generateWithPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("generateWithPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
-	prompt := args[1].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
+	prompt := args[1].(types.StringValue).Value()
 
 	var options map[string]interface{}
 	if len(args) > 2 {
@@ -799,13 +798,13 @@ func (b *PoolBridge) generateWithPool(ctx context.Context, args []engine.ScriptV
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	// Select provider based on strategy
 	provider, err := b.selectProvider(pool)
 	if err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	// Set active provider in LLM bridge
@@ -815,9 +814,9 @@ func (b *PoolBridge) generateWithPool(ctx context.Context, args []engine.ScriptV
 	b.llmBridge.mu.Unlock()
 
 	// Generate using LLM bridge
-	result, genErr := b.llmBridge.generate(ctx, []engine.ScriptValue{
-		engine.NewStringValue(prompt),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
+	result, genErr := b.llmBridge.generate(ctx, []types.ScriptValue{
+		types.NewStringValue(prompt),
+		types.NewObjectValue(types.ConvertMapToScriptValue(options)),
 	})
 
 	// Restore old provider
@@ -829,26 +828,26 @@ func (b *PoolBridge) generateWithPool(ctx context.Context, args []engine.ScriptV
 	b.updatePoolMetrics(pool, provider, genErr == nil)
 
 	if genErr != nil {
-		return engine.NewErrorValue(genErr), nil
+		return types.NewErrorValue(genErr), nil
 	}
 
 	// Extract content from result
-	if objValue, ok := result.(engine.ObjectValue); ok {
+	if objValue, ok := result.(types.ObjectValue); ok {
 		resultMap := objValue.ToGo().(map[string]interface{})
 		if content, exists := resultMap["content"]; exists {
-			return engine.NewStringValue(fmt.Sprintf("%v", content)), nil
+			return types.NewStringValue(fmt.Sprintf("%v", content)), nil
 		}
 	}
 
 	return result, nil
 }
 
-func (b *PoolBridge) generateMessageWithPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) generateMessageWithPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("generateMessageWithPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 	messages := args[1]
 
 	var options map[string]interface{}
@@ -862,13 +861,13 @@ func (b *PoolBridge) generateMessageWithPool(ctx context.Context, args []engine.
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	// Select provider based on strategy
 	provider, err := b.selectProvider(pool)
 	if err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	// Set active provider in LLM bridge
@@ -878,9 +877,9 @@ func (b *PoolBridge) generateMessageWithPool(ctx context.Context, args []engine.
 	b.llmBridge.mu.Unlock()
 
 	// Generate using LLM bridge
-	result, genErr := b.llmBridge.generateMessage(ctx, []engine.ScriptValue{
+	result, genErr := b.llmBridge.generateMessage(ctx, []types.ScriptValue{
 		messages,
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
+		types.NewObjectValue(types.ConvertMapToScriptValue(options)),
 	})
 
 	// Restore old provider
@@ -894,13 +893,13 @@ func (b *PoolBridge) generateMessageWithPool(ctx context.Context, args []engine.
 	return result, genErr
 }
 
-func (b *PoolBridge) streamWithPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) streamWithPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("streamWithPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
-	prompt := args[1].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
+	prompt := args[1].(types.StringValue).Value()
 
 	var options map[string]interface{}
 	if len(args) > 2 {
@@ -913,13 +912,13 @@ func (b *PoolBridge) streamWithPool(ctx context.Context, args []engine.ScriptVal
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	// Select provider based on strategy
 	provider, err := b.selectProvider(pool)
 	if err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	// Set active provider in LLM bridge
@@ -929,9 +928,9 @@ func (b *PoolBridge) streamWithPool(ctx context.Context, args []engine.ScriptVal
 	b.llmBridge.mu.Unlock()
 
 	// Stream using LLM bridge
-	result, streamErr := b.llmBridge.stream(ctx, []engine.ScriptValue{
-		engine.NewStringValue(prompt),
-		engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
+	result, streamErr := b.llmBridge.stream(ctx, []types.ScriptValue{
+		types.NewStringValue(prompt),
+		types.NewObjectValue(types.ConvertMapToScriptValue(options)),
 	})
 
 	// Restore old provider
@@ -947,75 +946,75 @@ func (b *PoolBridge) streamWithPool(ctx context.Context, args []engine.ScriptVal
 
 // Object Pooling Methods
 
-func (b *PoolBridge) getResponseFromPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	response := b.responsePool.pool.Get().(*bridge.Response)
+func (b *PoolBridge) getResponseFromPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	response := b.responsePool.pool.Get().(*types.Response)
 
 	// Convert to ScriptValue
-	responseData := map[string]engine.ScriptValue{
-		"content": engine.NewStringValue(response.Content),
-		"id":      engine.NewStringValue(fmt.Sprintf("response-%d", time.Now().UnixNano())),
+	responseData := map[string]types.ScriptValue{
+		"content": types.NewStringValue(response.Content),
+		"id":      types.NewStringValue(fmt.Sprintf("response-%d", time.Now().UnixNano())),
 	}
 
-	return engine.NewObjectValue(responseData), nil
+	return types.NewObjectValue(responseData), nil
 }
 
-func (b *PoolBridge) returnResponseToPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) returnResponseToPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("returnResponseToPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	// In a real implementation, we would convert the ScriptValue back to a Response
 	// For now, we just acknowledge the return
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *PoolBridge) getTokenFromPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) getTokenFromPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	token := b.tokenPool.pool.Get().(*Token)
 	token.Value = fmt.Sprintf("token-%d", time.Now().UnixNano())
 	token.CreatedAt = time.Now()
 	token.Used = false
 
-	tokenData := map[string]engine.ScriptValue{
-		"value":     engine.NewStringValue(token.Value),
-		"createdAt": engine.NewStringValue(token.CreatedAt.Format(time.RFC3339)),
-		"used":      engine.NewBoolValue(token.Used),
+	tokenData := map[string]types.ScriptValue{
+		"value":     types.NewStringValue(token.Value),
+		"createdAt": types.NewStringValue(token.CreatedAt.Format(time.RFC3339)),
+		"used":      types.NewBoolValue(token.Used),
 	}
 
-	return engine.NewObjectValue(tokenData), nil
+	return types.NewObjectValue(tokenData), nil
 }
 
-func (b *PoolBridge) returnTokenToPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) returnTokenToPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("returnTokenToPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	// In a real implementation, we would convert the ScriptValue back to a Token
 	// For now, we just acknowledge the return
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *PoolBridge) getChannelFromPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) getChannelFromPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	channelID := fmt.Sprintf("channel-%d", time.Now().UnixNano())
-	ch := make(chan bridge.ResponseStream, 100)
+	ch := make(chan types.ResponseStream, 100)
 
 	b.channelPool.mu.Lock()
 	b.channelPool.channels[channelID] = ch
 	b.channelPool.mu.Unlock()
 
-	channelData := map[string]engine.ScriptValue{
-		"id":       engine.NewStringValue(channelID),
-		"capacity": engine.NewNumberValue(100),
+	channelData := map[string]types.ScriptValue{
+		"id":       types.NewStringValue(channelID),
+		"capacity": types.NewNumberValue(100),
 	}
 
-	return engine.NewObjectValue(channelData), nil
+	return types.NewObjectValue(channelData), nil
 }
 
-func (b *PoolBridge) returnChannelToPool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) returnChannelToPool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("returnChannelToPool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	channelID := args[0].(engine.StringValue).Value()
+	channelID := args[0].(types.StringValue).Value()
 
 	b.channelPool.mu.Lock()
 	if ch, exists := b.channelPool.channels[channelID]; exists {
@@ -1024,17 +1023,17 @@ func (b *PoolBridge) returnChannelToPool(ctx context.Context, args []engine.Scri
 	}
 	b.channelPool.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // Configuration Methods
 
-func (b *PoolBridge) setPoolConfiguration(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) setPoolConfiguration(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("setPoolConfiguration", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 	configMap := args[1].ToGo().(map[string]interface{})
 
 	b.mu.RLock()
@@ -1042,7 +1041,7 @@ func (b *PoolBridge) setPoolConfiguration(ctx context.Context, args []engine.Scr
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	// Update configuration
@@ -1065,77 +1064,77 @@ func (b *PoolBridge) setPoolConfiguration(ctx context.Context, args []engine.Scr
 		pool.Config.CircuitThreshold = int(circuitThreshold)
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *PoolBridge) getPoolConfiguration(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) getPoolConfiguration(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getPoolConfiguration", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[poolName]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()
 
-	configData := map[string]engine.ScriptValue{
-		"maxRetries":       engine.NewNumberValue(float64(pool.Config.MaxRetries)),
-		"retryDelay":       engine.NewNumberValue(float64(pool.Config.RetryDelay.Milliseconds())),
-		"timeout":          engine.NewNumberValue(float64(pool.Config.Timeout.Milliseconds())),
-		"circuitBreaker":   engine.NewBoolValue(pool.Config.CircuitBreaker),
-		"circuitThreshold": engine.NewNumberValue(float64(pool.Config.CircuitThreshold)),
+	configData := map[string]types.ScriptValue{
+		"maxRetries":       types.NewNumberValue(float64(pool.Config.MaxRetries)),
+		"retryDelay":       types.NewNumberValue(float64(pool.Config.RetryDelay.Milliseconds())),
+		"timeout":          types.NewNumberValue(float64(pool.Config.Timeout.Milliseconds())),
+		"circuitBreaker":   types.NewBoolValue(pool.Config.CircuitBreaker),
+		"circuitThreshold": types.NewNumberValue(float64(pool.Config.CircuitThreshold)),
 	}
 
-	return engine.NewObjectValue(configData), nil
+	return types.NewObjectValue(configData), nil
 }
 
 // Advanced Pool Operations
 
-func (b *PoolBridge) setProviderWeight(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) setProviderWeight(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("setProviderWeight", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
-	provider := args[1].(engine.StringValue).Value()
-	weight := args[2].(engine.NumberValue).Value()
+	poolName := args[0].(types.StringValue).Value()
+	provider := args[1].(types.StringValue).Value()
+	weight := args[2].(types.NumberValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[poolName]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	pool.mu.Lock()
 	pool.providerWeights[provider] = weight
 	pool.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *PoolBridge) rebalancePool(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) rebalancePool(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("rebalancePool", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[poolName]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
 	// Reset provider metrics for rebalancing
@@ -1146,25 +1145,25 @@ func (b *PoolBridge) rebalancePool(ctx context.Context, args []engine.ScriptValu
 	atomic.StoreInt32(&pool.CurrentIndex, 0)
 	pool.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *PoolBridge) performHealthCheck(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *PoolBridge) performHealthCheck(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("performHealthCheck", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	poolName := args[0].(engine.StringValue).Value()
+	poolName := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	pool, exists := b.pools[poolName]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
+		return types.NewErrorValue(fmt.Errorf("pool not found: %s", poolName)), nil
 	}
 
-	healthResults := make(map[string]engine.ScriptValue)
+	healthResults := make(map[string]types.ScriptValue)
 
 	// Check each provider
 	for _, provider := range pool.Providers {
@@ -1184,10 +1183,10 @@ func (b *PoolBridge) performHealthCheck(ctx context.Context, args []engine.Scrip
 		}
 		pool.Metrics.mu.Unlock()
 
-		healthResults[provider] = engine.NewStringValue(status)
+		healthResults[provider] = types.NewStringValue(status)
 	}
 
-	return engine.NewObjectValue(healthResults), nil
+	return types.NewObjectValue(healthResults), nil
 }
 
 // Helper Methods
@@ -1313,22 +1312,22 @@ func (b *PoolBridge) updatePoolMetrics(pool *ProviderPool, provider string, succ
 	}
 }
 
-func (b *PoolBridge) poolToScriptValue(pool *ProviderPool) engine.ScriptValue {
+func (b *PoolBridge) poolToScriptValue(pool *ProviderPool) types.ScriptValue {
 	pool.mu.RLock()
 	defer pool.mu.RUnlock()
 
-	providers := make([]engine.ScriptValue, len(pool.Providers))
+	providers := make([]types.ScriptValue, len(pool.Providers))
 	for i, p := range pool.Providers {
-		providers[i] = engine.NewStringValue(p)
+		providers[i] = types.NewStringValue(p)
 	}
 
-	poolData := map[string]engine.ScriptValue{
-		"name":      engine.NewStringValue(pool.Name),
-		"providers": engine.NewArrayValue(providers),
-		"strategy":  engine.NewStringValue(string(pool.Strategy)),
+	poolData := map[string]types.ScriptValue{
+		"name":      types.NewStringValue(pool.Name),
+		"providers": types.NewArrayValue(providers),
+		"strategy":  types.NewStringValue(string(pool.Strategy)),
 	}
 
-	return engine.NewObjectValue(poolData)
+	return types.NewObjectValue(poolData)
 }
 
-// NOTE: Duplicate conversion functions removed - using centralized engine.ConvertToScriptValue() instead
+// NOTE: Duplicate conversion functions removed - using centralized types.ConvertToScriptValue() instead

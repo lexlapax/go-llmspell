@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 )
 
 // UtilBridge provides script access to general go-llms utilities.
@@ -56,8 +56,8 @@ func (b *UtilBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // Provides information about the bridge including name, version,
 // description, author, and license for documentation and discovery.
-func (b *UtilBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *UtilBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "util",
 		Version:     "1.0.0",
 		Description: "General utilities bridge for miscellaneous helper functions",
@@ -99,22 +99,24 @@ func (b *UtilBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // Delegates to the engine's RegisterBridge method for proper integration.
-func (b *UtilBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+func (b *UtilBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
 // Provides comprehensive utility functions including error handling, string manipulation,
 // time utilities, retry logic, validation, UUID generation, hashing, and sleep functionality.
-func (b *UtilBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *UtilBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Error handling utilities
 		{
 			Name:        "isRetryableError",
 			Description: "Check if an error is retryable",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "error", Type: "error", Description: "Error to check", Required: true},
 			},
 			ReturnType: "boolean",
@@ -122,7 +124,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "wrapError",
 			Description: "Wrap error with additional context",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "error", Type: "error", Description: "Original error", Required: true},
 				{Name: "message", Type: "string", Description: "Context message", Required: true},
 			},
@@ -131,7 +133,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "errorToString",
 			Description: "Convert error to detailed string representation",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "error", Type: "error", Description: "Error to convert", Required: true},
 			},
 			ReturnType: "string",
@@ -141,7 +143,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "truncateString",
 			Description: "Truncate string to specified length",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "text", Type: "string", Description: "Text to truncate", Required: true},
 				{Name: "maxLength", Type: "number", Description: "Maximum length", Required: true},
 				{Name: "suffix", Type: "string", Description: "Truncation suffix", Required: false},
@@ -151,7 +153,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "sanitizeString",
 			Description: "Sanitize string for safe output",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "text", Type: "string", Description: "Text to sanitize", Required: true},
 				{Name: "allowedChars", Type: "string", Description: "Allowed character set", Required: false},
 			},
@@ -162,7 +164,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "parseHumanDuration",
 			Description: "Parse human-readable duration (e.g., '2h30m')",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "duration", Type: "string", Description: "Human-readable duration", Required: true},
 			},
 			ReturnType: "number", // milliseconds
@@ -170,7 +172,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "formatDuration",
 			Description: "Format duration to human-readable string",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "milliseconds", Type: "number", Description: "Duration in milliseconds", Required: true},
 			},
 			ReturnType: "string",
@@ -180,7 +182,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "retryWithBackoff",
 			Description: "Execute function with exponential backoff retry",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "fn", Type: "function", Description: "Function to retry", Required: true},
 				{Name: "maxRetries", Type: "number", Description: "Maximum retry attempts", Required: true},
 				{Name: "initialDelay", Type: "number", Description: "Initial delay in ms", Required: false},
@@ -190,7 +192,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createRetryConfig",
 			Description: "Create retry configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "maxRetries", Type: "number", Description: "Maximum retries", Required: true},
 				{Name: "backoffMultiplier", Type: "number", Description: "Backoff multiplier", Required: false},
 				{Name: "maxDelay", Type: "number", Description: "Maximum delay in ms", Required: false},
@@ -202,7 +204,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateURL",
 			Description: "Validate URL format",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "url", Type: "string", Description: "URL to validate", Required: true},
 			},
 			ReturnType: "boolean",
@@ -210,7 +212,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateEmail",
 			Description: "Validate email address format",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "email", Type: "string", Description: "Email to validate", Required: true},
 			},
 			ReturnType: "boolean",
@@ -220,13 +222,13 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateUUID",
 			Description: "Generate a new UUID",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "string",
 		},
 		{
 			Name:        "hashString",
 			Description: "Generate hash of string",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "text", Type: "string", Description: "Text to hash", Required: true},
 				{Name: "algorithm", Type: "string", Description: "Hash algorithm (sha256/sha512/md5)", Required: false},
 			},
@@ -235,7 +237,7 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "sleep",
 			Description: "Sleep for specified duration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "milliseconds", Type: "number", Description: "Sleep duration in ms", Required: true},
 			},
 			ReturnType: "void",
@@ -246,8 +248,8 @@ func (b *UtilBridge) Methods() []engine.MethodInfo {
 // TypeMappings returns type conversion mappings.
 // Maps Go error and function types to script-compatible object and function types
 // for proper data conversion during method execution.
-func (b *UtilBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *UtilBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"error": {
 			GoType:     "error",
 			ScriptType: "object",
@@ -262,7 +264,7 @@ func (b *UtilBridge) TypeMappings() map[string]engine.TypeMapping {
 // ValidateMethod validates method calls.
 // Currently delegates all validation to the engine based on method metadata.
 // Returns nil as the engine handles parameter validation.
-func (b *UtilBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *UtilBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -270,16 +272,16 @@ func (b *UtilBridge) ValidateMethod(name string, args []engine.ScriptValue) erro
 // RequiredPermissions returns required permissions.
 // Specifies that scripts need memory access for utility functions and
 // time access for sleep operations.
-func (b *UtilBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *UtilBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "util",
 			Actions:     []string{"read"},
 			Description: "Access to utility functions",
 		},
 		{
-			Type:        engine.PermissionTime,
+			Type:        types.PermissionTime,
 			Resource:    "system",
 			Actions:     []string{"sleep"},
 			Description: "Time-based operations",
@@ -291,7 +293,7 @@ func (b *UtilBridge) RequiredPermissions() []engine.Permission {
 // Routes method calls to appropriate utility implementations including UUID generation,
 // string truncation, hashing, sleep, and duration formatting. Returns script-compatible
 // values and handles parameter validation for each method.
-func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -301,49 +303,49 @@ func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []engi
 
 	switch name {
 	case "generateUUID":
-		return engine.NewStringValue(uuid.New().String()), nil
+		return types.NewStringValue(uuid.New().String()), nil
 
 	case "truncateString":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("truncateString requires text and maxLength parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("text must be string")
 		}
-		text := args[0].(engine.StringValue).Value()
+		text := args[0].(types.StringValue).Value()
 
-		if args[1] == nil || args[1].Type() != engine.TypeNumber {
+		if args[1] == nil || args[1].Type() != types.TypeNumber {
 			return nil, fmt.Errorf("maxLength must be number")
 		}
-		maxLength := int(args[1].(engine.NumberValue).Value())
+		maxLength := int(args[1].(types.NumberValue).Value())
 
 		suffix := "..."
-		if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
-			suffix = args[2].(engine.StringValue).Value()
+		if len(args) > 2 && args[2] != nil && args[2].Type() == types.TypeString {
+			suffix = args[2].(types.StringValue).Value()
 		}
 
 		if len(text) <= maxLength {
-			return engine.NewStringValue(text), nil
+			return types.NewStringValue(text), nil
 		}
 
 		if maxLength <= len(suffix) {
-			return engine.NewStringValue(suffix), nil
+			return types.NewStringValue(suffix), nil
 		}
 
-		return engine.NewStringValue(text[:maxLength-len(suffix)] + suffix), nil
+		return types.NewStringValue(text[:maxLength-len(suffix)] + suffix), nil
 
 	case "hashString":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("hashString requires text parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("text must be string")
 		}
-		text := args[0].(engine.StringValue).Value()
+		text := args[0].(types.StringValue).Value()
 
 		algorithm := "sha256"
-		if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
-			algorithm = args[1].(engine.StringValue).Value()
+		if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeString {
+			algorithm = args[1].(types.StringValue).Value()
 		}
 
 		var h hash.Hash
@@ -359,31 +361,31 @@ func (b *UtilBridge) ExecuteMethod(ctx context.Context, name string, args []engi
 		}
 
 		h.Write([]byte(text))
-		return engine.NewStringValue(hex.EncodeToString(h.Sum(nil))), nil
+		return types.NewStringValue(hex.EncodeToString(h.Sum(nil))), nil
 
 	case "sleep":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("sleep requires milliseconds parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeNumber {
+		if args[0] == nil || args[0].Type() != types.TypeNumber {
 			return nil, fmt.Errorf("milliseconds must be number")
 		}
-		ms := args[0].(engine.NumberValue).Value()
+		ms := args[0].(types.NumberValue).Value()
 
 		time.Sleep(time.Duration(ms) * time.Millisecond)
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "formatDuration":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("formatDuration requires milliseconds parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeNumber {
+		if args[0] == nil || args[0].Type() != types.TypeNumber {
 			return nil, fmt.Errorf("milliseconds must be number")
 		}
-		ms := args[0].(engine.NumberValue).Value()
+		ms := args[0].(types.NumberValue).Value()
 
 		d := time.Duration(ms) * time.Millisecond
-		return engine.NewStringValue(d.String()), nil
+		return types.NewStringValue(d.String()), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)

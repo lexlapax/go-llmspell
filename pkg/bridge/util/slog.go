@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	// Internal bridge imports
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 
 	// go-llms imports for logging hook
 	"github.com/lexlapax/go-llms/pkg/agent/core"
@@ -50,7 +50,7 @@ func NewSlogBridge() *SlogBridge {
 }
 
 // GetID returns the bridge identifier.
-// It implements the engine.Bridge interface.
+// It implements the types.Bridge interface.
 func (sb *SlogBridge) GetID() string {
 	return "slog"
 }
@@ -58,8 +58,8 @@ func (sb *SlogBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // It provides information about the slog bridge including
 // version, description, and dependencies on slog and go-llms.
-func (sb *SlogBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (sb *SlogBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:         "slog",
 		Version:      "v2.0.0",
 		Description:  "Bridge for go-llms structured logging with slog integration, emoji enhancement, and key-value logging",
@@ -97,22 +97,24 @@ func (sb *SlogBridge) IsInitialized() bool {
 	return sb.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // It enables the script engine to access structured logging through this bridge.
-func (sb *SlogBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(sb)
+func (sb *SlogBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns available bridge methods.
 // It provides metadata about all structured logging methods available to scripts,
 // including basic logging, lifecycle hooks, and configuration.
-func (sb *SlogBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (sb *SlogBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Basic logging methods
 		{
 			Name:        "info",
 			Description: "Log info message with optional key-value pairs",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "message", Type: "string", Required: true, Description: "Log message"},
 				{Name: "emoji", Type: "string", Required: false, Description: "Emoji to include"},
 				{Name: "attributes", Type: "object", Required: false, Description: "Key-value attributes"},
@@ -123,7 +125,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "warn",
 			Description: "Log warning message with optional key-value pairs",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "message", Type: "string", Required: true, Description: "Warning message"},
 				{Name: "emoji", Type: "string", Required: false, Description: "Emoji to include"},
 				{Name: "attributes", Type: "object", Required: false, Description: "Key-value attributes"},
@@ -134,7 +136,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "error",
 			Description: "Log error message with optional key-value pairs",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "message", Type: "string", Required: true, Description: "Error message"},
 				{Name: "emoji", Type: "string", Required: false, Description: "Emoji to include"},
 				{Name: "attributes", Type: "object", Required: false, Description: "Key-value attributes"},
@@ -145,7 +147,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "debug",
 			Description: "Log debug message with optional key-value pairs",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "message", Type: "string", Required: true, Description: "Debug message"},
 				{Name: "emoji", Type: "string", Required: false, Description: "Emoji to include"},
 				{Name: "attributes", Type: "object", Required: false, Description: "Key-value attributes"},
@@ -157,7 +159,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "logBeforeGenerate",
 			Description: "Log before LLM generation using logging hook",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "messages", Type: "array", Required: true, Description: "Array of messages"},
 			},
 			ReturnType: "void",
@@ -166,7 +168,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "logAfterGenerate",
 			Description: "Log after LLM generation using logging hook",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "response", Type: "object", Required: true, Description: "LLM response object"},
 				{Name: "error", Type: "string", Required: false, Description: "Error message if any"},
 			},
@@ -176,7 +178,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "logBeforeToolCall",
 			Description: "Log before tool execution using logging hook",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "tool", Type: "string", Required: true, Description: "Tool name"},
 				{Name: "params", Type: "object", Required: true, Description: "Tool parameters"},
 			},
@@ -186,7 +188,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "logAfterToolCall",
 			Description: "Log after tool execution using logging hook",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "tool", Type: "string", Required: true, Description: "Tool name"},
 				{Name: "result", Type: "object", Required: false, Description: "Tool result"},
 				{Name: "error", Type: "string", Required: false, Description: "Error message if any"},
@@ -198,7 +200,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "setLogLevel",
 			Description: "Set the structured logging level",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "level", Type: "string", Required: true, Description: "Log level: 'basic', 'detailed', 'debug'"},
 			},
 			ReturnType: "void",
@@ -207,7 +209,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getLogLevel",
 			Description: "Get the current structured logging level",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "string",
 			Examples:    []string{"getLogLevel()"},
 		},
@@ -215,7 +217,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "configureLogger",
 			Description: "Configure the structured logger",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "config", Type: "object", Required: true, Description: "Logger configuration"},
 			},
 			ReturnType: "void",
@@ -224,7 +226,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "withAttributes",
 			Description: "Create context with structured attributes",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "attributes", Type: "object", Required: true, Description: "Key-value attributes"},
 			},
 			ReturnType: "object",
@@ -235,7 +237,7 @@ func (sb *SlogBridge) Methods() []engine.MethodInfo {
 
 // ValidateMethod validates method calls.
 // It delegates validation to the engine based on Methods() metadata.
-func (sb *SlogBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (sb *SlogBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -243,8 +245,8 @@ func (sb *SlogBridge) ValidateMethod(name string, args []engine.ScriptValue) err
 // TypeMappings returns type conversion mappings.
 // It defines how Go logging types are mapped to script types
 // for loggers, levels, hooks, and LLM messages.
-func (sb *SlogBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (sb *SlogBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"slog_logger": {
 			GoType:     "*slog.Logger",
 			ScriptType: "object",
@@ -280,16 +282,16 @@ func (sb *SlogBridge) TypeMappings() map[string]engine.TypeMapping {
 
 // RequiredPermissions returns required permissions.
 // It specifies permissions for logging configuration and context management.
-func (sb *SlogBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (sb *SlogBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionStorage,
+			Type:        types.PermissionStorage,
 			Resource:    "slog.logging",
 			Actions:     []string{"read", "write"},
 			Description: "Access structured logging configuration",
 		},
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "slog.context",
 			Actions:     []string{"read", "write"},
 			Description: "Manage logging context and attributes",
@@ -298,9 +300,9 @@ func (sb *SlogBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method.
-// It implements the engine.Bridge interface, routing method calls
+// It implements the types.Bridge interface, routing method calls
 // to the appropriate structured logging operations.
-func (sb *SlogBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Check initialization first
 	sb.mu.RLock()
 	if !sb.initialized {
@@ -344,81 +346,81 @@ func (sb *SlogBridge) ExecuteMethod(ctx context.Context, name string, args []eng
 
 // info logs an info message with optional emoji and attributes.
 // It supports structured key-value logging at info level.
-func (sb *SlogBridge) info(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) info(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("info requires at least a message")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("message must be a string")
 	}
-	message := args[0].(engine.StringValue).Value()
+	message := args[0].(types.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelInfo, message, args[1:])
 }
 
 // warn logs a warning message with optional emoji and attributes.
 // It supports structured key-value logging at warning level.
-func (sb *SlogBridge) warn(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) warn(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("warn requires at least a message")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("message must be a string")
 	}
-	message := args[0].(engine.StringValue).Value()
+	message := args[0].(types.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelWarn, message, args[1:])
 }
 
 // error logs an error message with optional emoji and attributes.
 // It supports structured key-value logging at error level.
-func (sb *SlogBridge) error(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) error(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("error requires at least a message")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("message must be a string")
 	}
-	message := args[0].(engine.StringValue).Value()
+	message := args[0].(types.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelError, message, args[1:])
 }
 
 // debug logs a debug message with optional emoji and attributes.
 // It supports structured key-value logging at debug level.
-func (sb *SlogBridge) debug(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) debug(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("debug requires at least a message")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("message must be a string")
 	}
-	message := args[0].(engine.StringValue).Value()
+	message := args[0].(types.StringValue).Value()
 
 	return sb.logWithLevel(ctx, slog.LevelDebug, message, args[1:])
 }
 
 // logWithLevel handles the actual logging with emoji and attributes.
 // It prepends emojis to messages and adds structured attributes.
-func (sb *SlogBridge) logWithLevel(ctx context.Context, level slog.Level, message string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) logWithLevel(ctx context.Context, level slog.Level, message string, args []types.ScriptValue) (types.ScriptValue, error) {
 	var emoji string
 	var attrs []slog.Attr
 
 	// Check for optional emoji (second argument)
-	if len(args) > 0 && args[0] != nil && args[0].Type() == engine.TypeString {
-		emoji = args[0].(engine.StringValue).Value()
+	if len(args) > 0 && args[0] != nil && args[0].Type() == types.TypeString {
+		emoji = args[0].(types.StringValue).Value()
 		if emoji != "" {
 			message = emoji + " " + message
 		}
 	}
 
 	// Check for optional attributes (third argument)
-	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
-		objFields := args[1].(engine.ObjectValue).Fields()
+	if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeObject {
+		objFields := args[1].(types.ObjectValue).Fields()
 		for k, v := range objFields {
 			attrs = append(attrs, slog.Any(k, v.ToGo()))
 		}
@@ -426,40 +428,40 @@ func (sb *SlogBridge) logWithLevel(ctx context.Context, level slog.Level, messag
 
 	// Log with structured attributes
 	sb.logger.LogAttrs(ctx, level, message, attrs...)
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // logBeforeGenerate calls the logging hook's BeforeGenerate method.
 // It logs LLM messages before generation for debugging and auditing.
-func (sb *SlogBridge) logBeforeGenerate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) logBeforeGenerate(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("logBeforeGenerate requires messages array")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeArray {
+	if args[0] == nil || args[0].Type() != types.TypeArray {
 		return nil, fmt.Errorf("messages must be an array")
 	}
-	messagesArray := args[0].(engine.ArrayValue).Elements()
+	messagesArray := args[0].(types.ArrayValue).Elements()
 
 	// Convert script messages to go-llms Message format
 	messages := make([]ldomain.Message, len(messagesArray))
 	for i, msgVal := range messagesArray {
-		if msgVal.Type() != engine.TypeObject {
+		if msgVal.Type() != types.TypeObject {
 			return nil, fmt.Errorf("message at index %d must be an object", i)
 		}
-		msgMap := msgVal.(engine.ObjectValue).Fields()
+		msgMap := msgVal.(types.ObjectValue).Fields()
 
 		roleVal, ok := msgMap["role"]
-		if !ok || roleVal.Type() != engine.TypeString {
+		if !ok || roleVal.Type() != types.TypeString {
 			return nil, fmt.Errorf("message role must be a string")
 		}
-		role := roleVal.(engine.StringValue).Value()
+		role := roleVal.(types.StringValue).Value()
 
 		contentVal, ok := msgMap["content"]
-		if !ok || contentVal.Type() != engine.TypeString {
+		if !ok || contentVal.Type() != types.TypeString {
 			return nil, fmt.Errorf("message content must be a string")
 		}
-		content := contentVal.(engine.StringValue).Value()
+		content := contentVal.(types.StringValue).Value()
 
 		messages[i] = ldomain.Message{
 			Role:    ldomain.Role(role),
@@ -469,31 +471,31 @@ func (sb *SlogBridge) logBeforeGenerate(ctx context.Context, args []engine.Scrip
 
 	// Call the logging hook
 	sb.hook.BeforeGenerate(ctx, messages)
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // logAfterGenerate calls the logging hook's AfterGenerate method.
 // It logs LLM responses after generation with optional error information.
-func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("logAfterGenerate requires response object")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("response must be an object")
 	}
-	responseMap := args[0].(engine.ObjectValue).Fields()
+	responseMap := args[0].(types.ObjectValue).Fields()
 
 	// Convert response object to go-llms Response
 	var response ldomain.Response
-	if contentVal, ok := responseMap["content"]; ok && contentVal.Type() == engine.TypeString {
-		response.Content = contentVal.(engine.StringValue).Value()
+	if contentVal, ok := responseMap["content"]; ok && contentVal.Type() == types.TypeString {
+		response.Content = contentVal.(types.StringValue).Value()
 	}
 
 	// Check for optional error
 	var err error
-	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
-		errMsg := args[1].(engine.StringValue).Value()
+	if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeString {
+		errMsg := args[1].(types.StringValue).Value()
 		if errMsg != "" {
 			err = fmt.Errorf("%s", errMsg)
 		}
@@ -501,25 +503,25 @@ func (sb *SlogBridge) logAfterGenerate(ctx context.Context, args []engine.Script
 
 	// Call the logging hook
 	sb.hook.AfterGenerate(ctx, response, err)
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // logBeforeToolCall calls the logging hook's BeforeToolCall method.
 // It logs tool invocations before execution with parameters.
-func (sb *SlogBridge) logBeforeToolCall(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) logBeforeToolCall(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("logBeforeToolCall requires tool name and params")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("tool name must be a string")
 	}
-	toolName := args[0].(engine.StringValue).Value()
+	toolName := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("params must be an object")
 	}
-	paramsMap := args[1].(engine.ObjectValue).Fields()
+	paramsMap := args[1].(types.ObjectValue).Fields()
 
 	// Convert params to native map
 	params := make(map[string]interface{})
@@ -529,25 +531,25 @@ func (sb *SlogBridge) logBeforeToolCall(ctx context.Context, args []engine.Scrip
 
 	// Call the logging hook with tool name and params
 	sb.hook.BeforeToolCall(ctx, toolName, params)
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // logAfterToolCall calls the logging hook's AfterToolCall method.
 // It logs tool results after execution with optional error information.
-func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("logAfterToolCall requires at least tool name")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("tool name must be a string")
 	}
-	toolName := args[0].(engine.StringValue).Value()
+	toolName := args[0].(types.StringValue).Value()
 
 	// Convert optional result
 	var result interface{}
-	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
-		resultMap := args[1].(engine.ObjectValue).Fields()
+	if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeObject {
+		resultMap := args[1].(types.ObjectValue).Fields()
 		resultNative := make(map[string]interface{})
 		for k, v := range resultMap {
 			resultNative[k] = v.ToGo()
@@ -557,8 +559,8 @@ func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []engine.Script
 
 	// Check for optional error
 	var err error
-	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
-		errMsg := args[2].(engine.StringValue).Value()
+	if len(args) > 2 && args[2] != nil && args[2].Type() == types.TypeString {
+		errMsg := args[2].(types.StringValue).Value()
 		if errMsg != "" {
 			err = fmt.Errorf("%s", errMsg)
 		}
@@ -566,20 +568,20 @@ func (sb *SlogBridge) logAfterToolCall(ctx context.Context, args []engine.Script
 
 	// Call the logging hook with tool name, result and error
 	sb.hook.AfterToolCall(ctx, toolName, result, err)
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // setLogLevel sets the structured logging level.
 // It configures the verbosity of the logging hook (basic, detailed, debug).
-func (sb *SlogBridge) setLogLevel(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) setLogLevel(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("setLogLevel requires level string")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("level must be a string")
 	}
-	levelStr := args[0].(engine.StringValue).Value()
+	levelStr := args[0].(types.StringValue).Value()
 
 	// Map string to core.LogLevel
 	var level core.LogLevel
@@ -600,12 +602,12 @@ func (sb *SlogBridge) setLogLevel(ctx context.Context, args []engine.ScriptValue
 	sb.hook = core.NewLoggingHook(sb.logger, level)
 	sb.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // getLogLevel gets the current structured logging level.
 // It returns the current verbosity setting as a string.
-func (sb *SlogBridge) getLogLevel(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) getLogLevel(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	sb.mu.RLock()
 	level := sb.level
 	sb.mu.RUnlock()
@@ -623,20 +625,20 @@ func (sb *SlogBridge) getLogLevel(ctx context.Context, args []engine.ScriptValue
 		levelStr = "unknown"
 	}
 
-	return engine.NewStringValue(levelStr), nil
+	return types.NewStringValue(levelStr), nil
 }
 
 // configureLogger configures the structured logger.
 // It sets the output format (text/json) and log level threshold.
-func (sb *SlogBridge) configureLogger(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) configureLogger(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("configureLogger requires config object")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("config must be an object")
 	}
-	configMap := args[0].(engine.ObjectValue).Fields()
+	configMap := args[0].(types.ObjectValue).Fields()
 
 	// Extract configuration options
 	var handlerOptions slog.HandlerOptions
@@ -644,13 +646,13 @@ func (sb *SlogBridge) configureLogger(ctx context.Context, args []engine.ScriptV
 	// Check for format
 	var handler slog.Handler
 	format := "text" // default
-	if formatVal, ok := configMap["format"]; ok && formatVal.Type() == engine.TypeString {
-		format = formatVal.(engine.StringValue).Value()
+	if formatVal, ok := configMap["format"]; ok && formatVal.Type() == types.TypeString {
+		format = formatVal.(types.StringValue).Value()
 	}
 
 	// Check for level
-	if levelVal, ok := configMap["level"]; ok && levelVal.Type() == engine.TypeString {
-		levelStr := levelVal.(engine.StringValue).Value()
+	if levelVal, ok := configMap["level"]; ok && levelVal.Type() == types.TypeString {
+		levelStr := levelVal.(types.StringValue).Value()
 		switch levelStr {
 		case "debug":
 			handlerOptions.Level = slog.LevelDebug
@@ -678,20 +680,20 @@ func (sb *SlogBridge) configureLogger(ctx context.Context, args []engine.ScriptV
 	sb.hook = core.NewLoggingHook(sb.logger, sb.level)
 	sb.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // withAttributes creates context with structured attributes.
 // It returns a logger context that includes the specified attributes in all logs.
-func (sb *SlogBridge) withAttributes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (sb *SlogBridge) withAttributes(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("withAttributes requires attributes object")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("attributes must be an object")
 	}
-	attrsMap := args[0].(engine.ObjectValue).Fields()
+	attrsMap := args[0].(types.ObjectValue).Fields()
 
 	// Convert attributes to slog.Attr slice
 	var attrs []slog.Attr
@@ -707,8 +709,8 @@ func (sb *SlogBridge) withAttributes(ctx context.Context, args []engine.ScriptVa
 	contextLogger := sb.logger.With(anyAttrs...)
 
 	// Return a context object that scripts can use
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"logger":     engine.NewCustomValue("logger", contextLogger),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"logger":     types.NewCustomValue("logger", contextLogger),
 		"attributes": args[0],
 	}), nil
 }

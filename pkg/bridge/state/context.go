@@ -24,7 +24,7 @@ import (
 	"github.com/lexlapax/go-llms/pkg/schema/repository"
 	"github.com/lexlapax/go-llms/pkg/schema/validation"
 	"github.com/lexlapax/go-llms/pkg/util/json"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 )
 
 // TransformMetrics tracks transformation pipeline metrics.
@@ -186,8 +186,8 @@ func (b *StateContextBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // Provides information about the bridge including name, version,
 // description, author, and license for documentation and discovery.
-func (b *StateContextBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *StateContextBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "State Context Bridge",
 		Version:     "1.0.0",
 		Description: "Bridges go-llms SharedStateContext for parent-child state sharing",
@@ -216,10 +216,12 @@ func (b *StateContextBridge) IsInitialized() bool {
 	return true
 }
 
-// RegisterWithEngine registers this bridge with a script engine.
+// RegisterWithEngine registers this bridge with a script types.
 // Delegates to the engine's RegisterBridge method for proper integration.
-func (b *StateContextBridge) RegisterWithEngine(scriptEngine engine.ScriptEngine) error {
-	return scriptEngine.RegisterBridge(b)
+func (b *StateContextBridge) RegisterWithEngine(scriptEngine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
@@ -231,8 +233,8 @@ func (b *StateContextBridge) RegisterWithEngine(scriptEngine engine.ScriptEngine
 //   - State persistence and migration
 //   - Transformation pipelines
 //   - Import/export functionality
-func (b *StateContextBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *StateContextBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		{Name: "createSharedContext", Description: "Create a new shared state context with parent", ReturnType: "SharedStateContext"},
 		{Name: "withInheritanceConfig", Description: "Configure inheritance settings for shared context", ReturnType: "SharedStateContext"},
 		{Name: "get", Description: "Get a value from shared context (local first, then parent)", ReturnType: "any"},
@@ -317,8 +319,8 @@ func (b *StateContextBridge) Methods() []engine.MethodInfo {
 // TypeMappings returns type mappings for this bridge.
 // Maps go-llms domain types to script-compatible types for proper
 // data conversion during method execution.
-func (b *StateContextBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *StateContextBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"SharedStateContext": {
 			GoType:     "SharedStateContext",
 			ScriptType: "object",
@@ -365,7 +367,7 @@ func (b *StateContextBridge) TypeMappings() map[string]engine.TypeMapping {
 // ValidateMethod validates a method call.
 // Currently delegates to the engine for validation based on method metadata.
 // Always returns nil as detailed validation occurs during method execution.
-func (b *StateContextBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *StateContextBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Validation is handled by the engine, so we always return nil
 	return nil
 }
@@ -373,16 +375,16 @@ func (b *StateContextBridge) ValidateMethod(name string, args []engine.ScriptVal
 // RequiredPermissions returns required permissions.
 // Defines memory access for state operations and storage access
 // for persistence functionality.
-func (b *StateContextBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *StateContextBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "state",
 			Actions:     []string{"read", "write"},
 			Description: "Access to shared state context operations",
 		},
 		{
-			Type:        engine.PermissionStorage,
+			Type:        types.PermissionStorage,
 			Resource:    "state_persistence",
 			Actions:     []string{"read", "write", "delete"},
 			Description: "Access to state persistence operations",
@@ -393,7 +395,7 @@ func (b *StateContextBridge) RequiredPermissions() []engine.Permission {
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
 // Routes method calls to specific implementations based on the method name.
 // Returns script-compatible values or errors for all operations.
-func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	switch name {
 	case "createSharedContext":
 		return b.createSharedContext(ctx, args)
@@ -542,11 +544,11 @@ func (b *StateContextBridge) ExecuteMethod(ctx context.Context, name string, arg
 
 // Method implementations
 
-func (b *StateContextBridge) createSharedContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) createSharedContext(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	var parentContext *domain.SharedStateContext
-	if len(args) > 0 && args[0] != nil && !args[0].IsNil() && args[0].Type() == engine.TypeObject {
+	if len(args) > 0 && args[0] != nil && !args[0].IsNil() && args[0].Type() == types.TypeObject {
 		parentObj := make(map[string]interface{})
-		for k, v := range args[0].(engine.ObjectValue).Fields() {
+		for k, v := range args[0].(types.ObjectValue).Fields() {
 			parentObj[k] = v.ToGo()
 		}
 
@@ -593,36 +595,36 @@ func (b *StateContextBridge) createSharedContext(ctx context.Context, args []eng
 
 	// Convert result to ScriptValue
 	result := b.sharedContextToScript(contextID, sharedContext)
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
-func (b *StateContextBridge) withInheritanceConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) withInheritanceConfig(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 4 {
 		return nil, fmt.Errorf("withInheritanceConfig requires context, messages, artifacts, and metadata parameters")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
-	if args[1] == nil || args[1].Type() != engine.TypeBool {
+	if args[1] == nil || args[1].Type() != types.TypeBool {
 		return nil, fmt.Errorf("messages must be boolean")
 	}
-	messages := args[1].(engine.BoolValue).Value()
+	messages := args[1].(types.BoolValue).Value()
 
-	if args[2] == nil || args[2].Type() != engine.TypeBool {
+	if args[2] == nil || args[2].Type() != types.TypeBool {
 		return nil, fmt.Errorf("artifacts must be boolean")
 	}
-	artifacts := args[2].(engine.BoolValue).Value()
+	artifacts := args[2].(types.BoolValue).Value()
 
-	if args[3] == nil || args[3].Type() != engine.TypeBool {
+	if args[3] == nil || args[3].Type() != types.TypeBool {
 		return nil, fmt.Errorf("metadata must be boolean")
 	}
-	metadata := args[3].(engine.BoolValue).Value()
+	metadata := args[3].(types.BoolValue).Value()
 
 	// Convert script object to shared context
 	sharedContext, err := b.scriptToSharedContext(contextObj)
@@ -646,24 +648,24 @@ func (b *StateContextBridge) withInheritanceConfig(ctx context.Context, args []e
 	}
 	b.mu.Unlock()
 
-	return engine.ConvertToScriptValue(b.sharedContextToScript(contextID, updatedContext)), nil
+	return types.ConvertToScriptValue(b.sharedContextToScript(contextID, updatedContext)), nil
 }
 
-func (b *StateContextBridge) get(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) get(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("get requires context and key parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("key must be string")
 	}
-	key := args[1].(engine.StringValue).Value()
+	key := args[1].(types.StringValue).Value()
 
 	sharedContext, err := b.scriptToSharedContext(contextObj)
 	if err != nil {
@@ -672,26 +674,26 @@ func (b *StateContextBridge) get(ctx context.Context, args []engine.ScriptValue)
 
 	value, exists := sharedContext.Get(key)
 	if !exists {
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 	}
-	return engine.ConvertToScriptValue(value), nil
+	return types.ConvertToScriptValue(value), nil
 }
 
-func (b *StateContextBridge) set(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) set(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("set requires context, key, and value parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("key must be string")
 	}
-	key := args[1].(engine.StringValue).Value()
+	key := args[1].(types.StringValue).Value()
 
 	// Get context ID for event emission
 	contextID, ok := contextObj["_id"].(string)
@@ -714,24 +716,24 @@ func (b *StateContextBridge) set(ctx context.Context, args []engine.ScriptValue)
 	// Emit state change event
 	b.emitStateChangeEvent(contextID, key, oldValue, newValue)
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) delete(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) delete(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("delete requires context and key parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("key must be string")
 	}
-	key := args[1].(engine.StringValue).Value()
+	key := args[1].(types.StringValue).Value()
 
 	// Get context ID for event emission
 	contextID, ok := contextObj["_id"].(string)
@@ -755,42 +757,42 @@ func (b *StateContextBridge) delete(ctx context.Context, args []engine.ScriptVal
 	// Emit state change event
 	b.emitStateChangeEvent(contextID, key, oldValue, nil)
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) has(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) has(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("has requires context and key parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("key must be string")
 	}
-	key := args[1].(engine.StringValue).Value()
+	key := args[1].(types.StringValue).Value()
 
 	sharedContext, err := b.scriptToSharedContext(contextObj)
 	if err != nil {
 		return nil, err
 	}
 
-	return engine.NewBoolValue(sharedContext.Has(key)), nil
+	return types.NewBoolValue(sharedContext.Has(key)), nil
 }
 
-func (b *StateContextBridge) keys(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) keys(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("keys requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -800,23 +802,23 @@ func (b *StateContextBridge) keys(ctx context.Context, args []engine.ScriptValue
 	}
 
 	keys := sharedContext.Keys()
-	scriptKeys := make([]engine.ScriptValue, len(keys))
+	scriptKeys := make([]types.ScriptValue, len(keys))
 	for i, key := range keys {
-		scriptKeys[i] = engine.NewStringValue(key)
+		scriptKeys[i] = types.NewStringValue(key)
 	}
 
-	return engine.NewArrayValue(scriptKeys), nil
+	return types.NewArrayValue(scriptKeys), nil
 }
 
-func (b *StateContextBridge) values(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) values(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("values requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -826,29 +828,29 @@ func (b *StateContextBridge) values(ctx context.Context, args []engine.ScriptVal
 	}
 
 	values := sharedContext.Values()
-	scriptValues := make([]engine.ScriptValue, 0, len(values))
+	scriptValues := make([]types.ScriptValue, 0, len(values))
 	for _, value := range values {
-		scriptValues = append(scriptValues, engine.ConvertToScriptValue(value))
+		scriptValues = append(scriptValues, types.ConvertToScriptValue(value))
 	}
 
-	return engine.NewArrayValue(scriptValues), nil
+	return types.NewArrayValue(scriptValues), nil
 }
 
-func (b *StateContextBridge) getArtifact(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getArtifact(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("getArtifact requires context and id parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("id must be string")
 	}
-	id := args[1].(engine.StringValue).Value()
+	id := args[1].(types.StringValue).Value()
 
 	sharedContext, err := b.scriptToSharedContext(contextObj)
 	if err != nil {
@@ -857,21 +859,21 @@ func (b *StateContextBridge) getArtifact(ctx context.Context, args []engine.Scri
 
 	artifact, ok := sharedContext.GetArtifact(id)
 	if !ok || artifact == nil {
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 	}
 
-	return engine.ConvertToScriptValue(b.artifactToScript(artifact)), nil
+	return types.ConvertToScriptValue(b.artifactToScript(artifact)), nil
 }
 
-func (b *StateContextBridge) artifacts(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) artifacts(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("artifacts requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -881,23 +883,23 @@ func (b *StateContextBridge) artifacts(ctx context.Context, args []engine.Script
 	}
 
 	artifacts := sharedContext.Artifacts()
-	scriptArtifacts := make([]engine.ScriptValue, 0, len(artifacts))
+	scriptArtifacts := make([]types.ScriptValue, 0, len(artifacts))
 	for _, artifact := range artifacts {
-		scriptArtifacts = append(scriptArtifacts, engine.ConvertToScriptValue(b.artifactToScript(artifact)))
+		scriptArtifacts = append(scriptArtifacts, types.ConvertToScriptValue(b.artifactToScript(artifact)))
 	}
 
-	return engine.NewArrayValue(scriptArtifacts), nil
+	return types.NewArrayValue(scriptArtifacts), nil
 }
 
-func (b *StateContextBridge) messages(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) messages(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("messages requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -907,23 +909,23 @@ func (b *StateContextBridge) messages(ctx context.Context, args []engine.ScriptV
 	}
 
 	messages := sharedContext.Messages()
-	scriptMessages := make([]engine.ScriptValue, len(messages))
+	scriptMessages := make([]types.ScriptValue, len(messages))
 	for i, message := range messages {
-		scriptMessages[i] = engine.ConvertToScriptValue(b.messageToScript(message))
+		scriptMessages[i] = types.ConvertToScriptValue(b.messageToScript(message))
 	}
 
-	return engine.NewArrayValue(scriptMessages), nil
+	return types.NewArrayValue(scriptMessages), nil
 }
 
-func (b *StateContextBridge) getMetadata(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getMetadata(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getMetadata requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -935,18 +937,18 @@ func (b *StateContextBridge) getMetadata(ctx context.Context, args []engine.Scri
 	// GetMetadata requires a key parameter. Get all metadata from local state
 	localState := sharedContext.LocalState()
 	metadata := localState.GetAllMetadata()
-	return engine.ConvertToScriptValue(metadata), nil
+	return types.ConvertToScriptValue(metadata), nil
 }
 
-func (b *StateContextBridge) localState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) localState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("localState requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -956,18 +958,18 @@ func (b *StateContextBridge) localState(ctx context.Context, args []engine.Scrip
 	}
 
 	localState := sharedContext.LocalState()
-	return engine.ConvertToScriptValue(b.stateToScript(localState)), nil
+	return types.ConvertToScriptValue(b.stateToScript(localState)), nil
 }
 
-func (b *StateContextBridge) clone(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) clone(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("clone requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -996,18 +998,18 @@ func (b *StateContextBridge) clone(ctx context.Context, args []engine.ScriptValu
 	}
 	b.mu.Unlock()
 
-	return engine.ConvertToScriptValue(b.sharedContextToScript(clonedID, clonedContext)), nil
+	return types.ConvertToScriptValue(b.sharedContextToScript(clonedID, clonedContext)), nil
 }
 
-func (b *StateContextBridge) asState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) asState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("asState requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -1017,18 +1019,18 @@ func (b *StateContextBridge) asState(ctx context.Context, args []engine.ScriptVa
 	}
 
 	state := sharedContext.AsState()
-	return engine.ConvertToScriptValue(b.stateToScript(state)), nil
+	return types.ConvertToScriptValue(b.stateToScript(state)), nil
 }
 
-func (b *StateContextBridge) createSnapshot(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) createSnapshot(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("createSnapshot requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -1067,18 +1069,18 @@ func (b *StateContextBridge) createSnapshot(ctx context.Context, args []engine.S
 	})
 	b.eventHistoryMu.Unlock()
 
-	return engine.ConvertToScriptValue(snapshot), nil
+	return types.ConvertToScriptValue(snapshot), nil
 }
 
-func (b *StateContextBridge) validateState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) validateState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("validateState requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -1089,76 +1091,76 @@ func (b *StateContextBridge) validateState(ctx context.Context, args []engine.Sc
 		"errors": []interface{}{},
 	}
 
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
-func (b *StateContextBridge) setStateSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) setStateSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("setStateSchema requires context, schemaId, and schema parameters")
 	}
 	// Implementation for setting state schema
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) getStateSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getStateSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getStateSchema requires context parameter")
 	}
 	// Implementation for getting state schema
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) registerCustomValidator(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) registerCustomValidator(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for registering custom validator
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) getSchemaVersions(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getSchemaVersions(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for getting schema versions
-	return engine.NewArrayValue([]engine.ScriptValue{}), nil
+	return types.NewArrayValue([]types.ScriptValue{}), nil
 }
 
-func (b *StateContextBridge) setSchemaVersion(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) setSchemaVersion(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for setting schema version
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) validateWithVersion(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) validateWithVersion(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for validating with specific version
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) addEventFilter(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) addEventFilter(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for adding event filter
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) removeEventFilter(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) removeEventFilter(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for removing event filter
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) listEventFilters(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) listEventFilters(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for listing event filters
-	return engine.NewArrayValue([]engine.ScriptValue{}), nil
+	return types.NewArrayValue([]types.ScriptValue{}), nil
 }
 
-func (b *StateContextBridge) replayEvents(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) replayEvents(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for replaying events
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) getEventHistory(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getEventHistory(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for getting event history
-	return engine.NewArrayValue([]engine.ScriptValue{}), nil
+	return types.NewArrayValue([]types.ScriptValue{}), nil
 }
 
-func (b *StateContextBridge) clearEventHistory(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) clearEventHistory(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for clearing event history
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) persistState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) persistState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("persistState requires context parameter")
 	}
@@ -1167,36 +1169,36 @@ func (b *StateContextBridge) persistState(ctx context.Context, args []engine.Scr
 		"success": true,
 		"version": 1,
 	}
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
-func (b *StateContextBridge) loadState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) loadState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for loading state
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) listPersistedStates(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) listPersistedStates(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for listing persisted states
 	result := map[string]interface{}{
 		"states": []interface{}{},
 		"total":  0,
 	}
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
-func (b *StateContextBridge) deletePersistedState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) deletePersistedState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for deleting persisted state
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) generateStateDiff(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) generateStateDiff(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for generating state diff
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) migrateState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) migrateState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Implementation for migrating state
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // Helper methods
@@ -1502,15 +1504,15 @@ func (b *StateContextBridge) loadStateFromFile(contextID string, version int) (*
 
 // Additional method implementations
 
-func (b *StateContextBridge) parentState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) parentState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("parentState requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -1526,7 +1528,7 @@ func (b *StateContextBridge) parentState(ctx context.Context, args []engine.Scri
 	b.mu.RUnlock()
 
 	if !hasParent {
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 	}
 
 	// Get parent context
@@ -1535,39 +1537,39 @@ func (b *StateContextBridge) parentState(ctx context.Context, args []engine.Scri
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 	}
 
 	// Return parent's local state
-	return engine.ConvertToScriptValue(b.stateToScript(parentContext.LocalState())), nil
+	return types.ConvertToScriptValue(b.stateToScript(parentContext.LocalState())), nil
 }
 
-func (b *StateContextBridge) generateContextID(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) generateContextID(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.Lock()
 	id := fmt.Sprintf("context_%d", b.nextID)
 	b.nextID++
 	b.mu.Unlock()
-	return engine.NewStringValue(id), nil
+	return types.NewStringValue(id), nil
 }
 
-func (b *StateContextBridge) validateWithSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) validateWithSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("validateWithSchema requires context, schemaId, and state parameters")
 	}
 
 	// Get context (first parameter)
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 
 	// Get schema ID (second parameter)
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("schemaId must be string")
 	}
-	schemaID := args[1].(engine.StringValue).Value()
+	schemaID := args[1].(types.StringValue).Value()
 
 	// Get state to validate (third parameter)
-	if args[2] == nil || args[2].Type() != engine.TypeObject {
+	if args[2] == nil || args[2].Type() != types.TypeObject {
 		return nil, fmt.Errorf("state must be object")
 	}
 	stateObj := args[2].ToGo()
@@ -1575,44 +1577,44 @@ func (b *StateContextBridge) validateWithSchema(ctx context.Context, args []engi
 	// Get the schema
 	schema, err := b.schemaRepo.Get(schemaID)
 	if err != nil {
-		return engine.NewBoolValue(false), nil // Schema not found, validation fails
+		return types.NewBoolValue(false), nil // Schema not found, validation fails
 	}
 
 	// Simple validation: check required fields
 	stateMap, ok := stateObj.(map[string]interface{})
 	if !ok {
-		return engine.NewBoolValue(false), nil
+		return types.NewBoolValue(false), nil
 	}
 
 	// Check all required fields are present
 	for _, requiredField := range schema.Required {
 		if _, exists := stateMap[requiredField]; !exists {
-			return engine.NewBoolValue(false), nil
+			return types.NewBoolValue(false), nil
 		}
 	}
 
 	// TODO: Add more comprehensive validation using the validator
 	// For now, return true if all required fields are present
-	return engine.NewBoolValue(true), nil
+	return types.NewBoolValue(true), nil
 }
 
-func (b *StateContextBridge) saveState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) saveState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	return b.persistState(ctx, args)
 }
 
-func (b *StateContextBridge) deleteState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) deleteState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	return b.deletePersistedState(ctx, args)
 }
 
-func (b *StateContextBridge) getAllStateVersions(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getAllStateVersions(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getAllStateVersions requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -1626,33 +1628,33 @@ func (b *StateContextBridge) getAllStateVersions(ctx context.Context, args []eng
 	b.persistenceMu.RUnlock()
 
 	if !exists {
-		return engine.NewArrayValue([]engine.ScriptValue{}), nil
+		return types.NewArrayValue([]types.ScriptValue{}), nil
 	}
 
-	scriptVersions := make([]engine.ScriptValue, len(versions))
+	scriptVersions := make([]types.ScriptValue, len(versions))
 	for i, version := range versions {
-		scriptVersions[i] = engine.ConvertToScriptValue(map[string]interface{}{
+		scriptVersions[i] = types.ConvertToScriptValue(map[string]interface{}{
 			"version":   version,
 			"contextId": contextID,
 		})
 	}
 
-	return engine.NewArrayValue(scriptVersions), nil
+	return types.NewArrayValue(scriptVersions), nil
 }
 
-func (b *StateContextBridge) loadStateVersion(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) loadStateVersion(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("loadStateVersion requires contextId and version parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("contextId must be string")
 	}
-	contextID := args[0].(engine.StringValue).Value()
+	contextID := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeNumber {
+	if args[1] == nil || args[1].Type() != types.TypeNumber {
 		return nil, fmt.Errorf("version must be number")
 	}
-	numVal := args[1].(engine.NumberValue).Value()
+	numVal := args[1].(types.NumberValue).Value()
 	version := int(numVal)
 
 	state, err := b.loadStateFromFile(contextID, version)
@@ -1660,19 +1662,19 @@ func (b *StateContextBridge) loadStateVersion(ctx context.Context, args []engine
 		return nil, err
 	}
 
-	return engine.ConvertToScriptValue(b.stateToScript(state)), nil
+	return types.ConvertToScriptValue(b.stateToScript(state)), nil
 }
 
-func (b *StateContextBridge) registerSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) registerSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("registerSchema requires schemaId and schema parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("schemaId must be string")
 	}
-	schemaID := args[0].(engine.StringValue).Value()
+	schemaID := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("schema must be object")
 	}
 	schemaObj := args[1].ToGo()
@@ -1733,18 +1735,18 @@ func (b *StateContextBridge) registerSchema(ctx context.Context, args []engine.S
 		return nil, fmt.Errorf("failed to save schema: %w", err)
 	}
 
-	return engine.NewStringValue(schemaID), nil
+	return types.NewStringValue(schemaID), nil
 }
 
-func (b *StateContextBridge) getSchemaForContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getSchemaForContext(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getSchemaForContext requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -1758,12 +1760,12 @@ func (b *StateContextBridge) getSchemaForContext(ctx context.Context, args []eng
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 	}
 
 	schema, err := b.schemaRepo.Get(schemaID)
 	if err != nil {
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 	}
 
 	// Convert schema back to map for script
@@ -1786,27 +1788,27 @@ func (b *StateContextBridge) getSchemaForContext(ctx context.Context, args []eng
 		schemaObj["required"] = schema.Required
 	}
 
-	return engine.ConvertToScriptValue(schemaObj), nil
+	return types.ConvertToScriptValue(schemaObj), nil
 }
 
-func (b *StateContextBridge) enableEventEmission(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) enableEventEmission(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Event emission is always enabled when event emitter is provided
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) disableEventEmission(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) disableEventEmission(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// For now, we don't support disabling event emission
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) emitEvent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) emitEvent(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("emitEvent requires eventType and data parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("eventType must be string")
 	}
-	eventType := args[0].(engine.StringValue).Value()
+	eventType := args[0].(types.StringValue).Value()
 
 	eventData := args[1].ToGo()
 
@@ -1814,17 +1816,17 @@ func (b *StateContextBridge) emitEvent(ctx context.Context, args []engine.Script
 		b.eventEmitter.EmitCustom(eventType, eventData)
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) subscribeToEvents(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) subscribeToEvents(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("subscribeToEvents requires pattern parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("pattern must be string")
 	}
-	pattern := args[0].(engine.StringValue).Value()
+	pattern := args[0].(types.StringValue).Value()
 
 	// Generate subscription ID
 	subscriptionID := fmt.Sprintf("sub_%s_%d", pattern, time.Now().UnixNano())
@@ -1840,33 +1842,33 @@ func (b *StateContextBridge) subscribeToEvents(ctx context.Context, args []engin
 	b.eventFilters[subscriptionID] = filter
 	b.mu.Unlock()
 
-	return engine.NewStringValue(subscriptionID), nil
+	return types.NewStringValue(subscriptionID), nil
 }
 
-func (b *StateContextBridge) unsubscribeFromEvents(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) unsubscribeFromEvents(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("unsubscribeFromEvents requires subscriptionId parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("subscriptionId must be string")
 	}
-	subscriptionID := args[0].(engine.StringValue).Value()
+	subscriptionID := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	delete(b.eventFilters, subscriptionID)
 	b.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) setPersistenceDirectory(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) setPersistenceDirectory(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("setPersistenceDirectory requires directory parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("directory must be string")
 	}
-	directory := args[0].(engine.StringValue).Value()
+	directory := args[0].(types.StringValue).Value()
 
 	b.persistenceMu.Lock()
 	b.persistDir = directory
@@ -1881,36 +1883,36 @@ func (b *StateContextBridge) setPersistenceDirectory(ctx context.Context, args [
 		b.fileRepo = fileRepo
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) enableCompression(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) enableCompression(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.persistenceMu.Lock()
 	b.enableCompress = true
 	b.persistenceMu.Unlock()
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) disableCompression(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) disableCompression(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.persistenceMu.Lock()
 	b.enableCompress = false
 	b.persistenceMu.Unlock()
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) registerTransformPipeline(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) registerTransformPipeline(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, fmt.Errorf("registerTransformPipeline requires contextId, pipelineId, and config parameters")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("contextId must be string")
 	}
-	contextID := args[0].(engine.StringValue).Value()
+	contextID := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("pipelineId must be string")
 	}
-	pipelineID := args[1].(engine.StringValue).Value()
+	pipelineID := args[1].(types.StringValue).Value()
 
 	config := args[2].ToGo()
 	configMap, ok := config.(map[string]interface{})
@@ -1927,10 +1929,10 @@ func (b *StateContextBridge) registerTransformPipeline(ctx context.Context, args
 	b.transformMetrics[pipelineID] = &TransformMetrics{}
 	b.transformMu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) applyTransform(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) applyTransform(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("applyTransform requires context and pipelineId parameters")
 	}
@@ -1938,24 +1940,24 @@ func (b *StateContextBridge) applyTransform(ctx context.Context, args []engine.S
 	return args[0], nil
 }
 
-func (b *StateContextBridge) getTransformMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getTransformMetrics(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getTransformMetrics requires pipelineId parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("pipelineId must be string")
 	}
-	pipelineID := args[0].(engine.StringValue).Value()
+	pipelineID := args[0].(types.StringValue).Value()
 
 	b.transformMu.RLock()
 	metrics, exists := b.transformMetrics[pipelineID]
 	b.transformMu.RUnlock()
 
 	if !exists {
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 	}
 
-	return engine.ConvertToScriptValue(map[string]interface{}{
+	return types.ConvertToScriptValue(map[string]interface{}{
 		"executionCount":  metrics.ExecutionCount,
 		"totalDuration":   metrics.TotalDuration.String(),
 		"averageDuration": metrics.AverageDuration.String(),
@@ -1967,33 +1969,33 @@ func (b *StateContextBridge) getTransformMetrics(ctx context.Context, args []eng
 	}), nil
 }
 
-func (b *StateContextBridge) clearTransformCache(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) clearTransformCache(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.transformMu.Lock()
 	b.transformCache = make(map[string]*domain.State)
 	b.transformMu.Unlock()
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) importState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) importState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("importState requires context and data parameters")
 	}
 	// Implementation for importing state
-	return engine.ConvertToScriptValue(map[string]interface{}{
+	return types.ConvertToScriptValue(map[string]interface{}{
 		"success":  true,
 		"imported": 0,
 	}), nil
 }
 
-func (b *StateContextBridge) exportState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) exportState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("exportState requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -2003,10 +2005,10 @@ func (b *StateContextBridge) exportState(ctx context.Context, args []engine.Scri
 	}
 
 	state := sharedContext.AsState()
-	return engine.ConvertToScriptValue(b.stateToScript(state)), nil
+	return types.ConvertToScriptValue(b.stateToScript(state)), nil
 }
 
-func (b *StateContextBridge) mergeStates(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) mergeStates(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("mergeStates requires at least two state parameters")
 	}
@@ -2016,11 +2018,11 @@ func (b *StateContextBridge) mergeStates(ctx context.Context, args []engine.Scri
 
 	// Merge each state
 	for _, arg := range args {
-		if arg == nil || arg.Type() != engine.TypeObject {
+		if arg == nil || arg.Type() != types.TypeObject {
 			continue
 		}
 		stateObj := make(map[string]interface{})
-		for k, v := range arg.(engine.ObjectValue).Fields() {
+		for k, v := range arg.(types.ObjectValue).Fields() {
 			stateObj[k] = v.ToGo()
 		}
 
@@ -2051,54 +2053,54 @@ func (b *StateContextBridge) mergeStates(ctx context.Context, args []engine.Scri
 		}
 	}
 
-	return engine.ConvertToScriptValue(b.stateToScript(mergedState)), nil
+	return types.ConvertToScriptValue(b.stateToScript(mergedState)), nil
 }
 
-func (b *StateContextBridge) diffStates(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) diffStates(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("diffStates requires two state parameters")
 	}
 	// Implementation for calculating state diff
-	return engine.ConvertToScriptValue(map[string]interface{}{
+	return types.ConvertToScriptValue(map[string]interface{}{
 		"added":    []string{},
 		"removed":  []string{},
 		"modified": []string{},
 	}), nil
 }
 
-func (b *StateContextBridge) lockState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) lockState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("lockState requires context parameter")
 	}
 	// Implementation for locking state
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) unlockState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) unlockState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("unlockState requires context parameter")
 	}
 	// Implementation for unlocking state
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) isStateLocked(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) isStateLocked(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("isStateLocked requires context parameter")
 	}
 	// Implementation for checking if state is locked
-	return engine.NewBoolValue(false), nil
+	return types.NewBoolValue(false), nil
 }
 
-func (b *StateContextBridge) getContextStats(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getContextStats(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getContextStats requires context parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be object")
 	}
 	contextObj := make(map[string]interface{})
-	for k, v := range args[0].(engine.ObjectValue).Fields() {
+	for k, v := range args[0].(types.ObjectValue).Fields() {
 		contextObj[k] = v.ToGo()
 	}
 
@@ -2116,17 +2118,17 @@ func (b *StateContextBridge) getContextStats(ctx context.Context, args []engine.
 		"metadataCount": len(state.GetAllMetadata()),
 	}
 
-	return engine.ConvertToScriptValue(stats), nil
+	return types.ConvertToScriptValue(stats), nil
 }
 
-func (b *StateContextBridge) clearContext(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) clearContext(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("clearContext requires contextId parameter")
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("contextId must be string")
 	}
-	contextID := args[0].(engine.StringValue).Value()
+	contextID := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -2153,46 +2155,46 @@ func (b *StateContextBridge) clearContext(ctx context.Context, args []engine.Scr
 	delete(b.transformPipelines, contextID)
 	b.transformMu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *StateContextBridge) getAllContexts(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getAllContexts(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	contexts := make([]engine.ScriptValue, 0, len(b.contexts))
+	contexts := make([]types.ScriptValue, 0, len(b.contexts))
 	for contextID, sharedContext := range b.contexts {
-		contexts = append(contexts, engine.ConvertToScriptValue(b.sharedContextToScript(contextID, sharedContext)))
+		contexts = append(contexts, types.ConvertToScriptValue(b.sharedContextToScript(contextID, sharedContext)))
 	}
 
-	return engine.NewArrayValue(contexts), nil
+	return types.NewArrayValue(contexts), nil
 }
 
-func (b *StateContextBridge) setEventFilter(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) setEventFilter(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	return b.addEventFilter(ctx, args)
 }
 
-func (b *StateContextBridge) getActiveFilters(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) getActiveFilters(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	return b.listEventFilters(ctx, args)
 }
 
-func (b *StateContextBridge) repairState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) repairState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("repairState requires context parameter")
 	}
 	// Implementation for repairing state
-	return engine.ConvertToScriptValue(map[string]interface{}{
+	return types.ConvertToScriptValue(map[string]interface{}{
 		"repaired": true,
 		"errors":   []string{},
 	}), nil
 }
 
-func (b *StateContextBridge) optimizeState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateContextBridge) optimizeState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("optimizeState requires context parameter")
 	}
 	// Implementation for optimizing state
-	return engine.ConvertToScriptValue(map[string]interface{}{
+	return types.ConvertToScriptValue(map[string]interface{}{
 		"optimized":    true,
 		"spaceSaved":   0,
 		"itemsRemoved": 0,

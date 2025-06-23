@@ -7,7 +7,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 
 	// go-llms imports for model info functionality
 	"fmt"
@@ -43,8 +43,8 @@ func (b *ModelInfoBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // Provides information about the bridge including name, version,
 // and description for documentation and discovery.
-func (b *ModelInfoBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *ModelInfoBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "Model Info Bridge",
 		Version:     "1.0.0",
 		Description: "Provides access to go-llms ModelRegistry for model discovery",
@@ -86,21 +86,23 @@ func (b *ModelInfoBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
-// Delegates to the engine's RegisterBridge method for proper integration.
-func (b *ModelInfoBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+// RegisterWithEngine registers the bridge with a script types.
+// This method is called by the engine during registration - no delegation needed.
+func (b *ModelInfoBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
 // Defines the script-accessible API for model information including
 // registry management and model queries.
-func (b *ModelInfoBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *ModelInfoBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		{
 			Name:        "registerModelRegistry",
 			Description: "Register a model registry",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Description: "Registry name", Required: true},
 				{Name: "registry", Type: "ModelRegistry", Description: "Model registry instance", Required: true},
 			},
@@ -109,13 +111,13 @@ func (b *ModelInfoBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listModels",
 			Description: "List all models from all registries",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 		},
 		{
 			Name:        "listModelsByRegistry",
 			Description: "List models from a specific registry",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "registryName", Type: "string", Description: "Registry name", Required: true},
 			},
 			ReturnType: "array",
@@ -123,7 +125,7 @@ func (b *ModelInfoBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getModel",
 			Description: "Get a specific model by ID",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "registryName", Type: "string", Description: "Registry name", Required: true},
 				{Name: "modelID", Type: "string", Description: "Model ID", Required: true},
 			},
@@ -132,7 +134,7 @@ func (b *ModelInfoBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listRegistries",
 			Description: "List all registered model registries",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 		},
 	}
@@ -141,8 +143,8 @@ func (b *ModelInfoBridge) Methods() []engine.MethodInfo {
 // TypeMappings returns type conversion mappings.
 // Maps go-llms types to script types for proper type conversion
 // during method execution.
-func (b *ModelInfoBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *ModelInfoBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"ModelRegistry": {
 			GoType:     "ModelRegistry",
 			ScriptType: "object",
@@ -157,7 +159,7 @@ func (b *ModelInfoBridge) TypeMappings() map[string]engine.TypeMapping {
 // ValidateMethod validates method calls.
 // Currently delegates validation to the engine based on Methods() metadata.
 // Can be extended for custom validation logic.
-func (b *ModelInfoBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *ModelInfoBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -165,10 +167,10 @@ func (b *ModelInfoBridge) ValidateMethod(name string, args []engine.ScriptValue)
 // RequiredPermissions returns required permissions.
 // Defines that scripts need read access to model information
 // for security sandboxing.
-func (b *ModelInfoBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *ModelInfoBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "modelinfo",
 			Actions:     []string{"read"},
 			Description: "Access to model information",
@@ -213,7 +215,7 @@ func (b *ModelInfoBridge) GetRegistry(name string) llmdomain.ModelRegistry {
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
 // Handles all script-callable methods including model inventory fetching,
 // registry management, and model queries. Returns script-compatible values.
-func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -231,25 +233,25 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 		}
 
 		// Convert to script-friendly format
-		metadata := map[string]engine.ScriptValue{
-			"version":       engine.NewStringValue(inventory.Metadata.Version),
-			"lastUpdated":   engine.NewStringValue(inventory.Metadata.LastUpdated),
-			"description":   engine.NewStringValue(inventory.Metadata.Description),
-			"schemaVersion": engine.NewStringValue(inventory.Metadata.SchemaVersion),
+		metadata := map[string]types.ScriptValue{
+			"version":       types.NewStringValue(inventory.Metadata.Version),
+			"lastUpdated":   types.NewStringValue(inventory.Metadata.LastUpdated),
+			"description":   types.NewStringValue(inventory.Metadata.Description),
+			"schemaVersion": types.NewStringValue(inventory.Metadata.SchemaVersion),
 		}
 		models := convertModelsToScriptValue(inventory.Models)
 
-		result := map[string]engine.ScriptValue{
-			"metadata": engine.NewObjectValue(metadata),
+		result := map[string]types.ScriptValue{
+			"metadata": types.NewObjectValue(metadata),
 			"models":   models,
 		}
-		return engine.NewObjectValue(result), nil
+		return types.NewObjectValue(result), nil
 
 	case "fetchProviderModels":
-		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+		if len(args) < 1 || args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("fetchProviderModels requires provider parameter")
 		}
-		provider := args[0].(engine.StringValue).Value()
+		provider := args[0].(types.StringValue).Value()
 
 		// Create service and fetch models for specific provider
 		service := modelinfo.NewModelInfoServiceFunc()
@@ -274,23 +276,23 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 
 	case "listRegistries":
 		registries := b.ListRegistries()
-		values := make([]engine.ScriptValue, len(registries))
+		values := make([]types.ScriptValue, len(registries))
 		for i, reg := range registries {
-			values[i] = engine.NewStringValue(reg)
+			values[i] = types.NewStringValue(reg)
 		}
-		return engine.NewArrayValue(values), nil
+		return types.NewArrayValue(values), nil
 
 	case "registerModelRegistry":
-		if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString {
+		if len(args) < 2 || args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("registerModelRegistry requires name and registry parameters")
 		}
-		name := args[0].(engine.StringValue).Value()
+		name := args[0].(types.StringValue).Value()
 		// Note: registry parameter would need special handling as it's a Go type
 		// For now, this would need to be passed as a custom value
-		if args[1] == nil || args[1].Type() != engine.TypeCustom {
+		if args[1] == nil || args[1].Type() != types.TypeCustom {
 			return nil, fmt.Errorf("registry must be ModelRegistry")
 		}
-		customVal := args[1].(engine.CustomValue)
+		customVal := args[1].(types.CustomValue)
 		registry, ok := customVal.Value().(llmdomain.ModelRegistry)
 		if !ok {
 			return nil, fmt.Errorf("registry must be ModelRegistry")
@@ -299,7 +301,7 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "listModels":
 		// List all models from all registries
@@ -308,35 +310,35 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 			models := registry.ListModels()
 			allModels = append(allModels, models...)
 		}
-		values := make([]engine.ScriptValue, len(allModels))
+		values := make([]types.ScriptValue, len(allModels))
 		for i, model := range allModels {
-			values[i] = engine.NewStringValue(model)
+			values[i] = types.NewStringValue(model)
 		}
-		return engine.NewArrayValue(values), nil
+		return types.NewArrayValue(values), nil
 
 	case "listModelsByRegistry":
-		if len(args) < 1 || args[0] == nil || args[0].Type() != engine.TypeString {
+		if len(args) < 1 || args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("listModelsByRegistry requires registryName parameter")
 		}
-		registryName := args[0].(engine.StringValue).Value()
+		registryName := args[0].(types.StringValue).Value()
 		registry := b.GetRegistry(registryName)
 		if registry == nil {
 			return nil, fmt.Errorf("registry not found: %s", registryName)
 		}
 		models := registry.ListModels()
-		values := make([]engine.ScriptValue, len(models))
+		values := make([]types.ScriptValue, len(models))
 		for i, model := range models {
-			values[i] = engine.NewStringValue(model)
+			values[i] = types.NewStringValue(model)
 		}
-		return engine.NewArrayValue(values), nil
+		return types.NewArrayValue(values), nil
 
 	case "getModel":
-		if len(args) < 2 || args[0] == nil || args[0].Type() != engine.TypeString ||
-			args[1] == nil || args[1].Type() != engine.TypeString {
+		if len(args) < 2 || args[0] == nil || args[0].Type() != types.TypeString ||
+			args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("getModel requires registryName and modelID parameters")
 		}
-		registryName := args[0].(engine.StringValue).Value()
-		modelID := args[1].(engine.StringValue).Value()
+		registryName := args[0].(types.StringValue).Value()
+		modelID := args[1].(types.StringValue).Value()
 		registry := b.GetRegistry(registryName)
 		if registry == nil {
 			return nil, fmt.Errorf("registry not found: %s", registryName)
@@ -346,11 +348,11 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 			return nil, fmt.Errorf("failed to get model: %w", err)
 		}
 		// Return provider as a custom value wrapped in an object
-		result := map[string]engine.ScriptValue{
-			"provider": engine.NewCustomValue("Provider", provider),
-			"modelID":  engine.NewStringValue(modelID),
+		result := map[string]types.ScriptValue{
+			"provider": types.NewCustomValue("Provider", provider),
+			"modelID":  types.NewStringValue(modelID),
 		}
-		return engine.NewObjectValue(result), nil
+		return types.NewObjectValue(result), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
@@ -359,73 +361,73 @@ func (b *ModelInfoBridge) ExecuteMethod(ctx context.Context, name string, args [
 
 // convertModelsToScriptValue converts an array of domain.Model to ScriptValue.
 // Transforms go-llms model structs into script-compatible array format.
-func convertModelsToScriptValue(models []domain.Model) engine.ScriptValue {
-	values := make([]engine.ScriptValue, len(models))
+func convertModelsToScriptValue(models []domain.Model) types.ScriptValue {
+	values := make([]types.ScriptValue, len(models))
 	for i, m := range models {
 		values[i] = convertModelToScriptValue(m)
 	}
-	return engine.NewArrayValue(values)
+	return types.NewArrayValue(values)
 }
 
 // convertModelToScriptValue converts a single domain.Model to ScriptValue.
 // Creates a comprehensive object representation including all model metadata,
 // pricing information, and capability flags.
-func convertModelToScriptValue(m domain.Model) engine.ScriptValue {
-	pricingFields := map[string]engine.ScriptValue{
-		"inputPer1kTokens":  engine.NewNumberValue(m.Pricing.InputPer1kTokens),
-		"outputPer1kTokens": engine.NewNumberValue(m.Pricing.OutputPer1kTokens),
+func convertModelToScriptValue(m domain.Model) types.ScriptValue {
+	pricingFields := map[string]types.ScriptValue{
+		"inputPer1kTokens":  types.NewNumberValue(m.Pricing.InputPer1kTokens),
+		"outputPer1kTokens": types.NewNumberValue(m.Pricing.OutputPer1kTokens),
 	}
 
-	fields := map[string]engine.ScriptValue{
-		"provider":         engine.NewStringValue(m.Provider),
-		"name":             engine.NewStringValue(m.Name),
-		"displayName":      engine.NewStringValue(m.DisplayName),
-		"description":      engine.NewStringValue(m.Description),
-		"documentationURL": engine.NewStringValue(m.DocumentationURL),
-		"contextWindow":    engine.NewNumberValue(float64(m.ContextWindow)),
-		"maxOutputTokens":  engine.NewNumberValue(float64(m.MaxOutputTokens)),
-		"trainingCutoff":   engine.NewStringValue(m.TrainingCutoff),
-		"modelFamily":      engine.NewStringValue(m.ModelFamily),
-		"lastUpdated":      engine.NewStringValue(m.LastUpdated),
-		"pricing":          engine.NewObjectValue(pricingFields),
+	fields := map[string]types.ScriptValue{
+		"provider":         types.NewStringValue(m.Provider),
+		"name":             types.NewStringValue(m.Name),
+		"displayName":      types.NewStringValue(m.DisplayName),
+		"description":      types.NewStringValue(m.Description),
+		"documentationURL": types.NewStringValue(m.DocumentationURL),
+		"contextWindow":    types.NewNumberValue(float64(m.ContextWindow)),
+		"maxOutputTokens":  types.NewNumberValue(float64(m.MaxOutputTokens)),
+		"trainingCutoff":   types.NewStringValue(m.TrainingCutoff),
+		"modelFamily":      types.NewStringValue(m.ModelFamily),
+		"lastUpdated":      types.NewStringValue(m.LastUpdated),
+		"pricing":          types.NewObjectValue(pricingFields),
 		"capabilities":     convertCapabilitiesToScriptValue(m.Capabilities),
 	}
-	return engine.NewObjectValue(fields)
+	return types.NewObjectValue(fields)
 }
 
 // convertCapabilitiesToScriptValue converts domain.Capabilities to ScriptValue.
 // Creates nested object structure representing model capabilities across
 // different modalities (text, image, audio, video, file) and features.
-func convertCapabilitiesToScriptValue(c domain.Capabilities) engine.ScriptValue {
-	textFields := map[string]engine.ScriptValue{
-		"read":  engine.NewBoolValue(c.Text.Read),
-		"write": engine.NewBoolValue(c.Text.Write),
+func convertCapabilitiesToScriptValue(c domain.Capabilities) types.ScriptValue {
+	textFields := map[string]types.ScriptValue{
+		"read":  types.NewBoolValue(c.Text.Read),
+		"write": types.NewBoolValue(c.Text.Write),
 	}
-	imageFields := map[string]engine.ScriptValue{
-		"read":  engine.NewBoolValue(c.Image.Read),
-		"write": engine.NewBoolValue(c.Image.Write),
+	imageFields := map[string]types.ScriptValue{
+		"read":  types.NewBoolValue(c.Image.Read),
+		"write": types.NewBoolValue(c.Image.Write),
 	}
-	audioFields := map[string]engine.ScriptValue{
-		"read":  engine.NewBoolValue(c.Audio.Read),
-		"write": engine.NewBoolValue(c.Audio.Write),
+	audioFields := map[string]types.ScriptValue{
+		"read":  types.NewBoolValue(c.Audio.Read),
+		"write": types.NewBoolValue(c.Audio.Write),
 	}
-	videoFields := map[string]engine.ScriptValue{
-		"read":  engine.NewBoolValue(c.Video.Read),
-		"write": engine.NewBoolValue(c.Video.Write),
+	videoFields := map[string]types.ScriptValue{
+		"read":  types.NewBoolValue(c.Video.Read),
+		"write": types.NewBoolValue(c.Video.Write),
 	}
-	fileFields := map[string]engine.ScriptValue{
-		"read":  engine.NewBoolValue(c.File.Read),
-		"write": engine.NewBoolValue(c.File.Write),
+	fileFields := map[string]types.ScriptValue{
+		"read":  types.NewBoolValue(c.File.Read),
+		"write": types.NewBoolValue(c.File.Write),
 	}
 
-	fields := map[string]engine.ScriptValue{
-		"text":            engine.NewObjectValue(textFields),
-		"image":           engine.NewObjectValue(imageFields),
-		"audio":           engine.NewObjectValue(audioFields),
-		"video":           engine.NewObjectValue(videoFields),
-		"file":            engine.NewObjectValue(fileFields),
-		"functionCalling": engine.NewBoolValue(c.FunctionCalling),
-		"streaming":       engine.NewBoolValue(c.Streaming),
+	fields := map[string]types.ScriptValue{
+		"text":            types.NewObjectValue(textFields),
+		"image":           types.NewObjectValue(imageFields),
+		"audio":           types.NewObjectValue(audioFields),
+		"video":           types.NewObjectValue(videoFields),
+		"file":            types.NewObjectValue(fileFields),
+		"functionCalling": types.NewBoolValue(c.FunctionCalling),
+		"streaming":       types.NewBoolValue(c.Streaming),
 	}
-	return engine.NewObjectValue(fields)
+	return types.NewObjectValue(fields)
 }

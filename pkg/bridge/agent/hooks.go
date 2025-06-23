@@ -9,7 +9,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 	// Note: domain import is used by the Hook interface in scriptHook
 	llmdomain "github.com/lexlapax/go-llms/pkg/llm/domain"
 )
@@ -102,7 +102,7 @@ func NewHooksBridge() *HooksBridge {
 }
 
 // GetID returns the bridge identifier.
-// It implements the engine.Bridge interface.
+// It implements the types.Bridge interface.
 func (b *HooksBridge) GetID() string {
 	return "hooks"
 }
@@ -110,8 +110,8 @@ func (b *HooksBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // It provides information about the bridge including
 // name, version, description, and author.
-func (b *HooksBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *HooksBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "Hooks Bridge",
 		Version:     "1.0.0",
 		Description: "Bridge for go-llms agent hook system",
@@ -149,12 +149,12 @@ func (b *HooksBridge) IsInitialized() bool {
 // Methods returns available bridge methods.
 // It provides metadata about all hook management methods
 // exposed to scripts through this bridge.
-func (b *HooksBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *HooksBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		{
 			Name:        "registerHook",
 			Description: "Register a new hook with lifecycle callbacks",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "id", Type: "string", Required: true},
 				{Name: "definition", Type: "object", Required: true},
 			},
@@ -163,7 +163,7 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "unregisterHook",
 			Description: "Remove a registered hook",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "id", Type: "string", Required: true},
 			},
 			ReturnType: "boolean",
@@ -171,13 +171,13 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listHooks",
 			Description: "List all registered hooks",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 		},
 		{
 			Name:        "enableHook",
 			Description: "Enable a disabled hook",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "id", Type: "string", Required: true},
 			},
 			ReturnType: "boolean",
@@ -185,7 +185,7 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "disableHook",
 			Description: "Disable a hook without removing it",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "id", Type: "string", Required: true},
 			},
 			ReturnType: "boolean",
@@ -193,7 +193,7 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getHookInfo",
 			Description: "Get information about a specific hook",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "id", Type: "string", Required: true},
 			},
 			ReturnType: "object",
@@ -201,7 +201,7 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "executeHooks",
 			Description: "Execute hooks of a specific type",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "type", Type: "string", Required: true},
 				{Name: "context", Type: "object", Required: true},
 			},
@@ -210,18 +210,18 @@ func (b *HooksBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "clearHooks",
 			Description: "Remove all registered hooks",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "number",
 		},
 	}
 }
 
 // ExecuteMethod runs a bridge method.
-// It implements the engine.Bridge interface, routing method calls
+// It implements the types.Bridge interface, routing method calls
 // to the appropriate hook management functions.
-func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []types.ScriptValue) (types.ScriptValue, error) {
 	if !b.IsInitialized() {
-		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
+		return types.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
 	}
 
 	switch method {
@@ -230,13 +230,13 @@ func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []e
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewStringValue(id.(string)), nil
+		return types.NewStringValue(id.(string)), nil
 	case "unregisterHook":
 		exists, err := b.unregisterHook(ctx, args)
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewBoolValue(exists.(bool)), nil
+		return types.NewBoolValue(exists.(bool)), nil
 	case "listHooks":
 		hooks, err := b.listHooks(ctx)
 		if err != nil {
@@ -248,13 +248,13 @@ func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []e
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewBoolValue(ok.(bool)), nil
+		return types.NewBoolValue(ok.(bool)), nil
 	case "disableHook":
 		ok, err := b.disableHook(ctx, args)
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewBoolValue(ok.(bool)), nil
+		return types.NewBoolValue(ok.(bool)), nil
 	case "getHookInfo":
 		info, err := b.getHookInfo(ctx, args)
 		if err != nil {
@@ -266,13 +266,13 @@ func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []e
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewBoolValue(success.(bool)), nil
+		return types.NewBoolValue(success.(bool)), nil
 	case "clearHooks":
 		count, err := b.clearHooks(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNumberValue(float64(count.(int))), nil
+		return types.NewNumberValue(float64(count.(int))), nil
 	default:
 		return nil, fmt.Errorf("method not found: %s", method)
 	}
@@ -281,20 +281,20 @@ func (b *HooksBridge) ExecuteMethod(ctx context.Context, method string, args []e
 // registerHook registers a new hook with lifecycle callbacks.
 // It expects an ID string and a definition object containing hook functions
 // for beforeGenerate, afterGenerate, beforeToolCall, and afterToolCall.
-func (b *HooksBridge) registerHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
+func (b *HooksBridge) registerHook(ctx context.Context, args []types.ScriptValue) (interface{}, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("registerHook requires id and definition arguments")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
-	id := args[0].(engine.StringValue).Value()
+	id := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("definition must be an object")
 	}
-	definitionObj := args[1].(engine.ObjectValue).Fields()
+	definitionObj := args[1].(types.ObjectValue).Fields()
 	definition := make(map[string]interface{})
 	for k, v := range definitionObj {
 		definition[k] = v.ToGo()
@@ -336,15 +336,15 @@ func (b *HooksBridge) registerHook(ctx context.Context, args []engine.ScriptValu
 // unregisterHook removes a registered hook.
 // It expects an ID string and returns true if the hook existed and was removed,
 // or false if the hook was not found.
-func (b *HooksBridge) unregisterHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
+func (b *HooksBridge) unregisterHook(ctx context.Context, args []types.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("unregisterHook requires id argument")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
-	id := args[0].(engine.StringValue).Value()
+	id := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	_, exists := b.hooks[id]
@@ -384,15 +384,15 @@ func (b *HooksBridge) listHooks(ctx context.Context) (interface{}, error) {
 // enableHook enables a disabled hook.
 // It expects an ID string and returns true if the hook was found and enabled,
 // or false with an error if the hook was not found.
-func (b *HooksBridge) enableHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
+func (b *HooksBridge) enableHook(ctx context.Context, args []types.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("enableHook requires id argument")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
-	id := args[0].(engine.StringValue).Value()
+	id := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -408,15 +408,15 @@ func (b *HooksBridge) enableHook(ctx context.Context, args []engine.ScriptValue)
 // disableHook disables a hook without removing it.
 // It expects an ID string and returns true if the hook was found and disabled,
 // or false with an error if the hook was not found.
-func (b *HooksBridge) disableHook(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
+func (b *HooksBridge) disableHook(ctx context.Context, args []types.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("disableHook requires id argument")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
-	id := args[0].(engine.StringValue).Value()
+	id := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -432,15 +432,15 @@ func (b *HooksBridge) disableHook(ctx context.Context, args []engine.ScriptValue
 // getHookInfo returns detailed information about a specific hook.
 // It expects an ID string and returns an object with the hook's
 // ID, enabled status, priority, and available callbacks.
-func (b *HooksBridge) getHookInfo(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
+func (b *HooksBridge) getHookInfo(ctx context.Context, args []types.ScriptValue) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("getHookInfo requires id argument")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("id must be a string")
 	}
-	id := args[0].(engine.StringValue).Value()
+	id := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -459,20 +459,20 @@ func (b *HooksBridge) getHookInfo(ctx context.Context, args []engine.ScriptValue
 // executeHooks executes hooks of a specific type.
 // It expects a hook type string (beforeGenerate, afterGenerate, beforeToolCall, afterToolCall)
 // and a context object containing relevant data for the hook execution.
-func (b *HooksBridge) executeHooks(ctx context.Context, args []engine.ScriptValue) (interface{}, error) {
+func (b *HooksBridge) executeHooks(ctx context.Context, args []types.ScriptValue) (interface{}, error) {
 	if len(args) < 2 {
 		return nil, fmt.Errorf("executeHooks requires type and context arguments")
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("type must be a string")
 	}
-	hookType := args[0].(engine.StringValue).Value()
+	hookType := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("context must be an object")
 	}
-	hookContextObj := args[1].(engine.ObjectValue).Fields()
+	hookContextObj := args[1].(types.ObjectValue).Fields()
 	hookContext := make(map[string]interface{})
 	for k, v := range hookContextObj {
 		hookContext[k] = v.ToGo()
@@ -583,8 +583,8 @@ func (b *HooksBridge) clearHooks(ctx context.Context) (interface{}, error) {
 // TypeMappings returns type mappings for the bridge.
 // It defines how Go types are mapped to script types for
 // hooks, hook information, and hook contexts.
-func (b *HooksBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *HooksBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"Hook": {
 			GoType:     "domain.Hook",
 			ScriptType: "object",
@@ -607,10 +607,10 @@ func (b *HooksBridge) TypeMappings() map[string]engine.TypeMapping {
 // RequiredPermissions returns permissions needed by this bridge.
 // It requires process permissions for hook registration,
 // execution, and management operations.
-func (b *HooksBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *HooksBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionProcess,
+			Type:        types.PermissionProcess,
 			Resource:    "hook",
 			Actions:     []string{"register", "execute", "manage"},
 			Description: "Hook registration and execution",
@@ -631,9 +631,9 @@ func (b *HooksBridge) GetDependencies() []string {
 	return []string{}
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // The hooks bridge requires no special engine registration.
-func (b *HooksBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
+func (b *HooksBridge) RegisterWithEngine(engine types.ScriptEngine) error {
 	// No special registration needed for this bridge
 	return nil
 }
@@ -641,33 +641,33 @@ func (b *HooksBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 // ValidateMethod validates method arguments before execution.
 // It ensures that each method receives the correct number and
 // types of arguments before processing.
-func (b *HooksBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *HooksBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	switch name {
 	case "registerHook":
 		if len(args) < 2 {
 			return fmt.Errorf("registerHook requires id and definition arguments")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return fmt.Errorf("id must be a string")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeObject {
+		if args[1] == nil || args[1].Type() != types.TypeObject {
 			return fmt.Errorf("definition must be an object")
 		}
 	case "unregisterHook", "enableHook", "disableHook", "getHookInfo":
 		if len(args) < 1 {
 			return fmt.Errorf("%s requires id argument", name)
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return fmt.Errorf("id must be a string")
 		}
 	case "executeHooks":
 		if len(args) < 2 {
 			return fmt.Errorf("executeHooks requires type and context arguments")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return fmt.Errorf("type must be a string")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeObject {
+		if args[1] == nil || args[1].Type() != types.TypeObject {
 			return fmt.Errorf("context must be an object")
 		}
 	case "listHooks", "clearHooks":
@@ -679,28 +679,28 @@ func (b *HooksBridge) ValidateMethod(name string, args []engine.ScriptValue) err
 }
 
 // Ensure HooksBridge implements the Bridge interface
-var _ engine.Bridge = (*HooksBridge)(nil)
+var _ types.Bridge = (*HooksBridge)(nil)
 
 // Helper functions for ScriptValue conversions
 
 // convertHooksListToScriptValue converts a slice of hook information maps
 // to a ScriptValue array for returning to scripts.
-func convertHooksListToScriptValue(hooks []map[string]interface{}) engine.ScriptValue {
-	result := make([]engine.ScriptValue, len(hooks))
+func convertHooksListToScriptValue(hooks []map[string]interface{}) types.ScriptValue {
+	result := make([]types.ScriptValue, len(hooks))
 	for i, hook := range hooks {
 		result[i] = convertHookInfoToScriptValue(hook)
 	}
-	return engine.NewArrayValue(result)
+	return types.NewArrayValue(result)
 }
 
 // convertHookInfoToScriptValue converts a hook information map
 // to a ScriptValue object for returning to scripts.
-func convertHookInfoToScriptValue(info map[string]interface{}) engine.ScriptValue {
-	result := make(map[string]engine.ScriptValue)
+func convertHookInfoToScriptValue(info map[string]interface{}) types.ScriptValue {
+	result := make(map[string]types.ScriptValue)
 	for k, v := range info {
-		result[k] = engine.ConvertToScriptValue(v)
+		result[k] = types.ConvertToScriptValue(v)
 	}
-	return engine.NewObjectValue(result)
+	return types.NewObjectValue(result)
 }
 
-// NOTE: Duplicate conversion function removed - using centralized engine.ConvertToScriptValue() instead
+// NOTE: Duplicate conversion function removed - using centralized types.ConvertToScriptValue() instead

@@ -79,7 +79,7 @@ func (c *ValidateCmd) Run(ctx context.Context) error {
 	config := engine.EngineConfig{
 		DebugMode: IsDebug(ctx),
 	}
-	scriptEngine, err := engineRegistry.GetEngine(engineName, config)
+	scriptEngine, err := engineRegistry.GetEngine(engineName, config, "minimal")
 	if err != nil {
 		return errors.Wrap(err, errors.CategoryEngine, "failed to get engine")
 	}

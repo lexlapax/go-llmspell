@@ -58,6 +58,11 @@ type RunnerConfig struct {
 	// Security settings
 	DefaultSecurityProfile string                 `json:"default_security_profile" yaml:"default_security_profile"`
 	SecurityProfiles       map[string]interface{} `json:"security_profiles" yaml:"security_profiles"`
+
+	// Engine-specific bridge profile mappings
+	// Maps engine name -> security profile -> bridge profile name
+	// Example: {"lua": {"sandbox": "standard", "minimal": "minimal"}}
+	EngineBridgeProfiles map[string]map[string]string `json:"engine_bridge_profiles,omitempty" yaml:"engine_bridge_profiles,omitempty"`
 }
 
 // Validate checks if the configuration is valid.

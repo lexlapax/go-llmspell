@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 )
 
 // StateManagerBridge bridges go-llms StateManager to script engines.
@@ -20,13 +19,13 @@ import (
 // The bridge enables scripts to manage complex stateful applications
 // with built-in support for artifacts, messages, and metadata.
 type StateManagerBridge struct {
-	manager bridge.StateManager
+	manager types.StateManager
 }
 
 // NewStateManagerBridge creates a new state manager bridge.
 // The manager parameter must not be nil and should be a valid go-llms StateManager.
 // Returns an error if the manager is nil.
-func NewStateManagerBridge(manager bridge.StateManager) (*StateManagerBridge, error) {
+func NewStateManagerBridge(manager types.StateManager) (*StateManagerBridge, error) {
 	if manager == nil {
 		return nil, fmt.Errorf("state manager cannot be nil")
 	}
@@ -49,8 +48,8 @@ func (b *StateManagerBridge) Name() string {
 //   - Data operations (get, set, delete)
 //   - Metadata management
 //   - Artifact and message handling
-func (b *StateManagerBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *StateManagerBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		{Name: "createState", Description: "Create a new state object", ReturnType: "State"},
 		{Name: "saveState", Description: "Save a state object to persistence", ReturnType: "void"},
 		{Name: "loadState", Description: "Load a state object by ID", ReturnType: "State"},
@@ -81,8 +80,8 @@ func (b *StateManagerBridge) Methods() []engine.MethodInfo {
 // TypeMappings returns type mappings for this bridge.
 // Maps go-llms state types to script-compatible object types
 // for seamless data conversion between domains.
-func (b *StateManagerBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *StateManagerBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"State": {
 			GoType:     "State",
 			ScriptType: "object",
@@ -111,8 +110,8 @@ func (b *StateManagerBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // Provides information about the bridge including name, version,
 // description, author, and license.
-func (b *StateManagerBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *StateManagerBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "State Manager Bridge",
 		Version:     "1.0.0",
 		Description: "Bridges go-llms StateManager to script engines",
@@ -142,16 +141,16 @@ func (b *StateManagerBridge) IsInitialized() bool {
 	return true
 }
 
-// RegisterWithEngine registers this bridge with a script engine.
+// RegisterWithEngine registers this bridge with a script types.
 // Delegates to the engine's RegisterBridge method for integration.
-func (b *StateManagerBridge) RegisterWithEngine(scriptEngine engine.ScriptEngine) error {
+func (b *StateManagerBridge) RegisterWithEngine(scriptEngine types.ScriptEngine) error {
 	return scriptEngine.RegisterBridge(b)
 }
 
 // ValidateMethod validates a method call.
 // Checks if the method exists in the bridge's method list.
 // Returns an error if the method is not found.
-func (b *StateManagerBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *StateManagerBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Basic validation - method exists
 	for _, method := range b.Methods() {
 		if method.Name == name {
@@ -164,10 +163,10 @@ func (b *StateManagerBridge) ValidateMethod(name string, args []engine.ScriptVal
 // RequiredPermissions returns required permissions.
 // Requires memory access for state management operations
 // including read and write permissions.
-func (b *StateManagerBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *StateManagerBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "state_management",
 			Actions:     []string{"read", "write"},
 			Description: "Access to state management operations",
@@ -341,20 +340,20 @@ func (b *StateManagerBridge) mergeStates(ctx context.Context, params map[string]
 	}
 
 	// Convert strategy string to enum
-	var strategy bridge.MergeStrategy
+	var strategy types.MergeStrategy
 	switch strings.ToLower(strategyStr) {
 	case "last":
-		strategy = bridge.MergeStrategyLast
+		strategy = types.MergeStrategyLast
 	case "merge_all":
-		strategy = bridge.MergeStrategyMergeAll
+		strategy = types.MergeStrategyMergeAll
 	case "union":
-		strategy = bridge.MergeStrategyUnion
+		strategy = types.MergeStrategyUnion
 	default:
 		return nil, fmt.Errorf("invalid merge strategy: %s", strategyStr)
 	}
 
 	// Convert script states to Go states
-	states := make([]bridge.State, len(statesParam))
+	states := make([]types.State, len(statesParam))
 	for i, stateParam := range statesParam {
 		stateObj, ok := stateParam.(map[string]interface{})
 		if !ok {
@@ -715,7 +714,7 @@ func (b *StateManagerBridge) messages(ctx context.Context, params map[string]int
 
 // Helper functions for type conversion
 
-func (b *StateManagerBridge) stateToScript(state bridge.State) map[string]interface{} {
+func (b *StateManagerBridge) stateToScript(state types.State) map[string]interface{} {
 	return map[string]interface{}{
 		"id":       state.ID(),
 		"created":  state.Created().Format(time.RFC3339),
@@ -728,9 +727,9 @@ func (b *StateManagerBridge) stateToScript(state bridge.State) map[string]interf
 	}
 }
 
-func (b *StateManagerBridge) scriptToState(scriptObj map[string]interface{}) (bridge.State, error) {
+func (b *StateManagerBridge) scriptToState(scriptObj map[string]interface{}) (types.State, error) {
 	// First check if we have the actual state object stored
-	if state, ok := scriptObj["__state"].(bridge.State); ok {
+	if state, ok := scriptObj["__state"].(types.State); ok {
 		return state, nil
 	}
 
@@ -742,7 +741,7 @@ func (b *StateManagerBridge) scriptToState(scriptObj map[string]interface{}) (br
 }
 
 //nolint:unused // Will be used by script engines
-func (b *StateManagerBridge) updateScriptState(scriptObj map[string]interface{}, state bridge.State) {
+func (b *StateManagerBridge) updateScriptState(scriptObj map[string]interface{}, state types.State) {
 	// Update the script object to reflect state changes
 	scriptObj["data"] = state.Values()
 	scriptObj["metadata"] = state.GetAllMetadata()
@@ -843,7 +842,7 @@ func (b *StateManagerBridge) scriptToMessage(scriptObj map[string]interface{}) (
 // Routes method calls to specific implementations and converts between
 // script values and go-llms domain objects. Handles all state operations
 // including lifecycle, data manipulation, and metadata management.
-func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	switch name {
 	case "createState":
 		result, err := b.createState(ctx, nil)
@@ -852,106 +851,106 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		}
 		// Convert result to ScriptValue
 		if result == nil {
-			return engine.NewNilValue(), nil
+			return types.NewNilValue(), nil
 		}
 		if resultMap, ok := result.(map[string]interface{}); ok {
-			scriptMap := make(map[string]engine.ScriptValue)
+			scriptMap := make(map[string]types.ScriptValue)
 			for k, v := range resultMap {
 				// Handle special fields
 				if k == "__state" {
 					// Preserve the state object as a custom value
-					scriptMap[k] = engine.NewCustomValue("State", v)
+					scriptMap[k] = types.NewCustomValue("State", v)
 				} else {
 					// Simple conversion for other fields
 					switch val := v.(type) {
 					case string:
-						scriptMap[k] = engine.NewStringValue(val)
+						scriptMap[k] = types.NewStringValue(val)
 					case float64:
-						scriptMap[k] = engine.NewNumberValue(val)
+						scriptMap[k] = types.NewNumberValue(val)
 					case bool:
-						scriptMap[k] = engine.NewBoolValue(val)
+						scriptMap[k] = types.NewBoolValue(val)
 					case map[string]interface{}:
-						scriptMap[k] = engine.ConvertToScriptValue(val)
+						scriptMap[k] = types.ConvertToScriptValue(val)
 					default:
-						scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+						scriptMap[k] = types.NewStringValue(fmt.Sprintf("%v", v))
 					}
 				}
 			}
-			return engine.NewObjectValue(scriptMap), nil
+			return types.NewObjectValue(scriptMap), nil
 		}
-		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
+		return types.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	case "saveState":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("saveState requires state parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		_, err := b.saveState(ctx, map[string]interface{}{"state": stateObj})
 		if err != nil {
 			return nil, err
 		}
 		// For now, saveState typically returns nil on success
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "loadState":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("loadState requires id parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
-		id := args[0].(engine.StringValue).Value()
+		id := args[0].(types.StringValue).Value()
 		result, err := b.loadState(ctx, map[string]interface{}{"id": id})
 		if err != nil {
 			return nil, err
 		}
 		// Convert state to ScriptValue - similar to createState
 		if result == nil {
-			return engine.NewNilValue(), nil
+			return types.NewNilValue(), nil
 		}
 		if resultMap, ok := result.(map[string]interface{}); ok {
-			scriptMap := make(map[string]engine.ScriptValue)
+			scriptMap := make(map[string]types.ScriptValue)
 			for k, v := range resultMap {
 				// Handle special fields
 				if k == "__state" {
 					// Preserve the state object as a custom value
-					scriptMap[k] = engine.NewCustomValue("State", v)
+					scriptMap[k] = types.NewCustomValue("State", v)
 				} else {
 					// Simple conversion for other fields
 					switch val := v.(type) {
 					case string:
-						scriptMap[k] = engine.NewStringValue(val)
+						scriptMap[k] = types.NewStringValue(val)
 					case float64:
-						scriptMap[k] = engine.NewNumberValue(val)
+						scriptMap[k] = types.NewNumberValue(val)
 					case bool:
-						scriptMap[k] = engine.NewBoolValue(val)
+						scriptMap[k] = types.NewBoolValue(val)
 					case map[string]interface{}:
-						scriptMap[k] = engine.ConvertToScriptValue(val)
+						scriptMap[k] = types.ConvertToScriptValue(val)
 					default:
-						scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+						scriptMap[k] = types.NewStringValue(fmt.Sprintf("%v", v))
 					}
 				}
 			}
-			return engine.NewObjectValue(scriptMap), nil
+			return types.NewObjectValue(scriptMap), nil
 		}
-		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
+		return types.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	case "deleteState":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("deleteState requires id parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
-		id := args[0].(engine.StringValue).Value()
+		id := args[0].(types.StringValue).Value()
 		_, err := b.deleteState(ctx, map[string]interface{}{"id": id})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "listStates":
 		result, err := b.listStates(ctx, nil)
@@ -960,32 +959,32 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		}
 		// Convert result array to ScriptValue
 		if resultArray, ok := result.([]interface{}); ok {
-			scriptArray := make([]engine.ScriptValue, len(resultArray))
+			scriptArray := make([]types.ScriptValue, len(resultArray))
 			for i, v := range resultArray {
 				switch val := v.(type) {
 				case string:
-					scriptArray[i] = engine.NewStringValue(val)
+					scriptArray[i] = types.NewStringValue(val)
 				default:
-					scriptArray[i] = engine.NewStringValue(fmt.Sprintf("%v", v))
+					scriptArray[i] = types.NewStringValue(fmt.Sprintf("%v", v))
 				}
 			}
-			return engine.NewArrayValue(scriptArray), nil
+			return types.NewArrayValue(scriptArray), nil
 		}
-		return engine.NewArrayValue([]engine.ScriptValue{}), nil
+		return types.NewArrayValue([]types.ScriptValue{}), nil
 
 	case "applyTransform":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("applyTransform requires name and state parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		name := args[0].(engine.StringValue).Value()
-		if args[1] == nil || args[1].Type() != engine.TypeObject {
+		name := args[0].(types.StringValue).Value()
+		if args[1] == nil || args[1].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
 		stateObj := make(map[string]interface{})
-		for k, v := range args[1].(engine.ObjectValue).Fields() {
+		for k, v := range args[1].(types.ObjectValue).Fields() {
 			stateObj[k] = v.ToGo()
 		}
 		result, err := b.applyTransform(ctx, map[string]interface{}{"name": name, "state": stateObj})
@@ -994,401 +993,401 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		}
 		// Convert transformed state to ScriptValue
 		if result == nil {
-			return engine.NewNilValue(), nil
+			return types.NewNilValue(), nil
 		}
 		if resultMap, ok := result.(map[string]interface{}); ok {
-			scriptMap := make(map[string]engine.ScriptValue)
+			scriptMap := make(map[string]types.ScriptValue)
 			for k, v := range resultMap {
 				// Handle special fields
 				if k == "__state" {
 					// Preserve the state object as a custom value
-					scriptMap[k] = engine.NewCustomValue("State", v)
+					scriptMap[k] = types.NewCustomValue("State", v)
 				} else {
 					// Simple conversion for other fields
 					switch val := v.(type) {
 					case string:
-						scriptMap[k] = engine.NewStringValue(val)
+						scriptMap[k] = types.NewStringValue(val)
 					case float64:
-						scriptMap[k] = engine.NewNumberValue(val)
+						scriptMap[k] = types.NewNumberValue(val)
 					case bool:
-						scriptMap[k] = engine.NewBoolValue(val)
+						scriptMap[k] = types.NewBoolValue(val)
 					case map[string]interface{}:
-						scriptMap[k] = engine.ConvertToScriptValue(val)
+						scriptMap[k] = types.ConvertToScriptValue(val)
 					default:
-						scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+						scriptMap[k] = types.NewStringValue(fmt.Sprintf("%v", v))
 					}
 				}
 			}
-			return engine.NewObjectValue(scriptMap), nil
+			return types.NewObjectValue(scriptMap), nil
 		}
-		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
+		return types.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	case "mergeStates":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("mergeStates requires states and strategy parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeArray {
+		if args[0] == nil || args[0].Type() != types.TypeArray {
 			return nil, fmt.Errorf("states must be array")
 		}
 		states := make([]interface{}, 0)
-		for _, v := range args[0].(engine.ArrayValue).Elements() {
+		for _, v := range args[0].(types.ArrayValue).Elements() {
 			states = append(states, v.ToGo())
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("strategy must be string")
 		}
-		strategy := args[1].(engine.StringValue).Value()
+		strategy := args[1].(types.StringValue).Value()
 		result, err := b.mergeStates(ctx, map[string]interface{}{"states": states, "strategy": strategy})
 		if err != nil {
 			return nil, err
 		}
 		// Convert merged state to ScriptValue
 		if result == nil {
-			return engine.NewNilValue(), nil
+			return types.NewNilValue(), nil
 		}
 		if resultMap, ok := result.(map[string]interface{}); ok {
-			scriptMap := make(map[string]engine.ScriptValue)
+			scriptMap := make(map[string]types.ScriptValue)
 			for k, v := range resultMap {
 				// Handle special fields
 				if k == "__state" {
 					// Preserve the state object as a custom value
-					scriptMap[k] = engine.NewCustomValue("State", v)
+					scriptMap[k] = types.NewCustomValue("State", v)
 				} else {
 					// Simple conversion for other fields
 					switch val := v.(type) {
 					case string:
-						scriptMap[k] = engine.NewStringValue(val)
+						scriptMap[k] = types.NewStringValue(val)
 					case float64:
-						scriptMap[k] = engine.NewNumberValue(val)
+						scriptMap[k] = types.NewNumberValue(val)
 					case bool:
-						scriptMap[k] = engine.NewBoolValue(val)
+						scriptMap[k] = types.NewBoolValue(val)
 					case map[string]interface{}:
-						scriptMap[k] = engine.ConvertToScriptValue(val)
+						scriptMap[k] = types.ConvertToScriptValue(val)
 					default:
-						scriptMap[k] = engine.NewStringValue(fmt.Sprintf("%v", v))
+						scriptMap[k] = types.NewStringValue(fmt.Sprintf("%v", v))
 					}
 				}
 			}
-			return engine.NewObjectValue(scriptMap), nil
+			return types.NewObjectValue(scriptMap), nil
 		}
-		return engine.NewStringValue(fmt.Sprintf("%v", result)), nil
+		return types.NewStringValue(fmt.Sprintf("%v", result)), nil
 
 	case "get":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("get requires state and key parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("key must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
-		key := args[1].(engine.StringValue).Value()
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+		key := args[1].(types.StringValue).Value()
 		result, err := b.get(ctx, map[string]interface{}{"state": stateObj, "key": key})
 		if err != nil {
 			return nil, err
 		}
 		// Convert result to ScriptValue
 		if resultMap, ok := result.(map[string]interface{}); ok {
-			scriptMap := make(map[string]engine.ScriptValue)
+			scriptMap := make(map[string]types.ScriptValue)
 			for k, v := range resultMap {
 				switch val := v.(type) {
 				case string:
-					scriptMap[k] = engine.NewStringValue(val)
+					scriptMap[k] = types.NewStringValue(val)
 				case bool:
-					scriptMap[k] = engine.NewBoolValue(val)
+					scriptMap[k] = types.NewBoolValue(val)
 				default:
-					scriptMap[k] = engine.ConvertToScriptValue(v)
+					scriptMap[k] = types.ConvertToScriptValue(v)
 				}
 			}
-			return engine.NewObjectValue(scriptMap), nil
+			return types.NewObjectValue(scriptMap), nil
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 
 	case "set":
 		if len(args) < 3 {
 			return nil, fmt.Errorf("set requires state, key, and value parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("key must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
-		key := args[1].(engine.StringValue).Value()
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+		key := args[1].(types.StringValue).Value()
 		value := args[2].ToGo()
 		_, err := b.set(ctx, map[string]interface{}{"state": stateObj, "key": key, "value": value})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "delete":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("delete requires state and key parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("key must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
-		key := args[1].(engine.StringValue).Value()
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+		key := args[1].(types.StringValue).Value()
 		_, err := b.delete(ctx, map[string]interface{}{"state": stateObj, "key": key})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "has":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("has requires state and key parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("key must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
-		key := args[1].(engine.StringValue).Value()
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+		key := args[1].(types.StringValue).Value()
 		result, err := b.has(ctx, map[string]interface{}{"state": stateObj, "key": key})
 		if err != nil {
 			return nil, err
 		}
 		if boolResult, ok := result.(bool); ok {
-			return engine.NewBoolValue(boolResult), nil
+			return types.NewBoolValue(boolResult), nil
 		}
-		return engine.NewBoolValue(false), nil
+		return types.NewBoolValue(false), nil
 
 	case "keys":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("keys requires state parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		result, err := b.keys(ctx, map[string]interface{}{"state": stateObj})
 		if err != nil {
 			return nil, err
 		}
 		if arrayResult, ok := result.([]interface{}); ok {
-			scriptArray := make([]engine.ScriptValue, len(arrayResult))
+			scriptArray := make([]types.ScriptValue, len(arrayResult))
 			for i, v := range arrayResult {
 				if strVal, ok := v.(string); ok {
-					scriptArray[i] = engine.NewStringValue(strVal)
+					scriptArray[i] = types.NewStringValue(strVal)
 				} else {
-					scriptArray[i] = engine.NewStringValue(fmt.Sprintf("%v", v))
+					scriptArray[i] = types.NewStringValue(fmt.Sprintf("%v", v))
 				}
 			}
-			return engine.NewArrayValue(scriptArray), nil
+			return types.NewArrayValue(scriptArray), nil
 		}
-		return engine.NewArrayValue([]engine.ScriptValue{}), nil
+		return types.NewArrayValue([]types.ScriptValue{}), nil
 
 	case "values":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("values requires state parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		result, err := b.values(ctx, map[string]interface{}{"state": stateObj})
 		if err != nil {
 			return nil, err
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 
 	case "setMetadata":
 		if len(args) < 3 {
 			return nil, fmt.Errorf("setMetadata requires state, key, and value parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("key must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
-		key := args[1].(engine.StringValue).Value()
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+		key := args[1].(types.StringValue).Value()
 		value := args[2].ToGo()
 		_, err := b.setMetadata(ctx, map[string]interface{}{"state": stateObj, "key": key, "value": value})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "getMetadata":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("getMetadata requires state and key parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("key must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
-		key := args[1].(engine.StringValue).Value()
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+		key := args[1].(types.StringValue).Value()
 		result, err := b.getMetadata(ctx, map[string]interface{}{"state": stateObj, "key": key})
 		if err != nil {
 			return nil, err
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 
 	case "getAllMetadata":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("getAllMetadata requires state parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		result, err := b.getAllMetadata(ctx, map[string]interface{}{"state": stateObj})
 		if err != nil {
 			return nil, err
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 
 	case "addArtifact":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("addArtifact requires state and artifact parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeObject {
+		if args[1] == nil || args[1].Type() != types.TypeObject {
 			return nil, fmt.Errorf("artifact must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		artifactObj := make(map[string]interface{})
-		for k, v := range args[1].(engine.ObjectValue).Fields() {
+		for k, v := range args[1].(types.ObjectValue).Fields() {
 			artifactObj[k] = v.ToGo()
 		}
 		_, err := b.addArtifact(ctx, map[string]interface{}{"state": stateObj, "artifact": artifactObj})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "getArtifact":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("getArtifact requires state and id parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeString {
+		if args[1] == nil || args[1].Type() != types.TypeString {
 			return nil, fmt.Errorf("id must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
-		id := args[1].(engine.StringValue).Value()
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+		id := args[1].(types.StringValue).Value()
 		result, err := b.getArtifact(ctx, map[string]interface{}{"state": stateObj, "id": id})
 		if err != nil {
 			return nil, err
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 
 	case "artifacts":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("artifacts requires state parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		result, err := b.artifacts(ctx, map[string]interface{}{"state": stateObj})
 		if err != nil {
 			return nil, err
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 
 	case "addMessage":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("addMessage requires state and message parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeObject {
+		if args[1] == nil || args[1].Type() != types.TypeObject {
 			return nil, fmt.Errorf("message must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		messageObj := make(map[string]interface{})
-		for k, v := range args[1].(engine.ObjectValue).Fields() {
+		for k, v := range args[1].(types.ObjectValue).Fields() {
 			messageObj[k] = v.ToGo()
 		}
 		_, err := b.addMessage(ctx, map[string]interface{}{"state": stateObj, "message": messageObj})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "messages":
 		if len(args) < 1 {
 			return nil, fmt.Errorf("messages requires state parameter")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeObject {
+		if args[0] == nil || args[0].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(engine.ObjectValue))
+		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
 		result, err := b.messages(ctx, map[string]interface{}{"state": stateObj})
 		if err != nil {
 			return nil, err
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 
 	case "registerTransform":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("registerTransform requires name and transform parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		name := args[0].(engine.StringValue).Value()
+		name := args[0].(types.StringValue).Value()
 		transform := args[1].ToGo()
 		_, err := b.registerTransform(ctx, map[string]interface{}{"name": name, "transform": transform})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "registerValidator":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("registerValidator requires name and validator parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		name := args[0].(engine.StringValue).Value()
+		name := args[0].(types.StringValue).Value()
 		validator := args[1].ToGo()
 		_, err := b.registerValidator(ctx, map[string]interface{}{"name": name, "validator": validator})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	case "validateState":
 		if len(args) < 2 {
 			return nil, fmt.Errorf("validateState requires name and state parameters")
 		}
-		if args[0] == nil || args[0].Type() != engine.TypeString {
+		if args[0] == nil || args[0].Type() != types.TypeString {
 			return nil, fmt.Errorf("name must be string")
 		}
-		if args[1] == nil || args[1].Type() != engine.TypeObject {
+		if args[1] == nil || args[1].Type() != types.TypeObject {
 			return nil, fmt.Errorf("state must be object")
 		}
-		name := args[0].(engine.StringValue).Value()
-		stateObj := b.extractStateObject(args[1].(engine.ObjectValue))
+		name := args[0].(types.StringValue).Value()
+		stateObj := b.extractStateObject(args[1].(types.ObjectValue))
 		_, err := b.validateState(ctx, map[string]interface{}{"name": name, "state": stateObj})
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewNilValue(), nil
+		return types.NewNilValue(), nil
 
 	default:
 		return nil, fmt.Errorf("method not found: %s", name)
@@ -1398,10 +1397,10 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 // extractStateObject safely extracts a state object from ScriptValue, preserving the __state field.
 // This ensures round-trip conversion between script and Go representations
 // maintains the underlying state object reference.
-func (b *StateManagerBridge) extractStateObject(obj engine.ObjectValue) map[string]interface{} {
+func (b *StateManagerBridge) extractStateObject(obj types.ObjectValue) map[string]interface{} {
 	stateObj := make(map[string]interface{})
 	for k, v := range obj.Fields() {
-		if k == "__state" && v.Type() == engine.TypeCustom {
+		if k == "__state" && v.Type() == types.TypeCustom {
 			// Preserve the actual state object
 			stateObj[k] = v.ToGo()
 		} else {

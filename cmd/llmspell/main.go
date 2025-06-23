@@ -11,13 +11,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/lexlapax/go-llmspell/cmd/llmspell/commands"
 	"github.com/lexlapax/go-llmspell/pkg/config"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
@@ -116,42 +113,27 @@ func main() {
 		cfg.Debug = true
 	}
 
-	// Create engine registry with default configuration
-	registryConfig := engine.RegistryConfig{
-		MaxEngines:        10,
-		DefaultTimeout:    30 * time.Second,
-		HealthCheckPeriod: 60 * time.Second,
-		PoolingEnabled:    true,
-		MaxPoolSize:       5,
-		IdleTimeout:       10 * time.Minute,
-		MetricsEnabled:    true,
-		LoggingEnabled:    cli.Verbose,
-		TracingEnabled:    cli.DebugMode,
-	}
-	registry := engine.NewRegistry(registryConfig)
+	// Create runner configuration
+	runnerConfig := runner.DefaultRunnerConfig()
+	runnerConfig.EnableDebug = cli.DebugMode
+	runnerConfig.EnableMetrics = true
 
-	// Initialize registry first
-	if err := registry.Initialize(); err != nil {
-		parser.Fatalf("failed to initialize engine registry: %v", err)
+	// Setup engine registry with bridges
+	engineManager, err := runner.SetupEngineRegistry(runnerConfig, cli.Profile)
+	if err != nil {
+		parser.Fatalf("failed to setup engine registry: %v", err)
 		osExit(1)
 		return
 	}
 
-	// Register Lua engine factory
-	luaFactory := gopherlua.NewLuaEngineFactory()
-	if err := registry.Register(luaFactory); err != nil {
-		parser.Fatalf("failed to register Lua engine: %v", err)
-		osExit(1)
-		return
-	}
+	// Create engine selector
+	selector := runner.NewEngineSelector(engineManager)
 
-	// Create engine registry manager for runner
-	engineRegistry := runner.NewEngineRegistryManager(registry)
-
-	// TODO: Register JavaScript and Tengo engines when implemented
+	// Create script executor with proper architecture
+	scriptRunner := runner.NewScriptExecutor(runnerConfig, engineManager, selector)
 
 	// Create command context
-	cmdCtx := createCommandContext(ctx, cfg, cli, engineRegistry)
+	cmdCtx := createCommandContext(ctx, cfg, cli, scriptRunner)
 
 	// Set up error handler
 	errorHandler := setupErrorHandler(cfg)
@@ -205,14 +187,14 @@ func formatVersion() string {
 }
 
 // createCommandContext creates context for command execution.
-// It enriches the context with configuration, flags, and registry
+// It enriches the context with configuration, flags, and runner
 // information needed by command implementations.
-func createCommandContext(ctx context.Context, cfg *config.Config, cli *CLI, engineRegistry *runner.EngineRegistryManager) context.Context {
+func createCommandContext(ctx context.Context, cfg *config.Config, cli *CLI, scriptRunner runner.Runner) context.Context {
 	ctx = context.WithValue(ctx, commands.ConfigKey, cfg)
 	ctx = context.WithValue(ctx, commands.DebugKey, cli.DebugMode)
 	ctx = context.WithValue(ctx, commands.VerboseKey, cli.Verbose)
 	ctx = context.WithValue(ctx, commands.ProfileKey, cli.Profile)
-	ctx = context.WithValue(ctx, commands.EngineRegistryKey, engineRegistry)
+	ctx = context.WithValue(ctx, commands.RunnerKey, scriptRunner)
 	return ctx
 }
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,31 +74,31 @@ func TestAgentBridge_ValidateMethod(t *testing.T) {
 	tests := []struct {
 		name        string
 		method      string
-		args        []engine.ScriptValue
+		args        []types.ScriptValue
 		expectError bool
 	}{
 		{
 			name:        "valid createAgent",
 			method:      "createAgent",
-			args:        []engine.ScriptValue{sv("agent1"), svMap(map[string]interface{}{})},
+			args:        []types.ScriptValue{sv("agent1"), svMap(map[string]interface{}{})},
 			expectError: false,
 		},
 		{
 			name:        "invalid createAgent - missing args",
 			method:      "createAgent",
-			args:        []engine.ScriptValue{sv("agent1")},
+			args:        []types.ScriptValue{sv("agent1")},
 			expectError: true,
 		},
 		{
 			name:        "valid listAgents",
 			method:      "listAgents",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: false,
 		},
 		{
 			name:        "unknown method",
 			method:      "unknownMethod",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: true,
 		},
 	}
@@ -122,10 +122,10 @@ func TestAgentBridge_ExecuteMethod_ListAgents(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test listAgents - should work even with no agents
-	result, err := bridge.ExecuteMethod(ctx, "listAgents", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "listAgents", []types.ScriptValue{})
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue")
 	assert.Equal(t, 0, len(arrayValue.ToGo().([]interface{})), "Expected empty array")
 }
@@ -143,7 +143,7 @@ func TestAgentBridge_ExecuteMethod_CreateAgent(t *testing.T) {
 		"description": "A test agent",
 	}
 
-	args := []engine.ScriptValue{
+	args := []types.ScriptValue{
 		sv(agentID),
 		svMap(config),
 	}
@@ -153,10 +153,10 @@ func TestAgentBridge_ExecuteMethod_CreateAgent(t *testing.T) {
 	assert.NotNil(t, result)
 
 	// Verify agent was created by listing agents
-	listResult, err := bridge.ExecuteMethod(ctx, "listAgents", []engine.ScriptValue{})
+	listResult, err := bridge.ExecuteMethod(ctx, "listAgents", []types.ScriptValue{})
 	assert.NoError(t, err)
 
-	arrayValue, ok := listResult.(engine.ArrayValue)
+	arrayValue, ok := listResult.(types.ArrayValue)
 	assert.True(t, ok)
 	agents := arrayValue.ToGo().([]interface{})
 	assert.Equal(t, 1, len(agents), "Expected one agent")
@@ -174,7 +174,7 @@ func TestAgentBridge_ExecuteMethod_GetAgent(t *testing.T) {
 		"name": "Test Agent",
 	}
 
-	createArgs := []engine.ScriptValue{
+	createArgs := []types.ScriptValue{
 		sv(agentID),
 		svMap(config),
 	}
@@ -183,17 +183,17 @@ func TestAgentBridge_ExecuteMethod_GetAgent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test getAgent
-	getArgs := []engine.ScriptValue{sv(agentID)}
+	getArgs := []types.ScriptValue{sv(agentID)}
 	result, err := bridge.ExecuteMethod(ctx, "getAgent", getArgs)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
 	// Test getAgent with non-existent ID
-	nonExistentArgs := []engine.ScriptValue{sv("non-existent")}
+	nonExistentArgs := []types.ScriptValue{sv("non-existent")}
 	result, err = bridge.ExecuteMethod(ctx, "getAgent", nonExistentArgs)
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for non-existent agent")
 	assert.Contains(t, errorValue.Error().Error(), "not found")
 }
@@ -210,7 +210,7 @@ func TestAgentBridge_ExecuteMethod_RemoveAgent(t *testing.T) {
 		"name": "Test Agent",
 	}
 
-	createArgs := []engine.ScriptValue{
+	createArgs := []types.ScriptValue{
 		sv(agentID),
 		svMap(config),
 	}
@@ -219,24 +219,24 @@ func TestAgentBridge_ExecuteMethod_RemoveAgent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify agent exists
-	listResult, err := bridge.ExecuteMethod(ctx, "listAgents", []engine.ScriptValue{})
+	listResult, err := bridge.ExecuteMethod(ctx, "listAgents", []types.ScriptValue{})
 	require.NoError(t, err)
-	arrayValue := listResult.(engine.ArrayValue)
+	arrayValue := listResult.(types.ArrayValue)
 	assert.Equal(t, 1, len(arrayValue.ToGo().([]interface{})))
 
 	// Remove the agent
-	removeArgs := []engine.ScriptValue{sv(agentID)}
+	removeArgs := []types.ScriptValue{sv(agentID)}
 	result, err := bridge.ExecuteMethod(ctx, "removeAgent", removeArgs)
 	assert.NoError(t, err)
 
-	nilValue, ok := result.(engine.NilValue)
+	nilValue, ok := result.(types.NilValue)
 	assert.True(t, ok, "Expected NilValue from removeAgent")
 	assert.True(t, nilValue.IsNil())
 
 	// Verify agent was removed
-	listResult, err = bridge.ExecuteMethod(ctx, "listAgents", []engine.ScriptValue{})
+	listResult, err = bridge.ExecuteMethod(ctx, "listAgents", []types.ScriptValue{})
 	require.NoError(t, err)
-	arrayValue = listResult.(engine.ArrayValue)
+	arrayValue = listResult.(types.ArrayValue)
 	assert.Equal(t, 0, len(arrayValue.ToGo().([]interface{})))
 }
 
@@ -252,7 +252,7 @@ func TestAgentBridge_ExecuteMethod_GetAgentMetrics(t *testing.T) {
 		"name": "Test Agent",
 	}
 
-	createArgs := []engine.ScriptValue{
+	createArgs := []types.ScriptValue{
 		sv(agentID),
 		svMap(config),
 	}
@@ -261,12 +261,12 @@ func TestAgentBridge_ExecuteMethod_GetAgentMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get metrics
-	metricsArgs := []engine.ScriptValue{sv(agentID)}
+	metricsArgs := []types.ScriptValue{sv(agentID)}
 	result, err := bridge.ExecuteMethod(ctx, "getAgentMetrics", metricsArgs)
 	assert.NoError(t, err)
 
 	// Should return an object with metrics
-	objectValue, ok := result.(engine.ObjectValue)
+	objectValue, ok := result.(types.ObjectValue)
 	if !assert.True(t, ok, "Expected ObjectValue from getAgentMetrics") {
 		t.Logf("Got type: %T, value: %v", result, result)
 		return
@@ -283,10 +283,10 @@ func TestAgentBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []types.ScriptValue{})
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for unknown method")
 	assert.Contains(t, errorValue.Error().Error(), "unknown method")
 }
@@ -340,10 +340,10 @@ func TestAgentBridge_NotInitialized(t *testing.T) {
 	ctx := context.Background()
 
 	// Should fail when not initialized
-	result, err := bridge.ExecuteMethod(ctx, "listAgents", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "listAgents", []types.ScriptValue{})
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue when not initialized")
 	assert.Contains(t, errorValue.Error().Error(), "not initialized")
 }

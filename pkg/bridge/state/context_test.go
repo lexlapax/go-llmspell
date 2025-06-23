@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -128,31 +128,31 @@ func TestStateContextBridgeCreateSharedContext(t *testing.T) {
 	ctx := context.Background()
 
 	// Test creating shared context without parent
-	result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeObject, result.Type())
+	assert.Equal(t, types.TypeObject, result.Type())
 
-	contextObj := result.(engine.ObjectValue).Fields()
+	contextObj := result.(types.ObjectValue).Fields()
 	assert.Contains(t, contextObj, "_id")
 	assert.Contains(t, contextObj, "_type")
-	assert.Equal(t, "SharedStateContext", contextObj["_type"].(engine.StringValue).Value())
+	assert.Equal(t, "SharedStateContext", contextObj["_type"].(types.StringValue).Value())
 
 	// Store context ID for further tests
-	contextID := contextObj["_id"].(engine.StringValue).Value()
+	contextID := contextObj["_id"].(types.StringValue).Value()
 
 	// Test creating shared context with parent
-	childResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
+	childResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
 		result,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeObject, childResult.Type())
+	assert.Equal(t, types.TypeObject, childResult.Type())
 
-	childContextObj := childResult.(engine.ObjectValue).Fields()
+	childContextObj := childResult.(types.ObjectValue).Fields()
 	assert.Contains(t, childContextObj, "_id")
 	assert.Contains(t, childContextObj, "_parent")
-	assert.Equal(t, contextID, childContextObj["_parent"].(engine.StringValue).Value())
+	assert.Equal(t, contextID, childContextObj["_parent"].(types.StringValue).Value())
 }
 
 func TestStateContextBridgeInheritanceConfig(t *testing.T) {
@@ -162,20 +162,20 @@ func TestStateContextBridgeInheritanceConfig(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a context
-	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
 	// Configure inheritance
-	result, err := bridge.ExecuteMethod(ctx, "withInheritanceConfig", []engine.ScriptValue{
+	result, err := bridge.ExecuteMethod(ctx, "withInheritanceConfig", []types.ScriptValue{
 		contextResult,
-		engine.NewBoolValue(true),  // messages
-		engine.NewBoolValue(false), // artifacts
-		engine.NewBoolValue(true),  // metadata
+		types.NewBoolValue(true),  // messages
+		types.NewBoolValue(false), // artifacts
+		types.NewBoolValue(true),  // metadata
 	})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeObject, result.Type())
+	assert.Equal(t, types.TypeObject, result.Type())
 }
 
 func TestStateContextBridgeGetSet(t *testing.T) {
@@ -185,67 +185,67 @@ func TestStateContextBridgeGetSet(t *testing.T) {
 	ctx := context.Background()
 
 	// Create parent context
-	parentResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	parentResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
 	// Set value in parent
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		parentResult,
-		engine.NewStringValue("parent_key"),
-		engine.NewStringValue("parent_value"),
+		types.NewStringValue("parent_key"),
+		types.NewStringValue("parent_value"),
 	})
 	require.NoError(t, err)
 
 	// Get value from parent
-	value, err := bridge.ExecuteMethod(ctx, "get", []engine.ScriptValue{
+	value, err := bridge.ExecuteMethod(ctx, "get", []types.ScriptValue{
 		parentResult,
-		engine.NewStringValue("parent_key"),
+		types.NewStringValue("parent_key"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeString, value.Type())
-	assert.Equal(t, "parent_value", value.(engine.StringValue).Value())
+	assert.Equal(t, types.TypeString, value.Type())
+	assert.Equal(t, "parent_value", value.(types.StringValue).Value())
 
 	// Create child context
-	childResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
+	childResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
 		parentResult,
 	})
 	require.NoError(t, err)
 
 	// Get parent value from child (should inherit)
-	childValue, err := bridge.ExecuteMethod(ctx, "get", []engine.ScriptValue{
+	childValue, err := bridge.ExecuteMethod(ctx, "get", []types.ScriptValue{
 		childResult,
-		engine.NewStringValue("parent_key"),
+		types.NewStringValue("parent_key"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeString, childValue.Type())
-	assert.Equal(t, "parent_value", childValue.(engine.StringValue).Value())
+	assert.Equal(t, types.TypeString, childValue.Type())
+	assert.Equal(t, "parent_value", childValue.(types.StringValue).Value())
 
 	// Set override in child
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		childResult,
-		engine.NewStringValue("parent_key"),
-		engine.NewStringValue("child_override"),
+		types.NewStringValue("parent_key"),
+		types.NewStringValue("child_override"),
 	})
 	require.NoError(t, err)
 
 	// Get overridden value from child
-	overriddenValue, err := bridge.ExecuteMethod(ctx, "get", []engine.ScriptValue{
+	overriddenValue, err := bridge.ExecuteMethod(ctx, "get", []types.ScriptValue{
 		childResult,
-		engine.NewStringValue("parent_key"),
+		types.NewStringValue("parent_key"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeString, overriddenValue.Type())
-	assert.Equal(t, "child_override", overriddenValue.(engine.StringValue).Value())
+	assert.Equal(t, types.TypeString, overriddenValue.Type())
+	assert.Equal(t, "child_override", overriddenValue.(types.StringValue).Value())
 
 	// Parent value should be unchanged
-	parentValue, err := bridge.ExecuteMethod(ctx, "get", []engine.ScriptValue{
+	parentValue, err := bridge.ExecuteMethod(ctx, "get", []types.ScriptValue{
 		parentResult,
-		engine.NewStringValue("parent_key"),
+		types.NewStringValue("parent_key"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "parent_value", parentValue.(engine.StringValue).Value())
+	assert.Equal(t, "parent_value", parentValue.(types.StringValue).Value())
 }
 
 func TestStateContextBridgeDelete(t *testing.T) {
@@ -255,41 +255,41 @@ func TestStateContextBridgeDelete(t *testing.T) {
 	ctx := context.Background()
 
 	// Create context
-	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
 	// Set value
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		contextResult,
-		engine.NewStringValue("test_key"),
-		engine.NewStringValue("test_value"),
+		types.NewStringValue("test_key"),
+		types.NewStringValue("test_value"),
 	})
 	require.NoError(t, err)
 
 	// Verify it exists
-	hasResult, err := bridge.ExecuteMethod(ctx, "has", []engine.ScriptValue{
+	hasResult, err := bridge.ExecuteMethod(ctx, "has", []types.ScriptValue{
 		contextResult,
-		engine.NewStringValue("test_key"),
+		types.NewStringValue("test_key"),
 	})
 	require.NoError(t, err)
-	assert.True(t, hasResult.(engine.BoolValue).Value())
+	assert.True(t, hasResult.(types.BoolValue).Value())
 
 	// Delete the key
-	_, err = bridge.ExecuteMethod(ctx, "delete", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "delete", []types.ScriptValue{
 		contextResult,
-		engine.NewStringValue("test_key"),
+		types.NewStringValue("test_key"),
 	})
 	require.NoError(t, err)
 
 	// Verify it's gone
-	hasResult, err = bridge.ExecuteMethod(ctx, "has", []engine.ScriptValue{
+	hasResult, err = bridge.ExecuteMethod(ctx, "has", []types.ScriptValue{
 		contextResult,
-		engine.NewStringValue("test_key"),
+		types.NewStringValue("test_key"),
 	})
 	require.NoError(t, err)
-	assert.False(t, hasResult.(engine.BoolValue).Value())
+	assert.False(t, hasResult.(types.BoolValue).Value())
 }
 
 func TestStateContextBridgeKeysValues(t *testing.T) {
@@ -299,8 +299,8 @@ func TestStateContextBridgeKeysValues(t *testing.T) {
 	ctx := context.Background()
 
 	// Create context
-	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
@@ -312,28 +312,28 @@ func TestStateContextBridgeKeysValues(t *testing.T) {
 	}
 
 	for k, v := range testData {
-		_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+		_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 			contextResult,
-			engine.NewStringValue(k),
-			engine.NewStringValue(v),
+			types.NewStringValue(k),
+			types.NewStringValue(v),
 		})
 		require.NoError(t, err)
 	}
 
 	// Get keys
-	keysResult, err := bridge.ExecuteMethod(ctx, "keys", []engine.ScriptValue{contextResult})
+	keysResult, err := bridge.ExecuteMethod(ctx, "keys", []types.ScriptValue{contextResult})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeArray, keysResult.Type())
+	assert.Equal(t, types.TypeArray, keysResult.Type())
 
-	keys := keysResult.(engine.ArrayValue).Elements()
+	keys := keysResult.(types.ArrayValue).Elements()
 	assert.Len(t, keys, 3)
 
 	// Get values
-	valuesResult, err := bridge.ExecuteMethod(ctx, "values", []engine.ScriptValue{contextResult})
+	valuesResult, err := bridge.ExecuteMethod(ctx, "values", []types.ScriptValue{contextResult})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeArray, valuesResult.Type())
+	assert.Equal(t, types.TypeArray, valuesResult.Type())
 
-	values := valuesResult.(engine.ArrayValue).Elements()
+	values := valuesResult.(types.ArrayValue).Elements()
 	assert.Len(t, values, 3)
 }
 
@@ -344,60 +344,60 @@ func TestStateContextBridgeSchemaValidation(t *testing.T) {
 	ctx := context.Background()
 
 	// Register a schema
-	schema := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"type": engine.NewStringValue("object"),
-		"properties": engine.NewObjectValue(map[string]engine.ScriptValue{
-			"name": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"type": engine.NewStringValue("string"),
+	schema := types.NewObjectValue(map[string]types.ScriptValue{
+		"type": types.NewStringValue("object"),
+		"properties": types.NewObjectValue(map[string]types.ScriptValue{
+			"name": types.NewObjectValue(map[string]types.ScriptValue{
+				"type": types.NewStringValue("string"),
 			}),
-			"age": engine.NewObjectValue(map[string]engine.ScriptValue{
-				"type": engine.NewStringValue("number"),
+			"age": types.NewObjectValue(map[string]types.ScriptValue{
+				"type": types.NewStringValue("number"),
 			}),
 		}),
-		"required": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewStringValue("name"),
+		"required": types.NewArrayValue([]types.ScriptValue{
+			types.NewStringValue("name"),
 		}),
 	})
 
-	schemaID, err := bridge.ExecuteMethod(ctx, "registerSchema", []engine.ScriptValue{
-		engine.NewStringValue("person"),
+	schemaID, err := bridge.ExecuteMethod(ctx, "registerSchema", []types.ScriptValue{
+		types.NewStringValue("person"),
 		schema,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeString, schemaID.Type())
+	assert.Equal(t, types.TypeString, schemaID.Type())
 
 	// Create context
-	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
 	// Validate valid state
-	validState := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("John"),
-		"age":  engine.NewNumberValue(30),
+	validState := types.NewObjectValue(map[string]types.ScriptValue{
+		"name": types.NewStringValue("John"),
+		"age":  types.NewNumberValue(30),
 	})
 
-	isValid, err := bridge.ExecuteMethod(ctx, "validateWithSchema", []engine.ScriptValue{
+	isValid, err := bridge.ExecuteMethod(ctx, "validateWithSchema", []types.ScriptValue{
 		contextResult,
 		schemaID,
 		validState,
 	})
 	require.NoError(t, err)
-	assert.True(t, isValid.(engine.BoolValue).Value())
+	assert.True(t, isValid.(types.BoolValue).Value())
 
 	// Validate invalid state (missing required field)
-	invalidState := engine.NewObjectValue(map[string]engine.ScriptValue{
-		"age": engine.NewNumberValue(30),
+	invalidState := types.NewObjectValue(map[string]types.ScriptValue{
+		"age": types.NewNumberValue(30),
 	})
 
-	isValid, err = bridge.ExecuteMethod(ctx, "validateWithSchema", []engine.ScriptValue{
+	isValid, err = bridge.ExecuteMethod(ctx, "validateWithSchema", []types.ScriptValue{
 		contextResult,
 		schemaID,
 		invalidState,
 	})
 	require.NoError(t, err)
-	assert.False(t, isValid.(engine.BoolValue).Value())
+	assert.False(t, isValid.(types.BoolValue).Value())
 }
 
 func TestStateContextBridgeClone(t *testing.T) {
@@ -407,49 +407,49 @@ func TestStateContextBridgeClone(t *testing.T) {
 	ctx := context.Background()
 
 	// Create context with data
-	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
 	// Add some data
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		contextResult,
-		engine.NewStringValue("original_key"),
-		engine.NewStringValue("original_value"),
+		types.NewStringValue("original_key"),
+		types.NewStringValue("original_value"),
 	})
 	require.NoError(t, err)
 
 	// Clone the context
-	cloneResult, err := bridge.ExecuteMethod(ctx, "clone", []engine.ScriptValue{contextResult})
+	cloneResult, err := bridge.ExecuteMethod(ctx, "clone", []types.ScriptValue{contextResult})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeObject, cloneResult.Type())
+	assert.Equal(t, types.TypeObject, cloneResult.Type())
 
 	// Verify clone has fresh local state (no data)
 	// Clone has the same parent as the original (nil in this case)
 	// So it should not see the original's data
-	hasKey, err := bridge.ExecuteMethod(ctx, "has", []engine.ScriptValue{
+	hasKey, err := bridge.ExecuteMethod(ctx, "has", []types.ScriptValue{
 		cloneResult,
-		engine.NewStringValue("original_key"),
+		types.NewStringValue("original_key"),
 	})
 	require.NoError(t, err)
-	assert.False(t, hasKey.(engine.BoolValue).Value())
+	assert.False(t, hasKey.(types.BoolValue).Value())
 
 	// Set value in clone
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		cloneResult,
-		engine.NewStringValue("clone_key"),
-		engine.NewStringValue("clone_value"),
+		types.NewStringValue("clone_key"),
+		types.NewStringValue("clone_value"),
 	})
 	require.NoError(t, err)
 
 	// Original should not have clone's data
-	hasCloneKey, err := bridge.ExecuteMethod(ctx, "has", []engine.ScriptValue{
+	hasCloneKey, err := bridge.ExecuteMethod(ctx, "has", []types.ScriptValue{
 		contextResult,
-		engine.NewStringValue("clone_key"),
+		types.NewStringValue("clone_key"),
 	})
 	require.NoError(t, err)
-	assert.False(t, hasCloneKey.(engine.BoolValue).Value())
+	assert.False(t, hasCloneKey.(types.BoolValue).Value())
 }
 
 func TestStateContextBridgeAsState(t *testing.T) {
@@ -459,44 +459,44 @@ func TestStateContextBridgeAsState(t *testing.T) {
 	ctx := context.Background()
 
 	// Create parent context
-	parentResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	parentResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
 	// Set parent data
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		parentResult,
-		engine.NewStringValue("parent_key"),
-		engine.NewStringValue("parent_value"),
+		types.NewStringValue("parent_key"),
+		types.NewStringValue("parent_value"),
 	})
 	require.NoError(t, err)
 
 	// Create child context
-	childResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
+	childResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
 		parentResult,
 	})
 	require.NoError(t, err)
 
 	// Set child data
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		childResult,
-		engine.NewStringValue("child_key"),
-		engine.NewStringValue("child_value"),
+		types.NewStringValue("child_key"),
+		types.NewStringValue("child_value"),
 	})
 	require.NoError(t, err)
 
 	// Convert to state (merges parent and child data)
-	stateResult, err := bridge.ExecuteMethod(ctx, "asState", []engine.ScriptValue{childResult})
+	stateResult, err := bridge.ExecuteMethod(ctx, "asState", []types.ScriptValue{childResult})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeObject, stateResult.Type())
+	assert.Equal(t, types.TypeObject, stateResult.Type())
 
-	stateObj := stateResult.(engine.ObjectValue).Fields()
+	stateObj := stateResult.(types.ObjectValue).Fields()
 	assert.Contains(t, stateObj, "type")
-	assert.Equal(t, "State", stateObj["type"].(engine.StringValue).Value())
+	assert.Equal(t, "State", stateObj["type"].(types.StringValue).Value())
 
 	// Check merged data
-	data := stateObj["data"].(engine.ObjectValue).Fields()
+	data := stateObj["data"].(types.ObjectValue).Fields()
 	assert.Contains(t, data, "parent_key")
 	assert.Contains(t, data, "child_key")
 }
@@ -508,28 +508,28 @@ func TestStateContextBridgeGetAllContexts(t *testing.T) {
 	ctx := context.Background()
 
 	// Initially no contexts
-	contexts, err := bridge.ExecuteMethod(ctx, "getAllContexts", []engine.ScriptValue{})
+	contexts, err := bridge.ExecuteMethod(ctx, "getAllContexts", []types.ScriptValue{})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeArray, contexts.Type())
-	assert.Len(t, contexts.(engine.ArrayValue).Elements(), 0)
+	assert.Equal(t, types.TypeArray, contexts.Type())
+	assert.Len(t, contexts.(types.ArrayValue).Elements(), 0)
 
 	// Create multiple contexts
 	var contextIDs []string
 	for i := 0; i < 3; i++ {
-		result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-			engine.NewNilValue(),
+		result, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+			types.NewNilValue(),
 		})
 		require.NoError(t, err)
 
-		contextObj := result.(engine.ObjectValue).Fields()
-		_ = append(contextIDs, contextObj["_id"].(engine.StringValue).Value())
+		contextObj := result.(types.ObjectValue).Fields()
+		_ = append(contextIDs, contextObj["_id"].(types.StringValue).Value())
 	}
 
 	// Get all contexts
-	contexts, err = bridge.ExecuteMethod(ctx, "getAllContexts", []engine.ScriptValue{})
+	contexts, err = bridge.ExecuteMethod(ctx, "getAllContexts", []types.ScriptValue{})
 	require.NoError(t, err)
-	assert.Equal(t, engine.TypeArray, contexts.Type())
-	assert.Len(t, contexts.(engine.ArrayValue).Elements(), 3)
+	assert.Equal(t, types.TypeArray, contexts.Type())
+	assert.Len(t, contexts.(types.ArrayValue).Elements(), 3)
 }
 
 func TestStateContextBridgeClearContext(t *testing.T) {
@@ -539,32 +539,32 @@ func TestStateContextBridgeClearContext(t *testing.T) {
 	ctx := context.Background()
 
 	// Create context
-	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	contextResult, err := bridge.ExecuteMethod(ctx, "createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	require.NoError(t, err)
 
-	contextID := contextResult.(engine.ObjectValue).Fields()["_id"].(engine.StringValue).Value()
+	contextID := contextResult.(types.ObjectValue).Fields()["_id"].(types.StringValue).Value()
 
 	// Add data
-	_, err = bridge.ExecuteMethod(ctx, "set", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "set", []types.ScriptValue{
 		contextResult,
-		engine.NewStringValue("test_key"),
-		engine.NewStringValue("test_value"),
+		types.NewStringValue("test_key"),
+		types.NewStringValue("test_value"),
 	})
 	require.NoError(t, err)
 
 	// Clear context
-	result, err := bridge.ExecuteMethod(ctx, "clearContext", []engine.ScriptValue{
-		engine.NewStringValue(contextID),
+	result, err := bridge.ExecuteMethod(ctx, "clearContext", []types.ScriptValue{
+		types.NewStringValue(contextID),
 	})
 	require.NoError(t, err)
 	assert.True(t, result.IsNil())
 
 	// Verify context is gone
-	contexts, err := bridge.ExecuteMethod(ctx, "getAllContexts", []engine.ScriptValue{})
+	contexts, err := bridge.ExecuteMethod(ctx, "getAllContexts", []types.ScriptValue{})
 	require.NoError(t, err)
-	assert.Len(t, contexts.(engine.ArrayValue).Elements(), 0)
+	assert.Len(t, contexts.(types.ArrayValue).Elements(), 0)
 }
 
 func TestStateContextBridgeValidateMethod(t *testing.T) {
@@ -572,12 +572,12 @@ func TestStateContextBridgeValidateMethod(t *testing.T) {
 	require.NoError(t, err)
 
 	// ValidateMethod should always return nil as validation is handled by engine
-	err = bridge.ValidateMethod("createSharedContext", []engine.ScriptValue{
-		engine.NewNilValue(),
+	err = bridge.ValidateMethod("createSharedContext", []types.ScriptValue{
+		types.NewNilValue(),
 	})
 	assert.NoError(t, err)
 
-	err = bridge.ValidateMethod("unknownMethod", []engine.ScriptValue{})
+	err = bridge.ValidateMethod("unknownMethod", []types.ScriptValue{})
 	assert.NoError(t, err)
 }
 
@@ -593,13 +593,13 @@ func TestStateContextBridgeRequiredPermissions(t *testing.T) {
 
 	for _, perm := range permissions {
 		switch perm.Type {
-		case engine.PermissionMemory:
+		case types.PermissionMemory:
 			if perm.Resource == "state" {
 				hasMemory = true
 				assert.Contains(t, perm.Actions, "read")
 				assert.Contains(t, perm.Actions, "write")
 			}
-		case engine.PermissionStorage:
+		case types.PermissionStorage:
 			if perm.Resource == "state_persistence" {
 				hasStorage = true
 				assert.Contains(t, perm.Actions, "read")
@@ -646,20 +646,20 @@ func TestStateContextBridgeErrorHandling(t *testing.T) {
 	ctx := context.Background()
 
 	// Test invalid arguments
-	_, err = bridge.ExecuteMethod(ctx, "get", []engine.ScriptValue{})
+	_, err = bridge.ExecuteMethod(ctx, "get", []types.ScriptValue{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "requires context and key parameters")
 
 	// Test invalid context type
-	_, err = bridge.ExecuteMethod(ctx, "get", []engine.ScriptValue{
-		engine.NewStringValue("not a context"),
-		engine.NewStringValue("key"),
+	_, err = bridge.ExecuteMethod(ctx, "get", []types.ScriptValue{
+		types.NewStringValue("not a context"),
+		types.NewStringValue("key"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "context must be object")
 
 	// Test unknown method
-	_, err = bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	_, err = bridge.ExecuteMethod(ctx, "unknownMethod", []types.ScriptValue{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "method not found")
 }

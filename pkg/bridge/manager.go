@@ -17,7 +17,7 @@ import (
 
 	"github.com/lexlapax/go-llms/pkg/agent/events"
 	"github.com/lexlapax/go-llms/pkg/docs"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 )
 
 // BridgeManager manages the lifecycle of bridges across all script engines.
@@ -26,7 +26,7 @@ import (
 // ensures thread-safe operations and proper cleanup of bridge resources.
 type BridgeManager struct {
 	mu           sync.RWMutex
-	bridges      map[string]engine.Bridge
+	bridges      map[string]types.Bridge
 	initialized  map[string]bool
 	dependencies map[string][]string // Bridge ID -> list of dependency IDs
 	watchers     map[string][]chan string
@@ -82,7 +82,7 @@ func NewBridgeManagerWithEvents(eventBus *events.EventBus, eventStore events.Eve
 	publisher := events.NewBridgeEventPublisher(eventBus, "bridge-manager", sessionID)
 
 	return &BridgeManager{
-		bridges:      make(map[string]engine.Bridge),
+		bridges:      make(map[string]types.Bridge),
 		initialized:  make(map[string]bool),
 		dependencies: make(map[string][]string),
 		watchers:     make(map[string][]chan string),
@@ -103,7 +103,7 @@ func NewBridgeManagerWithEvents(eventBus *events.EventBus, eventStore events.Eve
 // It validates the bridge, stores its metadata and dependencies, initializes
 // metrics tracking, and publishes a registration event. Returns error if the
 // bridge is nil, has empty ID, or is already registered.
-func (m *BridgeManager) RegisterBridge(bridge engine.Bridge) error {
+func (m *BridgeManager) RegisterBridge(bridge types.Bridge) error {
 	if bridge == nil {
 		return fmt.Errorf("cannot register nil bridge")
 	}
@@ -463,7 +463,7 @@ func (m *BridgeManager) NotifyChange(bridgeID string) {
 // GetBridge retrieves a bridge by ID.
 // Returns the bridge interface and nil error if found,
 // or nil and error if not found. Thread-safe for concurrent access.
-func (m *BridgeManager) GetBridge(bridgeID string) (engine.Bridge, error) {
+func (m *BridgeManager) GetBridge(bridgeID string) (types.Bridge, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -501,24 +501,24 @@ func (m *BridgeManager) IsBridgeInitialized(bridgeID string) bool {
 // GetBridgeMetadata retrieves metadata for a bridge.
 // Returns a copy of the bridge metadata including name, version,
 // description, and dependencies. Returns error if bridge not found.
-func (m *BridgeManager) GetBridgeMetadata(bridgeID string) (engine.BridgeMetadata, error) {
+func (m *BridgeManager) GetBridgeMetadata(bridgeID string) (types.BridgeMetadata, error) {
 	m.mu.RLock()
 	bridge, exists := m.bridges[bridgeID]
 	m.mu.RUnlock()
 
 	if !exists {
-		return engine.BridgeMetadata{}, fmt.Errorf("bridge %s not found", bridgeID)
+		return types.BridgeMetadata{}, fmt.Errorf("bridge %s not found", bridgeID)
 	}
 
 	return bridge.GetMetadata(), nil
 }
 
-// RegisterBridgesWithEngine registers all bridges with a script engine.
+// RegisterBridgesWithEngine registers all bridges with a script types.
 // This is typically called when initializing a new script engine to make
 // all available bridges accessible. Returns on first registration error.
-func (m *BridgeManager) RegisterBridgesWithEngine(scriptEngine engine.ScriptEngine) error {
+func (m *BridgeManager) RegisterBridgesWithEngine(scriptEngine types.ScriptEngine) error {
 	m.mu.RLock()
-	bridges := make([]engine.Bridge, 0, len(m.bridges))
+	bridges := make([]types.Bridge, 0, len(m.bridges))
 	for _, bridge := range m.bridges {
 		bridges = append(bridges, bridge)
 	}
@@ -533,10 +533,10 @@ func (m *BridgeManager) RegisterBridgesWithEngine(scriptEngine engine.ScriptEngi
 	return nil
 }
 
-// RegisterSpecificBridgesWithEngine registers specific bridges with a script engine.
+// RegisterSpecificBridgesWithEngine registers specific bridges with a script types.
 // Useful when you want to limit which bridges are available to a particular
 // engine instance. Returns error if any bridge ID not found.
-func (m *BridgeManager) RegisterSpecificBridgesWithEngine(scriptEngine engine.ScriptEngine, bridgeIDs []string) error {
+func (m *BridgeManager) RegisterSpecificBridgesWithEngine(scriptEngine types.ScriptEngine, bridgeIDs []string) error {
 	for _, id := range bridgeIDs {
 		m.mu.RLock()
 		bridge, exists := m.bridges[id]
@@ -720,9 +720,9 @@ type BridgeDocumentable struct {
 	Name         string
 	Version      string
 	Description  string
-	Methods      []engine.MethodInfo
-	TypeMappings map[string]engine.TypeMapping
-	Permissions  []engine.Permission
+	Methods      []types.MethodInfo
+	TypeMappings map[string]types.TypeMapping
+	Permissions  []types.Permission
 	Dependencies []string
 }
 

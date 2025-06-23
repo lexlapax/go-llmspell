@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,43 +68,43 @@ func TestToolsRegistryBridge_ValidateMethod(t *testing.T) {
 	tests := []struct {
 		name        string
 		method      string
-		args        []engine.ScriptValue
+		args        []types.ScriptValue
 		expectError bool
 	}{
 		{
 			name:        "valid listTools",
 			method:      "listTools",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: false,
 		},
 		{
 			name:        "valid getTool",
 			method:      "getTool",
-			args:        []engine.ScriptValue{sv("calculator")},
+			args:        []types.ScriptValue{sv("calculator")},
 			expectError: false,
 		},
 		{
 			name:        "invalid getTool - missing args",
 			method:      "getTool",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: true,
 		},
 		{
 			name:        "valid searchTools",
 			method:      "searchTools",
-			args:        []engine.ScriptValue{sv("math")},
+			args:        []types.ScriptValue{sv("math")},
 			expectError: false,
 		},
 		{
 			name:        "valid listToolsByTags",
 			method:      "listToolsByTags",
-			args:        []engine.ScriptValue{svArray("math")},
+			args:        []types.ScriptValue{svArray("math")},
 			expectError: false,
 		},
 		{
 			name:        "unknown method",
 			method:      "unknownMethod",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: true,
 		},
 	}
@@ -128,10 +128,10 @@ func TestToolsRegistryBridge_ExecuteMethod_ListTools(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test listTools
-	result, err := bridge.ExecuteMethod(ctx, "listTools", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "listTools", []types.ScriptValue{})
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from listTools")
 
 	// Should return array (may be empty if no tools registered)
@@ -146,11 +146,11 @@ func TestToolsRegistryBridge_ExecuteMethod_GetTool(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test getTool with non-existent tool
-	args := []engine.ScriptValue{sv("non-existent-tool")}
+	args := []types.ScriptValue{sv("non-existent-tool")}
 	result, err := bridge.ExecuteMethod(ctx, "getTool", args)
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for non-existent tool")
 	assert.Contains(t, errorValue.Error().Error(), "not found")
 }
@@ -162,11 +162,11 @@ func TestToolsRegistryBridge_ExecuteMethod_SearchTools(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test searchTools
-	args := []engine.ScriptValue{sv("test")}
+	args := []types.ScriptValue{sv("test")}
 	result, err := bridge.ExecuteMethod(ctx, "searchTools", args)
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from searchTools")
 
 	// Should return array (may be empty)
@@ -181,11 +181,11 @@ func TestToolsRegistryBridge_ExecuteMethod_ListToolsByCategory(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test listToolsByCategory
-	args := []engine.ScriptValue{sv("math")}
+	args := []types.ScriptValue{sv("math")}
 	result, err := bridge.ExecuteMethod(ctx, "listToolsByCategory", args)
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from listToolsByCategory")
 
 	// Should return array (may be empty)
@@ -201,11 +201,11 @@ func TestToolsRegistryBridge_ExecuteMethod_ListToolsByTags(t *testing.T) {
 
 	// Test listToolsByTags
 	tags := svArray("math", "utility")
-	args := []engine.ScriptValue{tags}
+	args := []types.ScriptValue{tags}
 	result, err := bridge.ExecuteMethod(ctx, "listToolsByTags", args)
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from listToolsByTags")
 
 	// Should return array (may be empty)
@@ -220,10 +220,10 @@ func TestToolsRegistryBridge_ExecuteMethod_GetToolCategories(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test getToolCategories
-	result, err := bridge.ExecuteMethod(ctx, "getToolCategories", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "getToolCategories", []types.ScriptValue{})
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from getToolCategories")
 
 	// Should return array of categories
@@ -238,11 +238,11 @@ func TestToolsRegistryBridge_ExecuteMethod_ListToolsByPermission(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test listToolsByPermission
-	args := []engine.ScriptValue{sv("file:read")}
+	args := []types.ScriptValue{sv("file:read")}
 	result, err := bridge.ExecuteMethod(ctx, "listToolsByPermission", args)
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from listToolsByPermission")
 
 	// Should return array (may be empty)
@@ -262,11 +262,11 @@ func TestToolsRegistryBridge_ExecuteMethod_ListToolsByResourceUsage(t *testing.T
 		"requiresNetwork":    false,
 		"requiresFileSystem": true,
 	}
-	args := []engine.ScriptValue{svMap(criteria)}
+	args := []types.ScriptValue{svMap(criteria)}
 	result, err := bridge.ExecuteMethod(ctx, "listToolsByResourceUsage", args)
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from listToolsByResourceUsage")
 
 	// Should return array (may be empty)
@@ -281,11 +281,11 @@ func TestToolsRegistryBridge_ExecuteMethod_GetToolDocumentation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test getToolDocumentation with non-existent tool
-	args := []engine.ScriptValue{sv("non-existent-tool")}
+	args := []types.ScriptValue{sv("non-existent-tool")}
 	result, err := bridge.ExecuteMethod(ctx, "getToolDocumentation", args)
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for non-existent tool documentation")
 	assert.Contains(t, errorValue.Error().Error(), "failed to get tool documentation")
 }
@@ -297,7 +297,7 @@ func TestToolsRegistryBridge_ExecuteMethod_RegisterTool(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test registerTool (should return error as not implemented)
-	args := []engine.ScriptValue{
+	args := []types.ScriptValue{
 		sv("test-tool"),
 		svMap(map[string]interface{}{}),
 		svMap(map[string]interface{}{}),
@@ -305,7 +305,7 @@ func TestToolsRegistryBridge_ExecuteMethod_RegisterTool(t *testing.T) {
 	result, err := bridge.ExecuteMethod(ctx, "registerTool", args)
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for registerTool (not implemented)")
 	assert.Contains(t, errorValue.Error().Error(), "not yet implemented")
 }
@@ -317,11 +317,11 @@ func TestToolsRegistryBridge_ExecuteMethod_ExportToolToMCP(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test exportToolToMCP with non-existent tool
-	args := []engine.ScriptValue{sv("non-existent-tool")}
+	args := []types.ScriptValue{sv("non-existent-tool")}
 	result, err := bridge.ExecuteMethod(ctx, "exportToolToMCP", args)
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for non-existent tool export")
 	assert.Contains(t, errorValue.Error().Error(), "failed to export tool to MCP")
 }
@@ -333,16 +333,16 @@ func TestToolsRegistryBridge_ExecuteMethod_ExportAllToolsToMCP(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test exportAllToolsToMCP
-	result, err := bridge.ExecuteMethod(ctx, "exportAllToolsToMCP", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "exportAllToolsToMCP", []types.ScriptValue{})
 	assert.NoError(t, err)
 
 	// Could be either ObjectValue (success) or ErrorValue (if registry fails)
 	switch v := result.(type) {
-	case engine.ObjectValue:
+	case types.ObjectValue:
 		catalog := v.ToGo().(map[string]interface{})
 		assert.Contains(t, catalog, "tools")
 		assert.Contains(t, catalog, "version")
-	case engine.ErrorValue:
+	case types.ErrorValue:
 		assert.Contains(t, v.Error(), "failed to export tools to MCP catalog")
 	default:
 		t.Fatalf("Expected ObjectValue or ErrorValue, got %T", result)
@@ -356,10 +356,10 @@ func TestToolsRegistryBridge_ExecuteMethod_ClearRegistry(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test clearRegistry
-	result, err := bridge.ExecuteMethod(ctx, "clearRegistry", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "clearRegistry", []types.ScriptValue{})
 	assert.NoError(t, err)
 
-	_, ok := result.(engine.NilValue)
+	_, ok := result.(types.NilValue)
 	assert.True(t, ok, "Expected NilValue from clearRegistry")
 }
 
@@ -370,10 +370,10 @@ func TestToolsRegistryBridge_ExecuteMethod_GetRegistryStats(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test getRegistryStats
-	result, err := bridge.ExecuteMethod(ctx, "getRegistryStats", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "getRegistryStats", []types.ScriptValue{})
 	assert.NoError(t, err)
 
-	objectValue, ok := result.(engine.ObjectValue)
+	objectValue, ok := result.(types.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from getRegistryStats")
 
 	stats := objectValue.ToGo().(map[string]interface{})
@@ -391,10 +391,10 @@ func TestToolsRegistryBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []types.ScriptValue{})
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for unknown method")
 	assert.Contains(t, errorValue.Error().Error(), "unknown method")
 }
@@ -409,10 +409,10 @@ func TestToolsRegistryBridge_RequiredPermissions(t *testing.T) {
 	hasStoragePermission := false
 	hasMemoryPermission := false
 	for _, perm := range permissions {
-		if perm.Type == engine.PermissionStorage {
+		if perm.Type == types.PermissionStorage {
 			hasStoragePermission = true
 		}
-		if perm.Type == engine.PermissionMemory {
+		if perm.Type == types.PermissionMemory {
 			hasMemoryPermission = true
 		}
 	}
@@ -452,10 +452,10 @@ func TestToolsRegistryBridge_NotInitialized(t *testing.T) {
 	ctx := context.Background()
 
 	// Should fail when not initialized
-	result, err := bridge.ExecuteMethod(ctx, "listTools", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "listTools", []types.ScriptValue{})
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue when not initialized")
 	assert.Contains(t, errorValue.Error().Error(), "not initialized")
 }

@@ -29,7 +29,9 @@ const (
 	VerboseKey contextKey = "verbose"
 	// ProfileKey stores the security profile name
 	ProfileKey contextKey = "profile"
-	// EngineRegistryKey stores the engine registry instance
+	// RunnerKey stores the runner instance
+	RunnerKey contextKey = "runner"
+	// EngineRegistryKey stores the engine registry instance (deprecated, use RunnerKey)
 	EngineRegistryKey contextKey = "engineRegistry"
 )
 
@@ -82,8 +84,15 @@ func GetProfile(ctx context.Context) string {
 	return "sandbox"
 }
 
+// GetRunner gets the runner from context.
+// Returns nil if not found in context.
+func GetRunner(ctx context.Context) interface{} {
+	return ctx.Value(RunnerKey)
+}
+
 // GetEngineRegistry gets the engine registry from context.
 // Returns nil if not found in context.
+// Deprecated: Use GetRunner instead.
 func GetEngineRegistry(ctx context.Context) interface{} {
 	return ctx.Value(EngineRegistryKey)
 }

@@ -14,7 +14,7 @@ import (
 func TestEngineSelector(t *testing.T) {
 	t.Run("new_selector", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		assert.NotNil(t, selector)
@@ -25,7 +25,7 @@ func TestEngineSelector(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register test engines
@@ -74,7 +74,7 @@ func TestEngineSelector(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register test engines
@@ -161,7 +161,7 @@ func TestEngineSelector(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register test engine
@@ -199,7 +199,7 @@ func TestEngineSelector(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register test engine
@@ -223,7 +223,7 @@ func TestEngineSelector(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register test engines
@@ -250,7 +250,7 @@ func TestEngineSelector(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register test engines
@@ -296,7 +296,7 @@ func TestEngineSelectorPriority(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register all engines
@@ -340,7 +340,7 @@ func TestEngineSelectorPriority(t *testing.T) {
 // Benchmark tests
 func BenchmarkEngineSelector_SelectByExtension(b *testing.B) {
 	registry := engine.NewRegistry(engine.RegistryConfig{})
-	manager := NewEngineRegistryManager(registry)
+	manager := NewEngineRegistryManager(registry, nil)
 	selector := NewEngineSelector(manager)
 
 	// Register test engine
@@ -372,7 +372,7 @@ func TestEngineSelection_Integration(t *testing.T) {
 		err := registry.Initialize()
 		require.NoError(t, err)
 
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 		selector := NewEngineSelector(manager)
 
 		// Register engines

@@ -45,6 +45,14 @@ func (c *REPLCmd) Run(ctx context.Context) error {
 
 	// Create REPL configuration from main config
 	replConfig := repl.NewREPLConfigFromConfig(cfg, engine)
+	
+	// Get runner from context to access engine registry if available
+	if runner := GetRunner(ctx); runner != nil {
+		// Extract engine registry from runner if it has the method
+		if registryProvider, ok := runner.(interface{ GetEngineRegistry() interface{} }); ok {
+			replConfig.EngineRegistry = registryProvider.GetEngineRegistry()
+		}
+	}
 
 	// Override with command-line options if provided
 	if c.HistoryFile != "" {

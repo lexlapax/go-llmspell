@@ -19,8 +19,9 @@ import (
 // and Lua-specific features like script loading and completion.
 type LuaREPL struct {
 	*BaseREPL
-	engine   engine.ScriptEngine // Used for capabilities and validation
-	luaState *lua.LState         // Persistent state for REPL evaluations
+	engine          engine.ScriptEngine // Used for capabilities and validation
+	luaState        *lua.LState         // Persistent state for REPL evaluations
+	useBridgeEngine bool                // Whether to use engine for bridge-aware evaluation
 }
 
 // NewLuaREPL creates a new Lua REPL instance.
@@ -37,31 +38,90 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 		return nil, errors.Wrap(err, errors.CategoryConfig, "failed to create base REPL")
 	}
 
-	// Create Lua engine using factory pattern
-	factory := gopherlua.NewLuaEngineFactory()
-	engineConfig := factory.GetDefaultConfig()
+	var scriptEngine engine.ScriptEngine
+	var luaState *lua.LState
 
-	// Override some settings for REPL use
-	engineConfig.SandboxMode = false // More permissive for interactive use
-	engineConfig.DebugMode = false
-	engineConfig.MetricsMode = true
+	// Check if we have an engine registry for bridge support
+	if config.EngineRegistry != nil {
+		// Try to use the engine registry for lazy bridge loading
+		if engineManager, ok := config.EngineRegistry.(interface {
+			GetEngine(name string, config engine.EngineConfig, securityProfile string) (engine.ScriptEngine, error)
+		}); ok {
+			// Create engine config for REPL use
+			engineConfig := engine.EngineConfig{
+				SandboxMode:    false, // More permissive for interactive use
+				FileSystemMode: engine.FSModeReadWrite,
+				DebugMode:      false,
+				MetricsMode:    true,
+			}
 
-	scriptEngine, err := factory.Create(engineConfig)
-	if err != nil {
-		_ = baseREPL.Close()
-		return nil, errors.Wrap(err, errors.CategoryEngine, "failed to create Lua engine")
+			// Get engine with bridges loaded lazily (using development profile for REPL)
+			eng, err := engineManager.GetEngine("lua", engineConfig, "development")
+			if err != nil {
+				_ = baseREPL.Close()
+				return nil, errors.Wrap(err, errors.CategoryEngine, "failed to get Lua engine from registry")
+			}
+			scriptEngine = eng
+
+			// For REPL, we still need a persistent Lua state
+			// The engine's internal state is not accessible, so we create our own
+			luaState = lua.NewState()
+			luaState.OpenLibs()
+
+			// If the engine is a Lua engine with bridge loading, we need to make bridges available
+			// in the REPL's persistent state. This is a bit tricky because bridges are registered
+			// with the engine, not the standalone Lua state.
+			// For now, we'll use the engine for bridge-aware operations and the Lua state for
+			// basic REPL evaluations.
+			
+			// Try to load bridges into the REPL's Lua state if the engine supports it
+			if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
+				if err := luaEngine.LoadBridgeModulesIntoState(luaState); err != nil {
+					// Log warning but don't fail - REPL can still function without bridges
+					// TODO: Add proper logging
+					_ = err
+				}
+			}
+		}
 	}
 
-	// Create persistent Lua state for REPL
-	luaState := lua.NewState()
+	// Fallback to creating engine directly if no registry or type assertion failed
+	if scriptEngine == nil {
+		// Create Lua engine using factory pattern
+		factory := gopherlua.NewLuaEngineFactory()
+		engineConfig := factory.GetDefaultConfig()
 
-	// Load standard libraries for REPL use
-	luaState.OpenLibs()
+		// Override some settings for REPL use
+		engineConfig.SandboxMode = false // More permissive for interactive use
+		engineConfig.DebugMode = false
+		engineConfig.MetricsMode = true
+
+		eng, err := factory.Create(engineConfig)
+		if err != nil {
+			_ = baseREPL.Close()
+			return nil, errors.Wrap(err, errors.CategoryEngine, "failed to create Lua engine")
+		}
+		scriptEngine = eng
+
+		// Create persistent Lua state for REPL
+		luaState = lua.NewState()
+		luaState.OpenLibs()
+		
+		// Load bridges if available
+		if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
+			if err := luaEngine.LoadBridgeModulesIntoState(luaState); err != nil {
+				// Log warning but don't fail - REPL can still function without bridges
+				// TODO: Add proper logging
+				_ = err
+			}
+		}
+	}
 
 	luaREPL := &LuaREPL{
-		BaseREPL: baseREPL,
-		engine:   scriptEngine,
-		luaState: luaState,
+		BaseREPL:        baseREPL,
+		engine:          scriptEngine,
+		luaState:        luaState,
+		useBridgeEngine: config.EngineRegistry != nil,
 	}
 
 	return luaREPL, nil

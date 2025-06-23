@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 
 	// go-llms imports for auth functionality
 	"github.com/lexlapax/go-llms/pkg/agent/domain"
@@ -80,7 +80,7 @@ func NewUtilAuthBridgeWithEventEmitter(eventEmitter domain.EventEmitter) *UtilAu
 }
 
 // GetID returns the bridge identifier.
-// It implements the engine.Bridge interface.
+// It implements the types.Bridge interface.
 func (b *UtilAuthBridge) GetID() string {
 	return "util_auth"
 }
@@ -88,8 +88,8 @@ func (b *UtilAuthBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // It provides information about the auth utilities bridge including
 // version, description, and supported authentication features.
-func (b *UtilAuthBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *UtilAuthBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "util_auth",
 		Version:     "2.0.0",
 		Description: "Enhanced authentication with OAuth2 flows, token validation, event logging, and multi-scheme support",
@@ -147,22 +147,24 @@ func (b *UtilAuthBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // It enables the script engine to access authentication utilities through this bridge.
-func (b *UtilAuthBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+func (b *UtilAuthBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
 // It provides metadata about all auth-related methods available to scripts,
 // including configuration, HTTP authentication, OAuth2, and credential management.
-func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *UtilAuthBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Auth configuration
 		{
 			Name:        "createAuthConfig",
 			Description: "Create authentication configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "type", Type: "string", Description: "Auth type (apiKey/bearer/basic/oauth2)", Required: true},
 				{Name: "credentials", Type: "object", Description: "Auth credentials", Required: true},
 			},
@@ -171,7 +173,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createAuthFromEnv",
 			Description: "Create auth config from environment variables",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
 			},
 			ReturnType: "AuthConfig",
@@ -179,7 +181,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createAuthFromState",
 			Description: "Create auth config from agent state",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "state", Type: "State", Description: "Agent state", Required: true},
 				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
 			},
@@ -190,7 +192,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "applyAuth",
 			Description: "Apply authentication to HTTP request",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "request", Type: "object", Description: "HTTP request", Required: true},
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 			},
@@ -199,7 +201,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "applyAuthToHeaders",
 			Description: "Apply authentication to headers map",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "headers", Type: "object", Description: "Headers map", Required: true},
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 			},
@@ -210,7 +212,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "detectAuthScheme",
 			Description: "Detect authentication scheme from configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "config", Type: "object", Description: "Configuration object", Required: true},
 			},
 			ReturnType: "string",
@@ -218,7 +220,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "parseAuthHeader",
 			Description: "Parse authentication header",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "header", Type: "string", Description: "Auth header value", Required: true},
 			},
 			ReturnType: "object",
@@ -226,7 +228,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateAuthConfig",
 			Description: "Validate authentication configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 			},
 			ReturnType: "boolean",
@@ -236,7 +238,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createOAuth2Config",
 			Description: "Create OAuth2 configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "clientID", Type: "string", Description: "OAuth2 client ID", Required: true},
 				{Name: "clientSecret", Type: "string", Description: "OAuth2 client secret", Required: true},
 				{Name: "tokenURL", Type: "string", Description: "Token endpoint URL", Required: true},
@@ -247,7 +249,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "refreshOAuth2Token",
 			Description: "Refresh OAuth2 access token",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "oauth2Config", Type: "object", Description: "OAuth2 configuration", Required: true},
 				{Name: "refreshToken", Type: "string", Description: "Refresh token", Required: true},
 			},
@@ -258,7 +260,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "discoverOAuth2Endpoints",
 			Description: "Discover OAuth2 endpoints from .well-known configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "issuerURL", Type: "string", Description: "OAuth2 issuer URL", Required: true},
 			},
 			ReturnType: "object",
@@ -266,7 +268,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateOAuth2Token",
 			Description: "Validate OAuth2 token with schema validation",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "token", Type: "string", Description: "OAuth2 access token", Required: true},
 				{Name: "schema", Type: "object", Description: "Token validation schema", Required: false},
 			},
@@ -275,7 +277,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "parseJWTClaims",
 			Description: "Parse JWT token claims without verification",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "token", Type: "string", Description: "JWT token", Required: true},
 			},
 			ReturnType: "object",
@@ -283,7 +285,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "autoRefreshToken",
 			Description: "Set up automatic token refresh",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 				{Name: "refreshBefore", Type: "number", Description: "Seconds before expiry to refresh", Required: false},
 			},
@@ -294,7 +296,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "registerAuthScheme",
 			Description: "Register auth scheme for endpoint",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "endpoint", Type: "string", Description: "API endpoint pattern", Required: true},
 				{Name: "scheme", Type: "AuthScheme", Description: "Authentication scheme", Required: true},
 			},
@@ -303,7 +305,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getAuthSchemes",
 			Description: "Get all auth schemes for endpoint",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "endpoint", Type: "string", Description: "API endpoint", Required: true},
 			},
 			ReturnType: "array",
@@ -311,7 +313,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "selectBestAuthScheme",
 			Description: "Select best auth scheme for endpoint",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "endpoint", Type: "string", Description: "API endpoint", Required: true},
 				{Name: "available", Type: "array", Description: "Available auth types", Required: true},
 			},
@@ -322,7 +324,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "serializeCredentials",
 			Description: "Serialize auth credentials for storage",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 				{Name: "encryptKey", Type: "string", Description: "Encryption key", Required: false},
 			},
@@ -331,7 +333,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "deserializeCredentials",
 			Description: "Deserialize stored auth credentials",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "serialized", Type: "string", Description: "Serialized credentials", Required: true},
 				{Name: "decryptKey", Type: "string", Description: "Decryption key", Required: false},
 			},
@@ -340,7 +342,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "cacheCredentials",
 			Description: "Cache credentials with metadata",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "key", Type: "string", Description: "Cache key", Required: true},
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 				{Name: "ttl", Type: "number", Description: "Time to live in seconds", Required: false},
@@ -352,7 +354,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "logAuthEvent",
 			Description: "Log authentication event for security audit",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "eventType", Type: "string", Description: "Event type (login/logout/refresh/failure)", Required: true},
 				{Name: "metadata", Type: "object", Description: "Event metadata", Required: true},
 			},
@@ -361,7 +363,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getAuthEventHistory",
 			Description: "Get auth event history for audit",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "filter", Type: "object", Description: "Event filter criteria", Required: false},
 				{Name: "limit", Type: "number", Description: "Maximum events to return", Required: false},
 			},
@@ -370,7 +372,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "subscribeToAuthEvents",
 			Description: "Subscribe to auth events",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "eventTypes", Type: "array", Description: "Event types to subscribe to", Required: true},
 				{Name: "handler", Type: "function", Description: "Event handler function", Required: true},
 			},
@@ -381,7 +383,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createAuthSession",
 			Description: "Create authentication session",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 				{Name: "sessionID", Type: "string", Description: "Session identifier", Required: false},
 			},
@@ -390,7 +392,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateSession",
 			Description: "Validate authentication session",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "session", Type: "object", Description: "Auth session", Required: true},
 			},
 			ReturnType: "boolean",
@@ -400,7 +402,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "maskCredentials",
 			Description: "Mask sensitive credentials in logs",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "text", Type: "string", Description: "Text containing credentials", Required: true},
 				{Name: "authConfig", Type: "AuthConfig", Description: "Auth configuration", Required: true},
 			},
@@ -409,7 +411,7 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "rotateAPIKey",
 			Description: "Generate rotated API key suggestion",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Description: "Provider name", Required: true},
 			},
 			ReturnType: "string",
@@ -420,8 +422,8 @@ func (b *UtilAuthBridge) Methods() []engine.MethodInfo {
 // TypeMappings returns type conversion mappings.
 // It defines how Go auth types are mapped to script types
 // for AuthConfig, AuthScheme, and OAuth2Config.
-func (b *UtilAuthBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *UtilAuthBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"AuthConfig": {
 			GoType:     "AuthConfig",
 			ScriptType: "object",
@@ -439,7 +441,7 @@ func (b *UtilAuthBridge) TypeMappings() map[string]engine.TypeMapping {
 
 // ValidateMethod validates method calls.
 // It delegates validation to the engine based on Methods() metadata.
-func (b *UtilAuthBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *UtilAuthBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
@@ -447,22 +449,22 @@ func (b *UtilAuthBridge) ValidateMethod(name string, args []engine.ScriptValue) 
 // RequiredPermissions returns required permissions.
 // It specifies permissions for environment access, OAuth2 operations,
 // and credential management.
-func (b *UtilAuthBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *UtilAuthBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionProcess,
+			Type:        types.PermissionProcess,
 			Resource:    "environment",
 			Actions:     []string{"read"},
 			Description: "Read authentication credentials from environment",
 		},
 		{
-			Type:        engine.PermissionNetwork,
+			Type:        types.PermissionNetwork,
 			Resource:    "oauth2",
 			Actions:     []string{"token"},
 			Description: "OAuth2 token operations",
 		},
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "credentials",
 			Actions:     []string{"read", "mask"},
 			Description: "Handle authentication credentials",
@@ -471,9 +473,9 @@ func (b *UtilAuthBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
-// It implements the engine.Bridge interface, routing method calls
+// It implements the types.Bridge interface, routing method calls
 // to the appropriate authentication operations.
-func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Check initialization without holding the lock during method execution
 	b.mu.RLock()
 	initialized := b.initialized
@@ -519,20 +521,20 @@ func (b *UtilAuthBridge) ExecuteMethod(ctx context.Context, name string, args []
 
 // createAuthConfig creates an authentication configuration from type and credentials.
 // It converts script credentials to a go-llms AuthConfig structure.
-func (b *UtilAuthBridge) createAuthConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) createAuthConfig(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("auth type must be string")
 	}
-	authType := args[0].(engine.StringValue).Value()
+	authType := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("credentials must be object")
 	}
-	credentials := args[1].(engine.ObjectValue).Fields()
+	credentials := args[1].(types.ObjectValue).Fields()
 
 	// Convert ScriptValue map to native map
 	credMap := make(map[string]interface{})
@@ -547,56 +549,56 @@ func (b *UtilAuthBridge) createAuthConfig(ctx context.Context, args []engine.Scr
 	}
 
 	// Return as object with fields
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"type": engine.NewStringValue(config.Type),
-		"data": engine.NewObjectValue(credentials),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"type": types.NewStringValue(config.Type),
+		"data": types.NewObjectValue(credentials),
 	}), nil
 }
 
 // applyAuth applies authentication to an HTTP request.
 // It uses the auth configuration to add appropriate headers or parameters.
-func (b *UtilAuthBridge) applyAuth(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) applyAuth(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
 
 	// In a real implementation, we'd need to handle the HTTP request object
 	// This is a simplified version
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("auth config must be object")
 	}
 
 	// Would call llmauth.ApplyAuth here with actual HTTP request
 	// For now, just return success
-	return engine.NewBoolValue(true), nil
+	return types.NewBoolValue(true), nil
 }
 
 // detectAuthSchemeFromState detects authentication scheme from agent state.
 // It analyzes state configuration to determine the appropriate auth method.
-func (b *UtilAuthBridge) detectAuthSchemeFromState(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) detectAuthSchemeFromState(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
 
 	// Would call llmauth.DetectAuthSchemeFromState
 	// This requires integration with state system
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"type":        engine.NewStringValue("bearer"),
-		"description": engine.NewStringValue("Detected auth scheme"),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"type":        types.NewStringValue("bearer"),
+		"description": types.NewStringValue("Detected auth scheme"),
 	}), nil
 }
 
 // discoverOAuth2Endpoints discovers OAuth2 endpoints from issuer URL.
 // It attempts to fetch .well-known/openid-configuration for endpoint discovery.
-func (b *UtilAuthBridge) discoverOAuth2Endpoints(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) discoverOAuth2Endpoints(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("issuerURL must be string")
 	}
-	issuerURL := args[0].(engine.StringValue).Value()
+	issuerURL := args[0].(types.StringValue).Value()
 
 	// Since go-llms doesn't have .well-known discovery, we'll simulate it
 	wellKnownURL := strings.TrimSuffix(issuerURL, "/") + "/.well-known/openid-configuration"
@@ -611,42 +613,42 @@ func (b *UtilAuthBridge) discoverOAuth2Endpoints(ctx context.Context, args []eng
 	}
 
 	// Convert response types array
-	responseTypes := []engine.ScriptValue{
-		engine.NewStringValue("code"),
-		engine.NewStringValue("token"),
-		engine.NewStringValue("id_token"),
+	responseTypes := []types.ScriptValue{
+		types.NewStringValue("code"),
+		types.NewStringValue("token"),
+		types.NewStringValue("id_token"),
 	}
 
 	// Convert grant types array
-	grantTypes := []engine.ScriptValue{
-		engine.NewStringValue("authorization_code"),
-		engine.NewStringValue("client_credentials"),
-		engine.NewStringValue("refresh_token"),
+	grantTypes := []types.ScriptValue{
+		types.NewStringValue("authorization_code"),
+		types.NewStringValue("client_credentials"),
+		types.NewStringValue("refresh_token"),
 	}
 
 	// Return simulated discovery response
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"issuer":                   engine.NewStringValue(issuerURL),
-		"authorization_endpoint":   engine.NewStringValue(issuerURL + "/authorize"),
-		"token_endpoint":           engine.NewStringValue(issuerURL + "/token"),
-		"userinfo_endpoint":        engine.NewStringValue(issuerURL + "/userinfo"),
-		"jwks_uri":                 engine.NewStringValue(issuerURL + "/jwks"),
-		"response_types_supported": engine.NewArrayValue(responseTypes),
-		"grant_types_supported":    engine.NewArrayValue(grantTypes),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"issuer":                   types.NewStringValue(issuerURL),
+		"authorization_endpoint":   types.NewStringValue(issuerURL + "/authorize"),
+		"token_endpoint":           types.NewStringValue(issuerURL + "/token"),
+		"userinfo_endpoint":        types.NewStringValue(issuerURL + "/userinfo"),
+		"jwks_uri":                 types.NewStringValue(issuerURL + "/jwks"),
+		"response_types_supported": types.NewArrayValue(responseTypes),
+		"grant_types_supported":    types.NewArrayValue(grantTypes),
 	}), nil
 }
 
 // validateOAuth2Token validates an OAuth2 access token.
 // It parses JWT claims and optionally validates against a schema.
-func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("token must be string")
 	}
-	token := args[0].(engine.StringValue).Value()
+	token := args[0].(types.StringValue).Value()
 
 	// Parse JWT claims without verification (using go-llms capability)
 	claims, err := llmauth.ParseJWTClaims(token)
@@ -655,17 +657,17 @@ func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []engine.
 	}
 
 	// Convert claims to ScriptValue map
-	claimsMap := map[string]engine.ScriptValue{
-		"exp": engine.NewNumberValue(float64(claims.Exp)),
-		"iat": engine.NewNumberValue(float64(claims.Iat)),
-		"sub": engine.NewStringValue(claims.Sub),
-		"aud": engine.NewStringValue(claims.Aud),
-		"iss": engine.NewStringValue(claims.Iss),
+	claimsMap := map[string]types.ScriptValue{
+		"exp": types.NewNumberValue(float64(claims.Exp)),
+		"iat": types.NewNumberValue(float64(claims.Iat)),
+		"sub": types.NewStringValue(claims.Sub),
+		"aud": types.NewStringValue(claims.Aud),
+		"iss": types.NewStringValue(claims.Iss),
 	}
 
 	// If schema provided, validate against it
-	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeObject {
-		schemaObj := args[1].(engine.ObjectValue).Fields()
+	if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeObject {
+		schemaObj := args[1].(types.ObjectValue).Fields()
 		// Convert to native map for marshaling
 		schemaMap := make(map[string]interface{})
 		for k, v := range schemaObj {
@@ -685,15 +687,15 @@ func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []engine.
 			validationResult, _ := b.validator.Validate(schema, string(claimsJSON))
 			if validationResult != nil && !validationResult.Valid {
 				// Convert errors to ScriptValue array
-				errorValues := make([]engine.ScriptValue, len(validationResult.Errors))
+				errorValues := make([]types.ScriptValue, len(validationResult.Errors))
 				for i, errMsg := range validationResult.Errors {
-					errorValues[i] = engine.NewStringValue(fmt.Sprintf("%v", errMsg))
+					errorValues[i] = types.NewStringValue(fmt.Sprintf("%v", errMsg))
 				}
 
-				return engine.NewObjectValue(map[string]engine.ScriptValue{
-					"valid":  engine.NewBoolValue(false),
-					"claims": engine.NewObjectValue(claimsMap),
-					"errors": engine.NewArrayValue(errorValues),
+				return types.NewObjectValue(map[string]types.ScriptValue{
+					"valid":  types.NewBoolValue(false),
+					"claims": types.NewObjectValue(claimsMap),
+					"errors": types.NewArrayValue(errorValues),
 				}), nil
 			}
 		}
@@ -702,24 +704,24 @@ func (b *UtilAuthBridge) validateOAuth2Token(ctx context.Context, args []engine.
 	// Check expiration
 	isExpired := claims.Exp > 0 && time.Now().Unix() > claims.Exp
 
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"valid":   engine.NewBoolValue(!isExpired),
-		"claims":  engine.NewObjectValue(claimsMap),
-		"expired": engine.NewBoolValue(isExpired),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"valid":   types.NewBoolValue(!isExpired),
+		"claims":  types.NewObjectValue(claimsMap),
+		"expired": types.NewBoolValue(isExpired),
 	}), nil
 }
 
 // parseJWTClaims parses JWT token claims without verification.
 // It extracts standard claims (exp, iat, sub, aud, iss) from the token.
-func (b *UtilAuthBridge) parseJWTClaims(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) parseJWTClaims(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("token must be string")
 	}
-	token := args[0].(engine.StringValue).Value()
+	token := args[0].(types.StringValue).Value()
 
 	claims, err := llmauth.ParseJWTClaims(token)
 	if err != nil {
@@ -727,66 +729,66 @@ func (b *UtilAuthBridge) parseJWTClaims(ctx context.Context, args []engine.Scrip
 	}
 
 	// Convert to ScriptValue map
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"exp": engine.NewNumberValue(float64(claims.Exp)),
-		"iat": engine.NewNumberValue(float64(claims.Iat)),
-		"sub": engine.NewStringValue(claims.Sub),
-		"aud": engine.NewStringValue(claims.Aud),
-		"iss": engine.NewStringValue(claims.Iss),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"exp": types.NewNumberValue(float64(claims.Exp)),
+		"iat": types.NewNumberValue(float64(claims.Iat)),
+		"sub": types.NewStringValue(claims.Sub),
+		"aud": types.NewStringValue(claims.Aud),
+		"iss": types.NewStringValue(claims.Iss),
 	}), nil
 }
 
 // autoRefreshToken configures automatic token refresh.
 // It sets up metadata for automatic refresh before token expiration.
-func (b *UtilAuthBridge) autoRefreshToken(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) autoRefreshToken(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
 	// Extract auth config from args
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("authConfig must be object")
 	}
 
 	refreshBefore := 300 // Default 5 minutes
-	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeNumber {
-		refreshBefore = int(args[1].(engine.NumberValue).Value())
+	if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeNumber {
+		refreshBefore = int(args[1].(types.NumberValue).Value())
 	}
 
 	// Set up auto-refresh metadata
-	return engine.NewObjectValue(map[string]engine.ScriptValue{
-		"enabled":       engine.NewBoolValue(true),
-		"refreshBefore": engine.NewNumberValue(float64(refreshBefore)),
+	return types.NewObjectValue(map[string]types.ScriptValue{
+		"enabled":       types.NewBoolValue(true),
+		"refreshBefore": types.NewNumberValue(float64(refreshBefore)),
 		"authConfig":    args[0],
-		"nextRefresh":   engine.NewStringValue(time.Now().Add(time.Duration(refreshBefore) * time.Second).Format(time.RFC3339)),
+		"nextRefresh":   types.NewStringValue(time.Now().Add(time.Duration(refreshBefore) * time.Second).Format(time.RFC3339)),
 	}), nil
 }
 
 // registerAuthScheme registers an authentication scheme for an endpoint.
 // It associates auth requirements with specific API endpoints.
-func (b *UtilAuthBridge) registerAuthScheme(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) registerAuthScheme(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("endpoint must be string")
 	}
-	endpoint := args[0].(engine.StringValue).Value()
+	endpoint := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("scheme must be object")
 	}
-	schemeObj := args[1].(engine.ObjectValue).Fields()
+	schemeObj := args[1].(types.ObjectValue).Fields()
 
 	// Extract scheme type and description
 	schemeType := ""
 	schemeDesc := ""
-	if typeVal, ok := schemeObj["type"]; ok && typeVal.Type() == engine.TypeString {
-		schemeType = typeVal.(engine.StringValue).Value()
+	if typeVal, ok := schemeObj["type"]; ok && typeVal.Type() == types.TypeString {
+		schemeType = typeVal.(types.StringValue).Value()
 	}
-	if descVal, ok := schemeObj["description"]; ok && descVal.Type() == engine.TypeString {
-		schemeDesc = descVal.(engine.StringValue).Value()
+	if descVal, ok := schemeObj["description"]; ok && descVal.Type() == types.TypeString {
+		schemeDesc = descVal.(types.StringValue).Value()
 	}
 
 	scheme := &llmauth.AuthScheme{
@@ -807,49 +809,49 @@ func (b *UtilAuthBridge) registerAuthScheme(ctx context.Context, args []engine.S
 		})
 	}
 
-	return engine.NewBoolValue(true), nil
+	return types.NewBoolValue(true), nil
 }
 
 // getAuthSchemes retrieves all authentication schemes for an endpoint.
 // It performs pattern matching to find applicable auth schemes.
-func (b *UtilAuthBridge) getAuthSchemes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) getAuthSchemes(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("endpoint must be string")
 	}
-	endpoint := args[0].(engine.StringValue).Value()
+	endpoint := args[0].(types.StringValue).Value()
 
-	schemes := []engine.ScriptValue{}
+	schemes := []types.ScriptValue{}
 	for ep, scheme := range b.authSchemes {
 		// Simple pattern matching
 		if strings.HasPrefix(endpoint, ep) || strings.HasPrefix(ep, endpoint) {
-			schemeValue := engine.NewObjectValue(map[string]engine.ScriptValue{
-				"type":        engine.NewStringValue(scheme.Type),
-				"description": engine.NewStringValue(scheme.Description),
+			schemeValue := types.NewObjectValue(map[string]types.ScriptValue{
+				"type":        types.NewStringValue(scheme.Type),
+				"description": types.NewStringValue(scheme.Description),
 			})
 			schemes = append(schemes, schemeValue)
 		}
 	}
 
-	return engine.NewArrayValue(schemes), nil
+	return types.NewArrayValue(schemes), nil
 }
 
 // serializeCredentials serializes authentication credentials for storage.
 // It converts auth configuration to JSON with optional encryption.
-func (b *UtilAuthBridge) serializeCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) serializeCredentials(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeObject {
+	if args[0] == nil || args[0].Type() != types.TypeObject {
 		return nil, fmt.Errorf("authConfig must be object")
 	}
 
 	// Convert ScriptValue to native for serialization
-	authConfigObj := args[0].(engine.ObjectValue).Fields()
+	authConfigObj := args[0].(types.ObjectValue).Fields()
 	authConfigNative := make(map[string]interface{})
 	for k, v := range authConfigObj {
 		authConfigNative[k] = v.ToGo()
@@ -868,20 +870,20 @@ func (b *UtilAuthBridge) serializeCredentials(ctx context.Context, args []engine
 		})
 	}
 
-	return engine.NewStringValue(string(serialized)), nil
+	return types.NewStringValue(string(serialized)), nil
 }
 
 // deserializeCredentials deserializes stored authentication credentials.
 // It reconstructs auth configuration from JSON with optional decryption.
-func (b *UtilAuthBridge) deserializeCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) deserializeCredentials(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("serialized must be string")
 	}
-	serialized := args[0].(engine.StringValue).Value()
+	serialized := args[0].(types.StringValue).Value()
 
 	// Deserialize from JSON (in production, would decrypt if key provided)
 	var authConfigNative map[string]interface{}
@@ -890,37 +892,37 @@ func (b *UtilAuthBridge) deserializeCredentials(ctx context.Context, args []engi
 	}
 
 	// Convert to ScriptValue
-	authConfigFields := make(map[string]engine.ScriptValue)
+	authConfigFields := make(map[string]types.ScriptValue)
 	for k, v := range authConfigNative {
-		authConfigFields[k] = engine.NewCustomValue("any", v)
+		authConfigFields[k] = types.NewCustomValue("any", v)
 	}
 
-	return engine.NewObjectValue(authConfigFields), nil
+	return types.NewObjectValue(authConfigFields), nil
 }
 
 // cacheCredentials caches authentication credentials with TTL.
 // It stores credentials in memory with expiration tracking.
-func (b *UtilAuthBridge) cacheCredentials(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) cacheCredentials(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("key must be string")
 	}
-	key := args[0].(engine.StringValue).Value()
+	key := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("authConfig must be object")
 	}
 
 	ttl := 3600 // Default 1 hour
-	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeNumber {
-		ttl = int(args[2].(engine.NumberValue).Value())
+	if len(args) > 2 && args[2] != nil && args[2].Type() == types.TypeNumber {
+		ttl = int(args[2].(types.NumberValue).Value())
 	}
 
 	// Convert authConfig to native
-	authConfigObj := args[1].(engine.ObjectValue).Fields()
+	authConfigObj := args[1].(types.ObjectValue).Fields()
 	authConfigNative := make(map[string]interface{})
 	for k, v := range authConfigObj {
 		authConfigNative[k] = v.ToGo()
@@ -944,25 +946,25 @@ func (b *UtilAuthBridge) cacheCredentials(ctx context.Context, args []engine.Scr
 	}
 	b.mu.Unlock()
 
-	return engine.NewBoolValue(true), nil
+	return types.NewBoolValue(true), nil
 }
 
 // logAuthEvent logs an authentication event for security auditing.
 // It emits events to both the event emitter and event bus for comprehensive tracking.
-func (b *UtilAuthBridge) logAuthEvent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilAuthBridge) logAuthEvent(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
 
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("eventType must be string")
 	}
-	eventType := args[0].(engine.StringValue).Value()
+	eventType := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("metadata must be object")
 	}
-	metadataObj := args[1].(engine.ObjectValue).Fields()
+	metadataObj := args[1].(types.ObjectValue).Fields()
 
 	// Convert metadata to native
 	metadata := make(map[string]interface{})
@@ -989,5 +991,5 @@ func (b *UtilAuthBridge) logAuthEvent(ctx context.Context, args []engine.ScriptV
 		b.eventBus.Publish(event)
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }

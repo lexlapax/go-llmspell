@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 
 	// go-llms imports for metrics functionality
 	"github.com/lexlapax/go-llms/pkg/util/metrics"
@@ -45,37 +45,37 @@ func TestMetricsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create counter
-				result, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
+				result, err := bridge.ExecuteMethod(ctx, "createCounter", []types.ScriptValue{
 					sv("test_counter"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
-				counterInfo, ok := result.(engine.ObjectValue)
+				counterInfo, ok := result.(types.ObjectValue)
 				require.True(t, ok)
 				counterMap := counterInfo.ToGo().(map[string]interface{})
 				assert.Equal(t, "test_counter", counterMap["name"])
 				counterID := counterMap["id"].(string)
 
 				// Increment counter
-				_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []types.ScriptValue{
 					sv(counterID),
 				})
 				require.NoError(t, err)
 
 				// Increment by specific value
-				_, err = bridge.ExecuteMethod(ctx, "incrementCounterBy", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementCounterBy", []types.ScriptValue{
 					sv(counterID),
 					sv(5),
 				})
 				require.NoError(t, err)
 
 				// Get counter value
-				result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []engine.ScriptValue{
+				result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []types.ScriptValue{
 					sv(counterID),
 				})
 				require.NoError(t, err)
-				numValue, ok := result.(engine.NumberValue)
+				numValue, ok := result.(types.NumberValue)
 				require.True(t, ok)
 				assert.Equal(t, float64(6), numValue.Value())
 			},
@@ -88,44 +88,44 @@ func TestMetricsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create gauge
-				result, err := bridge.ExecuteMethod(ctx, "createGauge", []engine.ScriptValue{
+				result, err := bridge.ExecuteMethod(ctx, "createGauge", []types.ScriptValue{
 					sv("test_gauge"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
-				gaugeInfo, ok := result.(engine.ObjectValue)
+				gaugeInfo, ok := result.(types.ObjectValue)
 				require.True(t, ok)
 				gaugeMap := gaugeInfo.ToGo().(map[string]interface{})
 				assert.Equal(t, "test_gauge", gaugeMap["name"])
 				gaugeID := gaugeMap["id"].(string)
 
 				// Set gauge value
-				_, err = bridge.ExecuteMethod(ctx, "setGaugeValue", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "setGaugeValue", []types.ScriptValue{
 					sv(gaugeID),
 					sv(42.5),
 				})
 				require.NoError(t, err)
 
 				// Increment gauge
-				_, err = bridge.ExecuteMethod(ctx, "incrementGauge", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementGauge", []types.ScriptValue{
 					sv(gaugeID),
 				})
 				require.NoError(t, err)
 
 				// Add to gauge
-				_, err = bridge.ExecuteMethod(ctx, "addToGaugeValue", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "addToGaugeValue", []types.ScriptValue{
 					sv(gaugeID),
 					sv(7.5),
 				})
 				require.NoError(t, err)
 
 				// Get gauge value
-				result, err = bridge.ExecuteMethod(ctx, "getGaugeValue", []engine.ScriptValue{
+				result, err = bridge.ExecuteMethod(ctx, "getGaugeValue", []types.ScriptValue{
 					sv(gaugeID),
 				})
 				require.NoError(t, err)
-				numValue, ok := result.(engine.NumberValue)
+				numValue, ok := result.(types.NumberValue)
 				require.True(t, ok)
 				assert.Equal(t, float64(51.0), numValue.Value())
 			},
@@ -138,55 +138,55 @@ func TestMetricsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create ratio counter
-				result, err := bridge.ExecuteMethod(ctx, "createRatioCounter", []engine.ScriptValue{
+				result, err := bridge.ExecuteMethod(ctx, "createRatioCounter", []types.ScriptValue{
 					sv("test_ratio"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
-				ratioInfo, ok := result.(engine.ObjectValue)
+				ratioInfo, ok := result.(types.ObjectValue)
 				require.True(t, ok)
 				ratioMap := ratioInfo.ToGo().(map[string]interface{})
 				assert.Equal(t, "test_ratio", ratioMap["name"])
 				ratioID := ratioMap["id"].(string)
 
 				// Increment numerator and denominator
-				_, err = bridge.ExecuteMethod(ctx, "incrementRatioNumerator", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementRatioNumerator", []types.ScriptValue{
 					sv(ratioID),
 				})
 				require.NoError(t, err)
-				_, err = bridge.ExecuteMethod(ctx, "incrementRatioNumerator", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementRatioNumerator", []types.ScriptValue{
 					sv(ratioID),
 				})
 				require.NoError(t, err)
-				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []types.ScriptValue{
 					sv(ratioID),
 				})
 				require.NoError(t, err)
-				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []types.ScriptValue{
 					sv(ratioID),
 				})
 				require.NoError(t, err)
-				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementRatioDenominator", []types.ScriptValue{
 					sv(ratioID),
 				})
 				require.NoError(t, err)
 
 				// Get ratio
-				result, err = bridge.ExecuteMethod(ctx, "getRatio", []engine.ScriptValue{
+				result, err = bridge.ExecuteMethod(ctx, "getRatio", []types.ScriptValue{
 					sv(ratioID),
 				})
 				require.NoError(t, err)
-				numValue, ok := result.(engine.NumberValue)
+				numValue, ok := result.(types.NumberValue)
 				require.True(t, ok)
 				assert.InDelta(t, float64(2.0/3.0), numValue.Value(), 0.001)
 
 				// Get raw values
-				result, err = bridge.ExecuteMethod(ctx, "getRatioValues", []engine.ScriptValue{
+				result, err = bridge.ExecuteMethod(ctx, "getRatioValues", []types.ScriptValue{
 					sv(ratioID),
 				})
 				require.NoError(t, err)
-				values, ok := result.(engine.ObjectValue)
+				values, ok := result.(types.ObjectValue)
 				require.True(t, ok)
 				valuesMap := values.ToGo().(map[string]interface{})
 				assert.Equal(t, float64(2), valuesMap["numerator"])
@@ -201,20 +201,20 @@ func TestMetricsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create timer
-				result, err := bridge.ExecuteMethod(ctx, "createTimer", []engine.ScriptValue{
+				result, err := bridge.ExecuteMethod(ctx, "createTimer", []types.ScriptValue{
 					sv("test_timer"),
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, result)
 
-				timerInfo, ok := result.(engine.ObjectValue)
+				timerInfo, ok := result.(types.ObjectValue)
 				require.True(t, ok)
 				timerMap := timerInfo.ToGo().(map[string]interface{})
 				assert.Equal(t, "test_timer", timerMap["name"])
 				timerID := timerMap["id"].(string)
 
 				// Start timer
-				_, err = bridge.ExecuteMethod(ctx, "startTimer", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "startTimer", []types.ScriptValue{
 					sv(timerID),
 				})
 				require.NoError(t, err)
@@ -223,27 +223,27 @@ func TestMetricsBridge(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 
 				// Stop timer
-				result, err = bridge.ExecuteMethod(ctx, "stopTimer", []engine.ScriptValue{
+				result, err = bridge.ExecuteMethod(ctx, "stopTimer", []types.ScriptValue{
 					sv(timerID),
 				})
 				require.NoError(t, err)
-				duration, ok := result.(engine.NumberValue)
+				duration, ok := result.(types.NumberValue)
 				require.True(t, ok)
 				assert.Greater(t, duration.Value(), float64(0))
 
 				// Record manual duration
-				_, err = bridge.ExecuteMethod(ctx, "recordTimerDuration", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "recordTimerDuration", []types.ScriptValue{
 					sv(timerID),
 					sv(0.05), // 50ms
 				})
 				require.NoError(t, err)
 
 				// Get timer stats
-				result, err = bridge.ExecuteMethod(ctx, "getTimerStats", []engine.ScriptValue{
+				result, err = bridge.ExecuteMethod(ctx, "getTimerStats", []types.ScriptValue{
 					sv(timerID),
 				})
 				require.NoError(t, err)
-				stats, ok := result.(engine.ObjectValue)
+				stats, ok := result.(types.ObjectValue)
 				require.True(t, ok)
 				statsMap := stats.ToGo().(map[string]interface{})
 				assert.Equal(t, float64(2), statsMap["count"])
@@ -259,23 +259,23 @@ func TestMetricsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create various metrics
-				_, err = bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "createCounter", []types.ScriptValue{
 					sv("counter1"),
 				})
 				require.NoError(t, err)
-				_, err = bridge.ExecuteMethod(ctx, "createGauge", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "createGauge", []types.ScriptValue{
 					sv("gauge1"),
 				})
 				require.NoError(t, err)
-				_, err = bridge.ExecuteMethod(ctx, "createTimer", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "createTimer", []types.ScriptValue{
 					sv("timer1"),
 				})
 				require.NoError(t, err)
 
 				// Get all metrics
-				result, err := bridge.ExecuteMethod(ctx, "getAllMetrics", []engine.ScriptValue{})
+				result, err := bridge.ExecuteMethod(ctx, "getAllMetrics", []types.ScriptValue{})
 				require.NoError(t, err)
-				allMetrics, ok := result.(engine.ObjectValue)
+				allMetrics, ok := result.(types.ObjectValue)
 				require.True(t, ok)
 				metricsMap := allMetrics.ToGo().(map[string]interface{})
 
@@ -293,34 +293,34 @@ func TestMetricsBridge(t *testing.T) {
 				require.NoError(t, err)
 
 				// Create and modify counter
-				result, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
+				result, err := bridge.ExecuteMethod(ctx, "createCounter", []types.ScriptValue{
 					sv("reset_counter"),
 				})
 				require.NoError(t, err)
-				counterInfo := result.(engine.ObjectValue)
+				counterInfo := result.(types.ObjectValue)
 				counterMap := counterInfo.ToGo().(map[string]interface{})
 				counterID := counterMap["id"].(string)
 
-				_, err = bridge.ExecuteMethod(ctx, "incrementCounterBy", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementCounterBy", []types.ScriptValue{
 					sv(counterID),
 					sv(10),
 				})
 				require.NoError(t, err)
 
 				// Verify value
-				result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []engine.ScriptValue{
+				result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []types.ScriptValue{
 					sv(counterID),
 				})
 				require.NoError(t, err)
-				numValue := result.(engine.NumberValue)
+				numValue := result.(types.NumberValue)
 				assert.Equal(t, float64(10), numValue.Value())
 
 				// Reset all metrics
-				_, err = bridge.ExecuteMethod(ctx, "resetAllMetrics", []engine.ScriptValue{})
+				_, err = bridge.ExecuteMethod(ctx, "resetAllMetrics", []types.ScriptValue{})
 				require.NoError(t, err)
 
 				// Counter should be gone - this will return an error
-				_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
+				_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []types.ScriptValue{
 					sv(counterID),
 				})
 				assert.Error(t, err)
@@ -373,7 +373,7 @@ func TestMetricsBridgeErrors(t *testing.T) {
 	ctx := context.Background()
 
 	// Test methods without initialization
-	_, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
+	_, err := bridge.ExecuteMethod(ctx, "createCounter", []types.ScriptValue{
 		sv("test"),
 	})
 	assert.Error(t, err)
@@ -384,25 +384,25 @@ func TestMetricsBridgeErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test invalid parameters - empty args
-	_, err = bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{})
+	_, err = bridge.ExecuteMethod(ctx, "createCounter", []types.ScriptValue{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "requires at least")
 
 	// Test with non-existent counter ID
-	_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "incrementCounter", []types.ScriptValue{
 		sv("invalid-id"),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 
-	_, err = bridge.ExecuteMethod(ctx, "setGaugeValue", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "setGaugeValue", []types.ScriptValue{
 		sv("invalid-id"),
 		sv(42),
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 
-	_, err = bridge.ExecuteMethod(ctx, "startTimer", []engine.ScriptValue{
+	_, err = bridge.ExecuteMethod(ctx, "startTimer", []types.ScriptValue{
 		sv("invalid-id"),
 	})
 	assert.Error(t, err)
@@ -417,11 +417,11 @@ func TestMetricsBridgeConcurrency(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create counter
-	result, err := bridge.ExecuteMethod(ctx, "createCounter", []engine.ScriptValue{
+	result, err := bridge.ExecuteMethod(ctx, "createCounter", []types.ScriptValue{
 		sv("concurrent_counter"),
 	})
 	require.NoError(t, err)
-	counterInfo := result.(engine.ObjectValue)
+	counterInfo := result.(types.ObjectValue)
 	counterMap := counterInfo.ToGo().(map[string]interface{})
 	counterID := counterMap["id"].(string)
 
@@ -431,7 +431,7 @@ func TestMetricsBridgeConcurrency(t *testing.T) {
 
 	for i := 0; i < numRoutines; i++ {
 		go func() {
-			_, err := bridge.ExecuteMethod(ctx, "incrementCounter", []engine.ScriptValue{
+			_, err := bridge.ExecuteMethod(ctx, "incrementCounter", []types.ScriptValue{
 				sv(counterID),
 			})
 			assert.NoError(t, err)
@@ -445,10 +445,10 @@ func TestMetricsBridgeConcurrency(t *testing.T) {
 	}
 
 	// Check final value
-	result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []engine.ScriptValue{
+	result, err = bridge.ExecuteMethod(ctx, "getCounterValue", []types.ScriptValue{
 		sv(counterID),
 	})
 	require.NoError(t, err)
-	numValue := result.(engine.NumberValue)
+	numValue := result.(types.NumberValue)
 	assert.Equal(t, float64(numRoutines), numValue.Value())
 }

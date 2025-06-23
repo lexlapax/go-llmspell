@@ -99,14 +99,33 @@ func (e *ScriptExecutor) ExecuteFile(ctx context.Context, filepath string, param
 		Engine:     engineName,
 	}
 
-	// Use engine registry to execute file
-	result, err := e.engineManager.ExecuteFile(ctx, filepath, options.Parameters)
+	// Get security profile from config
+	securityProfile := e.config.DefaultSecurityProfile
+
+	// Build engine config
+	var engineConfig map[string]interface{}
+	if e.config.EngineConfigs != nil {
+		engineConfig = e.config.EngineConfigs[engineName]
+	}
+	config := BuildEngineConfig(e.config, engineConfig)
+
+	// Get engine with bridges loaded lazily
+	scriptEngine, err := e.engineManager.GetEngine(engineName, config, securityProfile)
 	if err != nil {
 		e.updateMetrics(engineName, 0, err)
+		return nil, fmt.Errorf("failed to get engine %s: %w", engineName, err)
+	}
+
+	// Execute using the script engine directly
+	startTime := time.Now()
+	result, err := scriptEngine.ExecuteFile(ctx, filepath, options.Parameters)
+	duration := time.Since(startTime)
+
+	e.updateMetrics(engineName, duration, err)
+	if err != nil {
 		return nil, err
 	}
 
-	e.updateMetrics(engineName, time.Since(time.Now()), nil)
 	return result, nil
 }
 
@@ -166,8 +185,14 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 	config := BuildEngineConfig(e.config, engineConfig)
 	config = ApplyOptionsToConfig(config, options)
 
-	// Get engine
-	engine, err := e.engineManager.GetEngine(engineName, config)
+	// Determine security profile
+	securityProfile := options.SecurityProfile
+	if securityProfile == "" {
+		securityProfile = e.config.DefaultSecurityProfile
+	}
+
+	// Get engine with bridges loaded lazily
+	engine, err := e.engineManager.GetEngine(engineName, config, securityProfile)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to get engine %s: %w", engineName, err)
 		result.EndTime = time.Now()
@@ -401,4 +426,11 @@ func (e *ScriptExecutor) updateMetrics(engineName string, duration time.Duration
 			em.ErrorCount++
 		}
 	}
+}
+
+// GetEngineRegistry returns the engine registry manager.
+// This is primarily used by components that need access to the engine registry,
+// such as the REPL for loading bridges into its persistent Lua state.
+func (e *ScriptExecutor) GetEngineRegistry() interface{} {
+	return e.engineManager
 }

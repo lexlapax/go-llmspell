@@ -373,6 +373,15 @@ func (e *LuaEngine) ListBridges() []string {
 	return e.bridgeManager.ListBridges()
 }
 
+// LoadBridgeModulesIntoState loads all registered bridge modules into a Lua state
+// This is primarily used by the REPL to make bridges available in its persistent state
+func (e *LuaEngine) LoadBridgeModulesIntoState(L *lua.LState) error {
+	if e.bridgeManager == nil {
+		return fmt.Errorf("bridge manager not initialized")
+	}
+	return e.bridgeManager.LoadBridgeModules(L)
+}
+
 // ToNative converts a ScriptValue to a Go value
 func (e *LuaEngine) ToNative(scriptValue engine.ScriptValue) (interface{}, error) {
 	if scriptValue == nil || scriptValue.IsNil() {

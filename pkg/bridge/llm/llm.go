@@ -14,8 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 )
 
 // LLMBridge provides script access to language model functionality via go-llms.
@@ -24,7 +23,7 @@ import (
 // and streaming capabilities across different providers.
 type LLMBridge struct {
 	mu             sync.RWMutex
-	providers      map[string]bridge.Provider
+	providers      map[string]types.Provider
 	activeProvider string
 	initialized    bool
 
@@ -53,7 +52,7 @@ type ProviderMetrics struct {
 // Providers must be registered before use.
 func NewLLMBridge() *LLMBridge {
 	return &LLMBridge{
-		providers: make(map[string]bridge.Provider),
+		providers: make(map[string]types.Provider),
 		metrics:   make(map[string]*ProviderMetrics),
 	}
 }
@@ -67,8 +66,8 @@ func (b *LLMBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // Provides information about the bridge including dependencies
 // on go-llms LLM domain package.
-func (b *LLMBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *LLMBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "llm",
 		Version:     "1.0.0",
 		Description: "Language model provider bridge for text generation",
@@ -102,7 +101,7 @@ func (b *LLMBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	b.providers = make(map[string]bridge.Provider)
+	b.providers = make(map[string]types.Provider)
 	b.activeProvider = ""
 	b.initialized = false
 
@@ -117,23 +116,25 @@ func (b *LLMBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // Delegates to the engine's RegisterBridge method for integration.
-func (b *LLMBridge) RegisterWithEngine(e engine.ScriptEngine) error {
-	return e.RegisterBridge(b)
+func (b *LLMBridge) RegisterWithEngine(e types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
 // Provides comprehensive LLM functionality including provider management,
 // text generation, structured output, streaming, schema validation,
 // and performance monitoring.
-func (b *LLMBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *LLMBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Provider management
 		{
 			Name:        "setProvider",
 			Description: "Set the active LLM provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Provider name"},
 				{Name: "config", Type: "object", Required: false, Description: "Provider configuration"},
 			},
@@ -145,7 +146,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProvider",
 			Description: "Get information about the active provider",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "object",
 			Examples: []string{
 				`llm.getProvider()`,
@@ -154,7 +155,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listProviders",
 			Description: "List all registered providers",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 			Examples: []string{
 				`llm.listProviders()`,
@@ -165,7 +166,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generate",
 			Description: "Generate text using the active provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "prompt", Type: "string", Required: true, Description: "Input prompt"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
 			},
@@ -178,7 +179,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateMessage",
 			Description: "Generate a message response",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "messages", Type: "array", Required: true, Description: "Array of message objects"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
 			},
@@ -190,7 +191,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "stream",
 			Description: "Stream text generation",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "prompt", Type: "string", Required: true, Description: "Input prompt"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
 			},
@@ -204,7 +205,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateWithSchema",
 			Description: "Generate structured output with schema validation",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "prompt", Type: "string", Required: true, Description: "Input prompt"},
 				{Name: "schema", Type: "string", Required: true, Description: "Schema name"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
@@ -219,7 +220,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "addResponseSchema",
 			Description: "Add a response schema for structured generation",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Schema name"},
 				{Name: "schema", Type: "object", Required: true, Description: "JSON schema"},
 			},
@@ -231,7 +232,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getResponseSchema",
 			Description: "Get a registered response schema",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Schema name"},
 			},
 			ReturnType: "object",
@@ -242,7 +243,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listResponseSchemas",
 			Description: "List all registered schemas",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 			Examples: []string{
 				`llm.listResponseSchemas()`,
@@ -251,7 +252,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateWithSchema",
 			Description: "Validate data against a schema",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "data", Type: "object", Required: true, Description: "Data to validate"},
 				{Name: "schema", Type: "string", Required: true, Description: "Schema name"},
 			},
@@ -265,7 +266,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getCapabilities",
 			Description: "Get capabilities of the active provider",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "object",
 			Examples: []string{
 				`llm.getCapabilities()`,
@@ -274,7 +275,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getModelInfo",
 			Description: "Get information about a model",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "model", Type: "string", Required: true, Description: "Model name"},
 			},
 			ReturnType: "object",
@@ -285,7 +286,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listModels",
 			Description: "List available models",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 			Examples: []string{
 				`llm.listModels()`,
@@ -294,7 +295,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "checkCapability",
 			Description: "Check if provider supports a capability",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "capability", Type: "string", Required: true, Description: "Capability name"},
 			},
 			ReturnType: "boolean",
@@ -307,7 +308,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "streamMessage",
 			Description: "Stream a message response",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "messages", Type: "array", Required: true, Description: "Array of messages"},
 				{Name: "options", Type: "object", Required: false, Description: "Stream options"},
 			},
@@ -319,7 +320,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "readStream",
 			Description: "Read from an active stream",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "streamId", Type: "string", Required: true, Description: "Stream ID"},
 			},
 			ReturnType: "object",
@@ -330,7 +331,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "closeStream",
 			Description: "Close an active stream",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "streamId", Type: "string", Required: true, Description: "Stream ID"},
 			},
 			ReturnType: "void",
@@ -343,7 +344,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "setFallbackChain",
 			Description: "Set provider fallback chain",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "providers", Type: "array", Required: true, Description: "Ordered list of provider names"},
 			},
 			ReturnType: "void",
@@ -354,7 +355,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getFallbackChain",
 			Description: "Get current fallback chain",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 			Examples: []string{
 				`llm.getFallbackChain()`,
@@ -365,7 +366,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProviderMetrics",
 			Description: "Get metrics for a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 			},
 			ReturnType: "object",
@@ -376,7 +377,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "resetProviderMetrics",
 			Description: "Reset metrics for a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 			},
 			ReturnType: "void",
@@ -389,7 +390,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateSchemaFromExample",
 			Description: "Generate a schema from example data",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "example", Type: "object", Required: true, Description: "Example data"},
 				{Name: "name", Type: "string", Required: true, Description: "Schema name"},
 			},
@@ -403,7 +404,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProviderInfo",
 			Description: "Get detailed provider information",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 			},
 			ReturnType: "object",
@@ -414,7 +415,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "testProviderConnection",
 			Description: "Test connection to a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 			},
 			ReturnType: "object",
@@ -428,7 +429,7 @@ func (b *LLMBridge) Methods() []engine.MethodInfo {
 // ValidateMethod validates method parameters.
 // Ensures bridge is initialized and validates parameter counts
 // against method definitions. Returns error for unknown methods.
-func (b *LLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *LLMBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	if !b.IsInitialized() {
 		return fmt.Errorf("llm bridge not initialized")
 	}
@@ -459,9 +460,9 @@ func (b *LLMBridge) ValidateMethod(name string, args []engine.ScriptValue) error
 // Routes method calls to appropriate implementations, handling
 // provider management, text generation, streaming, schema operations,
 // and metrics. Returns script-compatible values.
-func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod(name, args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	switch name {
@@ -536,32 +537,32 @@ func (b *LLMBridge) ExecuteMethod(ctx context.Context, name string, args []engin
 		return b.testProviderConnection(ctx, args)
 
 	default:
-		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
 	}
 }
 
 // TypeMappings returns type conversion hints.
 // Maps go-llms provider and response types to script types
 // for proper data conversion during method execution.
-func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *LLMBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"provider": {
-			GoType:     "bridge.Provider",
+			GoType:     "types.Provider",
 			ScriptType: "object",
 			Converter:  "providerConverter",
 		},
 		"response": {
-			GoType:     "*bridge.Response",
+			GoType:     "*types.Response",
 			ScriptType: "object",
 			Converter:  "responseConverter",
 		},
 		"message": {
-			GoType:     "bridge.Message",
+			GoType:     "types.Message",
 			ScriptType: "object",
 			Converter:  "messageConverter",
 		},
 		"schema": {
-			GoType:     "*bridge.Schema",
+			GoType:     "*types.Schema",
 			ScriptType: "object",
 			Converter:  "schemaConverter",
 		},
@@ -571,16 +572,16 @@ func (b *LLMBridge) TypeMappings() map[string]engine.TypeMapping {
 // RequiredPermissions returns required permissions.
 // Specifies that scripts need network access for LLM APIs
 // and memory access for response caching.
-func (b *LLMBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *LLMBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionNetwork,
+			Type:        types.PermissionNetwork,
 			Resource:    "llm.providers",
 			Actions:     []string{"read", "write"},
 			Description: "Access to LLM provider APIs",
 		},
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "llm.cache",
 			Actions:     []string{"read", "write"},
 			Description: "Cache for LLM responses",
@@ -590,12 +591,12 @@ func (b *LLMBridge) RequiredPermissions() []engine.Permission {
 
 // Implementation methods
 
-func (b *LLMBridge) setProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	name := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) setProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	name := args[0].(types.StringValue).Value()
 
 	var config map[string]interface{}
 	if len(args) > 1 {
-		config = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+		config = args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 	}
 
 	b.mu.Lock()
@@ -617,15 +618,15 @@ func (b *LLMBridge) setProvider(ctx context.Context, args []engine.ScriptValue) 
 		"active": true,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) getProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *LLMBridge) getProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	if b.activeProvider == "" {
-		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+		return types.NewErrorValue(fmt.Errorf("no active provider set")), nil
 	}
 
 	result := map[string]interface{}{
@@ -633,10 +634,10 @@ func (b *LLMBridge) getProvider(ctx context.Context, args []engine.ScriptValue) 
 		"active": true,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) listProviders(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *LLMBridge) listProviders(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -648,18 +649,18 @@ func (b *LLMBridge) listProviders(ctx context.Context, args []engine.ScriptValue
 		})
 	}
 
-	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(providers)), nil
+	return types.NewArrayValue(types.ConvertSliceToScriptValue(providers)), nil
 }
 
-func (b *LLMBridge) generate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	if args[0].Type() != engine.TypeString {
-		return engine.NewErrorValue(fmt.Errorf("expected string for prompt, got %s", args[0].Type())), nil
+func (b *LLMBridge) generate(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	if args[0].Type() != types.TypeString {
+		return types.NewErrorValue(fmt.Errorf("expected string for prompt, got %s", args[0].Type())), nil
 	}
-	prompt := args[0].(engine.StringValue).Value()
+	prompt := args[0].(types.StringValue).Value()
 
 	var options map[string]interface{}
 	if len(args) > 1 {
-		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+		options = args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 	}
 
 	b.mu.RLock()
@@ -667,7 +668,7 @@ func (b *LLMBridge) generate(ctx context.Context, args []engine.ScriptValue) (en
 	b.mu.RUnlock()
 
 	if providerName == "" {
-		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+		return types.NewErrorValue(fmt.Errorf("no active provider set")), nil
 	}
 
 	// Update metrics
@@ -676,15 +677,15 @@ func (b *LLMBridge) generate(ctx context.Context, args []engine.ScriptValue) (en
 	// Mock response for now
 	response := fmt.Sprintf("Generated response for: %s (options: %v)", prompt, options)
 
-	return engine.NewStringValue(response), nil
+	return types.NewStringValue(response), nil
 }
 
-func (b *LLMBridge) generateMessage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	messages := args[0].(engine.ArrayValue).ToGo().([]interface{})
+func (b *LLMBridge) generateMessage(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	messages := args[0].(types.ArrayValue).ToGo().([]interface{})
 
 	var options map[string]interface{}
 	if len(args) > 1 {
-		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+		options = args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 	}
 
 	b.mu.RLock()
@@ -692,7 +693,7 @@ func (b *LLMBridge) generateMessage(ctx context.Context, args []engine.ScriptVal
 	b.mu.RUnlock()
 
 	if providerName == "" {
-		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+		return types.NewErrorValue(fmt.Errorf("no active provider set")), nil
 	}
 
 	// Update metrics
@@ -711,15 +712,15 @@ func (b *LLMBridge) generateMessage(ctx context.Context, args []engine.ScriptVal
 		},
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) stream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	prompt := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) stream(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	prompt := args[0].(types.StringValue).Value()
 
 	var options map[string]interface{}
 	if len(args) > 1 {
-		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+		options = args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 	}
 
 	b.mu.RLock()
@@ -727,7 +728,7 @@ func (b *LLMBridge) stream(ctx context.Context, args []engine.ScriptValue) (engi
 	b.mu.RUnlock()
 
 	if providerName == "" {
-		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+		return types.NewErrorValue(fmt.Errorf("no active provider set")), nil
 	}
 
 	// Create a mock stream ID
@@ -740,16 +741,16 @@ func (b *LLMBridge) stream(ctx context.Context, args []engine.ScriptValue) (engi
 		"active":    true,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) generateWithSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	prompt := args[0].(engine.StringValue).Value()
-	schemaName := args[1].(engine.StringValue).Value()
+func (b *LLMBridge) generateWithSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	prompt := args[0].(types.StringValue).Value()
+	schemaName := args[1].(types.StringValue).Value()
 
 	var options map[string]interface{}
 	if len(args) > 2 {
-		options = args[2].(engine.ObjectValue).ToGo().(map[string]interface{})
+		options = args[2].(types.ObjectValue).ToGo().(map[string]interface{})
 	}
 
 	// Mock structured response
@@ -760,22 +761,22 @@ func (b *LLMBridge) generateWithSchema(ctx context.Context, args []engine.Script
 		"options": options,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) addResponseSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	name := args[0].(engine.StringValue).Value()
-	schema := args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+func (b *LLMBridge) addResponseSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	name := args[0].(types.StringValue).Value()
+	schema := args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 
 	// In a real implementation, this would store the schema
 	_ = name
 	_ = schema
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *LLMBridge) getResponseSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	name := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) getResponseSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	name := args[0].(types.StringValue).Value()
 
 	// Mock schema
 	result := map[string]interface{}{
@@ -790,22 +791,22 @@ func (b *LLMBridge) getResponseSchema(ctx context.Context, args []engine.ScriptV
 		},
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) listResponseSchemas(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *LLMBridge) listResponseSchemas(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Mock schema list
 	schemas := []interface{}{
 		map[string]interface{}{"name": "person", "type": "object"},
 		map[string]interface{}{"name": "color_list", "type": "array"},
 	}
 
-	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(schemas)), nil
+	return types.NewArrayValue(types.ConvertSliceToScriptValue(schemas)), nil
 }
 
-func (b *LLMBridge) validateWithSchema(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	data := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
-	schemaName := args[1].(engine.StringValue).Value()
+func (b *LLMBridge) validateWithSchema(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	data := args[0].(types.ObjectValue).ToGo().(map[string]interface{})
+	schemaName := args[1].(types.StringValue).Value()
 
 	// Mock validation
 	result := map[string]interface{}{
@@ -815,16 +816,16 @@ func (b *LLMBridge) validateWithSchema(ctx context.Context, args []engine.Script
 		"schema": schemaName,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) getCapabilities(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *LLMBridge) getCapabilities(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	providerName := b.activeProvider
 	b.mu.RUnlock()
 
 	if providerName == "" {
-		return engine.NewErrorValue(fmt.Errorf("no active provider set")), nil
+		return types.NewErrorValue(fmt.Errorf("no active provider set")), nil
 	}
 
 	// Mock capabilities
@@ -836,11 +837,11 @@ func (b *LLMBridge) getCapabilities(ctx context.Context, args []engine.ScriptVal
 		"max_context_length": 4096,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(capabilities)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(capabilities)), nil
 }
 
-func (b *LLMBridge) getModelInfo(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	model := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) getModelInfo(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	model := args[0].(types.StringValue).Value()
 
 	// Mock model info
 	info := map[string]interface{}{
@@ -850,10 +851,10 @@ func (b *LLMBridge) getModelInfo(ctx context.Context, args []engine.ScriptValue)
 		"capabilities": []interface{}{"text-generation", "chat"},
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(info)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(info)), nil
 }
 
-func (b *LLMBridge) listModels(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *LLMBridge) listModels(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	// Mock model list
 	models := []interface{}{
 		map[string]interface{}{
@@ -866,11 +867,11 @@ func (b *LLMBridge) listModels(ctx context.Context, args []engine.ScriptValue) (
 		},
 	}
 
-	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(models)), nil
+	return types.NewArrayValue(types.ConvertSliceToScriptValue(models)), nil
 }
 
-func (b *LLMBridge) checkCapability(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	capability := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) checkCapability(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	capability := args[0].(types.StringValue).Value()
 
 	// Mock capability check
 	supported := map[string]bool{
@@ -885,15 +886,15 @@ func (b *LLMBridge) checkCapability(ctx context.Context, args []engine.ScriptVal
 		hasCapability = false
 	}
 
-	return engine.NewBoolValue(hasCapability), nil
+	return types.NewBoolValue(hasCapability), nil
 }
 
-func (b *LLMBridge) streamMessage(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	messages := args[0].(engine.ArrayValue).ToGo().([]interface{})
+func (b *LLMBridge) streamMessage(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	messages := args[0].(types.ArrayValue).ToGo().([]interface{})
 
 	var options map[string]interface{}
 	if len(args) > 1 {
-		options = args[1].(engine.ObjectValue).ToGo().(map[string]interface{})
+		options = args[1].(types.ObjectValue).ToGo().(map[string]interface{})
 	}
 
 	// Create a mock stream
@@ -906,11 +907,11 @@ func (b *LLMBridge) streamMessage(ctx context.Context, args []engine.ScriptValue
 		"active":    true,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) readStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	streamID := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) readStream(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	streamID := args[0].(types.StringValue).Value()
 
 	// Mock stream chunk
 	chunk := map[string]interface{}{
@@ -920,20 +921,20 @@ func (b *LLMBridge) readStream(ctx context.Context, args []engine.ScriptValue) (
 		"index":     1,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(chunk)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(chunk)), nil
 }
 
-func (b *LLMBridge) closeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	streamID := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) closeStream(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	streamID := args[0].(types.StringValue).Value()
 
 	// Mock close stream
 	_ = streamID
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *LLMBridge) setFallbackChain(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	providers := args[0].(engine.ArrayValue).ToGo().([]interface{})
+func (b *LLMBridge) setFallbackChain(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	providers := args[0].(types.ArrayValue).ToGo().([]interface{})
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -945,10 +946,10 @@ func (b *LLMBridge) setFallbackChain(ctx context.Context, args []engine.ScriptVa
 		}
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *LLMBridge) getFallbackChain(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *LLMBridge) getFallbackChain(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -957,18 +958,18 @@ func (b *LLMBridge) getFallbackChain(ctx context.Context, args []engine.ScriptVa
 		chain[i] = name
 	}
 
-	return engine.NewArrayValue(engine.ConvertSliceToScriptValue(chain)), nil
+	return types.NewArrayValue(types.ConvertSliceToScriptValue(chain)), nil
 }
 
-func (b *LLMBridge) getProviderMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	provider := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) getProviderMetrics(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	provider := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	metrics, exists := b.metrics[provider]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("no metrics for provider: %s", provider)), nil
+		return types.NewErrorValue(fmt.Errorf("no metrics for provider: %s", provider)), nil
 	}
 
 	result := map[string]interface{}{
@@ -979,23 +980,23 @@ func (b *LLMBridge) getProviderMetrics(ctx context.Context, args []engine.Script
 		"success_rate":     float64(metrics.SuccessfulCalls) / float64(metrics.TotalRequests) * 100,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
-func (b *LLMBridge) resetProviderMetrics(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	provider := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) resetProviderMetrics(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	provider := args[0].(types.StringValue).Value()
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	b.metrics[provider] = &ProviderMetrics{}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *LLMBridge) generateSchemaFromExample(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	example := args[0].(engine.ObjectValue).ToGo().(map[string]interface{})
-	name := args[1].(engine.StringValue).Value()
+func (b *LLMBridge) generateSchemaFromExample(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	example := args[0].(types.ObjectValue).ToGo().(map[string]interface{})
+	name := args[1].(types.StringValue).Value()
 
 	// Mock schema generation
 	schema := map[string]interface{}{
@@ -1010,11 +1011,11 @@ func (b *LLMBridge) generateSchemaFromExample(ctx context.Context, args []engine
 		"generated_from": example,
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(schema)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(schema)), nil
 }
 
-func (b *LLMBridge) getProviderInfo(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	provider := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) getProviderInfo(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	provider := args[0].(types.StringValue).Value()
 
 	// Mock provider info
 	info := map[string]interface{}{
@@ -1026,11 +1027,11 @@ func (b *LLMBridge) getProviderInfo(ctx context.Context, args []engine.ScriptVal
 		"status":       "active",
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(info)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(info)), nil
 }
 
-func (b *LLMBridge) testProviderConnection(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	provider := args[0].(engine.StringValue).Value()
+func (b *LLMBridge) testProviderConnection(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	provider := args[0].(types.StringValue).Value()
 
 	// Mock connection test
 	result := map[string]interface{}{
@@ -1041,7 +1042,7 @@ func (b *LLMBridge) testProviderConnection(ctx context.Context, args []engine.Sc
 		"tested_at":  time.Now().Format(time.RFC3339),
 	}
 
-	return engine.NewObjectValue(engine.ConvertMapToScriptValue(result)), nil
+	return types.NewObjectValue(types.ConvertMapToScriptValue(result)), nil
 }
 
 // Helper methods

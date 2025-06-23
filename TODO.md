@@ -182,19 +182,77 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [ ] Add examples of parameter access patterns
     - [ ] Update troubleshooting guide for parameter issues
 
-- [ ] **Task 2.4.4.5: Bridge Initialization Fix** (Discovered during 2.4.4.4 testing)
+- [ ] **Task 2.4.4.5: Bridge Initialization Optimization** (Refactor for lazy loading and multi-engine support)
   - [x] Update `LoadBridgeModules` to set individual globals for stdlib compatibility **[COMPLETED - 2025-06-23]**
-  - [ ] Add bridge registration to CLI initialization
-    - [ ] Create standard bridge registration function
-    - [ ] Register all standard bridges (tools, llm, agent, util, etc.)
-    - [ ] Update main.go to call bridge registration
-  - [ ] Test bridge availability in stdlib modules
-    - [ ] Verify `tools.list()` works correctly
-    - [ ] Test other stdlib modules that require bridges
-    - [ ] Ensure bridge globals are properly set (`_G.tools`, `_G.util_errors`, etc.)
-  - [ ] Update example spells testing
-    - [ ] Test all 13 example spells work with proper bridge initialization
-    - [ ] Verify bridge-dependent functionality works correctly
+  - [x] Create modular bridge registry in `/pkg/bridge/registry/` **[COMPLETED - 2025-06-23]**
+    - [x] Implement configurable bridge sets (core, llm, utility, agent, observability, state, structured) **[COMPLETED - 2025-06-23]**
+    - [x] Create bridge profiles (standard, minimal, llm, development) for different use cases **[COMPLETED - 2025-06-23]**
+    - [x] Support engine-agnostic bridge registration for future JavaScript/Tengo engines **[COMPLETED - 2025-06-23]**
+  - [ ] **Task 2.4.4.5.1: Implement Lazy Bridge Loading**
+    - [x] Refactor `SetupEngineRegistry()` to only register lightweight engine factories **[COMPLETED - 2025-06-23]**
+      - [x] Remove bridge registration from startup (keep only engine factory registration) **[COMPLETED - 2025-06-23]**
+      - [x] Verify engine selector still works with factory-only registration **[COMPLETED - 2025-06-23]**
+      - [x] Ensure `llmspell engines` command still lists all available engines **[COMPLETED - 2025-06-23]**
+    - [x] Create `GetEngineWithBridges()` method in `EngineRegistryManager` **[COMPLETED - 2025-06-23]**
+      - [x] Add on-demand bridge registration when engine is first requested **[COMPLETED - 2025-06-23]**
+      - [x] Implement bridge profile selection based on security profile **[COMPLETED - 2025-06-23]**
+      - [x] Add caching to prevent re-registering bridges for same engine+profile combination **[COMPLETED - 2025-06-23]**
+    - [x] Update `ScriptExecutor.ExecuteWithOptions()` to use lazy bridge loading **[COMPLETED - 2025-06-23]**
+      - [x] Replace direct `GetEngine()` calls with `GetEngineWithBridges()` **[COMPLETED - 2025-06-23]**
+      - [x] Pass security profile for bridge profile selection **[COMPLETED - 2025-06-23]**
+      - [x] Ensure bridges are registered before script execution **[COMPLETED - 2025-06-23]**
+  - [x] **Task 2.4.4.5.2: Multi-Engine Architecture Preparation** **[COMPLETED - 2025-06-23]**
+    - [x] Design engine factory registration strategy for JavaScript/Tengo **[COMPLETED - 2025-06-23]**
+      - [x] Plan factory registration without breaking existing Lua functionality **[COMPLETED - 2025-06-23]**
+      - [x] Design bridge profile mapping per engine type (lua: standard, js: llm, tengo: minimal) **[COMPLETED - 2025-06-23]**
+      - [x] Create configuration structure for engine-specific bridge profiles **[COMPLETED - 2025-06-23]**
+    - [x] Add tests for lazy loading behavior **[COMPLETED - 2025-06-23]**
+      - [x] Test that only requested engines load bridges **[COMPLETED - 2025-06-23]**
+      - [x] Test bridge caching works correctly **[COMPLETED - 2025-06-23]**
+      - [x] Test that unused engines don't consume resources **[COMPLETED - 2025-06-23]**
+      - [x] Test engine selector works with factory-only registration **[COMPLETED - 2025-06-23]**
+  - [x] **Task 2.4.4.5.3: Repl Changes** **[COMPLETED - 2025-06-23]**
+    - [x] Assess impact to loading repl command `cmd/llmspell/command/repl.go` and `pkg/repl/lua_repl.go` **[COMPLETED - 2025-06-23]**
+    - [x] Make changes to packages **[COMPLETED - 2025-06-23]**
+    - [x] Test and verify changes **[COMPLETED - 2025-06-23]**
+  - [x] **Task 2.4.4.5.4: Fix Import Cycle Issues** **[COMPLETED - 2025-06-23]**
+    - [x] Create `pkg/bridge/types/` package structure **[COMPLETED - 2025-06-23]**
+      - [x] Create directory `pkg/bridge/types/` **[COMPLETED - 2025-06-23]**
+      - [x] Move `pkg/bridge/interfaces.go` to `pkg/bridge/types/types.go` **[COMPLETED - 2025-06-23]**
+      - [x] Update package declaration from `package bridge` to `package types` **[COMPLETED - 2025-06-23]**
+    - [x] Update all imports in bridge implementation files **[COMPLETED - 2025-06-23]**
+      - [x] Update `pkg/bridge/agent/*.go` files to import `pkg/bridge/types` **[COMPLETED - 2025-06-23]**
+      - [x] Update `pkg/bridge/llm/*.go` files to import `pkg/bridge/types` **[COMPLETED - 2025-06-23]**
+      - [x] Update `pkg/bridge/observability/*.go` files to import `pkg/bridge/types` **[COMPLETED - 2025-06-23]**
+      - [x] Update `pkg/bridge/state/*.go` files to import `pkg/bridge/types` **[COMPLETED - 2025-06-23]**
+      - [x] Update `pkg/bridge/structured/*.go` files to import `pkg/bridge/types` **[COMPLETED - 2025-06-23]**
+      - [x] Update `pkg/bridge/util/*.go` files to import `pkg/bridge/types` **[COMPLETED - 2025-06-23]**
+    - [x] Update registry imports **[COMPLETED - 2025-06-23]**
+      - [x] Update `pkg/bridge/registry/registry.go` to use types package **[COMPLETED - 2025-06-23]**
+      - [x] Update all type references from `bridge.TypeName` to `types.TypeName` **[COMPLETED - 2025-06-23]**
+    - [x] Add engine interface types to types package **[COMPLETED - 2025-06-23]**
+      - [x] Add `Registry = engine.Registry` type alias **[COMPLETED - 2025-06-23]**
+      - [x] Fix state bridge RegisterWithEngine method **[COMPLETED - 2025-06-23]**
+      - [x] Remove obsolete interfaces_test.go file **[COMPLETED - 2025-06-23]**
+    - [x] Verify all bridge packages compile and tests pass **[COMPLETED - 2025-06-23]**
+    - [x] Fix state bridge test interface compatibility issues **[COMPLETED - 2025-06-23]**
+      - [x] Ensure all tests pass after refactoring **[COMPLETED - 2025-06-23]**
+    - [x] Verify no circular dependencies remain **[COMPLETED - 2025-06-23]**
+      - [x] Run `go build ./...` to ensure compilation **[COMPLETED - 2025-06-23]**
+      - [x] Check IDE diagnostics show no import errors **[COMPLETED - 2025-06-23]**
+  - [ ] **Task 2.4.4.5.5: Integration Testing**
+    - [ ] Test bridge availability in stdlib modules with lazy loading
+      - [ ] Verify `tools.list()` works correctly with on-demand bridge loading
+      - [ ] Test other stdlib modules that require bridges work with lazy loading
+      - [ ] Ensure bridge globals are properly set when engine is loaded
+    - [ ] Update example spells testing
+      - [ ] Test all 13 example spells work with lazy bridge initialization
+      - [ ] Verify bridge-dependent functionality works correctly
+      - [ ] Test that only needed bridges are loaded for each spell
+    - [ ] Performance verification
+      - [ ] Measure startup time improvement with lazy loading
+      - [ ] Verify memory usage is reduced for simple scripts
+      - [ ] Test CLI responsiveness for engine listing commands
 
 
 #### 2.4.5: Documentation & Examples

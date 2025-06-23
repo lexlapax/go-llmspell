@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 	// go-llms imports for structured output functionality
 	"github.com/lexlapax/go-llms/pkg/llm/outputs"
 	schemaDomain "github.com/lexlapax/go-llms/pkg/schema/domain"
@@ -50,7 +50,7 @@ func NewUtilJSONBridgeWithValidator(validator schemaDomain.Validator) *UtilJSONB
 }
 
 // GetID returns the bridge identifier.
-// It implements the engine.Bridge interface.
+// It implements the types.Bridge interface.
 func (b *UtilJSONBridge) GetID() string {
 	return "util_json"
 }
@@ -58,8 +58,8 @@ func (b *UtilJSONBridge) GetID() string {
 // GetMetadata returns bridge metadata.
 // It provides information about the JSON utilities bridge including
 // version, description, and supported JSON processing features.
-func (b *UtilJSONBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *UtilJSONBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "util_json",
 		Version:     "2.0.0",
 		Description: "Structured output parser with JSON/YAML/XML conversion, schema validation, and LLM-optimized extraction",
@@ -110,22 +110,24 @@ func (b *UtilJSONBridge) IsInitialized() bool {
 	return b.initialized
 }
 
-// RegisterWithEngine registers the bridge with a script engine.
+// RegisterWithEngine registers the bridge with a script types.
 // It enables the script engine to access JSON utilities through this bridge.
-func (b *UtilJSONBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+func (b *UtilJSONBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge.
 // It provides metadata about all JSON-related methods available to scripts,
 // including marshaling, streaming, schema operations, and format conversion.
-func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *UtilJSONBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Optimized marshaling
 		{
 			Name:        "marshal",
 			Description: "Marshal object to JSON with optimizations",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "value", Type: "any", Description: "Value to marshal", Required: true},
 			},
 			ReturnType: "string",
@@ -133,7 +135,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "marshalIndent",
 			Description: "Marshal object to indented JSON",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "value", Type: "any", Description: "Value to marshal", Required: true},
 				{Name: "prefix", Type: "string", Description: "Line prefix", Required: false},
 				{Name: "indent", Type: "string", Description: "Indentation", Required: false},
@@ -143,7 +145,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "marshalToBytes",
 			Description: "Marshal object to JSON bytes",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "value", Type: "any", Description: "Value to marshal", Required: true},
 			},
 			ReturnType: "bytes",
@@ -153,7 +155,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "unmarshal",
 			Description: "Unmarshal JSON string to object",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "json", Type: "string", Description: "JSON string", Required: true},
 			},
 			ReturnType: "any",
@@ -161,7 +163,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "unmarshalFromBytes",
 			Description: "Unmarshal JSON bytes to object",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "data", Type: "bytes", Description: "JSON bytes", Required: true},
 			},
 			ReturnType: "any",
@@ -169,7 +171,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "unmarshalStrict",
 			Description: "Unmarshal JSON with strict validation",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "json", Type: "string", Description: "JSON string", Required: true},
 				{Name: "disallowUnknownFields", Type: "boolean", Description: "Disallow unknown fields", Required: false},
 			},
@@ -180,7 +182,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createEncoder",
 			Description: "Create JSON encoder for streaming",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "writer", Type: "io.Writer", Description: "Output writer", Required: true},
 			},
 			ReturnType: "JSONEncoder",
@@ -188,7 +190,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createDecoder",
 			Description: "Create JSON decoder for streaming",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "reader", Type: "io.Reader", Description: "Input reader", Required: true},
 			},
 			ReturnType: "JSONDecoder",
@@ -196,7 +198,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "encodeStream",
 			Description: "Encode value to JSON stream",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "encoder", Type: "JSONEncoder", Description: "JSON encoder", Required: true},
 				{Name: "value", Type: "any", Description: "Value to encode", Required: true},
 			},
@@ -205,7 +207,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "decodeStream",
 			Description: "Decode value from JSON stream",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "decoder", Type: "JSONDecoder", Description: "JSON decoder", Required: true},
 			},
 			ReturnType: "any",
@@ -215,7 +217,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "validateWithSchema",
 			Description: "Validate JSON against schema",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "json", Type: "string", Description: "JSON to validate", Required: true},
 				{Name: "schema", Type: "object", Description: "JSON schema", Required: true},
 			},
@@ -224,7 +226,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateFromSchema",
 			Description: "Generate example JSON from schema",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "schema", Type: "object", Description: "JSON schema", Required: true},
 			},
 			ReturnType: "any",
@@ -232,7 +234,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "inferSchema",
 			Description: "Infer JSON schema from example",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "example", Type: "any", Description: "Example object", Required: true},
 			},
 			ReturnType: "object",
@@ -242,7 +244,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "parseStructured",
 			Description: "Parse and validate structured output from LLM response",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "output", Type: "string", Description: "LLM output containing JSON", Required: true},
 				{Name: "schema", Type: "object", Description: "JSON schema for validation", Required: true},
 			},
@@ -251,7 +253,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "parseWithRecovery",
 			Description: "Extract JSON from malformed or mixed content",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "output", Type: "string", Description: "Potentially malformed content", Required: true},
 			},
 			ReturnType: "string",
@@ -259,7 +261,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "enhancePrompt",
 			Description: "Add schema information to prompt for better LLM output",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "prompt", Type: "string", Description: "Original prompt", Required: true},
 				{Name: "schema", Type: "object", Description: "JSON schema", Required: true},
 				{Name: "options", Type: "object", Description: "Enhancement options", Required: false},
@@ -271,7 +273,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "convertFormat",
 			Description: "Convert between JSON, YAML, and XML formats",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "data", Type: "string", Description: "Data to convert", Required: true},
 				{Name: "fromFormat", Type: "string", Description: "Source format (json/yaml/xml)", Required: true},
 				{Name: "toFormat", Type: "string", Description: "Target format (json/yaml/xml)", Required: true},
@@ -282,7 +284,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "streamConvert",
 			Description: "Convert format using streaming for large data",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "reader", Type: "io.Reader", Description: "Input reader", Required: true},
 				{Name: "writer", Type: "io.Writer", Description: "Output writer", Required: true},
 				{Name: "fromFormat", Type: "string", Description: "Source format", Required: true},
@@ -296,7 +298,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "prettyPrint",
 			Description: "Pretty print JSON with colors",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "json", Type: "string", Description: "JSON string", Required: true},
 				{Name: "colorize", Type: "boolean", Description: "Enable colors", Required: false},
 			},
@@ -305,7 +307,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "minify",
 			Description: "Minify JSON by removing whitespace",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "json", Type: "string", Description: "JSON string", Required: true},
 			},
 			ReturnType: "string",
@@ -313,7 +315,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "merge",
 			Description: "Deep merge multiple JSON objects",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "objects", Type: "array", Description: "Objects to merge", Required: true},
 			},
 			ReturnType: "any",
@@ -321,7 +323,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "diff",
 			Description: "Compare two JSON objects",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "obj1", Type: "any", Description: "First object", Required: true},
 				{Name: "obj2", Type: "any", Description: "Second object", Required: true},
 			},
@@ -332,7 +334,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "marshalWithBuffer",
 			Description: "Marshal with reusable buffer for performance",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "value", Type: "any", Description: "Value to marshal", Required: true},
 				{Name: "buffer", Type: "bytes", Description: "Reusable buffer", Required: false},
 			},
@@ -341,7 +343,7 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "marshalConcurrent",
 			Description: "Marshal multiple values concurrently",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "values", Type: "array", Description: "Values to marshal", Required: true},
 			},
 			ReturnType: "array",
@@ -352,8 +354,8 @@ func (b *UtilJSONBridge) Methods() []engine.MethodInfo {
 // TypeMappings returns type conversion mappings.
 // It defines how Go JSON types are mapped to script types
 // for encoders, decoders, and IO interfaces.
-func (b *UtilJSONBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *UtilJSONBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"JSONEncoder": {
 			GoType:     "json.Encoder",
 			ScriptType: "object",
@@ -379,17 +381,17 @@ func (b *UtilJSONBridge) TypeMappings() map[string]engine.TypeMapping {
 
 // ValidateMethod validates method calls.
 // It delegates validation to the engine based on Methods() metadata.
-func (b *UtilJSONBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *UtilJSONBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	// Method validation handled by engine based on Methods() metadata
 	return nil
 }
 
 // RequiredPermissions returns required permissions.
 // It specifies permissions for JSON processing operations.
-func (b *UtilJSONBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *UtilJSONBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionMemory,
+			Type:        types.PermissionMemory,
 			Resource:    "json",
 			Actions:     []string{"read", "write"},
 			Description: "JSON processing operations",
@@ -398,9 +400,9 @@ func (b *UtilJSONBridge) RequiredPermissions() []engine.Permission {
 }
 
 // ExecuteMethod executes a bridge method by calling the appropriate go-llms function.
-// It implements the engine.Bridge interface, routing method calls
+// It implements the types.Bridge interface, routing method calls
 // to the appropriate JSON processing operations.
-func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -452,7 +454,7 @@ func (b *UtilJSONBridge) ExecuteMethod(ctx context.Context, name string, args []
 
 // marshal converts a value to JSON string using optimized marshaling.
 // It uses go-llms json package for better performance.
-func (b *UtilJSONBridge) marshal(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) marshal(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
@@ -464,12 +466,12 @@ func (b *UtilJSONBridge) marshal(ctx context.Context, args []engine.ScriptValue)
 	if err != nil {
 		return nil, err
 	}
-	return engine.NewStringValue(result), nil
+	return types.NewStringValue(result), nil
 }
 
 // marshalIndent converts a value to indented JSON string.
 // It supports custom prefix and indentation for readable output.
-func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
@@ -478,11 +480,11 @@ func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.Script
 	prefix := ""
 	indent := "  "
 
-	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeString {
-		prefix = args[1].(engine.StringValue).Value()
+	if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeString {
+		prefix = args[1].(types.StringValue).Value()
 	}
-	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeString {
-		indent = args[2].(engine.StringValue).Value()
+	if len(args) > 2 && args[2] != nil && args[2].Type() == types.TypeString {
+		indent = args[2].(types.StringValue).Value()
 	}
 
 	// json-iterator doesn't support custom prefixes, so use standard library when prefix is non-empty
@@ -492,7 +494,7 @@ func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.Script
 		if err != nil {
 			return nil, err
 		}
-		return engine.NewStringValue(string(data)), nil
+		return types.NewStringValue(string(data)), nil
 	}
 
 	// Use go-llms json for better performance when no prefix
@@ -500,12 +502,12 @@ func (b *UtilJSONBridge) marshalIndent(ctx context.Context, args []engine.Script
 	if err != nil {
 		return nil, err
 	}
-	return engine.NewStringValue(string(data)), nil
+	return types.NewStringValue(string(data)), nil
 }
 
 // marshalToBytes converts a value to JSON byte array.
 // It returns the JSON as an array of numbers for binary operations.
-func (b *UtilJSONBridge) marshalToBytes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) marshalToBytes(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
@@ -517,51 +519,51 @@ func (b *UtilJSONBridge) marshalToBytes(ctx context.Context, args []engine.Scrip
 	}
 
 	// Convert []byte to array of numbers
-	scriptBytes := make([]engine.ScriptValue, len(data))
+	scriptBytes := make([]types.ScriptValue, len(data))
 	for i, b := range data {
-		scriptBytes[i] = engine.NewNumberValue(float64(b))
+		scriptBytes[i] = types.NewNumberValue(float64(b))
 	}
-	return engine.NewArrayValue(scriptBytes), nil
+	return types.NewArrayValue(scriptBytes), nil
 }
 
 // unmarshal parses JSON string into a value.
 // It uses optimized parsing for better performance.
-func (b *UtilJSONBridge) unmarshal(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) unmarshal(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, ErrInvalidArguments
 	}
 
-	jsonStr := args[0].(engine.StringValue).Value()
+	jsonStr := args[0].(types.StringValue).Value()
 	var result interface{}
 	err := llmjson.UnmarshalFromString(jsonStr, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
 // unmarshalFromBytes parses JSON byte array into a value.
 // It converts the byte array back to JSON before parsing.
-func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeArray {
+	if args[0] == nil || args[0].Type() != types.TypeArray {
 		return nil, ErrInvalidArguments
 	}
 
 	// Convert array of numbers to []byte
-	elements := args[0].(engine.ArrayValue).Elements()
+	elements := args[0].(types.ArrayValue).Elements()
 	data := make([]byte, len(elements))
 	for i, elem := range elements {
-		if elem.Type() != engine.TypeNumber {
+		if elem.Type() != types.TypeNumber {
 			return nil, fmt.Errorf("byte array must contain only numbers")
 		}
-		data[i] = byte(elem.(engine.NumberValue).Value())
+		data[i] = byte(elem.(types.NumberValue).Value())
 	}
 
 	var result interface{}
@@ -570,25 +572,25 @@ func (b *UtilJSONBridge) unmarshalFromBytes(ctx context.Context, args []engine.S
 		return nil, err
 	}
 
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
 // unmarshalStrict parses JSON with strict validation.
 // It can optionally disallow unknown fields for stricter parsing.
-func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, ErrInvalidArguments
 	}
 
-	jsonStr := args[0].(engine.StringValue).Value()
+	jsonStr := args[0].(types.StringValue).Value()
 
 	// Check for disallowUnknownFields option
 	disallowUnknown := false
-	if len(args) > 1 && args[1] != nil && args[1].Type() == engine.TypeBool {
-		disallowUnknown = args[1].(engine.BoolValue).Value()
+	if len(args) > 1 && args[1] != nil && args[1].Type() == types.TypeBool {
+		disallowUnknown = args[1].(types.BoolValue).Value()
 	}
 
 	// For strict unmarshaling with DisallowUnknownFields, we need to use standard decoder
@@ -600,7 +602,7 @@ func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.Scri
 		if err := decoder.Decode(&result); err != nil {
 			return nil, err
 		}
-		return engine.ConvertToScriptValue(result), nil
+		return types.ConvertToScriptValue(result), nil
 	}
 
 	// Otherwise use go-llms unmarshal
@@ -610,61 +612,61 @@ func (b *UtilJSONBridge) unmarshalStrict(ctx context.Context, args []engine.Scri
 		return nil, err
 	}
 
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
 // createEncoder creates a JSON encoder for streaming output.
 // It wraps an io.Writer for incremental JSON encoding.
-func (b *UtilJSONBridge) createEncoder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) createEncoder(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+	if args[0] == nil || args[0].Type() != types.TypeCustom {
 		return nil, ErrInvalidArguments
 	}
 
-	customVal := args[0].(engine.CustomValue)
+	customVal := args[0].(types.CustomValue)
 	writer, ok := customVal.Value().(io.Writer)
 	if !ok {
 		return nil, fmt.Errorf("argument must be io.Writer")
 	}
 
 	encoder := llmjson.NewEncoder(writer)
-	return engine.NewCustomValue("JSONEncoder", encoder), nil
+	return types.NewCustomValue("JSONEncoder", encoder), nil
 }
 
 // createDecoder creates a JSON decoder for streaming input.
 // It wraps an io.Reader for incremental JSON decoding.
-func (b *UtilJSONBridge) createDecoder(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) createDecoder(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+	if args[0] == nil || args[0].Type() != types.TypeCustom {
 		return nil, ErrInvalidArguments
 	}
 
-	customVal := args[0].(engine.CustomValue)
+	customVal := args[0].(types.CustomValue)
 	reader, ok := customVal.Value().(io.Reader)
 	if !ok {
 		return nil, fmt.Errorf("argument must be io.Reader")
 	}
 
 	decoder := llmjson.NewDecoder(reader)
-	return engine.NewCustomValue("JSONDecoder", decoder), nil
+	return types.NewCustomValue("JSONDecoder", decoder), nil
 }
 
 // encodeStream encodes a value to a JSON stream.
 // It writes JSON data incrementally to the encoder's writer.
-func (b *UtilJSONBridge) encodeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) encodeStream(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
 
 	// Get encoder
-	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+	if args[0] == nil || args[0].Type() != types.TypeCustom {
 		return nil, fmt.Errorf("encoder must be JSONEncoder")
 	}
-	customVal := args[0].(engine.CustomValue)
+	customVal := args[0].(types.CustomValue)
 	// json-iterator returns a concrete type, check the type name instead
 	if customVal.TypeName() != "JSONEncoder" {
 		return nil, fmt.Errorf("encoder must be JSONEncoder")
@@ -691,21 +693,21 @@ func (b *UtilJSONBridge) encodeStream(ctx context.Context, args []engine.ScriptV
 		}
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // decodeStream decodes a value from a JSON stream.
 // It reads JSON data incrementally from the decoder's reader.
-func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
 
 	// Get decoder
-	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+	if args[0] == nil || args[0].Type() != types.TypeCustom {
 		return nil, fmt.Errorf("decoder must be JSONDecoder")
 	}
-	customVal := args[0].(engine.CustomValue)
+	customVal := args[0].(types.CustomValue)
 	// json-iterator returns a concrete type, check the type name instead
 	if customVal.TypeName() != "JSONDecoder" {
 		return nil, fmt.Errorf("decoder must be JSONDecoder")
@@ -730,24 +732,24 @@ func (b *UtilJSONBridge) decodeStream(ctx context.Context, args []engine.ScriptV
 		}
 	}
 
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
 // parseStructured parses and validates structured output from LLM responses.
 // It extracts JSON from LLM output and validates against a schema.
-func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("output must be string")
 	}
-	output := args[0].(engine.StringValue).Value()
+	output := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("schema must be object")
 	}
-	schemaObj := args[1].(engine.ObjectValue).Fields()
+	schemaObj := args[1].(types.ObjectValue).Fields()
 	schemaMap := make(map[string]interface{})
 	for k, v := range schemaObj {
 		schemaMap[k] = v.ToGo()
@@ -764,40 +766,40 @@ func (b *UtilJSONBridge) parseStructured(ctx context.Context, args []engine.Scri
 		return nil, err
 	}
 
-	return engine.ConvertToScriptValue(result), nil
+	return types.ConvertToScriptValue(result), nil
 }
 
 // parseWithRecovery extracts JSON from malformed or mixed content.
 // It attempts to recover valid JSON from corrupted or partial data.
-func (b *UtilJSONBridge) parseWithRecovery(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) parseWithRecovery(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("output must be string")
 	}
-	output := args[0].(engine.StringValue).Value()
+	output := args[0].(types.StringValue).Value()
 
 	// Use go-llms ExtractJSON for malformed content recovery
 	extracted := processor.ExtractJSON(output)
-	return engine.NewStringValue(extracted), nil
+	return types.NewStringValue(extracted), nil
 }
 
 // enhancePrompt adds schema information to prompts for better LLM output.
 // It modifies prompts to include JSON schema requirements for structured responses.
-func (b *UtilJSONBridge) enhancePrompt(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) enhancePrompt(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 2 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("prompt must be string")
 	}
-	prompt := args[0].(engine.StringValue).Value()
+	prompt := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeObject {
+	if args[1] == nil || args[1].Type() != types.TypeObject {
 		return nil, fmt.Errorf("schema must be object")
 	}
-	schemaObj := args[1].(engine.ObjectValue).Fields()
+	schemaObj := args[1].(types.ObjectValue).Fields()
 	schemaMap := make(map[string]interface{})
 	for k, v := range schemaObj {
 		schemaMap[k] = v.ToGo()
@@ -811,8 +813,8 @@ func (b *UtilJSONBridge) enhancePrompt(ctx context.Context, args []engine.Script
 
 	// Check for options
 	var enhanced string
-	if len(args) > 2 && args[2] != nil && args[2].Type() == engine.TypeObject {
-		optionsObj := args[2].(engine.ObjectValue).Fields()
+	if len(args) > 2 && args[2] != nil && args[2].Type() == types.TypeObject {
+		optionsObj := args[2].(types.ObjectValue).Fields()
 		options := make(map[string]interface{})
 		for k, v := range optionsObj {
 			options[k] = v.ToGo()
@@ -826,29 +828,29 @@ func (b *UtilJSONBridge) enhancePrompt(ctx context.Context, args []engine.Script
 		return nil, err
 	}
 
-	return engine.NewStringValue(enhanced), nil
+	return types.NewStringValue(enhanced), nil
 }
 
 // convertFormat converts between JSON, YAML, and XML formats.
 // It preserves data structure while changing the serialization format.
-func (b *UtilJSONBridge) convertFormat(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) convertFormat(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 3 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("data must be string")
 	}
-	data := args[0].(engine.StringValue).Value()
+	data := args[0].(types.StringValue).Value()
 
-	if args[1] == nil || args[1].Type() != engine.TypeString {
+	if args[1] == nil || args[1].Type() != types.TypeString {
 		return nil, fmt.Errorf("fromFormat must be string")
 	}
-	fromFormat := args[1].(engine.StringValue).Value()
+	fromFormat := args[1].(types.StringValue).Value()
 
-	if args[2] == nil || args[2].Type() != engine.TypeString {
+	if args[2] == nil || args[2].Type() != types.TypeString {
 		return nil, fmt.Errorf("toFormat must be string")
 	}
-	toFormat := args[2].(engine.StringValue).Value()
+	toFormat := args[2].(types.StringValue).Value()
 
 	// Convert format strings to outputs.Format
 	from, err := b.stringToFormat(fromFormat)
@@ -862,8 +864,8 @@ func (b *UtilJSONBridge) convertFormat(ctx context.Context, args []engine.Script
 
 	// Check for conversion options
 	var opts *outputs.ConversionOptions
-	if len(args) > 3 && args[3] != nil && args[3].Type() == engine.TypeObject {
-		optionsObj := args[3].(engine.ObjectValue).Fields()
+	if len(args) > 3 && args[3] != nil && args[3].Type() == types.TypeObject {
+		optionsObj := args[3].(types.ObjectValue).Fields()
 		optionsMap := make(map[string]interface{})
 		for k, v := range optionsObj {
 			optionsMap[k] = v.ToGo()
@@ -876,45 +878,45 @@ func (b *UtilJSONBridge) convertFormat(ctx context.Context, args []engine.Script
 		return nil, err
 	}
 
-	return engine.NewStringValue(result), nil
+	return types.NewStringValue(result), nil
 }
 
 // streamConvert converts formats using streaming for large data.
 // It processes data incrementally to handle files too large for memory.
-func (b *UtilJSONBridge) streamConvert(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) streamConvert(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 4 {
 		return nil, ErrInvalidArguments
 	}
 
 	// Get reader
-	if args[0] == nil || args[0].Type() != engine.TypeCustom {
+	if args[0] == nil || args[0].Type() != types.TypeCustom {
 		return nil, fmt.Errorf("reader must be io.Reader")
 	}
-	readerVal := args[0].(engine.CustomValue)
+	readerVal := args[0].(types.CustomValue)
 	reader, ok := readerVal.Value().(io.Reader)
 	if !ok {
 		return nil, fmt.Errorf("reader must be io.Reader")
 	}
 
 	// Get writer
-	if args[1] == nil || args[1].Type() != engine.TypeCustom {
+	if args[1] == nil || args[1].Type() != types.TypeCustom {
 		return nil, fmt.Errorf("writer must be io.Writer")
 	}
-	writerVal := args[1].(engine.CustomValue)
+	writerVal := args[1].(types.CustomValue)
 	writer, ok := writerVal.Value().(io.Writer)
 	if !ok {
 		return nil, fmt.Errorf("writer must be io.Writer")
 	}
 
-	if args[2] == nil || args[2].Type() != engine.TypeString {
+	if args[2] == nil || args[2].Type() != types.TypeString {
 		return nil, fmt.Errorf("fromFormat must be string")
 	}
-	fromFormat := args[2].(engine.StringValue).Value()
+	fromFormat := args[2].(types.StringValue).Value()
 
-	if args[3] == nil || args[3].Type() != engine.TypeString {
+	if args[3] == nil || args[3].Type() != types.TypeString {
 		return nil, fmt.Errorf("toFormat must be string")
 	}
-	toFormat := args[3].(engine.StringValue).Value()
+	toFormat := args[3].(types.StringValue).Value()
 
 	// Convert format strings to outputs.Format
 	from, err := b.stringToFormat(fromFormat)
@@ -928,8 +930,8 @@ func (b *UtilJSONBridge) streamConvert(ctx context.Context, args []engine.Script
 
 	// Check for conversion options
 	var opts *outputs.ConversionOptions
-	if len(args) > 4 && args[4] != nil && args[4].Type() == engine.TypeObject {
-		optionsObj := args[4].(engine.ObjectValue).Fields()
+	if len(args) > 4 && args[4] != nil && args[4].Type() == types.TypeObject {
+		optionsObj := args[4].(types.ObjectValue).Fields()
 		optionsMap := make(map[string]interface{})
 		for k, v := range optionsObj {
 			optionsMap[k] = v.ToGo()
@@ -942,19 +944,19 @@ func (b *UtilJSONBridge) streamConvert(ctx context.Context, args []engine.Script
 		return nil, err
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // prettyPrint formats JSON with indentation for readability.
 // It parses and reformats JSON with consistent spacing.
-func (b *UtilJSONBridge) prettyPrint(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) prettyPrint(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("json must be string")
 	}
-	jsonStr := args[0].(engine.StringValue).Value()
+	jsonStr := args[0].(types.StringValue).Value()
 
 	// Parse and reformat with indentation
 	var obj interface{}
@@ -969,19 +971,19 @@ func (b *UtilJSONBridge) prettyPrint(ctx context.Context, args []engine.ScriptVa
 
 	// Note: Color support would require additional terminal color library
 	// For now, just return formatted JSON
-	return engine.NewStringValue(string(data)), nil
+	return types.NewStringValue(string(data)), nil
 }
 
 // minify removes unnecessary whitespace from JSON.
 // It creates compact JSON by removing formatting.
-func (b *UtilJSONBridge) minify(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *UtilJSONBridge) minify(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if len(args) < 1 {
 		return nil, ErrInvalidArguments
 	}
-	if args[0] == nil || args[0].Type() != engine.TypeString {
+	if args[0] == nil || args[0].Type() != types.TypeString {
 		return nil, fmt.Errorf("json must be string")
 	}
-	jsonStr := args[0].(engine.StringValue).Value()
+	jsonStr := args[0].(types.StringValue).Value()
 
 	// Parse and reformat without whitespace
 	var obj interface{}
@@ -994,7 +996,7 @@ func (b *UtilJSONBridge) minify(ctx context.Context, args []engine.ScriptValue) 
 		return nil, err
 	}
 
-	return engine.NewStringValue(result), nil
+	return types.NewStringValue(result), nil
 }
 
 // Helper methods
@@ -1063,4 +1065,4 @@ func (b *UtilJSONBridge) convertToConversionOptions(optionsMap map[string]interf
 }
 
 // Helper function to convert interface{} to ScriptValue
-// NOTE: Duplicate conversion functions removed - using centralized engine.ConvertToScriptValue() instead
+// NOTE: Duplicate conversion functions removed - using centralized types.ConvertToScriptValue() instead

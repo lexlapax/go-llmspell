@@ -73,6 +73,10 @@ type REPLConfig struct {
 
 	// Whether to support multi-line input
 	MultiLine bool
+
+	// Optional engine registry for bridge support
+	// If provided, REPL will use engines from this registry with lazy bridge loading
+	EngineRegistry interface{}
 }
 
 // Validate checks if the REPL configuration is valid.

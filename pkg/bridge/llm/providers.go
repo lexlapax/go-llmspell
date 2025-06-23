@@ -10,8 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lexlapax/go-llmspell/pkg/bridge"
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 )
 
 // ProviderTemplate defines a template for creating providers.
@@ -40,7 +39,7 @@ type MultiProvider struct {
 // and primary designation for fallback scenarios.
 type MultiProviderEntry struct {
 	Name     string
-	Provider bridge.Provider
+	Provider types.Provider
 	Weight   float64
 	Primary  bool
 }
@@ -60,7 +59,7 @@ type MultiProviderConfig struct {
 type ProvidersBridge struct {
 	mu             sync.RWMutex
 	initialized    bool
-	providers      map[string]bridge.Provider
+	providers      map[string]types.Provider
 	multiProviders map[string]*MultiProvider
 	templates      map[string]*ProviderTemplate
 	metadata       map[string]map[string]interface{}
@@ -72,7 +71,7 @@ type ProvidersBridge struct {
 // with a reference to the main LLM bridge.
 func NewProvidersBridge(llmBridge *LLMBridge) *ProvidersBridge {
 	return &ProvidersBridge{
-		providers:      make(map[string]bridge.Provider),
+		providers:      make(map[string]types.Provider),
 		multiProviders: make(map[string]*MultiProvider),
 		templates:      initializeTemplates(),
 		metadata:       make(map[string]map[string]interface{}),
@@ -123,8 +122,8 @@ func (b *ProvidersBridge) GetID() string {
 }
 
 // GetMetadata returns bridge metadata
-func (b *ProvidersBridge) GetMetadata() engine.BridgeMetadata {
-	return engine.BridgeMetadata{
+func (b *ProvidersBridge) GetMetadata() types.BridgeMetadata {
+	return types.BridgeMetadata{
 		Name:        "providers",
 		Version:     "1.0.0",
 		Description: "Provider management and configuration bridge",
@@ -151,7 +150,7 @@ func (b *ProvidersBridge) Cleanup(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	b.providers = make(map[string]bridge.Provider)
+	b.providers = make(map[string]types.Provider)
 	b.multiProviders = make(map[string]*MultiProvider)
 	b.metadata = make(map[string]map[string]interface{})
 	b.initialized = false
@@ -167,18 +166,20 @@ func (b *ProvidersBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script engine
-func (b *ProvidersBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
-	return engine.RegisterBridge(b)
+func (b *ProvidersBridge) RegisterWithEngine(engine types.ScriptEngine) error {
+	// Bridge registration is handled by the caller (types.RegisterBridge)
+	// This method can be used for additional setup if needed
+	return nil
 }
 
 // Methods returns the methods exposed by this bridge
-func (b *ProvidersBridge) Methods() []engine.MethodInfo {
-	return []engine.MethodInfo{
+func (b *ProvidersBridge) Methods() []types.MethodInfo {
+	return []types.MethodInfo{
 		// Provider creation
 		{
 			Name:        "createProvider",
 			Description: "Create a new provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "type", Type: "string", Required: true, Description: "Provider type"},
 				{Name: "name", Type: "string", Required: true, Description: "Provider name"},
 				{Name: "config", Type: "object", Required: true, Description: "Provider configuration"},
@@ -188,7 +189,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createProviderFromEnvironment",
 			Description: "Create provider from environment variables",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "type", Type: "string", Required: true, Description: "Provider type"},
 				{Name: "name", Type: "string", Required: true, Description: "Provider name"},
 			},
@@ -197,7 +198,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProvider",
 			Description: "Get a provider by name",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Provider name"},
 			},
 			ReturnType: "object",
@@ -205,13 +206,13 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listProviders",
 			Description: "List all providers",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 		},
 		{
 			Name:        "removeProvider",
 			Description: "Remove a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Provider name"},
 			},
 			ReturnType: "void",
@@ -220,7 +221,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProviderTemplate",
 			Description: "Get provider template",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "type", Type: "string", Required: true, Description: "Provider type"},
 			},
 			ReturnType: "object",
@@ -228,13 +229,13 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listProviderTemplates",
 			Description: "List available provider templates",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "array",
 		},
 		{
 			Name:        "validateProviderConfig",
 			Description: "Validate provider configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "type", Type: "string", Required: true, Description: "Provider type"},
 				{Name: "config", Type: "object", Required: true, Description: "Configuration to validate"},
 			},
@@ -244,7 +245,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createMultiProvider",
 			Description: "Create a multi-provider configuration",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Multi-provider name"},
 				{Name: "providers", Type: "array", Required: true, Description: "Array of provider configurations"},
 				{Name: "strategy", Type: "string", Required: true, Description: "Selection strategy"},
@@ -254,7 +255,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "configureMultiProvider",
 			Description: "Configure multi-provider settings",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Multi-provider name"},
 				{Name: "config", Type: "object", Required: true, Description: "Configuration object"},
 			},
@@ -263,7 +264,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getMultiProvider",
 			Description: "Get multi-provider information",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Multi-provider name"},
 			},
 			ReturnType: "object",
@@ -272,7 +273,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "createMockProvider",
 			Description: "Create a mock provider for testing",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "name", Type: "string", Required: true, Description: "Provider name"},
 				{Name: "responses", Type: "array", Required: true, Description: "Array of mock responses"},
 			},
@@ -282,7 +283,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "generateWithProvider",
 			Description: "Generate text using specific provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 				{Name: "prompt", Type: "string", Required: true, Description: "Prompt text"},
 				{Name: "options", Type: "object", Required: false, Description: "Generation options"},
@@ -293,13 +294,13 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "exportProviderConfig",
 			Description: "Export all provider configurations",
-			Parameters:  []engine.ParameterInfo{},
+			Parameters:  []types.ParameterInfo{},
 			ReturnType:  "object",
 		},
 		{
 			Name:        "importProviderConfig",
 			Description: "Import provider configurations",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "config", Type: "object", Required: true, Description: "Configuration to import"},
 			},
 			ReturnType: "void",
@@ -308,7 +309,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "setProviderMetadata",
 			Description: "Set metadata for a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 				{Name: "metadata", Type: "object", Required: true, Description: "Metadata object"},
 			},
@@ -317,7 +318,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "getProviderMetadata",
 			Description: "Get metadata for a provider",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "provider", Type: "string", Required: true, Description: "Provider name"},
 			},
 			ReturnType: "object",
@@ -325,7 +326,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 		{
 			Name:        "listProvidersByCapability",
 			Description: "List providers by capability",
-			Parameters: []engine.ParameterInfo{
+			Parameters: []types.ParameterInfo{
 				{Name: "capability", Type: "string", Required: true, Description: "Capability name"},
 			},
 			ReturnType: "array",
@@ -334,7 +335,7 @@ func (b *ProvidersBridge) Methods() []engine.MethodInfo {
 }
 
 // ValidateMethod validates method parameters
-func (b *ProvidersBridge) ValidateMethod(name string, args []engine.ScriptValue) error {
+func (b *ProvidersBridge) ValidateMethod(name string, args []types.ScriptValue) error {
 	if !b.IsInitialized() {
 		return fmt.Errorf("providers bridge not initialized")
 	}
@@ -372,11 +373,11 @@ func (b *ProvidersBridge) ValidateMethod(name string, args []engine.ScriptValue)
 }
 
 // ExecuteMethod executes a bridge method with ScriptValue parameters
-func (b *ProvidersBridge) ExecuteMethod(ctx context.Context, name string, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) ExecuteMethod(ctx context.Context, name string, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	if !b.initialized {
 		b.mu.RUnlock()
-		return engine.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
+		return types.NewErrorValue(fmt.Errorf("bridge not initialized")), nil
 	}
 	b.mu.RUnlock()
 
@@ -418,15 +419,15 @@ func (b *ProvidersBridge) ExecuteMethod(ctx context.Context, name string, args [
 	case "listProvidersByCapability":
 		return b.listProvidersByCapability(ctx, args)
 	default:
-		return engine.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("unknown method: %s", name)), nil
 	}
 }
 
 // TypeMappings returns type conversion mappings
-func (b *ProvidersBridge) TypeMappings() map[string]engine.TypeMapping {
-	return map[string]engine.TypeMapping{
+func (b *ProvidersBridge) TypeMappings() map[string]types.TypeMapping {
+	return map[string]types.TypeMapping{
 		"provider": {
-			GoType:     "bridge.Provider",
+			GoType:     "types.Provider",
 			ScriptType: "object",
 		},
 		"provider_template": {
@@ -441,16 +442,16 @@ func (b *ProvidersBridge) TypeMappings() map[string]engine.TypeMapping {
 }
 
 // RequiredPermissions returns required permissions
-func (b *ProvidersBridge) RequiredPermissions() []engine.Permission {
-	return []engine.Permission{
+func (b *ProvidersBridge) RequiredPermissions() []types.Permission {
+	return []types.Permission{
 		{
-			Type:        engine.PermissionNetwork,
+			Type:        types.PermissionNetwork,
 			Resource:    "llm.providers",
 			Actions:     []string{"create", "read", "write", "delete"},
 			Description: "Manage LLM providers",
 		},
 		{
-			Type:        engine.PermissionProcess,
+			Type:        types.PermissionProcess,
 			Resource:    "provider.registry",
 			Actions:     []string{"read", "write"},
 			Description: "Access provider registry",
@@ -460,27 +461,27 @@ func (b *ProvidersBridge) RequiredPermissions() []engine.Permission {
 
 // Provider Management Methods
 
-func (b *ProvidersBridge) createProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) createProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("createProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	providerType := args[0].(engine.StringValue).Value()
-	providerName := args[1].(engine.StringValue).Value()
+	providerType := args[0].(types.StringValue).Value()
+	providerName := args[1].(types.StringValue).Value()
 	configMap := args[2].ToGo().(map[string]interface{})
 
 	// Check if provider already exists
 	b.mu.RLock()
 	if _, exists := b.providers[providerName]; exists {
 		b.mu.RUnlock()
-		return engine.NewErrorValue(fmt.Errorf("provider %s already exists", providerName)), nil
+		return types.NewErrorValue(fmt.Errorf("provider %s already exists", providerName)), nil
 	}
 	b.mu.RUnlock()
 
 	// Get template
 	template, exists := b.templates[providerType]
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("unknown provider type: %s", providerType)), nil
+		return types.NewErrorValue(fmt.Errorf("unknown provider type: %s", providerType)), nil
 	}
 
 	// Merge with default config
@@ -507,25 +508,25 @@ func (b *ProvidersBridge) createProvider(ctx context.Context, args []engine.Scri
 	b.metadata[providerName] = mergedConfig
 	b.mu.Unlock()
 
-	result := map[string]engine.ScriptValue{
-		"name":    engine.NewStringValue(providerName),
-		"type":    engine.NewStringValue(providerType),
-		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
+	result := map[string]types.ScriptValue{
+		"name":    types.NewStringValue(providerName),
+		"type":    types.NewStringValue(providerType),
+		"created": types.NewStringValue(time.Now().Format(time.RFC3339)),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
-func (b *ProvidersBridge) createProviderFromEnvironment(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) createProviderFromEnvironment(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("createProviderFromEnvironment", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	providerType := args[0].(engine.StringValue).Value()
-	providerName := args[1].(engine.StringValue).Value()
+	providerType := args[0].(types.StringValue).Value()
+	providerName := args[1].(types.StringValue).Value()
 
 	template, exists := b.templates[providerType]
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("unknown provider type: %s", providerType)), nil
+		return types.NewErrorValue(fmt.Errorf("unknown provider type: %s", providerType)), nil
 	}
 
 	// Check required env vars
@@ -533,7 +534,7 @@ func (b *ProvidersBridge) createProviderFromEnvironment(ctx context.Context, arg
 	for _, envVar := range template.RequiredEnvVars {
 		value := os.Getenv(envVar)
 		if value == "" {
-			return engine.NewErrorValue(fmt.Errorf("required environment variable %s not set", envVar)), nil
+			return types.NewErrorValue(fmt.Errorf("required environment variable %s not set", envVar)), nil
 		}
 		config[envVar] = value
 	}
@@ -564,21 +565,21 @@ func (b *ProvidersBridge) createProviderFromEnvironment(ctx context.Context, arg
 	b.metadata[providerName] = config
 	b.mu.Unlock()
 
-	result := map[string]engine.ScriptValue{
-		"name":    engine.NewStringValue(providerName),
-		"type":    engine.NewStringValue(providerType),
-		"source":  engine.NewStringValue("environment"),
-		"created": engine.NewStringValue(time.Now().Format(time.RFC3339)),
+	result := map[string]types.ScriptValue{
+		"name":    types.NewStringValue(providerName),
+		"type":    types.NewStringValue(providerType),
+		"source":  types.NewStringValue("environment"),
+		"created": types.NewStringValue(time.Now().Format(time.RFC3339)),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
-func (b *ProvidersBridge) getProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) getProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	_, exists := b.providers[name]
@@ -586,7 +587,7 @@ func (b *ProvidersBridge) getProvider(ctx context.Context, args []engine.ScriptV
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("provider not found: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("provider not found: %s", name)), nil
 	}
 
 	// Find provider type from metadata
@@ -607,31 +608,31 @@ func (b *ProvidersBridge) getProvider(ctx context.Context, args []engine.ScriptV
 		}
 	}
 
-	result := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue(name),
-		"type": engine.NewStringValue(providerType),
+	result := map[string]types.ScriptValue{
+		"name": types.NewStringValue(name),
+		"type": types.NewStringValue(providerType),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
-func (b *ProvidersBridge) listProviders(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) listProviders(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	providers := make([]engine.ScriptValue, 0, len(b.providers))
+	providers := make([]types.ScriptValue, 0, len(b.providers))
 	for name := range b.providers {
-		providers = append(providers, engine.NewStringValue(name))
+		providers = append(providers, types.NewStringValue(name))
 	}
 
-	return engine.NewArrayValue(providers), nil
+	return types.NewArrayValue(providers), nil
 }
 
-func (b *ProvidersBridge) removeProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) removeProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("removeProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 
 	// Remove from LLM bridge
 	if b.llmBridge != nil {
@@ -645,46 +646,46 @@ func (b *ProvidersBridge) removeProvider(ctx context.Context, args []engine.Scri
 	delete(b.metadata, name)
 	b.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // Template Methods
 
-func (b *ProvidersBridge) getProviderTemplate(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) getProviderTemplate(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getProviderTemplate", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	providerType := args[0].(engine.StringValue).Value()
+	providerType := args[0].(types.StringValue).Value()
 
 	template, exists := b.templates[providerType]
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("template not found: %s", providerType)), nil
+		return types.NewErrorValue(fmt.Errorf("template not found: %s", providerType)), nil
 	}
 
 	return b.templateToScriptValue(template), nil
 }
 
-func (b *ProvidersBridge) listProviderTemplates(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-	templates := make([]engine.ScriptValue, 0, len(b.templates))
+func (b *ProvidersBridge) listProviderTemplates(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
+	templates := make([]types.ScriptValue, 0, len(b.templates))
 	for _, template := range b.templates {
 		templates = append(templates, b.templateToScriptValue(template))
 	}
 
-	return engine.NewArrayValue(templates), nil
+	return types.NewArrayValue(templates), nil
 }
 
-func (b *ProvidersBridge) validateProviderConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) validateProviderConfig(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("validateProviderConfig", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	providerType := args[0].(engine.StringValue).Value()
+	providerType := args[0].(types.StringValue).Value()
 	configMap := args[1].ToGo().(map[string]interface{})
 
 	template, exists := b.templates[providerType]
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("unknown provider type: %s", providerType)), nil
+		return types.NewErrorValue(fmt.Errorf("unknown provider type: %s", providerType)), nil
 	}
 
 	errors := []string{}
@@ -698,29 +699,29 @@ func (b *ProvidersBridge) validateProviderConfig(ctx context.Context, args []eng
 
 	valid := len(errors) == 0
 
-	errorsArray := make([]engine.ScriptValue, len(errors))
+	errorsArray := make([]types.ScriptValue, len(errors))
 	for i, err := range errors {
-		errorsArray[i] = engine.NewStringValue(err)
+		errorsArray[i] = types.NewStringValue(err)
 	}
 
-	result := map[string]engine.ScriptValue{
-		"valid":  engine.NewBoolValue(valid),
-		"errors": engine.NewArrayValue(errorsArray),
+	result := map[string]types.ScriptValue{
+		"valid":  types.NewBoolValue(valid),
+		"errors": types.NewArrayValue(errorsArray),
 	}
 
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
 // Multi-Provider Methods
 
-func (b *ProvidersBridge) createMultiProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) createMultiProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("createMultiProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 	providersArray := args[1].ToGo().([]interface{})
-	strategy := args[2].(engine.StringValue).Value()
+	strategy := args[2].(types.StringValue).Value()
 
 	// Validate strategy
 	validStrategies := map[string]bool{
@@ -729,7 +730,7 @@ func (b *ProvidersBridge) createMultiProvider(ctx context.Context, args []engine
 		"consensus": true,
 	}
 	if !validStrategies[strategy] {
-		return engine.NewErrorValue(fmt.Errorf("invalid strategy: %s", strategy)), nil
+		return types.NewErrorValue(fmt.Errorf("invalid strategy: %s", strategy)), nil
 	}
 
 	// Parse providers
@@ -751,7 +752,7 @@ func (b *ProvidersBridge) createMultiProvider(ctx context.Context, args []engine
 		b.mu.RLock()
 		if _, exists := b.providers[entry.Name]; !exists {
 			b.mu.RUnlock()
-			return engine.NewErrorValue(fmt.Errorf("provider not found: %s", entry.Name)), nil
+			return types.NewErrorValue(fmt.Errorf("provider not found: %s", entry.Name)), nil
 		}
 		b.mu.RUnlock()
 
@@ -774,27 +775,27 @@ func (b *ProvidersBridge) createMultiProvider(ctx context.Context, args []engine
 	b.multiProviders[name] = multi
 	b.mu.Unlock()
 
-	result := map[string]engine.ScriptValue{
-		"name":      engine.NewStringValue(name),
-		"strategy":  engine.NewStringValue(strategy),
-		"providers": engine.NewNumberValue(float64(len(entries))),
+	result := map[string]types.ScriptValue{
+		"name":      types.NewStringValue(name),
+		"strategy":  types.NewStringValue(strategy),
+		"providers": types.NewNumberValue(float64(len(entries))),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
-func (b *ProvidersBridge) configureMultiProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) configureMultiProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("configureMultiProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 	configMap := args[1].ToGo().(map[string]interface{})
 
 	b.mu.Lock()
 	multi, exists := b.multiProviders[name]
 	if !exists {
 		b.mu.Unlock()
-		return engine.NewErrorValue(fmt.Errorf("multi-provider not found: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("multi-provider not found: %s", name)), nil
 	}
 
 	// Update config
@@ -809,56 +810,56 @@ func (b *ProvidersBridge) configureMultiProvider(ctx context.Context, args []eng
 	}
 	b.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *ProvidersBridge) getMultiProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) getMultiProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getMultiProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	multi, exists := b.multiProviders[name]
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("multi-provider not found: %s", name)), nil
+		return types.NewErrorValue(fmt.Errorf("multi-provider not found: %s", name)), nil
 	}
 
-	providers := make([]engine.ScriptValue, len(multi.Providers))
+	providers := make([]types.ScriptValue, len(multi.Providers))
 	for i, entry := range multi.Providers {
-		providers[i] = engine.NewObjectValue(map[string]engine.ScriptValue{
-			"name":    engine.NewStringValue(entry.Name),
-			"weight":  engine.NewNumberValue(entry.Weight),
-			"primary": engine.NewBoolValue(entry.Primary),
+		providers[i] = types.NewObjectValue(map[string]types.ScriptValue{
+			"name":    types.NewStringValue(entry.Name),
+			"weight":  types.NewNumberValue(entry.Weight),
+			"primary": types.NewBoolValue(entry.Primary),
 		})
 	}
 
-	config := map[string]engine.ScriptValue{
-		"consensusThreshold": engine.NewNumberValue(multi.Config.ConsensusThreshold),
-		"timeout":            engine.NewNumberValue(multi.Config.Timeout.Seconds()),
-		"retryOnFailure":     engine.NewBoolValue(multi.Config.RetryOnFailure),
+	config := map[string]types.ScriptValue{
+		"consensusThreshold": types.NewNumberValue(multi.Config.ConsensusThreshold),
+		"timeout":            types.NewNumberValue(multi.Config.Timeout.Seconds()),
+		"retryOnFailure":     types.NewBoolValue(multi.Config.RetryOnFailure),
 	}
 
-	result := map[string]engine.ScriptValue{
-		"name":      engine.NewStringValue(multi.Name),
-		"strategy":  engine.NewStringValue(multi.Strategy),
-		"providers": engine.NewArrayValue(providers),
-		"config":    engine.NewObjectValue(config),
+	result := map[string]types.ScriptValue{
+		"name":      types.NewStringValue(multi.Name),
+		"strategy":  types.NewStringValue(multi.Strategy),
+		"providers": types.NewArrayValue(providers),
+		"config":    types.NewObjectValue(config),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
 // Mock Provider Methods
 
-func (b *ProvidersBridge) createMockProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) createMockProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("createMockProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	name := args[0].(engine.StringValue).Value()
+	name := args[0].(types.StringValue).Value()
 	responsesArray := args[1].ToGo().([]interface{})
 
 	// Convert responses
@@ -883,23 +884,23 @@ func (b *ProvidersBridge) createMockProvider(ctx context.Context, args []engine.
 		b.llmBridge.mu.Unlock()
 	}
 
-	result := map[string]engine.ScriptValue{
-		"name":      engine.NewStringValue(name),
-		"type":      engine.NewStringValue("mock"),
-		"responses": engine.NewNumberValue(float64(len(responses))),
+	result := map[string]types.ScriptValue{
+		"name":      types.NewStringValue(name),
+		"type":      types.NewStringValue("mock"),
+		"responses": types.NewNumberValue(float64(len(responses))),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
 // Provider Operations
 
-func (b *ProvidersBridge) generateWithProvider(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) generateWithProvider(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("generateWithProvider", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	providerName := args[0].(engine.StringValue).Value()
-	prompt := args[1].(engine.StringValue).Value()
+	providerName := args[0].(types.StringValue).Value()
+	prompt := args[1].(types.StringValue).Value()
 
 	// Check if provider exists
 	b.mu.RLock()
@@ -908,7 +909,7 @@ func (b *ProvidersBridge) generateWithProvider(ctx context.Context, args []engin
 	b.mu.RUnlock()
 
 	if !exists {
-		return engine.NewErrorValue(fmt.Errorf("provider not found: %s", providerName)), nil
+		return types.NewErrorValue(fmt.Errorf("provider not found: %s", providerName)), nil
 	}
 
 	// Mock response for mock providers
@@ -917,7 +918,7 @@ func (b *ProvidersBridge) generateWithProvider(ctx context.Context, args []engin
 			if responses, ok := metadata["responses"].([]string); ok && len(responses) > 0 {
 				// Simple cycling through responses
 				responseIndex := len(prompt) % len(responses)
-				return engine.NewStringValue(responses[responseIndex]), nil
+				return types.NewStringValue(responses[responseIndex]), nil
 			}
 		}
 	}
@@ -935,9 +936,9 @@ func (b *ProvidersBridge) generateWithProvider(ctx context.Context, args []engin
 		}
 
 		// Use the generate method from LLM bridge
-		result, err := b.llmBridge.generate(ctx, []engine.ScriptValue{
-			engine.NewStringValue(prompt),
-			engine.NewObjectValue(engine.ConvertMapToScriptValue(options)),
+		result, err := b.llmBridge.generate(ctx, []types.ScriptValue{
+			types.NewStringValue(prompt),
+			types.NewObjectValue(types.ConvertMapToScriptValue(options)),
 		})
 
 		// Restore old provider
@@ -946,51 +947,51 @@ func (b *ProvidersBridge) generateWithProvider(ctx context.Context, args []engin
 		b.llmBridge.mu.Unlock()
 
 		if err != nil {
-			return engine.NewErrorValue(err), nil
+			return types.NewErrorValue(err), nil
 		}
 
 		// Extract content from result if it's an object
-		if objValue, ok := result.(engine.ObjectValue); ok {
+		if objValue, ok := result.(types.ObjectValue); ok {
 			resultMap := objValue.ToGo().(map[string]interface{})
 			if content, exists := resultMap["content"]; exists {
-				return engine.NewStringValue(fmt.Sprintf("%v", content)), nil
+				return types.NewStringValue(fmt.Sprintf("%v", content)), nil
 			}
 		}
 
 		return result, nil
 	}
 
-	return engine.NewStringValue(fmt.Sprintf("Generated from %s: %s", providerName, prompt)), nil
+	return types.NewStringValue(fmt.Sprintf("Generated from %s: %s", providerName, prompt)), nil
 }
 
 // Export/Import Methods
 
-func (b *ProvidersBridge) exportProviderConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) exportProviderConfig(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	// Export providers
-	providers := make(map[string]engine.ScriptValue)
+	providers := make(map[string]types.ScriptValue)
 	for name, metadata := range b.metadata {
-		providers[name] = engine.NewObjectValue(engine.ConvertMapToScriptValue(metadata))
+		providers[name] = types.NewObjectValue(types.ConvertMapToScriptValue(metadata))
 	}
 
 	// Export templates
-	templates := make(map[string]engine.ScriptValue)
+	templates := make(map[string]types.ScriptValue)
 	for name, template := range b.templates {
 		templates[name] = b.templateToScriptValue(template)
 	}
 
-	result := map[string]engine.ScriptValue{
-		"providers": engine.NewObjectValue(providers),
-		"templates": engine.NewObjectValue(templates),
+	result := map[string]types.ScriptValue{
+		"providers": types.NewObjectValue(providers),
+		"templates": types.NewObjectValue(templates),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
-func (b *ProvidersBridge) importProviderConfig(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) importProviderConfig(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("importProviderConfig", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
 	configMap := args[0].ToGo().(map[string]interface{})
@@ -1005,23 +1006,23 @@ func (b *ProvidersBridge) importProviderConfig(ctx context.Context, args []engin
 		}
 	}
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
 // Metadata Methods
 
-func (b *ProvidersBridge) setProviderMetadata(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) setProviderMetadata(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("setProviderMetadata", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	providerName := args[0].(engine.StringValue).Value()
+	providerName := args[0].(types.StringValue).Value()
 	metadata := args[1].ToGo().(map[string]interface{})
 
 	b.mu.Lock()
 	if _, exists := b.providers[providerName]; !exists {
 		b.mu.Unlock()
-		return engine.NewErrorValue(fmt.Errorf("provider not found: %s", providerName)), nil
+		return types.NewErrorValue(fmt.Errorf("provider not found: %s", providerName)), nil
 	}
 
 	if b.metadata[providerName] == nil {
@@ -1034,78 +1035,78 @@ func (b *ProvidersBridge) setProviderMetadata(ctx context.Context, args []engine
 	}
 	b.mu.Unlock()
 
-	return engine.NewNilValue(), nil
+	return types.NewNilValue(), nil
 }
 
-func (b *ProvidersBridge) getProviderMetadata(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) getProviderMetadata(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("getProviderMetadata", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	providerName := args[0].(engine.StringValue).Value()
+	providerName := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	metadata := b.metadata[providerName]
 	b.mu.RUnlock()
 
 	if metadata == nil {
-		return engine.NewErrorValue(fmt.Errorf("provider not found: %s", providerName)), nil
+		return types.NewErrorValue(fmt.Errorf("provider not found: %s", providerName)), nil
 	}
 
-	result := map[string]engine.ScriptValue{
-		"name":     engine.NewStringValue(providerName),
-		"metadata": engine.NewObjectValue(engine.ConvertMapToScriptValue(metadata)),
+	result := map[string]types.ScriptValue{
+		"name":     types.NewStringValue(providerName),
+		"metadata": types.NewObjectValue(types.ConvertMapToScriptValue(metadata)),
 	}
-	return engine.NewObjectValue(result), nil
+	return types.NewObjectValue(result), nil
 }
 
-func (b *ProvidersBridge) listProvidersByCapability(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
+func (b *ProvidersBridge) listProvidersByCapability(ctx context.Context, args []types.ScriptValue) (types.ScriptValue, error) {
 	if err := b.ValidateMethod("listProvidersByCapability", args); err != nil {
-		return engine.NewErrorValue(err), nil
+		return types.NewErrorValue(err), nil
 	}
 
-	capability := args[0].(engine.StringValue).Value()
+	capability := args[0].(types.StringValue).Value()
 
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	providers := make([]engine.ScriptValue, 0)
+	providers := make([]types.ScriptValue, 0)
 
 	// For simplicity, all providers support "generate" capability
 	if capability == "generate" {
 		for name := range b.providers {
-			providerInfo := map[string]engine.ScriptValue{
-				"name":       engine.NewStringValue(name),
-				"capability": engine.NewStringValue(capability),
+			providerInfo := map[string]types.ScriptValue{
+				"name":       types.NewStringValue(name),
+				"capability": types.NewStringValue(capability),
 			}
-			providers = append(providers, engine.NewObjectValue(providerInfo))
+			providers = append(providers, types.NewObjectValue(providerInfo))
 		}
 	}
 
-	return engine.NewArrayValue(providers), nil
+	return types.NewArrayValue(providers), nil
 }
 
 // Helper Methods
 
-func (b *ProvidersBridge) templateToScriptValue(template *ProviderTemplate) engine.ScriptValue {
-	requiredVars := make([]engine.ScriptValue, len(template.RequiredEnvVars))
+func (b *ProvidersBridge) templateToScriptValue(template *ProviderTemplate) types.ScriptValue {
+	requiredVars := make([]types.ScriptValue, len(template.RequiredEnvVars))
 	for i, v := range template.RequiredEnvVars {
-		requiredVars[i] = engine.NewStringValue(v)
+		requiredVars[i] = types.NewStringValue(v)
 	}
 
-	optionalVars := make([]engine.ScriptValue, len(template.OptionalEnvVars))
+	optionalVars := make([]types.ScriptValue, len(template.OptionalEnvVars))
 	for i, v := range template.OptionalEnvVars {
-		optionalVars[i] = engine.NewStringValue(v)
+		optionalVars[i] = types.NewStringValue(v)
 	}
 
-	result := map[string]engine.ScriptValue{
-		"type":            engine.NewStringValue(template.Type),
-		"description":     engine.NewStringValue(template.Description),
-		"requiredEnvVars": engine.NewArrayValue(requiredVars),
-		"optionalEnvVars": engine.NewArrayValue(optionalVars),
-		"defaultConfig":   engine.NewObjectValue(engine.ConvertMapToScriptValue(template.DefaultConfig)),
+	result := map[string]types.ScriptValue{
+		"type":            types.NewStringValue(template.Type),
+		"description":     types.NewStringValue(template.Description),
+		"requiredEnvVars": types.NewArrayValue(requiredVars),
+		"optionalEnvVars": types.NewArrayValue(optionalVars),
+		"defaultConfig":   types.NewObjectValue(types.ConvertMapToScriptValue(template.DefaultConfig)),
 	}
-	return engine.NewObjectValue(result)
+	return types.NewObjectValue(result)
 }
 
-// NOTE: Duplicate conversion functions removed - using centralized engine.ConvertToScriptValue() instead
+// NOTE: Duplicate conversion functions removed - using centralized types.ConvertToScriptValue() instead

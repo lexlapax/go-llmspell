@@ -119,7 +119,7 @@ func (e *mockEngine) GenerateClientLibrary(language string, options engine.Clien
 func TestEngineRegistryManager(t *testing.T) {
 	t.Run("new_manager", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		assert.NotNil(t, manager)
 		assert.Equal(t, registry, manager.registry)
@@ -127,7 +127,7 @@ func TestEngineRegistryManager(t *testing.T) {
 
 	t.Run("initialize", func(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		err := manager.Initialize()
 		assert.NoError(t, err)
@@ -137,7 +137,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		// Register test engines
 		factories := map[string]engine.EngineFactory{
@@ -173,7 +173,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		// Register a test engine
 		factory := &mockEngineFactory{
@@ -184,7 +184,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get the engine
-		eng, err := manager.GetEngine("lua", engine.EngineConfig{})
+		eng, err := manager.GetEngine("lua", engine.EngineConfig{}, "sandbox")
 		assert.NoError(t, err)
 		assert.NotNil(t, eng)
 	})
@@ -193,9 +193,9 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
-		eng, err := manager.GetEngine("nonexistent", engine.EngineConfig{})
+		eng, err := manager.GetEngine("nonexistent", engine.EngineConfig{}, "sandbox")
 		assert.Error(t, err)
 		assert.Nil(t, eng)
 		assert.Contains(t, err.Error(), "not found")
@@ -205,7 +205,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		// Register test engines
 		luaFactory := &mockEngineFactory{
@@ -241,7 +241,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		// Register test engine
 		factory := &mockEngineFactory{
@@ -266,7 +266,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		// Register test engine
 		factory := &mockEngineFactory{
@@ -292,7 +292,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		// Register test engine
 		factory := &mockEngineFactory{
@@ -325,7 +325,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		err := registry.Initialize()
 		require.NoError(t, err)
 
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		// Register and use an engine
 		factory := &mockEngineFactory{name: "lua"}
@@ -347,7 +347,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		registry := engine.NewRegistry(engine.RegistryConfig{})
 		err := registry.Initialize()
 		require.NoError(t, err)
-		manager := NewEngineRegistryManager(registry)
+		manager := NewEngineRegistryManager(registry, nil)
 
 		err = manager.Shutdown()
 		assert.NoError(t, err)
@@ -401,21 +401,21 @@ func TestEngineConfigBuilder(t *testing.T) {
 func BenchmarkEngineRegistryManager_GetEngine(b *testing.B) {
 	registry := engine.NewRegistry(engine.RegistryConfig{})
 	_ = registry.Initialize()
-	manager := NewEngineRegistryManager(registry)
+	manager := NewEngineRegistryManager(registry, nil)
 
 	factory := &mockEngineFactory{name: "lua"}
 	_ = registry.Register(factory)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = manager.GetEngine("lua", engine.EngineConfig{})
+		_, _ = manager.GetEngine("lua", engine.EngineConfig{}, "sandbox")
 	}
 }
 
 func BenchmarkEngineRegistryManager_FindByExtension(b *testing.B) {
 	registry := engine.NewRegistry(engine.RegistryConfig{})
 	_ = registry.Initialize()
-	manager := NewEngineRegistryManager(registry)
+	manager := NewEngineRegistryManager(registry, nil)
 
 	factory := &mockEngineFactory{
 		name:           "lua",

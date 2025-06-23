@@ -1,11 +1,11 @@
 // ABOUTME: Type aliases for go-llms types used in bridge implementations
 // ABOUTME: Only includes aliases needed for script engine bridging
 
-// Package bridge provides type aliases and re-exports from go-llms.
+// Package types provides type aliases and re-exports from go-llms.
 // This package serves as the boundary between go-llms functionality and
 // the script engines, ensuring clean separation of concerns and making
 // go-llms types available to bridge implementations without direct imports.
-package bridge
+package types
 
 import (
 	"github.com/lexlapax/go-llms/pkg/agent/core"
@@ -21,6 +21,11 @@ import (
 	"github.com/lexlapax/go-llms/pkg/util/auth"
 	"github.com/lexlapax/go-llms/pkg/util/llmutil"
 	modelinfodomain "github.com/lexlapax/go-llms/pkg/util/llmutil/modelinfo/domain"
+
+	// Import engine types for bridge interface compliance
+	// This import is needed for bridge implementations to access engine types
+	// without creating circular dependencies
+	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
 // Type aliases for go-llms types - we use these directly.
@@ -142,6 +147,57 @@ type (
 	// Enhanced error handling with serialization and recovery.
 	SerializableError = errors.SerializableError
 	ErrorRecovery     = errors.RecoveryStrategy
+
+	// Engine interface types from go-llmspell/pkg/engine.
+	// These types enable bridges to implement the engine.Bridge interface
+	// without importing pkg/engine directly, preventing circular dependencies.
+	ScriptEngine     = engine.ScriptEngine
+	Bridge           = engine.Bridge
+	BridgeMetadata   = engine.BridgeMetadata
+	Registry         = engine.Registry
+	TypeConverter    = engine.TypeConverter
+	EngineConfig     = engine.EngineConfig
+	ContextOptions   = engine.ContextOptions
+	ExecutionOptions = engine.ExecutionOptions
+	ExecutionResult  = engine.ExecutionResult
+	ResourceLimits   = engine.ResourceLimits
+	EngineMetrics    = engine.EngineMetrics
+	ScriptContext    = engine.ScriptContext
+	MethodInfo       = engine.MethodInfo
+	ParameterInfo    = engine.ParameterInfo
+	TypeMapping      = engine.TypeMapping
+	TypeInfo         = engine.TypeInfo
+	Function         = engine.Function
+	FunctionSignature = engine.FunctionSignature
+	Permission       = engine.Permission
+	ScriptValue      = engine.ScriptValue
+	EventBus         = engine.EventBus
+	EventHandler     = engine.EventHandler
+	EngineEvent      = engine.EngineEvent
+	SubscriptionInfo = engine.SubscriptionInfo
+	TypeRegistry     = engine.TypeRegistry
+	TypeConverterFunc = engine.TypeConverterFunc
+	ProfilingConfig  = engine.ProfilingConfig
+	ProfilingReport  = engine.ProfilingReport
+	MemoryStats      = engine.MemoryStats
+	Hotspot          = engine.Hotspot
+	OptimizationHint = engine.OptimizationHint
+	ClientLibraryOptions = engine.ClientLibraryOptions
+	EngineError      = engine.EngineError
+
+	// ScriptValue types from go-llmspell/pkg/engine.
+	// These enable bridges to work with script values without importing engine directly.
+	ScriptValueType = engine.ScriptValueType
+	NilValue        = engine.NilValue
+	BoolValue       = engine.BoolValue
+	NumberValue     = engine.NumberValue
+	StringValue     = engine.StringValue
+	ArrayValue      = engine.ArrayValue
+	ObjectValue     = engine.ObjectValue
+	FunctionValue   = engine.FunctionValue
+	ErrorValue      = engine.ErrorValue
+	ChannelValue    = engine.ChannelValue
+	CustomValue     = engine.CustomValue
 )
 
 // Re-export constants from go-llms.
@@ -218,4 +274,92 @@ const (
 	ErrorActionSkip     = workflow.ErrorActionSkip
 	ErrorActionAbort    = workflow.ErrorActionAbort
 	ErrorActionContinue = workflow.ErrorActionContinue
+
+	// Engine feature constants from go-llmspell/pkg/engine.
+	// These define capabilities supported by script engines.
+	FeatureAsync       = engine.FeatureAsync
+	FeatureCoroutines  = engine.FeatureCoroutines
+	FeatureModules     = engine.FeatureModules
+	FeatureDebugging   = engine.FeatureDebugging
+	FeatureHotReload   = engine.FeatureHotReload
+	FeatureCompilation = engine.FeatureCompilation
+	FeatureInteractive = engine.FeatureInteractive
+	FeatureStreaming   = engine.FeatureStreaming
+
+	// Filesystem access modes for script security.
+	FSModeReadOnly  = engine.FSModeReadOnly
+	FSModeReadWrite = engine.FSModeReadWrite
+	FSModeNone      = engine.FSModeNone
+	FSModeSandbox   = engine.FSModeSandbox
+
+	// Type categories for script type system.
+	TypeCategoryPrimitive = engine.TypeCategoryPrimitive
+	TypeCategoryObject    = engine.TypeCategoryObject
+	TypeCategoryFunction  = engine.TypeCategoryFunction
+	TypeCategoryArray     = engine.TypeCategoryArray
+	TypeCategoryMap       = engine.TypeCategoryMap
+	TypeCategoryCustom    = engine.TypeCategoryCustom
+
+	// Permission types for bridge security.
+	PermissionFileSystem = engine.PermissionFileSystem
+	PermissionNetwork    = engine.PermissionNetwork
+	PermissionProcess    = engine.PermissionProcess
+	PermissionMemory     = engine.PermissionMemory
+	PermissionTime       = engine.PermissionTime
+	PermissionCrypto     = engine.PermissionCrypto
+	PermissionStorage    = engine.PermissionStorage
+
+	// Export formats for API documentation.
+	ExportFormatOpenAPI  = engine.ExportFormatOpenAPI
+	ExportFormatMarkdown = engine.ExportFormatMarkdown
+	ExportFormatJSON     = engine.ExportFormatJSON
+	ExportFormatGraphQL  = engine.ExportFormatGraphQL
+	ExportFormatProtobuf = engine.ExportFormatProtobuf
+
+	// Engine error types for error categorization.
+	ErrorTypeSyntax     = engine.ErrorTypeSyntax
+	ErrorTypeRuntime    = engine.ErrorTypeRuntime
+	ErrorTypeType       = engine.ErrorTypeType
+	ErrorTypeResource   = engine.ErrorTypeResource
+	ErrorTypeSecurity   = engine.ErrorTypeSecurity
+	ErrorTypeBridge     = engine.ErrorTypeBridge
+	ErrorTypeTimeout    = engine.ErrorTypeTimeout
+	ErrorTypeMemory     = engine.ErrorTypeMemory
+	ErrorTypePermission = engine.ErrorTypePermission
+
+	// ScriptValue type constants for type checking.
+	TypeNil      = engine.TypeNil
+	TypeBool     = engine.TypeBool
+	TypeNumber   = engine.TypeNumber
+	TypeString   = engine.TypeString
+	TypeArray    = engine.TypeArray
+	TypeObject   = engine.TypeObject
+	TypeFunction = engine.TypeFunction
+	TypeError    = engine.TypeError
+	TypeChannel  = engine.TypeChannel
+	TypeCustom   = engine.TypeCustom
+)
+
+// Re-export ScriptValue constructor functions.
+// These functions enable bridges to create ScriptValues without importing engine directly.
+var (
+	NewNilValue      = engine.NewNilValue
+	NewBoolValue     = engine.NewBoolValue
+	NewNumberValue   = engine.NewNumberValue
+	NewStringValue   = engine.NewStringValue
+	NewArrayValue    = engine.NewArrayValue
+	NewObjectValue   = engine.NewObjectValue
+	NewFunctionValue = engine.NewFunctionValue
+	NewErrorValue    = engine.NewErrorValue
+	NewChannelValue  = engine.NewChannelValue
+	NewCustomValue   = engine.NewCustomValue
+
+	// Conversion functions
+	ConvertToScriptValue      = engine.ConvertToScriptValue
+	ConvertMapToScriptValue   = engine.ConvertMapToScriptValue
+	ConvertSliceToScriptValue = engine.ConvertSliceToScriptValue
+	IsTrue                    = engine.IsTrue
+	ConvertToString           = engine.ConvertToString
+	ConvertToNumber           = engine.ConvertToNumber
+	ConvertToBool             = engine.ConvertToBool
 )

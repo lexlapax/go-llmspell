@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,37 +74,37 @@ func TestWorkflowBridge_ValidateMethod(t *testing.T) {
 	tests := []struct {
 		name        string
 		method      string
-		args        []engine.ScriptValue
+		args        []types.ScriptValue
 		expectError bool
 	}{
 		{
 			name:        "valid createWorkflow",
 			method:      "createWorkflow",
-			args:        []engine.ScriptValue{engine.NewStringValue("test-workflow"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			args:        []types.ScriptValue{types.NewStringValue("test-workflow"), types.NewObjectValue(map[string]types.ScriptValue{})},
 			expectError: false,
 		},
 		{
 			name:        "invalid createWorkflow - missing args",
 			method:      "createWorkflow",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: true,
 		},
 		{
 			name:        "valid listWorkflows",
 			method:      "listWorkflows",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: false,
 		},
 		{
 			name:        "valid executeWorkflow",
 			method:      "executeWorkflow",
-			args:        []engine.ScriptValue{engine.NewStringValue("test-workflow"), engine.NewObjectValue(map[string]engine.ScriptValue{})},
+			args:        []types.ScriptValue{types.NewStringValue("test-workflow"), types.NewObjectValue(map[string]types.ScriptValue{})},
 			expectError: false,
 		},
 		{
 			name:        "unknown method",
 			method:      "unknownMethod",
-			args:        []engine.ScriptValue{},
+			args:        []types.ScriptValue{},
 			expectError: true,
 		},
 	}
@@ -129,26 +129,26 @@ func TestWorkflowBridge_ExecuteMethod_CreateWorkflow(t *testing.T) {
 
 	// Test createWorkflow
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name":        engine.NewStringValue("Test Workflow"),
-		"description": engine.NewStringValue("A test workflow"),
-		"steps": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"name": engine.NewStringValue("step1"),
-				"type": engine.NewStringValue("action"),
+	config := map[string]types.ScriptValue{
+		"name":        types.NewStringValue("Test Workflow"),
+		"description": types.NewStringValue("A test workflow"),
+		"steps": types.NewArrayValue([]types.ScriptValue{
+			types.NewObjectValue(map[string]types.ScriptValue{
+				"name": types.NewStringValue("step1"),
+				"type": types.NewStringValue("action"),
 			}),
 		}),
 	}
 
-	args := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	args := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "createWorkflow", args)
 	assert.NoError(t, err)
 
-	stringValue, ok := result.(engine.StringValue)
+	stringValue, ok := result.(types.StringValue)
 	assert.True(t, ok, "Expected StringValue (workflow ID) from createWorkflow")
 	assert.Equal(t, workflowID, stringValue.Value(), "Workflow ID should match input")
 }
@@ -160,10 +160,10 @@ func TestWorkflowBridge_ExecuteMethod_ListWorkflows(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test listWorkflows - should work even with no workflows
-	result, err := bridge.ExecuteMethod(ctx, "listWorkflows", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "listWorkflows", []types.ScriptValue{})
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from listWorkflows")
 
 	workflows := arrayValue.ToGo().([]interface{})
@@ -178,24 +178,24 @@ func TestWorkflowBridge_ExecuteMethod_GetWorkflow(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test getWorkflow
-	getArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	getArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err := bridge.ExecuteMethod(ctx, "getWorkflow", getArgs)
 	assert.NoError(t, err)
 
-	objectValue, ok := result.(engine.ObjectValue)
+	objectValue, ok := result.(types.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from getWorkflow")
 
 	workflow := objectValue.ToGo().(map[string]interface{})
@@ -203,11 +203,11 @@ func TestWorkflowBridge_ExecuteMethod_GetWorkflow(t *testing.T) {
 	assert.Contains(t, workflow, "name")
 
 	// Test getWorkflow with non-existent ID
-	nonExistentArgs := []engine.ScriptValue{engine.NewStringValue("non-existent")}
+	nonExistentArgs := []types.ScriptValue{types.NewStringValue("non-existent")}
 	result, err = bridge.ExecuteMethod(ctx, "getWorkflow", nonExistentArgs)
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for non-existent workflow")
 	assert.Contains(t, errorValue.Error().Error(), "not found")
 }
@@ -220,29 +220,29 @@ func TestWorkflowBridge_ExecuteMethod_ExecuteWorkflow(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
-		"steps": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"name": engine.NewStringValue("step1"),
-				"type": engine.NewStringValue("action"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
+		"steps": types.NewArrayValue([]types.ScriptValue{
+			types.NewObjectValue(map[string]types.ScriptValue{
+				"name": types.NewStringValue("step1"),
+				"type": types.NewStringValue("action"),
 			}),
 		}),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test executeWorkflow
-	executeArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(map[string]engine.ScriptValue{
-			"input": engine.NewStringValue("test input"),
+	executeArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(map[string]types.ScriptValue{
+			"input": types.NewStringValue("test input"),
 		}),
 	}
 
@@ -261,24 +261,24 @@ func TestWorkflowBridge_ExecuteMethod_GetWorkflowStatus(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test getWorkflowStatus
-	statusArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	statusArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err := bridge.ExecuteMethod(ctx, "getWorkflowStatus", statusArgs)
 	assert.NoError(t, err)
 
-	stringValue, ok := result.(engine.StringValue)
+	stringValue, ok := result.(types.StringValue)
 	assert.True(t, ok, "Expected StringValue from getWorkflowStatus")
 	assert.Contains(t, []string{"created", "running", "paused", "completed", "failed"}, stringValue.Value())
 }
@@ -291,33 +291,33 @@ func TestWorkflowBridge_ExecuteMethod_PauseResumeWorkflow(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test pauseWorkflow
-	pauseArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	pauseArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err := bridge.ExecuteMethod(ctx, "pauseWorkflow", pauseArgs)
 	assert.NoError(t, err)
 
-	boolValue, ok := result.(engine.BoolValue)
+	boolValue, ok := result.(types.BoolValue)
 	assert.True(t, ok, "Expected BoolValue from pauseWorkflow")
 	assert.True(t, boolValue.Value(), "Pause should succeed")
 
 	// Test resumeWorkflow
-	resumeArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	resumeArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err = bridge.ExecuteMethod(ctx, "resumeWorkflow", resumeArgs)
 	assert.NoError(t, err)
 
-	boolValue, ok = result.(engine.BoolValue)
+	boolValue, ok = result.(types.BoolValue)
 	assert.True(t, ok, "Expected BoolValue from resumeWorkflow")
 	assert.True(t, boolValue.Value(), "Resume should succeed")
 }
@@ -330,58 +330,58 @@ func TestWorkflowBridge_ExecuteMethod_AddRemoveStep(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test addStep
-	stepConfig := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("new-step"),
-		"type": engine.NewStringValue("action"),
+	stepConfig := map[string]types.ScriptValue{
+		"name": types.NewStringValue("new-step"),
+		"type": types.NewStringValue("action"),
 	}
 
-	addArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(stepConfig),
+	addArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(stepConfig),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "addStep", addArgs)
 	assert.NoError(t, err)
 
-	stringValue, ok := result.(engine.StringValue)
+	stringValue, ok := result.(types.StringValue)
 	assert.True(t, ok, "Expected StringValue (step ID) from addStep")
 	stepID := stringValue.Value()
 
 	// Test getStep
-	getStepArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewStringValue(stepID),
+	getStepArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewStringValue(stepID),
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "getStep", getStepArgs)
 	assert.NoError(t, err)
 
-	_, ok = result.(engine.ObjectValue)
+	_, ok = result.(types.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from getStep")
 
 	// Test removeStep
-	removeArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewStringValue(stepID),
+	removeArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewStringValue(stepID),
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "removeStep", removeArgs)
 	assert.NoError(t, err)
 
-	boolValue, ok := result.(engine.BoolValue)
+	boolValue, ok := result.(types.BoolValue)
 	assert.True(t, ok, "Expected BoolValue from removeStep")
 	assert.True(t, boolValue.Value(), "Remove should succeed")
 }
@@ -394,29 +394,29 @@ func TestWorkflowBridge_ExecuteMethod_ListSteps(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
-		"steps": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"name": engine.NewStringValue("step1"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
+		"steps": types.NewArrayValue([]types.ScriptValue{
+			types.NewObjectValue(map[string]types.ScriptValue{
+				"name": types.NewStringValue("step1"),
 			}),
 		}),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test listSteps
-	listArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	listArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err := bridge.ExecuteMethod(ctx, "listSteps", listArgs)
 	assert.NoError(t, err)
 
-	arrayValue, ok := result.(engine.ArrayValue)
+	arrayValue, ok := result.(types.ArrayValue)
 	assert.True(t, ok, "Expected ArrayValue from listSteps")
 
 	steps := arrayValue.ToGo().([]interface{})
@@ -430,21 +430,21 @@ func TestWorkflowBridge_ExecuteMethod_ValidateWorkflow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test validateWorkflow
-	workflowConfig := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
-		"steps": engine.NewArrayValue([]engine.ScriptValue{
-			engine.NewObjectValue(map[string]engine.ScriptValue{
-				"name": engine.NewStringValue("step1"),
-				"type": engine.NewStringValue("action"),
+	workflowConfig := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
+		"steps": types.NewArrayValue([]types.ScriptValue{
+			types.NewObjectValue(map[string]types.ScriptValue{
+				"name": types.NewStringValue("step1"),
+				"type": types.NewStringValue("action"),
 			}),
 		}),
 	}
 
-	args := []engine.ScriptValue{engine.NewObjectValue(workflowConfig)}
+	args := []types.ScriptValue{types.NewObjectValue(workflowConfig)}
 	result, err := bridge.ExecuteMethod(ctx, "validateWorkflow", args)
 	assert.NoError(t, err)
 
-	objectValue, ok := result.(engine.ObjectValue)
+	objectValue, ok := result.(types.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from validateWorkflow")
 
 	validation := objectValue.ToGo().(map[string]interface{})
@@ -459,24 +459,24 @@ func TestWorkflowBridge_ExecuteMethod_GetWorkflowMetrics(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test getWorkflowMetrics
-	metricsArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	metricsArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err := bridge.ExecuteMethod(ctx, "getWorkflowMetrics", metricsArgs)
 	assert.NoError(t, err)
 
-	objectValue, ok := result.(engine.ObjectValue)
+	objectValue, ok := result.(types.ObjectValue)
 	assert.True(t, ok, "Expected ObjectValue from getWorkflowMetrics")
 
 	metrics := objectValue.ToGo().(map[string]interface{})
@@ -492,41 +492,41 @@ func TestWorkflowBridge_ExecuteMethod_SetGetWorkflowVariable(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Test setWorkflowVariable
-	setArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewStringValue("test_var"),
-		engine.NewStringValue("test_value"),
+	setArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewStringValue("test_var"),
+		types.NewStringValue("test_value"),
 	}
 
 	result, err := bridge.ExecuteMethod(ctx, "setWorkflowVariable", setArgs)
 	assert.NoError(t, err)
 
-	_, ok := result.(engine.NilValue)
+	_, ok := result.(types.NilValue)
 	assert.True(t, ok, "Expected NilValue from setWorkflowVariable")
 
 	// Test getWorkflowVariable
-	getArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewStringValue("test_var"),
+	getArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewStringValue("test_var"),
 	}
 
 	result, err = bridge.ExecuteMethod(ctx, "getWorkflowVariable", getArgs)
 	assert.NoError(t, err)
 
-	stringValue, ok := result.(engine.StringValue)
+	stringValue, ok := result.(types.StringValue)
 	assert.True(t, ok, "Expected StringValue from getWorkflowVariable")
 	assert.Equal(t, "test_value", stringValue.Value(), "Variable value should match what was set")
 }
@@ -539,38 +539,38 @@ func TestWorkflowBridge_ExecuteMethod_RemoveWorkflow(t *testing.T) {
 
 	// Create a workflow first
 	workflowID := "test-workflow"
-	config := map[string]engine.ScriptValue{
-		"name": engine.NewStringValue("Test Workflow"),
+	config := map[string]types.ScriptValue{
+		"name": types.NewStringValue("Test Workflow"),
 	}
 
-	createArgs := []engine.ScriptValue{
-		engine.NewStringValue(workflowID),
-		engine.NewObjectValue(config),
+	createArgs := []types.ScriptValue{
+		types.NewStringValue(workflowID),
+		types.NewObjectValue(config),
 	}
 
 	_, err = bridge.ExecuteMethod(ctx, "createWorkflow", createArgs)
 	require.NoError(t, err)
 
 	// Verify workflow exists
-	getArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	getArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err := bridge.ExecuteMethod(ctx, "getWorkflow", getArgs)
 	require.NoError(t, err)
-	_, ok := result.(engine.ObjectValue)
+	_, ok := result.(types.ObjectValue)
 	assert.True(t, ok, "Workflow should exist")
 
 	// Remove the workflow
-	removeArgs := []engine.ScriptValue{engine.NewStringValue(workflowID)}
+	removeArgs := []types.ScriptValue{types.NewStringValue(workflowID)}
 	result, err = bridge.ExecuteMethod(ctx, "removeWorkflow", removeArgs)
 	assert.NoError(t, err)
 
-	boolValue, ok := result.(engine.BoolValue)
+	boolValue, ok := result.(types.BoolValue)
 	assert.True(t, ok, "Expected BoolValue from removeWorkflow")
 	assert.True(t, boolValue.Value(), "Remove should succeed")
 
 	// Verify workflow was removed
 	result, err = bridge.ExecuteMethod(ctx, "getWorkflow", getArgs)
 	assert.NoError(t, err)
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for removed workflow")
 	assert.Contains(t, errorValue.Error().Error(), "not found")
 }
@@ -581,10 +581,10 @@ func TestWorkflowBridge_ExecuteMethod_UnknownMethod(t *testing.T) {
 	err := bridge.Initialize(ctx)
 	require.NoError(t, err)
 
-	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "unknownMethod", []types.ScriptValue{})
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue for unknown method")
 	assert.Contains(t, errorValue.Error().Error(), "unknown method")
 }
@@ -638,10 +638,10 @@ func TestWorkflowBridge_NotInitialized(t *testing.T) {
 	ctx := context.Background()
 
 	// Should fail when not initialized
-	result, err := bridge.ExecuteMethod(ctx, "listWorkflows", []engine.ScriptValue{})
+	result, err := bridge.ExecuteMethod(ctx, "listWorkflows", []types.ScriptValue{})
 	assert.NoError(t, err) // Should return error value, not Go error
 
-	errorValue, ok := result.(engine.ErrorValue)
+	errorValue, ok := result.(types.ErrorValue)
 	assert.True(t, ok, "Expected ErrorValue when not initialized")
 	assert.Contains(t, errorValue.Error().Error(), "not initialized")
 }

@@ -6,23 +6,32 @@ package runner
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 )
 
 // EngineRegistryManager wraps the engine registry for use by the runner.
 // It provides a higher-level interface for engine management, including
 // registration, execution, and statistics gathering.
 type EngineRegistryManager struct {
-	registry *engine.Registry
+	registry    *engine.Registry
+	bridgeCache map[string]bool // tracks which engine+profile combinations have bridges loaded
+	cacheMutex  sync.RWMutex    // protects bridgeCache from concurrent access
+	config      *RunnerConfig   // configuration for engine-specific bridge profiles
 }
 
 // NewEngineRegistryManager creates a new engine registry manager.
 // It wraps the provided engine registry for runner-specific operations.
-func NewEngineRegistryManager(registry *engine.Registry) *EngineRegistryManager {
+func NewEngineRegistryManager(registry *engine.Registry, config *RunnerConfig) *EngineRegistryManager {
 	return &EngineRegistryManager{
-		registry: registry,
+		registry:    registry,
+		bridgeCache: make(map[string]bool),
+		config:      config,
 	}
 }
 
@@ -50,11 +59,186 @@ func (m *EngineRegistryManager) RegisterEngines(factories map[string]engine.Engi
 	return nil
 }
 
-// GetEngine gets or creates an engine instance.
-// It delegates to the underlying registry's GetEngine method
-// with the provided name and configuration.
-func (m *EngineRegistryManager) GetEngine(name string, config engine.EngineConfig) (engine.ScriptEngine, error) {
-	return m.registry.GetEngine(name, config)
+// GetEngine gets or creates an engine instance with bridges loaded on-demand.
+// It ensures bridges are registered for the engine based on the security profile,
+// and caches bridge registration to prevent redundant loading.
+func (m *EngineRegistryManager) GetEngine(name string, config engine.EngineConfig, securityProfile string) (engine.ScriptEngine, error) {
+	// Get engine instance first
+	scriptEngine, err := m.registry.GetEngine(name, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get engine %s: %w", name, err)
+	}
+
+	// Create cache key from engine instance and security profile
+	// Use the engine's address as a unique identifier
+	cacheKey := fmt.Sprintf("%p:%s", scriptEngine, securityProfile)
+
+	// Check if bridges are already loaded for this engine instance+profile combination
+	m.cacheMutex.RLock()
+	bridgesLoaded := m.bridgeCache[cacheKey]
+	m.cacheMutex.RUnlock()
+
+	// If bridges not loaded for this combination, load them now
+	if !bridgesLoaded {
+		if err := m.loadBridgesForEngine(scriptEngine, securityProfile, cacheKey); err != nil {
+			return nil, fmt.Errorf("failed to load bridges for engine %s with profile %s: %w", name, securityProfile, err)
+		}
+	}
+
+	return scriptEngine, nil
+}
+
+// loadBridgesForEngine loads bridges for an engine based on security profile.
+// It maps security profiles to bridge profiles and registers the appropriate bridges.
+func (m *EngineRegistryManager) loadBridgesForEngine(scriptEngine engine.ScriptEngine, securityProfile, cacheKey string) error {
+	// Get engine name for engine-aware bridge profile selection
+	engineName := scriptEngine.Name()
+
+	// Map security profile to bridge profile (engine-aware)
+	bridgeProfile, err := m.getBridgeProfileForSecurityProfile(securityProfile, engineName)
+	if err != nil {
+		return fmt.Errorf("failed to get bridge profile for security profile %s and engine %s: %w", securityProfile, engineName, err)
+	}
+
+	// Register bridges using the profile
+	if err := registry.RegisterBridgeProfile(scriptEngine, bridgeProfile); err != nil {
+		// If bridges are already registered, that's OK for our lazy loading approach
+		// The engine instance may have been reused from the registry pool
+		if bridgeAlreadyRegisteredError(err) {
+			// Mark as cached even though we didn't register (since they're already there)
+			m.cacheMutex.Lock()
+			m.bridgeCache[cacheKey] = true
+			m.cacheMutex.Unlock()
+			return nil
+		}
+		return fmt.Errorf("failed to register bridge profile %s: %w", bridgeProfile.Name, err)
+	}
+
+	// Cache that bridges are loaded for this combination
+	m.cacheMutex.Lock()
+	m.bridgeCache[cacheKey] = true
+	m.cacheMutex.Unlock()
+
+	return nil
+}
+
+// getBridgeProfileForSecurityProfile maps security profiles to bridge profiles.
+// It provides appropriate bridge sets based on the security context and engine type.
+// Different engines may use different bridge profiles for the same security profile.
+func (m *EngineRegistryManager) getBridgeProfileForSecurityProfile(securityProfile, engineName string) (registry.BridgeProfile, error) {
+	// Check if custom mapping exists in configuration
+	if m.config != nil && m.config.EngineBridgeProfiles != nil {
+		if engineProfiles, exists := m.config.EngineBridgeProfiles[engineName]; exists {
+			if profileName, exists := engineProfiles[securityProfile]; exists {
+				return m.getProfileByName(profileName)
+			}
+		}
+	}
+
+	// Fallback to default engine-specific mappings
+	switch engineName {
+	case "lua":
+		return m.getLuaBridgeProfile(securityProfile)
+	case "javascript":
+		return m.getJavaScriptBridgeProfile(securityProfile)
+	case "tengo":
+		return m.getTengoBridgeProfile(securityProfile)
+	default:
+		// Fallback to Lua behavior for unknown engines
+		return m.getLuaBridgeProfile(securityProfile)
+	}
+}
+
+// getLuaBridgeProfile returns bridge profiles for Lua engine.
+// Maintains current behavior for backward compatibility.
+func (m *EngineRegistryManager) getLuaBridgeProfile(securityProfile string) (registry.BridgeProfile, error) {
+	switch securityProfile {
+	case "sandbox":
+		// Sandbox profile uses standard bridges with full functionality
+		return registry.StandardProfile, nil
+	case "development":
+		// Development profile includes debugging and observability bridges
+		return registry.DevelopmentProfile, nil
+	case "production":
+		// Production profile uses standard bridges (same as sandbox for now)
+		return registry.StandardProfile, nil
+	case "minimal":
+		// Minimal profile uses only essential bridges
+		return registry.MinimalProfile, nil
+	case "llm":
+		// LLM profile optimized for LLM operations
+		return registry.LLMProfile, nil
+	default:
+		// Default to standard profile for unknown security profiles
+		return registry.StandardProfile, nil
+	}
+}
+
+// getJavaScriptBridgeProfile returns bridge profiles for JavaScript engine.
+// JavaScript engines default to LLM-focused profiles for AI applications.
+func (m *EngineRegistryManager) getJavaScriptBridgeProfile(securityProfile string) (registry.BridgeProfile, error) {
+	switch securityProfile {
+	case "sandbox":
+		// JavaScript sandbox uses LLM profile (lighter than full standard)
+		return registry.LLMProfile, nil
+	case "development":
+		// Development profile includes debugging and observability bridges
+		return registry.DevelopmentProfile, nil
+	case "production":
+		// Production JavaScript focuses on LLM operations
+		return registry.LLMProfile, nil
+	case "minimal":
+		// Minimal profile uses only essential bridges
+		return registry.MinimalProfile, nil
+	case "llm":
+		// LLM profile optimized for LLM operations
+		return registry.LLMProfile, nil
+	default:
+		// JavaScript default to LLM-focused profile
+		return registry.LLMProfile, nil
+	}
+}
+
+// getTengoBridgeProfile returns bridge profiles for Tengo engine.
+// Tengo engines default to minimal profiles for lightweight execution.
+func (m *EngineRegistryManager) getTengoBridgeProfile(securityProfile string) (registry.BridgeProfile, error) {
+	switch securityProfile {
+	case "sandbox":
+		// Tengo sandbox uses minimal profile for lightweight execution
+		return registry.MinimalProfile, nil
+	case "development":
+		// Development profile includes debugging and observability bridges
+		return registry.DevelopmentProfile, nil
+	case "production":
+		// Production Tengo focuses on minimal footprint
+		return registry.MinimalProfile, nil
+	case "minimal":
+		// Minimal profile uses only essential bridges
+		return registry.MinimalProfile, nil
+	case "llm":
+		// LLM profile for LLM operations
+		return registry.LLMProfile, nil
+	default:
+		// Tengo default to minimal profile
+		return registry.MinimalProfile, nil
+	}
+}
+
+// getProfileByName returns a bridge profile by name.
+// It maps profile names to their corresponding BridgeProfile instances.
+func (m *EngineRegistryManager) getProfileByName(profileName string) (registry.BridgeProfile, error) {
+	switch profileName {
+	case "standard":
+		return registry.StandardProfile, nil
+	case "minimal":
+		return registry.MinimalProfile, nil
+	case "llm":
+		return registry.LLMProfile, nil
+	case "development":
+		return registry.DevelopmentProfile, nil
+	default:
+		return registry.BridgeProfile{}, fmt.Errorf("unknown bridge profile: %s", profileName)
+	}
 }
 
 // FindEngineByExtension finds the best engine for a file extension.
@@ -265,4 +449,54 @@ func CreateEngineMetrics(stats map[string]*engine.EngineStats) map[string]*Engin
 	}
 
 	return metrics
+}
+
+// SetupEngineRegistry creates and configures an engine registry with lightweight engine factories.
+// This function only registers engine factories for discovery and extension mapping.
+// Bridge registration is handled lazily when engines are actually requested.
+func SetupEngineRegistry(config *RunnerConfig, profile string) (*EngineRegistryManager, error) {
+	if config == nil {
+		config = DefaultRunnerConfig()
+	}
+
+	// Create engine registry with configuration
+	registryConfig := engine.RegistryConfig{
+		MaxEngines:        10,
+		DefaultTimeout:    30 * time.Second,
+		HealthCheckPeriod: 60 * time.Second,
+		PoolingEnabled:    true,
+		MaxPoolSize:       5,
+		IdleTimeout:       10 * time.Minute,
+		MetricsEnabled:    config.EnableMetrics,
+		LoggingEnabled:    config.EnableDebug,
+		TracingEnabled:    config.EnableDebug,
+	}
+	registry := engine.NewRegistry(registryConfig)
+
+	// Initialize registry
+	if err := registry.Initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize engine registry: %w", err)
+	}
+
+	// Register lightweight engine factories only (no bridges)
+	luaFactory := gopherlua.NewLuaEngineFactory()
+	if err := registry.Register(luaFactory); err != nil {
+		return nil, fmt.Errorf("failed to register Lua engine factory: %w", err)
+	}
+
+	// TODO: Register JavaScript and Tengo engine factories when implemented
+
+	// Create and return engine registry manager
+	// Bridge registration will happen on-demand in GetEngine()
+	return NewEngineRegistryManager(registry, config), nil
+}
+
+// bridgeAlreadyRegisteredError checks if an error indicates that a bridge is already registered.
+// This is used to handle the case where engine instances are reused from a pool.
+func bridgeAlreadyRegisteredError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "already registered") || strings.Contains(errMsg, "duplicate")
 }
