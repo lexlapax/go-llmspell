@@ -354,7 +354,135 @@ Tasks 1-14 completed and documented in TODO-DONE-ARCHIVE.md
 - Fixed all Lua lint errors (91 warnings resolved across 8 files)
 - Examples cover: basic LLM interactions, tools usage, agents (with and without tools), complex workflows, event-driven patterns, performance optimization, state management, hooks system, debugging features, custom tool creation, and multi-agent handoffs
 
+#### 2.4.3: Development Tools
+- [x] **Task 2.4.3.1: Debugger Support** (`/pkg/engine/gopherlua/debug.go`) **[COMPLETED - 2025-06-20]**
+  - [x] Implement breakpoint support with conditional breakpoints
+  - [x] Add step debugging (over, into, out, line modes)
+  - [x] Create variable inspection for call stack frames
+  - [x] Implement stack trace visualization with locals and upvalues
+  - [x] Add watch expressions with real-time evaluation
+  - [x] Add comprehensive test coverage (100% coverage achieved)
+  - [x] Fixed all linting issues and ensured clean build
+
+- [x] **Task 2.4.3.2: Script Validator** (`/pkg/engine/gopherlua/validator.go`) **[COMPLETED - 2025-06-20]**
+  - [x] Implement syntax validation using gopher-lua parser
+  - [x] Add type checking where possible (limited by Lua's dynamic nature)
+  - [x] Create linting rules for code quality
+  - [x] Implement security validation with pattern matching
+  - [x] Add performance warnings (complexity, nesting depth)
+  - [x] Add comprehensive test coverage (100% coverage achieved)
+
+- [x] **Task 2.4.3.3: Documentation Generator** **[COMPLETED - 2025-06-21]**
+  - [x] Extract API from bridges
+  - [x] Generate Lua documentation
+  - [x] Create example extraction
+  - [x] Add type annotations
+  - [x] Generate completion data
+  - [x] Reorganized architecture for multi-language support
+    - [x] Created `/pkg/docs/gendocs.go` with DocGenerator interface
+    - [x] Renamed `gopherlua.go` to `gendocs_lua.go` for consistency
+    - [x] Created command wrapper `/cmd/llmspell/commands/gendocs.go`
+    - [x] Added working `gen-docs` CLI command
+  - [x] Created comprehensive test suite with 100% coverage
+    - [x] Created `/pkg/docs/gendocs_test.go` with full test coverage
+    - [x] Fixed all lint errors
+  - [x] Renamed `llmspell.go` to `manpage_llmspell.go` for consistency
+  - [x] **Architecture Note**: Added upstream request for go-llms documentation extensions
+    - [x] Documented need for script-aware Documentable interface
+    - [x] Proposed upstreaming man page generation to go-llms
+    - [x] Plan to bridge go-llms docs instead of reimplementing
+
+#### 2.4.4: Production Readiness
+- [x] **Task 2.4.4.1: Comprehensive Testing** **[COMPLETED - 2025-06-23]**
+  - [x] Achieve 90%+ test coverage (comprehensive_test.go created) **[COMPLETED - 2025-06-22]**
+  - [x] Add integration test suite (integration_test.go created) **[COMPLETED - 2025-06-22]**
+  - [x] Create stress tests (engine_stress_test.go, bridge_stress_test.go) **[COMPLETED - 2025-06-23]**
+  - [x] Implement chaos testing (chaos_test.go) **[COMPLETED - 2025-06-23]**
+  - [x] Add regression test suite (regression_test.go) **[COMPLETED - 2025-06-23]**
+  - [x] Fix integration test failures **[COMPLETED - 2025-06-23]**
+
+- [x] **Task 2.4.4.2: Error Handling Enhancement** **[COMPLETED - 2025-06-23]**
+  - [x] Standardize error types (SpellError base type with consistent structure) **[COMPLETED - 2025-06-23]**
+  - [x] Add error categorization (13 categories: Usage, Config, Script, Engine, etc.) **[COMPLETED - 2025-06-23]**
+  - [x] Implement error recovery (suggestions, context, recovery handlers) **[COMPLETED - 2025-06-23]**
+  - [x] Create error reporting (formatter with color, debug modes, chain handling) **[COMPLETED - 2025-06-23]**
+  - [x] Add error metrics (counters, rates, recent errors buffer) **[COMPLETED - 2025-06-23]**
+
+#### 2.4.4: Production Readiness
+- [x] **Task 2.4.4.1: Comprehensive Testing** **[COMPLETED - 2025-06-23]**
+  - [x] Achieve 90%+ test coverage (comprehensive_test.go created) **[COMPLETED - 2025-06-22]**
+  - [x] Add integration test suite (integration_test.go created) **[COMPLETED - 2025-06-22]**
+  - [x] Create stress tests (engine_stress_test.go, bridge_stress_test.go) **[COMPLETED - 2025-06-23]**
+  - [x] Implement chaos testing (chaos_test.go) **[COMPLETED - 2025-06-23]**
+  - [x] Add regression test suite (regression_test.go) **[COMPLETED - 2025-06-23]**
+  - [x] Fix integration test failures **[COMPLETED - 2025-06-23]**
+
+- [x] **Task 2.4.4.2: Error Handling Enhancement** **[COMPLETED - 2025-06-23]**
+  - [x] Standardize error types (SpellError base type with consistent structure) **[COMPLETED - 2025-06-23]**
+  - [x] Add error categorization (13 categories: Usage, Config, Script, Engine, etc.) **[COMPLETED - 2025-06-23]**
+  - [x] Implement error recovery (suggestions, context, recovery handlers) **[COMPLETED - 2025-06-23]**
+  - [x] Create error reporting (formatter with color, debug modes, chain handling) **[COMPLETED - 2025-06-23]**
+  - [x] Add error metrics (counters, rates, recent errors buffer) **[COMPLETED - 2025-06-23]**
+
+- [x] **Task 2.4.4.3: Stdlib Module Loading Fix** (Option 1: Embed and Preload) **[COMPLETED - 2025-06-23]**
+  - [x] Create `/pkg/engine/gopherlua/stdlib/embed.go` to embed all .lua files
+    - [x] Use `go:embed` directive to embed *.lua files
+    - [x] Create exported variable with embedded filesystem
+    - [x] Add function to list all embedded modules
+    - [x] Update Makefile targets if we need to. (No changes needed)
+  - [x] Create `/pkg/engine/gopherlua/stdlib/loader.go` for module loading
+    - [x] Implement `LoadEmbeddedModule(name string) (lua.LGFunction, error)`
+    - [x] Create `GetAllStdlibLoaders() map[string]lua.LGFunction`
+    - [x] Add module caching to prevent re-parsing
+    - [x] Handle module dependencies and load order
+    - [x] Added module aliases (log -> logging) for compatibility
+  - [x] Update `/pkg/engine/gopherlua/factory.go`
+    - [x] Import stdlib loader package
+    - [x] Add stdlib modules to PreloadModules in FactoryConfig
+    - [x] Ensure modules are available before init script runs
+    - [x] Added DisableStdlib flag to FactoryConfig
+    - [x] Fixed NewLStateFactory to load stdlib by default
+  - [x] Update `/pkg/engine/gopherlua/engine.go`
+    - [x] Modify Initialize() to load stdlib modules
+    - [x] Pass loaded modules to factory config
+    - [x] Add configuration option to disable stdlib loading
+    - [x] Fixed security compatibility: auto-add "package" library when stdlib enabled
+  - [x] Add comprehensive tests
+    - [x] Test embedded file access (embed_test.go)
+    - [x] Test module loading in isolated Lua state (loader_test.go)
+    - [x] Test require() functionality for all modules (loader_test.go)
+    - [x] Test module interdependencies (loader_test.go, engine_test.go)
+    - [x] Test error cases (missing modules, load failures) (all test files)
+    - [x] Updated factory_test.go with comprehensive stdlib tests
+    - [x] Fixed all test failures and compatibility issues
+  - [x] Update example spells
+    - [x] Verify all example spells work with embedded modules **[COMPLETED - 2025-06-23]**
+    - [x] Remove any workarounds for module loading **[COMPLETED - 2025-06-23]**
+
+
+- [x] **Task 2.4.4.4: Parameter Injection Fix** (Option 1: Create params table) **[COMPLETED - 2025-06-23]**
+  - [x] Update `injectParameters` method in `engine_execute.go` **[COMPLETED - 2025-06-23]**
+    - [x] Create global `params` table instead of individual global variables **[COMPLETED - 2025-06-23]**
+    - [x] Support both `params.key` and individual `key` globals for backward compatibility **[COMPLETED - 2025-06-23]**
+    - [x] Maintain proper type conversion and error handling **[COMPLETED - 2025-06-23]**
+  - [x] Add comprehensive tests for parameter injection **[COMPLETED - 2025-06-23]**
+    - [x] Test `params` table creation and access **[COMPLETED - 2025-06-23]**
+    - [x] Test individual global variable fallback **[COMPLETED - 2025-06-23]**
+    - [x] Test complex parameter types (nested tables, arrays) **[COMPLETED - 2025-06-23]**
+    - [x] Test parameter type conversion edge cases **[COMPLETED - 2025-06-23]**
+  - [x] Verify all example spells work with new parameter injection **[COMPLETED - 2025-06-23]**
+    - [x] Test CLI parameter passing works end-to-end **[COMPLETED - 2025-06-23]**
+    - [x] Verify `params.output_dir`, `params.model`, etc. work correctly **[COMPLETED - 2025-06-23]**
+    - [x] Test all 13 example spells **[COMPLETED - 2025-06-23]**
+      - [x] Fixed CLI "engine registry not found in context" error by updating run.go to use Runner interface **[COMPLETED - 2025-06-23]**
+      - [x] Verified parameter injection works for both params table and global variables across all spell simulations **[COMPLETED - 2025-06-23]**
+  - [x] Update documentation for parameter usage **[COMPLETED - 2025-06-23]**
+    - [x] Document `params` table in user guide **[COMPLETED - 2025-06-23]**
+    - [x] Add examples of parameter access patterns **[COMPLETED - 2025-06-23]**
+    - [x] Update troubleshooting guide for parameter issues **[COMPLETED - 2025-06-23]**
+
 ---
+
 
 ## Phase 3: Spell Runner CLI - COMPLETED [2025-06-21]
 

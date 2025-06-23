@@ -32,9 +32,10 @@ func (c *RunCmd) Run(ctx context.Context) error {
 		return errors.New(errors.CategoryConfig, "script runner not found in context")
 	}
 
-	scriptRunner, ok := runnerInterface.(runner.Runner)
+	// Cast to ScriptExecutor to access ExecuteWithOptions
+	scriptExecutor, ok := runnerInterface.(*runner.ScriptExecutor)
 	if !ok {
-		return errors.New(errors.CategoryConfig, "invalid script runner type")
+		return errors.New(errors.CategoryConfig, "runner is not a ScriptExecutor")
 	}
 
 	// Convert string parameters to interface{}
@@ -43,8 +44,11 @@ func (c *RunCmd) Run(ctx context.Context) error {
 		params[k] = v
 	}
 
+	// Get security profile from context
+	securityProfile := GetProfile(ctx)
+
 	// Execute the script
-	c.Debug(ctx, "Executing script: %s", c.Script)
+	c.Debug(ctx, "Executing script: %s with profile: %s", c.Script, securityProfile)
 
 	// If engine is specified, we need to read the file and use Execute
 	if c.Engine != "" {
@@ -54,26 +58,45 @@ func (c *RunCmd) Run(ctx context.Context) error {
 			return errors.Wrap(err, errors.CategoryIO, "failed to read script file")
 		}
 
-		// Execute the script content directly
-		result, err := scriptRunner.Execute(ctx, string(scriptContent), params)
+		// Create options with security profile
+		options := &runner.RunnerOptions{
+			Parameters:      params,
+			Engine:          c.Engine,
+			SecurityProfile: securityProfile,
+		}
+
+		// Execute the script content directly with options
+		result, err := scriptExecutor.ExecuteWithOptions(ctx, string(scriptContent), options)
 		if err != nil {
 			return errors.Wrap(err, errors.CategoryScript, "failed to execute script")
 		}
 
 		// Print result if not nil
-		if result != nil {
-			c.Printf("%v\n", result)
+		if result.Value != nil {
+			c.Printf("%v\n", result.Value)
 		}
 	} else {
-		// Use ExecuteFile which will auto-detect the engine
-		result, err := scriptRunner.ExecuteFile(ctx, c.Script, params)
+		// For file execution, read the file and use ExecuteWithOptions
+		scriptContent, err := os.ReadFile(c.Script)
+		if err != nil {
+			return errors.Wrap(err, errors.CategoryIO, "failed to read script file")
+		}
+
+		// Create options with security profile for file execution
+		options := &runner.RunnerOptions{
+			Parameters:      params,
+			SecurityProfile: securityProfile,
+		}
+
+		// Execute the file content with options
+		result, err := scriptExecutor.ExecuteWithOptions(ctx, string(scriptContent), options)
 		if err != nil {
 			return errors.Wrap(err, errors.CategoryScript, "failed to execute script")
 		}
 
 		// Print result if not nil
-		if result != nil {
-			c.Printf("%v\n", result)
+		if result.Value != nil {
+			c.Printf("%v\n", result.Value)
 		}
 	}
 

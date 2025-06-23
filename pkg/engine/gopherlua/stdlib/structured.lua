@@ -59,7 +59,7 @@ end
 function structured.validate_async(schema, data, callback)
     validate_required(schema, "schema")
     validate_required(data, "data")
-    
+
     local Promise = promise.Promise or promise
     return Promise.new(function(resolve, reject)
         local bridge = get_structured_bridge()
@@ -285,13 +285,13 @@ end
 function structured.validate(schema_or_name, data)
     validate_required(schema_or_name, "schema_or_name")
     validate_required(data, "data")
-    
+
     local schema = schema_or_name
     if type(schema_or_name) == "string" then
         -- If string, assume it's a schema name and fetch from repository
         schema = structured.get_schema(schema_or_name)
     end
-    
+
     return structured.validate_json(schema, data)
 end
 
@@ -299,7 +299,7 @@ end
 function structured.create_and_save(name, schema_data)
     validate_required(name, "name")
     validate_required(schema_data, "schema_data")
-    
+
     local schema = structured.create_schema(schema_data)
     structured.save_schema(name, schema)
     return schema
@@ -309,11 +309,11 @@ end
 function structured.validate_batch(schema, data_array)
     validate_required(schema, "schema")
     validate_required(data_array, "data_array")
-    
+
     if type(data_array) ~= "table" then
         error("data_array must be an array")
     end
-    
+
     local results = {}
     for i, data in ipairs(data_array) do
         local result, err = structured.validate_json(schema, data)
@@ -329,7 +329,7 @@ function structured.validate_batch(schema, data_array)
             error = error_msg or err
         }
     end
-    
+
     return results
 end
 
@@ -342,7 +342,7 @@ function structured.builder()
             required = {}
         }
     }
-    
+
     function builder:add_property(name, property_type, required, constraints)
         self.schema.properties[name] = structured.create_property(property_type, constraints)
         if required then
@@ -350,7 +350,7 @@ function structured.builder()
         end
         return self
     end
-    
+
     function builder:add_string(name, required, min_length, max_length, pattern)
         local constraints = {}
         if min_length then constraints.minLength = min_length end
@@ -358,34 +358,34 @@ function structured.builder()
         if pattern then constraints.pattern = pattern end
         return self:add_property(name, "string", required, constraints)
     end
-    
+
     function builder:add_number(name, required, minimum, maximum)
         local constraints = {}
         if minimum then constraints.minimum = minimum end
         if maximum then constraints.maximum = maximum end
         return self:add_property(name, "number", required, constraints)
     end
-    
+
     function builder:add_boolean(name, required)
         return self:add_property(name, "boolean", required, {})
     end
-    
+
     function builder:add_array(name, required, items, min_items, max_items)
         local constraints = {items = items}
         if min_items then constraints.minItems = min_items end
         if max_items then constraints.maxItems = max_items end
         return self:add_property(name, "array", required, constraints)
     end
-    
+
     function builder:add_object(name, required, properties)
         local constraints = {properties = properties}
         return self:add_property(name, "object", required, constraints)
     end
-    
+
     function builder:build()
         return structured.create_schema(self.schema)
     end
-    
+
     return builder
 end
 

@@ -19,6 +19,7 @@ import (
 // It provides model discovery, capability querying, comparison operations,
 // and recommendation algorithms to help Lua scripts select the most appropriate
 // models for their use cases.
+// bridge_id=bridges.llm_modelinfo
 type ModelInfoAdapter struct {
 	*gopherlua.BridgeAdapter
 }

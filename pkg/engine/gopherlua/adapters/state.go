@@ -17,6 +17,8 @@ import (
 // It provides state creation, manipulation, transformation, validation,
 // persistence, and context management operations for maintaining application
 // state across LLM interactions.
+// bridge_id=bridges.state_manager
+// bridge_id=state_context
 type StateAdapter struct {
 	*gopherlua.BridgeAdapter
 

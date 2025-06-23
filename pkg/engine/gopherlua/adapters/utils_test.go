@@ -28,7 +28,7 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 				Description: "Authentication utilities",
 			})
 
-		debugBridge := testutils.NewMockBridge("debug").
+		debugBridge := testutils.NewMockBridge("util_debug").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Debug Bridge",
@@ -36,7 +36,7 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 				Description: "Debug logging utilities",
 			})
 
-		errorsBridge := testutils.NewMockBridge("errors").
+		errorsBridge := testutils.NewMockBridge("util_errors").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Errors Bridge",
@@ -44,7 +44,7 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 				Description: "Error handling utilities",
 			})
 
-		jsonBridge := testutils.NewMockBridge("json").
+		jsonBridge := testutils.NewMockBridge("util_json").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "JSON Bridge",
@@ -60,7 +60,7 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 				Description: "LLM utility functions",
 			})
 
-		loggerBridge := testutils.NewMockBridge("script_logger").
+		loggerBridge := testutils.NewMockBridge("util_script_logger").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Script Logger Bridge",
@@ -68,7 +68,7 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 				Description: "Unified logging interface",
 			})
 
-		slogBridge := testutils.NewMockBridge("slog").
+		slogBridge := testutils.NewMockBridge("util_slog").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Slog Bridge",
@@ -76,7 +76,7 @@ func TestUtilsAdapter_Creation(t *testing.T) {
 				Description: "Structured logging utilities",
 			})
 
-		utilBridge := testutils.NewMockBridge("util").
+		utilBridge := testutils.NewMockBridge("util_core").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "General Utils Bridge",
@@ -264,7 +264,7 @@ func TestUtilsAdapter_Auth(t *testing.T) {
 
 func TestUtilsAdapter_Debug(t *testing.T) {
 	t.Run("set_debug_level", func(t *testing.T) {
-		debugBridge := testutils.NewMockBridge("debug").
+		debugBridge := testutils.NewMockBridge("util_debug").
 			WithInitialized(true).
 			WithMethod("setDebugLevel", engine.MethodInfo{
 				Name: "setDebugLevel",
@@ -305,7 +305,7 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 	})
 
 	t.Run("debug_log", func(t *testing.T) {
-		debugBridge := testutils.NewMockBridge("debug").
+		debugBridge := testutils.NewMockBridge("util_debug").
 			WithInitialized(true).
 			WithMethod("debugLog", engine.MethodInfo{
 				Name: "debugLog",
@@ -349,7 +349,7 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 
 func TestUtilsAdapter_Errors(t *testing.T) {
 	t.Run("create_error", func(t *testing.T) {
-		errorsBridge := testutils.NewMockBridge("errors").
+		errorsBridge := testutils.NewMockBridge("util_errors").
 			WithInitialized(true).
 			WithMethod("createError", engine.MethodInfo{
 				Name: "createError",
@@ -393,7 +393,7 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 	})
 
 	t.Run("wrap_error", func(t *testing.T) {
-		errorsBridge := testutils.NewMockBridge("errors").
+		errorsBridge := testutils.NewMockBridge("util_errors").
 			WithInitialized(true).
 			WithMethod("wrapError", engine.MethodInfo{
 				Name: "wrapError",
@@ -441,7 +441,7 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 
 func TestUtilsAdapter_JSON(t *testing.T) {
 	t.Run("parse_json", func(t *testing.T) {
-		jsonBridge := testutils.NewMockBridge("json").
+		jsonBridge := testutils.NewMockBridge("util_json").
 			WithInitialized(true).
 			WithMethod("parseJSON", engine.MethodInfo{
 				Name: "parseJSON",
@@ -486,7 +486,7 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 	})
 
 	t.Run("to_json", func(t *testing.T) {
-		jsonBridge := testutils.NewMockBridge("json").
+		jsonBridge := testutils.NewMockBridge("util_json").
 			WithInitialized(true).
 			WithMethod("toJSON", engine.MethodInfo{
 				Name: "toJSON",
@@ -527,7 +527,7 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 
 func TestUtilsAdapter_General(t *testing.T) {
 	t.Run("generate_uuid", func(t *testing.T) {
-		utilBridge := testutils.NewMockBridge("util").
+		utilBridge := testutils.NewMockBridge("util_core").
 			WithInitialized(true).
 			WithMethod("generateUUID", engine.MethodInfo{
 				Name: "generateUUID",
@@ -562,7 +562,7 @@ func TestUtilsAdapter_General(t *testing.T) {
 	})
 
 	t.Run("hash", func(t *testing.T) {
-		utilBridge := testutils.NewMockBridge("util").
+		utilBridge := testutils.NewMockBridge("util_core").
 			WithInitialized(true).
 			WithMethod("hash", engine.MethodInfo{
 				Name: "hash",
@@ -603,7 +603,7 @@ func TestUtilsAdapter_General(t *testing.T) {
 	})
 
 	t.Run("sleep", func(t *testing.T) {
-		utilBridge := testutils.NewMockBridge("util").
+		utilBridge := testutils.NewMockBridge("util_core").
 			WithInitialized(true).
 			WithMethod("sleep", engine.MethodInfo{
 				Name: "sleep",
@@ -678,7 +678,7 @@ func TestUtilsAdapter_ErrorHandling(t *testing.T) {
 
 func TestUtilsAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("retry_operation", func(t *testing.T) {
-		utilBridge := testutils.NewMockBridge("util").
+		utilBridge := testutils.NewMockBridge("util_core").
 			WithInitialized(true).
 			WithMethod("retry", engine.MethodInfo{
 				Name: "retry",

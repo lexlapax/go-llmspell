@@ -19,7 +19,7 @@ import (
 func TestWorkflowAdapter_Creation(t *testing.T) {
 	t.Run("create_workflow_adapter", func(t *testing.T) {
 		// Create workflow bridge mock
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Workflow Bridge",
@@ -170,7 +170,7 @@ func TestWorkflowAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("workflow_module_structure", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "Workflow Bridge",
@@ -240,7 +240,7 @@ func TestWorkflowAdapter_Creation(t *testing.T) {
 
 func TestWorkflowAdapter_WorkflowLifecycle(t *testing.T) {
 	t.Run("create_and_execute_workflow", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("createWorkflow", engine.MethodInfo{
 				Name: "createWorkflow",
@@ -308,7 +308,7 @@ func TestWorkflowAdapter_WorkflowLifecycle(t *testing.T) {
 	})
 
 	t.Run("workflow_control_operations", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("pauseWorkflow", engine.MethodInfo{
 				Name: "pauseWorkflow",
@@ -371,7 +371,7 @@ func TestWorkflowAdapter_WorkflowLifecycle(t *testing.T) {
 	})
 
 	t.Run("list_and_get_workflows", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("listWorkflows", engine.MethodInfo{
 				Name: "listWorkflows",
@@ -442,7 +442,7 @@ func TestWorkflowAdapter_WorkflowLifecycle(t *testing.T) {
 
 func TestWorkflowAdapter_StepManagement(t *testing.T) {
 	t.Run("add_and_list_steps", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("addStep", engine.MethodInfo{
 				Name: "addStep",
@@ -513,7 +513,7 @@ func TestWorkflowAdapter_StepManagement(t *testing.T) {
 	})
 
 	t.Run("update_and_remove_steps", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("updateStep", engine.MethodInfo{
 				Name: "updateStep",
@@ -576,7 +576,7 @@ func TestWorkflowAdapter_StepManagement(t *testing.T) {
 
 func TestWorkflowAdapter_Templates(t *testing.T) {
 	t.Run("list_and_use_templates", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("listWorkflowTemplates", engine.MethodInfo{
 				Name: "listWorkflowTemplates",
@@ -646,7 +646,7 @@ func TestWorkflowAdapter_Templates(t *testing.T) {
 	})
 
 	t.Run("create_and_manage_templates", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("createWorkflowTemplate", engine.MethodInfo{
 				Name: "createWorkflowTemplate",
@@ -707,7 +707,7 @@ func TestWorkflowAdapter_Templates(t *testing.T) {
 
 func TestWorkflowAdapter_ImportExport(t *testing.T) {
 	t.Run("export_and_import_workflow", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("exportWorkflow", engine.MethodInfo{
 				Name: "exportWorkflow",
@@ -782,7 +782,7 @@ func TestWorkflowAdapter_ImportExport(t *testing.T) {
 
 func TestWorkflowAdapter_Variables(t *testing.T) {
 	t.Run("workflow_variables", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("setWorkflowVariable", engine.MethodInfo{
 				Name: "setWorkflowVariable",
@@ -855,7 +855,7 @@ func TestWorkflowAdapter_Variables(t *testing.T) {
 
 func TestWorkflowAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(false).
 			WithMethod("createWorkflow", engine.MethodInfo{
 				Name: "createWorkflow",
@@ -893,7 +893,7 @@ func TestWorkflowAdapter_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("handle_invalid_workflow_type", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("createWorkflow", engine.MethodInfo{
 				Name: "createWorkflow",
@@ -942,7 +942,7 @@ func TestWorkflowAdapter_ErrorHandling(t *testing.T) {
 
 func TestWorkflowAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("workflow_builder_pattern", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("createWorkflow", engine.MethodInfo{
 				Name: "createWorkflow",
@@ -1003,7 +1003,7 @@ func TestWorkflowAdapter_ConvenienceMethods(t *testing.T) {
 	})
 
 	t.Run("workflow_validation", func(t *testing.T) {
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("validateWorkflow", engine.MethodInfo{
 				Name: "validateWorkflow",

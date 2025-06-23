@@ -19,7 +19,7 @@ import (
 func TestHooksAdapter_Creation(t *testing.T) {
 	t.Run("create_hooks_adapter", func(t *testing.T) {
 		// Create hooks bridge mock
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Hooks Bridge",
@@ -88,7 +88,7 @@ func TestHooksAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("hooks_module_structure", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "Hooks Bridge",
@@ -155,7 +155,7 @@ func TestHooksAdapter_Creation(t *testing.T) {
 
 func TestHooksAdapter_Registration(t *testing.T) {
 	t.Run("register_simple_hook", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("registerHook", engine.MethodInfo{
 				Name: "registerHook",
@@ -209,7 +209,7 @@ func TestHooksAdapter_Registration(t *testing.T) {
 	})
 
 	t.Run("register_full_lifecycle_hook", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("registerHook", engine.MethodInfo{
 				Name: "registerHook",
@@ -280,7 +280,7 @@ func TestHooksAdapter_Registration(t *testing.T) {
 	})
 
 	t.Run("unregister_hook", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("unregisterHook", engine.MethodInfo{
 				Name: "unregisterHook",
@@ -328,7 +328,7 @@ func TestHooksAdapter_Registration(t *testing.T) {
 
 func TestHooksAdapter_Management(t *testing.T) {
 	t.Run("list_hooks", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("listHooks", engine.MethodInfo{
 				Name: "listHooks",
@@ -390,7 +390,7 @@ func TestHooksAdapter_Management(t *testing.T) {
 	})
 
 	t.Run("enable_disable_hooks", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("enableHook", engine.MethodInfo{
 				Name: "enableHook",
@@ -445,7 +445,7 @@ func TestHooksAdapter_Management(t *testing.T) {
 	})
 
 	t.Run("get_hook_info", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("getHookInfo", engine.MethodInfo{
 				Name: "getHookInfo",
@@ -500,7 +500,7 @@ func TestHooksAdapter_Management(t *testing.T) {
 	})
 
 	t.Run("clear_all_hooks", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("clearHooks", engine.MethodInfo{
 				Name: "clearHooks",
@@ -543,7 +543,7 @@ func TestHooksAdapter_Management(t *testing.T) {
 
 func TestHooksAdapter_Execution(t *testing.T) {
 	t.Run("execute_hooks_by_type", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("executeHooks", engine.MethodInfo{
 				Name: "executeHooks",
@@ -619,7 +619,7 @@ func TestHooksAdapter_Execution(t *testing.T) {
 	t.Run("priority_ordering", func(t *testing.T) {
 		callOrder := []string{}
 
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("registerHook", engine.MethodInfo{
 				Name: "registerHook",
@@ -696,7 +696,7 @@ func TestHooksAdapter_Execution(t *testing.T) {
 
 func TestHooksAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(false).
 			WithMethod("registerHook", engine.MethodInfo{
 				Name: "registerHook",
@@ -738,7 +738,7 @@ func TestHooksAdapter_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("handle_invalid_hook_type", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("executeHooks", engine.MethodInfo{
 				Name: "executeHooks",
@@ -788,7 +788,7 @@ func TestHooksAdapter_ErrorHandling(t *testing.T) {
 
 func TestHooksAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("hook_builder_pattern", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("registerHook", engine.MethodInfo{
 				Name: "registerHook",
@@ -844,7 +844,7 @@ func TestHooksAdapter_ConvenienceMethods(t *testing.T) {
 	})
 
 	t.Run("batch_operations", func(t *testing.T) {
-		hooksBridge := testutils.NewMockBridge("hooks").
+		hooksBridge := testutils.NewMockBridge("agent_hooks").
 			WithInitialized(true).
 			WithMethod("registerHook", engine.MethodInfo{
 				Name: "registerHook",

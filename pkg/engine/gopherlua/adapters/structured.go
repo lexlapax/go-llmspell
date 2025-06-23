@@ -16,6 +16,7 @@ import (
 // It provides schema creation, validation, generation, repository operations,
 // import/export capabilities, and custom validation features for ensuring
 // LLM outputs conform to specified schemas.
+// bridge_id=bridges.structured_schema
 type StructuredAdapter struct {
 	*gopherlua.BridgeAdapter
 }

@@ -20,7 +20,7 @@ import (
 func TestToolsAdapter_Creation(t *testing.T) {
 	t.Run("create_tools_adapter", func(t *testing.T) {
 		// Create tools bridge mock
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Tools Bridge",
@@ -103,7 +103,7 @@ func TestToolsAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("tools_module_structure", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "Tools Bridge",
@@ -162,7 +162,7 @@ func TestToolsAdapter_Creation(t *testing.T) {
 
 func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 	t.Run("list_tools", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("listTools", engine.MethodInfo{
 				Name: "listTools",
@@ -221,7 +221,7 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 	})
 
 	t.Run("search_tools", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("searchTools", engine.MethodInfo{
 				Name: "searchTools",
@@ -269,7 +269,7 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 	})
 
 	t.Run("get_tool_info", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("getToolInfo", engine.MethodInfo{
 				Name: "getToolInfo",
@@ -323,7 +323,7 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 
 func TestToolsAdapter_ToolExecution(t *testing.T) {
 	t.Run("execute_tool", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("executeTool", engine.MethodInfo{
 				Name: "executeTool",
@@ -398,7 +398,7 @@ func TestToolsAdapter_ToolExecution(t *testing.T) {
 	})
 
 	t.Run("execute_tool_async", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("executeToolAsync", engine.MethodInfo{
 				Name: "executeToolAsync",
@@ -441,7 +441,7 @@ func TestToolsAdapter_ToolExecution(t *testing.T) {
 
 func TestToolsAdapter_CustomTools(t *testing.T) {
 	t.Run("register_custom_tool", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("registerCustomTool", engine.MethodInfo{
 				Name: "registerCustomTool",
@@ -512,7 +512,7 @@ func TestToolsAdapter_CustomTools(t *testing.T) {
 
 func TestToolsAdapter_Validation(t *testing.T) {
 	t.Run("validate_tool_input", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("getToolSchema", engine.MethodInfo{
 				Name: "getToolSchema",
@@ -600,7 +600,7 @@ func TestToolsAdapter_Validation(t *testing.T) {
 
 func TestToolsAdapter_Metrics(t *testing.T) {
 	t.Run("get_tool_metrics", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("getToolMetrics", engine.MethodInfo{
 				Name: "getToolMetrics",
@@ -653,7 +653,7 @@ func TestToolsAdapter_Metrics(t *testing.T) {
 
 func TestToolsAdapter_Categories(t *testing.T) {
 	t.Run("list_by_category", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("listToolsByCategory", engine.MethodInfo{
 				Name: "listToolsByCategory",
@@ -722,7 +722,7 @@ func TestToolsAdapter_Categories(t *testing.T) {
 
 func TestToolsAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("executeTool", engine.MethodInfo{
 				Name: "executeTool",
@@ -755,7 +755,7 @@ func TestToolsAdapter_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("handle_invalid_tool_definition", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("registerCustomTool", engine.MethodInfo{
 				Name: "registerCustomTool",
@@ -793,7 +793,7 @@ func TestToolsAdapter_ErrorHandling(t *testing.T) {
 
 func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("tool_builder_pattern", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("registerCustomTool", engine.MethodInfo{
 				Name: "registerCustomTool",
@@ -841,7 +841,7 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 	})
 
 	t.Run("batch_operations", func(t *testing.T) {
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("listToolsByTags", engine.MethodInfo{
 				Name: "listToolsByTags",
@@ -884,7 +884,7 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 	t.Run("create_adapter_with_registry", func(t *testing.T) {
 		// Create tools bridge mock
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true)
 
 		// Create registry bridge mock
@@ -953,7 +953,7 @@ func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 
 	t.Run("registry_methods_in_lua", func(t *testing.T) {
 		// Create mocks
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true)
 
 		registryBridge := testutils.NewMockBridge("tools_registry").
@@ -1101,7 +1101,7 @@ func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 
 	t.Run("registry_methods_without_bridge", func(t *testing.T) {
 		// Create adapter without registry bridge
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true)
 
 		adapter := NewToolsAdapter(toolsBridge)

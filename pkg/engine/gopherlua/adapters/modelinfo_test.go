@@ -20,7 +20,7 @@ import (
 func TestModelInfoAdapter_Creation(t *testing.T) {
 	t.Run("create_modelinfo_adapter", func(t *testing.T) {
 		// Create modelinfo bridge mock
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Model Info Bridge",
@@ -104,7 +104,7 @@ func TestModelInfoAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("modelinfo_module_structure", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "Model Info Bridge",
@@ -171,7 +171,7 @@ func TestModelInfoAdapter_Creation(t *testing.T) {
 
 func TestModelInfoAdapter_Discovery(t *testing.T) {
 	t.Run("list_models", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("listModels", engine.MethodInfo{
 				Name: "listModels",
@@ -211,7 +211,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 	})
 
 	t.Run("fetch_model_inventory", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -260,7 +260,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 	})
 
 	t.Run("get_model_capabilities", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -309,7 +309,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 	})
 
 	t.Run("find_models_by_capability", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -366,7 +366,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 
 func TestModelInfoAdapter_Selection(t *testing.T) {
 	t.Run("suggest_model", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -436,7 +436,7 @@ func TestModelInfoAdapter_Selection(t *testing.T) {
 	})
 
 	t.Run("compare_models", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -495,7 +495,7 @@ func TestModelInfoAdapter_Selection(t *testing.T) {
 
 func TestModelInfoAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -528,7 +528,7 @@ func TestModelInfoAdapter_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("handle_missing_model", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -565,7 +565,7 @@ func TestModelInfoAdapter_ErrorHandling(t *testing.T) {
 
 func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("estimate_cost", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -612,7 +612,7 @@ func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 	})
 
 	t.Run("get_best_model_for_task", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -663,7 +663,7 @@ func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 // Test flattened methods specifically
 func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 	t.Run("flattened_discovery_methods", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("listModels", engine.MethodInfo{
 				Name: "listModels",
@@ -727,7 +727,7 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 	})
 
 	t.Run("flattened_capabilities_methods", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",
@@ -793,7 +793,7 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 	})
 
 	t.Run("flattened_selection_methods", func(t *testing.T) {
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").
 			WithInitialized(true).
 			WithMethod("fetchModelInventory", engine.MethodInfo{
 				Name: "fetchModelInventory",

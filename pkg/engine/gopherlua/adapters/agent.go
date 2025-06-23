@@ -18,6 +18,7 @@ import (
 // AgentAdapter specializes BridgeAdapter for agent functionality.
 // It provides Lua-specific adaptations for agent operations including lifecycle management,
 // communication, state handling, events, profiling, and workflow execution.
+// bridge_id=bridges.agent_core
 type AgentAdapter struct {
 	*gopherlua.BridgeAdapter
 }

@@ -20,7 +20,7 @@ import (
 func TestObservabilityAdapter_Creation(t *testing.T) {
 	t.Run("create_observability_adapter", func(t *testing.T) {
 		// Create observability bridges mock
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Guardrails Bridge",
@@ -28,7 +28,7 @@ func TestObservabilityAdapter_Creation(t *testing.T) {
 				Description: "Safety system with content filtering",
 			})
 
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Metrics Bridge",
@@ -36,7 +36,7 @@ func TestObservabilityAdapter_Creation(t *testing.T) {
 				Description: "Performance monitoring system",
 			})
 
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Tracing Bridge",
@@ -90,11 +90,11 @@ func TestObservabilityAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("observability_module_structure", func(t *testing.T) {
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true)
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true)
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true)
 
 		adapter := NewObservabilityAdapter(guardrailsBridge, metricsBridge, tracingBridge)
@@ -156,7 +156,7 @@ func TestObservabilityAdapter_Creation(t *testing.T) {
 
 func TestObservabilityAdapter_Guardrails(t *testing.T) {
 	t.Run("enable_guardrails", func(t *testing.T) {
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true).
 			WithMethod("enableGuardrails", engine.MethodInfo{
 				Name: "enableGuardrails",
@@ -201,7 +201,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 	})
 
 	t.Run("validate_content", func(t *testing.T) {
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true).
 			WithMethod("validateContent", engine.MethodInfo{
 				Name: "validateContent",
@@ -253,7 +253,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 	})
 
 	t.Run("behavioral_constraints", func(t *testing.T) {
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true).
 			WithMethod("addBehavioralConstraint", engine.MethodInfo{
 				Name: "addBehavioralConstraint",
@@ -299,7 +299,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 	})
 
 	t.Run("check_compliance", func(t *testing.T) {
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true).
 			WithMethod("checkCompliance", engine.MethodInfo{
 				Name: "checkCompliance",
@@ -352,7 +352,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 
 func TestObservabilityAdapter_Metrics(t *testing.T) {
 	t.Run("create_counter", func(t *testing.T) {
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMethod("createCounter", engine.MethodInfo{
 				Name: "createCounter",
@@ -399,7 +399,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 	})
 
 	t.Run("create_gauge", func(t *testing.T) {
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMethod("createGauge", engine.MethodInfo{
 				Name: "createGauge",
@@ -445,7 +445,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 	})
 
 	t.Run("create_timer", func(t *testing.T) {
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMethod("createTimer", engine.MethodInfo{
 				Name: "createTimer",
@@ -492,7 +492,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 	})
 
 	t.Run("record_metric", func(t *testing.T) {
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMethod("recordMetric", engine.MethodInfo{
 				Name: "recordMetric",
@@ -536,7 +536,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 	})
 
 	t.Run("get_metrics", func(t *testing.T) {
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMethod("getMetrics", engine.MethodInfo{
 				Name: "getMetrics",
@@ -586,7 +586,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 
 func TestObservabilityAdapter_Tracing(t *testing.T) {
 	t.Run("start_span", func(t *testing.T) {
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true).
 			WithMethod("startSpan", engine.MethodInfo{
 				Name: "startSpan",
@@ -637,7 +637,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 	})
 
 	t.Run("add_span_event", func(t *testing.T) {
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true).
 			WithMethod("addSpanEvent", engine.MethodInfo{
 				Name: "addSpanEvent",
@@ -684,7 +684,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 	})
 
 	t.Run("set_span_attribute", func(t *testing.T) {
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true).
 			WithMethod("setSpanAttribute", engine.MethodInfo{
 				Name: "setSpanAttribute",
@@ -732,7 +732,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 	})
 
 	t.Run("end_span", func(t *testing.T) {
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true).
 			WithMethod("endSpan", engine.MethodInfo{
 				Name: "endSpan",
@@ -775,7 +775,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 
 func TestObservabilityAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true).
 			WithMethod("validateContent", engine.MethodInfo{
 				Name: "validateContent",
@@ -810,7 +810,7 @@ func TestObservabilityAdapter_ErrorHandling(t *testing.T) {
 
 func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("metric_builder", func(t *testing.T) {
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMethod("createCounter", engine.MethodInfo{
 				Name: "createCounter",
@@ -852,7 +852,7 @@ func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 	})
 
 	t.Run("span_context", func(t *testing.T) {
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true).
 			WithMethod("getCurrentSpan", engine.MethodInfo{
 				Name: "getCurrentSpan",
@@ -891,7 +891,7 @@ func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 // Test flattened methods specifically
 func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 	t.Run("flattened_guardrails_methods", func(t *testing.T) {
-		guardrailsBridge := testutils.NewMockBridge("guardrails").
+		guardrailsBridge := testutils.NewMockBridge("observability_guardrails").
 			WithInitialized(true).
 			WithMethod("registerRule", engine.MethodInfo{
 				Name: "registerRule",
@@ -959,7 +959,7 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 	})
 
 	t.Run("flattened_metrics_methods", func(t *testing.T) {
-		metricsBridge := testutils.NewMockBridge("metrics").
+		metricsBridge := testutils.NewMockBridge("observability_metrics").
 			WithInitialized(true).
 			WithMethod("incrementMetric", engine.MethodInfo{
 				Name: "incrementMetric",
@@ -1033,7 +1033,7 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 	})
 
 	t.Run("flattened_tracing_methods", func(t *testing.T) {
-		tracingBridge := testutils.NewMockBridge("tracing").
+		tracingBridge := testutils.NewMockBridge("observability_tracing").
 			WithInitialized(true).
 			WithMethod("startSpan", engine.MethodInfo{
 				Name: "startSpan",

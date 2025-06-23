@@ -21,7 +21,7 @@ import (
 func TestEventsAdapter_Creation(t *testing.T) {
 	t.Run("create_events_adapter", func(t *testing.T) {
 		// Create events bridge mock
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Events Bridge",
@@ -70,7 +70,7 @@ func TestEventsAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("events_module_structure", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "Events Bridge",
@@ -157,7 +157,7 @@ func TestEventsAdapter_Creation(t *testing.T) {
 
 func TestEventsAdapter_EventPublication(t *testing.T) {
 	t.Run("publish_simple_event", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("publishEvent", engine.MethodInfo{
 				Name: "publishEvent",
@@ -198,7 +198,7 @@ func TestEventsAdapter_EventPublication(t *testing.T) {
 	})
 
 	t.Run("publish_event_via_bus_namespace", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("publishEvent", engine.MethodInfo{
 				Name: "publishEvent",
@@ -235,7 +235,7 @@ func TestEventsAdapter_EventPublication(t *testing.T) {
 
 func TestEventsAdapter_EventSubscription(t *testing.T) {
 	t.Run("subscribe_to_pattern", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("subscribe", engine.MethodInfo{
 				Name: "subscribe",
@@ -285,7 +285,7 @@ func TestEventsAdapter_EventSubscription(t *testing.T) {
 	})
 
 	t.Run("subscribe_with_filter", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("subscribeWithFilter", engine.MethodInfo{
 				Name: "subscribeWithFilter",
@@ -332,7 +332,7 @@ func TestEventsAdapter_EventSubscription(t *testing.T) {
 
 func TestEventsAdapter_EventFiltering(t *testing.T) {
 	t.Run("create_pattern_filter", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("createFilter", engine.MethodInfo{
 				Name: "createFilter",
@@ -374,7 +374,7 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 	})
 
 	t.Run("create_composite_filter", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("createFilter", engine.MethodInfo{
 				Name: "createFilter",
@@ -430,7 +430,7 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 
 func TestEventsAdapter_EventQuery(t *testing.T) {
 	t.Run("query_events", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("queryEvents", engine.MethodInfo{
 				Name: "queryEvents",
@@ -481,7 +481,7 @@ func TestEventsAdapter_EventQuery(t *testing.T) {
 	})
 
 	t.Run("get_event_history", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("getEventHistory", engine.MethodInfo{
 				Name: "getEventHistory",
@@ -527,7 +527,7 @@ func TestEventsAdapter_EventQuery(t *testing.T) {
 
 func TestEventsAdapter_EventRecording(t *testing.T) {
 	t.Run("start_stop_recording", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("startRecording", engine.MethodInfo{
 				Name: "startRecording",
@@ -580,7 +580,7 @@ func TestEventsAdapter_EventRecording(t *testing.T) {
 
 func TestEventsAdapter_EventReplay(t *testing.T) {
 	t.Run("replay_events", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("replayEvents", engine.MethodInfo{
 				Name: "replayEvents",
@@ -647,7 +647,7 @@ func TestEventsAdapter_EventReplay(t *testing.T) {
 
 func TestEventsAdapter_EventAggregation(t *testing.T) {
 	t.Run("create_aggregator", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("createAggregator", engine.MethodInfo{
 				Name: "createAggregator",
@@ -706,7 +706,7 @@ func TestEventsAdapter_EventAggregation(t *testing.T) {
 
 func TestEventsAdapter_EventSerialization(t *testing.T) {
 	t.Run("serialize_deserialize_event", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("serializeEvent", engine.MethodInfo{
 				Name: "serializeEvent",
@@ -766,7 +766,7 @@ func TestEventsAdapter_EventSerialization(t *testing.T) {
 
 func TestEventsAdapter_SubscriptionInfo(t *testing.T) {
 	t.Run("subscription_count_and_info", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("getSubscriptionCount", engine.MethodInfo{
 				Name: "getSubscriptionCount",
@@ -822,7 +822,7 @@ func TestEventsAdapter_SubscriptionInfo(t *testing.T) {
 
 func TestEventsAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("publishEvent", engine.MethodInfo{
 				Name: "publishEvent",
@@ -858,7 +858,7 @@ func TestEventsAdapter_ErrorHandling(t *testing.T) {
 
 func TestEventsAdapter_EventCorrelation(t *testing.T) {
 	t.Run("correlate_events", func(t *testing.T) {
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("correlateEvents", engine.MethodInfo{
 				Name: "correlateEvents",

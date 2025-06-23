@@ -28,24 +28,24 @@ func TestAllAdaptersIntegration(t *testing.T) {
 
 		// Create mock bridges for all adapters
 		llmBridge := testutils.NewMockBridge("llm_core").WithInitialized(true)
-		stateBridge := testutils.NewMockBridge("state").WithInitialized(true)
-		eventsBridge := testutils.NewMockBridge("events").WithInitialized(true)
-		structuredBridge := testutils.NewMockBridge("structured").WithInitialized(true)
+		stateBridge := testutils.NewMockBridge("state_manager").WithInitialized(true)
+		eventsBridge := testutils.NewMockBridge("agent_events").WithInitialized(true)
+		structuredBridge := testutils.NewMockBridge("structured_schema").WithInitialized(true)
 		agentBridge := testutils.NewMockBridge("agent_core").WithInitialized(true)
-		hooksBridge := testutils.NewMockBridge("hooks").WithInitialized(true)
-		workflowBridge := testutils.NewMockBridge("workflow").WithInitialized(true)
-		toolsBridge := testutils.NewMockBridge("tools").WithInitialized(true)
-		observabilityBridge := testutils.NewMockBridge("observability").WithInitialized(true)
-		modelinfoBridge := testutils.NewMockBridge("modelinfo").WithInitialized(true)
+		hooksBridge := testutils.NewMockBridge("agent_hooks").WithInitialized(true)
+		workflowBridge := testutils.NewMockBridge("agent_workflow").WithInitialized(true)
+		toolsBridge := testutils.NewMockBridge("agent_tools").WithInitialized(true)
+		observabilityBridge := testutils.NewMockBridge("observability_metrics").WithInitialized(true)
+		modelinfoBridge := testutils.NewMockBridge("llm_modelinfo").WithInitialized(true)
 
 		// Utility bridges
 		authBridge := testutils.NewMockBridge("auth").WithInitialized(true)
-		debugBridge := testutils.NewMockBridge("debug").WithInitialized(true)
-		errorsBridge := testutils.NewMockBridge("errors").WithInitialized(true)
-		jsonBridge := testutils.NewMockBridge("json").WithInitialized(true)
+		debugBridge := testutils.NewMockBridge("util_debug").WithInitialized(true)
+		errorsBridge := testutils.NewMockBridge("util_errors").WithInitialized(true)
+		jsonBridge := testutils.NewMockBridge("util_json").WithInitialized(true)
 		llmUtilsBridge := testutils.NewMockBridge("llm_utils").WithInitialized(true)
-		loggerBridge := testutils.NewMockBridge("logger").WithInitialized(true)
-		slogBridge := testutils.NewMockBridge("slog").WithInitialized(true)
+		loggerBridge := testutils.NewMockBridge("util_script_logger").WithInitialized(true)
+		slogBridge := testutils.NewMockBridge("util_slog").WithInitialized(true)
 		utilBridge := testutils.NewMockBridge("util").WithInitialized(true)
 
 		// Create and register all adapters
@@ -151,7 +151,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 			})
 
 		// Mock structured bridge for validation
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("validateStruct", engine.MethodInfo{
 				Name: "validateStruct",
@@ -209,7 +209,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 		ms := gopherlua.NewModuleSystem()
 
 		// Mock tools bridge
-		toolsBridge := testutils.NewMockBridge("tools").
+		toolsBridge := testutils.NewMockBridge("agent_tools").
 			WithInitialized(true).
 			WithMethod("listTools", engine.MethodInfo{
 				Name: "listTools",
@@ -283,7 +283,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 		ms := gopherlua.NewModuleSystem()
 
 		// Mock state bridge
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("setState", engine.MethodInfo{
 				Name: "setState",
@@ -302,7 +302,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 			})
 
 		// Mock events bridge
-		eventsBridge := testutils.NewMockBridge("events").
+		eventsBridge := testutils.NewMockBridge("agent_events").
 			WithInitialized(true).
 			WithMethod("publishEvent", engine.MethodInfo{
 				Name: "publishEvent",
@@ -314,7 +314,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 			})
 
 		// Mock workflow bridge
-		workflowBridge := testutils.NewMockBridge("workflow").
+		workflowBridge := testutils.NewMockBridge("agent_workflow").
 			WithInitialized(true).
 			WithMethod("createWorkflow", engine.MethodInfo{
 				Name: "createWorkflow",

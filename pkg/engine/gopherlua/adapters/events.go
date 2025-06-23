@@ -15,6 +15,8 @@ import (
 // EventsAdapter specializes BridgeAdapter for event system functionality.
 // It provides event bus operations, subscription management, filtering,
 // aggregation, recording, and replay capabilities to Lua scripts.
+// bridge_id=bridges.agent_events
+
 type EventsAdapter struct {
 	*gopherlua.BridgeAdapter
 

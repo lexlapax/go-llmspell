@@ -17,6 +17,8 @@ import (
 // It provides tool discovery, execution, registration, validation,
 // and metrics capabilities for extending LLM functionality with
 // external tools and APIs.
+// bridge_id=bridges.agent_tools
+// bridge_id=bridges.agent_tools_registry
 type ToolsAdapter struct {
 	bridge         engine.Bridge
 	registryBridge engine.Bridge // Tool registry bridge for enhanced functionality

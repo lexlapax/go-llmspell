@@ -16,6 +16,7 @@ import (
 // It provides hook registration, priority ordering, lifecycle execution,
 // and management operations for extending LLM behavior at various points
 // in the processing pipeline.
+// bridge_id=bridges.agent_hooks
 type HooksAdapter struct {
 	*gopherlua.BridgeAdapter
 }

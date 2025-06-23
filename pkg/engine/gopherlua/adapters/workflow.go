@@ -16,6 +16,7 @@ import (
 // It provides workflow creation, execution, step management, templates,
 // and serialization capabilities for orchestrating complex LLM interactions
 // and processing pipelines.
+// bridge_id=bridges.agent_workflow
 type WorkflowAdapter struct {
 	*gopherlua.BridgeAdapter
 }

@@ -17,6 +17,10 @@ import (
 // It combines guardrails for safety enforcement, metrics for performance monitoring,
 // and distributed tracing capabilities into a unified observability interface
 // for Lua scripts.
+// bridge_id=bridges.observability_metrics
+// bridge_id=bridges.observability_tracing
+// bridge_id=bridges.observability_guardrails
+
 type ObservabilityAdapter struct {
 	guardrailsBridge engine.Bridge
 	metricsBridge    engine.Bridge

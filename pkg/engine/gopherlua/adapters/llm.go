@@ -16,6 +16,10 @@ import (
 // It provides comprehensive LLM operations including agent creation,
 // completion methods, streaming, model selection, provider management,
 // and connection pool functionality for Lua scripts.
+// bridge_id=bridges.llm_core
+// bridge_id=bridges.llm_providers
+// bridge_id=bridges.llm_pool
+
 type LLMAdapter struct {
 	*gopherlua.BridgeAdapter
 

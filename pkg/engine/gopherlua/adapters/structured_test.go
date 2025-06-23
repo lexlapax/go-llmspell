@@ -20,7 +20,7 @@ import (
 func TestStructuredAdapter_Creation(t *testing.T) {
 	t.Run("create_structured_adapter", func(t *testing.T) {
 		// Create structured bridge mock
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name:        "Schema Bridge",
@@ -72,7 +72,7 @@ func TestStructuredAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("structured_module_structure", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "Schema Bridge",
@@ -150,7 +150,7 @@ func TestStructuredAdapter_Creation(t *testing.T) {
 
 func TestStructuredAdapter_SchemaCreation(t *testing.T) {
 	t.Run("create_simple_schema", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("createSchema", engine.MethodInfo{
 				Name: "createSchema",
@@ -205,7 +205,7 @@ func TestStructuredAdapter_SchemaCreation(t *testing.T) {
 	})
 
 	t.Run("create_property_definition", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("createProperty", engine.MethodInfo{
 				Name: "createProperty",
@@ -261,7 +261,7 @@ func TestStructuredAdapter_SchemaCreation(t *testing.T) {
 
 func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 	t.Run("validate_json_data", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("validateJSON", engine.MethodInfo{
 				Name: "validateJSON",
@@ -315,7 +315,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 	})
 
 	t.Run("validate_with_errors", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("validateJSON", engine.MethodInfo{
 				Name: "validateJSON",
@@ -375,7 +375,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 	})
 
 	t.Run("validate_struct_data", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("validateStruct", engine.MethodInfo{
 				Name: "validateStruct",
@@ -429,7 +429,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 
 func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 	t.Run("generate_from_type", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("generateSchemaFromType", engine.MethodInfo{
 				Name: "generateSchemaFromType",
@@ -486,7 +486,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 	})
 
 	t.Run("generate_from_tags", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("generateFromTags", engine.MethodInfo{
 				Name: "generateFromTags",
@@ -545,7 +545,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 	})
 
 	t.Run("convert_json_schema", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("convertJSONSchema", engine.MethodInfo{
 				Name: "convertJSONSchema",
@@ -596,7 +596,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 
 func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 	t.Run("save_and_get_schema", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("saveSchema", engine.MethodInfo{
 				Name: "saveSchema",
@@ -671,7 +671,7 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 	})
 
 	t.Run("initialize_file_repository", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("initializeFileRepository", engine.MethodInfo{
 				Name: "initializeFileRepository",
@@ -705,7 +705,7 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 
 func TestStructuredAdapter_ImportExport(t *testing.T) {
 	t.Run("export_to_json_schema", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("exportToJSONSchema", engine.MethodInfo{
 				Name: "exportToJSONSchema",
@@ -752,7 +752,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 	})
 
 	t.Run("export_to_openapi", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("exportToOpenAPI", engine.MethodInfo{
 				Name: "exportToOpenAPI",
@@ -798,7 +798,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 	})
 
 	t.Run("import_from_file", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("importFromFile", engine.MethodInfo{
 				Name: "importFromFile",
@@ -840,7 +840,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 	})
 
 	t.Run("merge_schemas", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("mergeSchemas", engine.MethodInfo{
 				Name: "mergeSchemas",
@@ -905,7 +905,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 
 func TestStructuredAdapter_CustomValidation(t *testing.T) {
 	t.Run("register_custom_validator", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("registerCustomValidator", engine.MethodInfo{
 				Name: "registerCustomValidator",
@@ -964,7 +964,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 	})
 
 	t.Run("list_custom_validators", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("listCustomValidators", engine.MethodInfo{
 				Name: "listCustomValidators",
@@ -1003,7 +1003,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 	})
 
 	t.Run("async_validation", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("validateAsync", engine.MethodInfo{
 				Name: "validateAsync",
@@ -1067,7 +1067,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 
 func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("validateJSON", engine.MethodInfo{
 				Name: "validateJSON",
@@ -1102,7 +1102,7 @@ func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 	})
 
 	t.Run("handle_invalid_schema_format", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("convertJSONSchema", engine.MethodInfo{
 				Name: "convertJSONSchema",
@@ -1138,7 +1138,7 @@ func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 
 func TestStructuredAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("schema_constants", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("createSchema", engine.MethodInfo{
 				Name: "createSchema",
@@ -1178,7 +1178,7 @@ func TestStructuredAdapter_ConvenienceMethods(t *testing.T) {
 	})
 
 	t.Run("utility_methods", func(t *testing.T) {
-		structuredBridge := testutils.NewMockBridge("structured").
+		structuredBridge := testutils.NewMockBridge("structured_schema").
 			WithInitialized(true).
 			WithMethod("generateDiff", engine.MethodInfo{
 				Name: "generateDiff",

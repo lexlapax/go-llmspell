@@ -16,6 +16,14 @@ import (
 // It provides authentication, debugging, error handling, JSON processing,
 // LLM utilities, logging, structured logging (slog), and general utility
 // functions in a single convenient interface for Lua scripts.
+// bridge_id=bridges.util_core
+// bridge_id=bridges.util_debug
+// bridge_id=bridges.util_slog
+// bridge_id=bridges.util_script_logger
+// bridge_id=bridges.util_auth
+// bridge_id=bridges.util_llm
+// bridge_id=bridges.util_json
+// bridge_id=bridges.util_errors
 type UtilsAdapter struct {
 	authBridge    engine.Bridge
 	debugBridge   engine.Bridge

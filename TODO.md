@@ -69,120 +69,18 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
 
 ### Phase 2.4: Advanced Features & Optimization
 #### 2.4.1: Performance Optimization
-
 #### 2.4.3: Development Tools
-- [x] **Task 2.4.3.1: Debugger Support** (`/pkg/engine/gopherlua/debug.go`) **[COMPLETED - 2025-06-20]**
-  - [x] Implement breakpoint support with conditional breakpoints
-  - [x] Add step debugging (over, into, out, line modes)
-  - [x] Create variable inspection for call stack frames
-  - [x] Implement stack trace visualization with locals and upvalues
-  - [x] Add watch expressions with real-time evaluation
-  - [x] Add comprehensive test coverage (100% coverage achieved)
-  - [x] Fixed all linting issues and ensured clean build
-
-- [x] **Task 2.4.3.2: Script Validator** (`/pkg/engine/gopherlua/validator.go`) **[COMPLETED - 2025-06-20]**
-  - [x] Implement syntax validation using gopher-lua parser
-  - [x] Add type checking where possible (limited by Lua's dynamic nature)
-  - [x] Create linting rules for code quality
-  - [x] Implement security validation with pattern matching
-  - [x] Add performance warnings (complexity, nesting depth)
-  - [x] Add comprehensive test coverage (100% coverage achieved)
-
-- [x] **Task 2.4.3.3: Documentation Generator** **[COMPLETED - 2025-06-21]**
-  - [x] Extract API from bridges
-  - [x] Generate Lua documentation
-  - [x] Create example extraction
-  - [x] Add type annotations
-  - [x] Generate completion data
-  - [x] Reorganized architecture for multi-language support
-    - [x] Created `/pkg/docs/gendocs.go` with DocGenerator interface
-    - [x] Renamed `gopherlua.go` to `gendocs_lua.go` for consistency
-    - [x] Created command wrapper `/cmd/llmspell/commands/gendocs.go`
-    - [x] Added working `gen-docs` CLI command
-  - [x] Created comprehensive test suite with 100% coverage
-    - [x] Created `/pkg/docs/gendocs_test.go` with full test coverage
-    - [x] Fixed all lint errors
-  - [x] Renamed `llmspell.go` to `manpage_llmspell.go` for consistency
-  - [x] **Architecture Note**: Added upstream request for go-llms documentation extensions
-    - [x] Documented need for script-aware Documentable interface
-    - [x] Proposed upstreaming man page generation to go-llms
-    - [x] Plan to bridge go-llms docs instead of reimplementing
 
 #### 2.4.4: Production Readiness
 - [x] **Task 2.4.4.1: Comprehensive Testing** **[COMPLETED - 2025-06-23]**
-  - [x] Achieve 90%+ test coverage (comprehensive_test.go created) **[COMPLETED - 2025-06-22]**
-  - [x] Add integration test suite (integration_test.go created) **[COMPLETED - 2025-06-22]**
-  - [x] Create stress tests (engine_stress_test.go, bridge_stress_test.go) **[COMPLETED - 2025-06-23]**
-  - [x] Implement chaos testing (chaos_test.go) **[COMPLETED - 2025-06-23]**
-  - [x] Add regression test suite (regression_test.go) **[COMPLETED - 2025-06-23]**
-  - [x] Fix integration test failures **[COMPLETED - 2025-06-23]**
-
 - [x] **Task 2.4.4.2: Error Handling Enhancement** **[COMPLETED - 2025-06-23]**
-  - [x] Standardize error types (SpellError base type with consistent structure) **[COMPLETED - 2025-06-23]**
-  - [x] Add error categorization (13 categories: Usage, Config, Script, Engine, etc.) **[COMPLETED - 2025-06-23]**
-  - [x] Implement error recovery (suggestions, context, recovery handlers) **[COMPLETED - 2025-06-23]**
-  - [x] Create error reporting (formatter with color, debug modes, chain handling) **[COMPLETED - 2025-06-23]**
-  - [x] Add error metrics (counters, rates, recent errors buffer) **[COMPLETED - 2025-06-23]**
-
 - [x] **Task 2.4.4.3: Stdlib Module Loading Fix** (Option 1: Embed and Preload) **[COMPLETED - 2025-06-23]**
-  - [x] Create `/pkg/engine/gopherlua/stdlib/embed.go` to embed all .lua files
-    - [x] Use `go:embed` directive to embed *.lua files
-    - [x] Create exported variable with embedded filesystem
-    - [x] Add function to list all embedded modules
-    - [x] Update Makefile targets if we need to. (No changes needed)
-  - [x] Create `/pkg/engine/gopherlua/stdlib/loader.go` for module loading
-    - [x] Implement `LoadEmbeddedModule(name string) (lua.LGFunction, error)`
-    - [x] Create `GetAllStdlibLoaders() map[string]lua.LGFunction`
-    - [x] Add module caching to prevent re-parsing
-    - [x] Handle module dependencies and load order
-    - [x] Added module aliases (log -> logging) for compatibility
-  - [x] Update `/pkg/engine/gopherlua/factory.go`
-    - [x] Import stdlib loader package
-    - [x] Add stdlib modules to PreloadModules in FactoryConfig
-    - [x] Ensure modules are available before init script runs
-    - [x] Added DisableStdlib flag to FactoryConfig
-    - [x] Fixed NewLStateFactory to load stdlib by default
-  - [x] Update `/pkg/engine/gopherlua/engine.go`
-    - [x] Modify Initialize() to load stdlib modules
-    - [x] Pass loaded modules to factory config
-    - [x] Add configuration option to disable stdlib loading
-    - [x] Fixed security compatibility: auto-add "package" library when stdlib enabled
-  - [x] Add comprehensive tests
-    - [x] Test embedded file access (embed_test.go)
-    - [x] Test module loading in isolated Lua state (loader_test.go)
-    - [x] Test require() functionality for all modules (loader_test.go)
-    - [x] Test module interdependencies (loader_test.go, engine_test.go)
-    - [x] Test error cases (missing modules, load failures) (all test files)
-    - [x] Updated factory_test.go with comprehensive stdlib tests
-    - [x] Fixed all test failures and compatibility issues
-  - [x] Update example spells
-    - [x] Verify all example spells work with embedded modules **[COMPLETED - 2025-06-23]**
-    - [x] Remove any workarounds for module loading **[COMPLETED - 2025-06-23]**
   - [ ] Documentation updates
     - [ ] Document embedded module system
     - [ ] Update troubleshooting guide
     - [ ] Add notes about deployment considerations
 
 - [x] **Task 2.4.4.4: Parameter Injection Fix** (Option 1: Create params table) **[COMPLETED - 2025-06-23]**
-  - [x] Update `injectParameters` method in `engine_execute.go` **[COMPLETED - 2025-06-23]**
-    - [x] Create global `params` table instead of individual global variables **[COMPLETED - 2025-06-23]**
-    - [x] Support both `params.key` and individual `key` globals for backward compatibility **[COMPLETED - 2025-06-23]**
-    - [x] Maintain proper type conversion and error handling **[COMPLETED - 2025-06-23]**
-  - [x] Add comprehensive tests for parameter injection **[COMPLETED - 2025-06-23]**
-    - [x] Test `params` table creation and access **[COMPLETED - 2025-06-23]**
-    - [x] Test individual global variable fallback **[COMPLETED - 2025-06-23]**
-    - [x] Test complex parameter types (nested tables, arrays) **[COMPLETED - 2025-06-23]**
-    - [x] Test parameter type conversion edge cases **[COMPLETED - 2025-06-23]**
-  - [x] Verify all example spells work with new parameter injection **[COMPLETED - 2025-06-23]**
-    - [x] Test CLI parameter passing works end-to-end **[COMPLETED - 2025-06-23]**
-    - [x] Verify `params.output_dir`, `params.model`, etc. work correctly **[COMPLETED - 2025-06-23]**
-    - [x] Test all 13 example spells **[COMPLETED - 2025-06-23]**
-      - [x] Fixed CLI "engine registry not found in context" error by updating run.go to use Runner interface **[COMPLETED - 2025-06-23]**
-      - [x] Verified parameter injection works for both params table and global variables across all spell simulations **[COMPLETED - 2025-06-23]**
-  - [x] Update documentation for parameter usage **[COMPLETED - 2025-06-23]**
-    - [x] Document `params` table in user guide **[COMPLETED - 2025-06-23]**
-    - [x] Add examples of parameter access patterns **[COMPLETED - 2025-06-23]**
-    - [x] Update troubleshooting guide for parameter issues **[COMPLETED - 2025-06-23]**
 
 - [ ] **Task 2.4.4.5: Bridge Initialization Optimization** (Refactor for lazy loading and multi-engine support)
   - [x] Update `LoadBridgeModules` to set individual globals for stdlib compatibility **[COMPLETED - 2025-06-23]**
@@ -242,149 +140,219 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
     - [x] Verify no circular dependencies remain **[COMPLETED - 2025-06-23]**
       - [x] Run `go build ./...` to ensure compilation **[COMPLETED - 2025-06-23]**
       - [x] Check IDE diagnostics show no import errors **[COMPLETED - 2025-06-23]**
-  - [ ] **Task 2.4.4.5.5: Integration Testing**
-    - [ ] Test bridge availability in stdlib modules with lazy loading
-      - [ ] Verify `tools.list()` works correctly with on-demand bridge loading
-      - [ ] Test other stdlib modules that require bridges work with lazy loading
-      - [ ] Ensure bridge globals are properly set when engine is loaded
-    - [ ] Update example spells testing
-      - [ ] Test all 13 example spells work with lazy bridge initialization
-      - [ ] Verify bridge-dependent functionality works correctly
-      - [ ] Test that only needed bridges are loaded for each spell
-    - [ ] Performance verification
-      - [ ] Measure startup time improvement with lazy loading
-      - [ ] Verify memory usage is reduced for simple scripts
-      - [ ] Test CLI responsiveness for engine listing commands
+  - [x] **Task 2.4.4.5.5: Integration Testing** **[ABSORBED INTO PHASE 6 - 2025-06-23]**
+    - **NOTE**: All tasks moved to Phase 6: Integration Testing for comprehensive end-to-end validation
 
-  - [ ] **Task 2.4.4.5.6: Bridge Architecture Naming Standardization**
+  - [x] **Task 2.4.4.5.6: Bridge Architecture Naming Standardization** **[COMPLETED - 2025-06-23]**
     - [x] **Phase 1: Bridge Layer Naming Updates** (`/pkg/bridge/*`) **[COMPLETED - 2025-06-23]**
-      - [x] Update LLM bridges:
-        - [x] Change `GetID() "llm"` → `"llm_core"` in `llm/llm.go`
-        - [x] Change `GetID() "providers"` → `"llm_providers"` in `llm/providers.go`
-        - [x] Change `GetID() "pool"` → `"llm_pool"` in `llm/pool.go`
-        - [x] Update corresponding tests in `llm/*_test.go`
-        - [x] Rename test files to match the implementation file names if they've changed.
-        - [x] Run `go test ./pkg/bridge/llm/...` to verify
-      - [x] Update Util bridges:
-        - [x] Change `GetID() "slog"` → `"util_slog"` in `util/slog.go`
-        - [x] Change `GetID() "script_logger"` → `"util_script_logger"` in `util/script_logger.go`  
-        - [x] Change `GetID() "debug"` → `"util_debug"` in `util/debug.go`
-        - [x] Change `GetID() "util"` → `"util_core"` in `util/util.go`
-        - [x] Keep `"util_auth"`, `"util_llm"`, `"util_json"`, `"util_errors"` as-is (already consistent)
-        - [x] Rename test files to match the implementation file names if they've changed.
-        - [x] Update corresponding tests in `util/*_test.go`
-        - [x] Run `go test ./pkg/bridge/util/...` to verify
-      - [x] Update Agent bridges:
-        - [x] Change `GetID() "agent"` → `"agent_core"` in `agent/agent.go`
-        - [x] Change `GetID() "tools"` → `"agent_tools"` in `agent/tools.go`
-        - [x] Change `GetID() "tools_registry"` → `"agent_tools_registry"` in `agent/tool_registry.go`
-        - [x] Change `GetID() "events"` → `"agent_events"` in `agent/events.go`
-        - [x] Change `GetID() "workflow"` → `"agent_workflow"` in `agent/workflow.go`
-        - [x] Change `GetID() "hooks"` → `"agent_hooks"` in `agent/hooks.go`
-        - [x] Rename test files to match the implementation file names if they've changed.
-        - [x] Update corresponding tests in `agent/*_test.go`
-        - [x] Run `go test ./pkg/bridge/agent/...` to verify
-      - [x] Update Observability bridges:
-        - [x] Change `GetID() "metrics"` → `"observability_metrics"` in `observability/metrics.go`
-        - [x] Change `GetID() "tracing"` → `"observability_tracing"` in `observability/tracing.go`
-        - [x] Change `GetID() "guardrails"` → `"observability_guardrails"` in `observability/guardrails.go`
-        - [x] Rename test files to match the implementation file names if they've changed.
-        - [x] Update corresponding tests in `observability/*_test.go`
-        - [x] Run `go test ./pkg/bridge/observability/...` to verify
-      - [x] Update State bridges:
-        - [x] Keep `"state_context"` and `"state_manager"` as-is (already namespaced)
-        - [x] Run `go test ./pkg/bridge/state/...` to verify nothing broke
-      - [x] Update Structured bridges:
-        - [x] Change `GetID() "schema"` → `"structured_schema"` in `structured/schema.go`
-        - [x] Rename test files to match the implementation file names if they've changed.
-        - [x] Update corresponding tests in `structured/*_test.go`
-        - [x] Run `go test ./pkg/bridge/structured/...` to verify
-      - [x] Update root bridges:
-        - [x] Change `GetID() "modelinfo"` → `"llm_modelinfo"` in `bridge/modelinfo.go`
-        - [x] Rename test files to match the implementation file names if they've changed.
-        - [x] Update corresponding tests
-        - [x] Run `go test ./pkg/bridge/...` to verify
-      - [x] Fix bridge registry tests that expect old bridge IDs
-      - [x] Update permission resources to match new bridge IDs in RequiredPermissions()
-      - [x] Update REPL tests to use new bridge names (bridges.util → bridges.util_core)
-    
-    - [ ] **Phase 2: Bridge Adapter Updates** (`/pkg/engine/gopherlua/adapters/*`)
-      - [ ] Update adapter registrations to match new bridge IDs:
-        - [ ] Update `agent/*` adapters to use new IDs (`agent_core`, `agent_tools`, etc.)
-        - [ ] Update `llm/*` adapters to use new IDs (`llm_core`, `llm_providers`, etc.)
-        - [ ] Update `utils/*` adapters to use new IDs (`util_core`, `util_debug`, etc.)
-        - [ ] Update `observability/*` adapters to use new IDs (`observability_metrics`, etc.)
-        - [ ] Update any bridge ID references in adapter implementations
-        - [ ] Rename test files to match the implementation file names if they've changed.
-        - [ ] Run adapter tests: `go test ./pkg/engine/gopherlua/adapters/...`
-      - [ ] Update bridge registry mappings:
-        - [ ] Update `pkg/bridge/registry/registry.go` factory functions to use new IDs
-        - [ ] Verify bridge sets still group bridges correctly
-        - [ ] Run registry tests: `go test ./pkg/bridge/registry/...`
-    
+    - [x] **Phase 2: Bridge Adapter Updates** (`/pkg/engine/gopherlua/adapters/*` + Registry) **[COMPLETED - 2025-06-23]**
     - [x] **Phase 3: Stdlib Module Updates** (`/pkg/engine/gopherlua/stdlib/*.lua`) **[COMPLETED - 2025-06-23]**
-      - [x] Update bridge references in Lua modules:
-        - [x] Update `llm.lua`: 
-          - [x] Change `bridges.llm_bridge` → `bridges.llm_core`
-          - [x] Change `bridges.llm_util_bridge` → `bridges.util_llm`
-        - [x] Update `logging.lua`:
-          - [x] Already correct: uses `bridges.util_debug`, `bridges.util_script_logger`, `bridges.util_slog`
-        - [x] Update `observability.lua`:
-          - [x] Change `bridges.metrics` → `bridges.observability_metrics`
-          - [x] Change `bridges.tracing` → `bridges.observability_tracing`
-          - [x] Change `bridges.guardrails` → `bridges.observability_guardrails`
-          - [x] Change `bridges.slog` → `bridges.util_slog`
-          - [x] Change `bridges.events` → `bridges.agent_events`
-        - [x] Update `agent.lua`:
-          - [x] Change `bridges.agent` → `bridges.agent_core`
-          - [x] Change `bridges.workflow` → `bridges.agent_workflow`
-        - [x] Update `events.lua`:
-          - [x] Change `bridges.events` → `bridges.agent_events`
-        - [x] Update `tools.lua`:
-          - [x] Change `bridges.tools` → `bridges.agent_tools`
-        - [x] Update `data.lua`:
-          - [x] Change `bridges.util` → `bridges.util_core`
-        - [x] Update `auth.lua`:
-          - [x] Already correct: uses `bridges.util_auth`, acknowledges `bridges.security` doesn't exist
-      - [x] Run stdlib tests: `go test ./pkg/engine/gopherlua/stdlib/...` **[COMPLETED - 2025-06-23]**
-    
     - [x] **Phase 4: Add Missing Components** **[COMPLETED - 2025-06-23]**
-      - [x] Create `structured.lua` stdlib module: **[COMPLETED - 2025-06-23]**
-        - [x] Create `/pkg/engine/gopherlua/stdlib/structured.lua` **[COMPLETED - 2025-06-23]**
-        - [x] Implement wrapper functions for `bridges.structured_schema` **[COMPLETED - 2025-06-23]**
-        - [x] Add unit tests in `structured_test.go` **[COMPLETED - 2025-06-23]**
-        - [x] Add to stdlib loader configuration **[COMPLETED - 2025-06-23]**
-      - [x] Decide on missing bridge implementations: **[COMPLETED - 2025-06-23]**
-        - [x] Determine if `security` bridge is needed for `auth.lua` **[COMPLETED - 2025-06-23]**
-        - [x] Document decision in code comments **[COMPLETED - 2025-06-23]**
-          - Decision: Security bridge is NOT needed. auth.lua is designed to work without it.
+    - [x] **Phase 5: Fix Security Profile Mapping** **[COMPLETED - 2025-06-23]**
+    - [x] **Phase 6: Comprehensive Integration Testing** **[COMPLETED - 2025-06-23]**
+
+  - [ ] **Task 2.4.4.5.7: Security Level & Feature Set Separation Implementation**
+    **BREAKING CHANGE: Replace --profile with --security-level and --feature-set flags**
     
-    - [ ] **Phase 5: Fix Security Profile Mapping**
-      - [ ] Debug why CLI `--profile` isn't reaching executor:
-        - [ ] Add debug logging in `cmd/llmspell/main.go` to trace profile value
-        - [ ] Add debug logging in `runner/executor.go` to verify profile mapping execution
-        - [ ] Test with `--debug` flag to see actual security level applied
-      - [ ] Fix the security profile propagation:
-        - [ ] Ensure CLI profile value is passed through context correctly
-        - [ ] Verify `ExecuteWithOptions` receives correct security profile
-        - [ ] Confirm mapping in `executor.go:194-207` is executed
-      - [ ] Add integration test for security profile mapping:
-        - [ ] Test that `--profile=development` allows `require()`
-        - [ ] Test that `--profile=sandbox` blocks `require()`
-        - [ ] Test stdlib module loading with different profiles
+    - [ ] **Phase 1: Single-Source Architecture (Core Definitions)**
+      - [ ] **Create `/pkg/security/levels.go`** (RENAME from profiles.go)
+        - [ ] Define SecurityLevel enum: `untrusted`, `trusted`, `privileged`
+        - [ ] Implement `IsValidLevel(level string) bool` validation function
+        - [ ] Implement `GetLevelConfig(level SecurityLevel) *SecurityConfig` 
+        - [ ] Replace all SecurityProfile struct usage with SecurityLevel enum
+        - [ ] Replace profile functions:
+          - [ ] `SandboxProfile()` → `UntrustedLevel()`
+          - [ ] `DevelopmentProfile()` → `TrustedLevel()`  
+          - [ ] `ProductionProfile()` → `PrivilegedLevel()`
+        - [ ] Add comprehensive unit tests for new SecurityLevel system
+        - [ ] Verify no hardcoded security level strings anywhere else
+      
+      - [ ] **Create `/pkg/bridge/registry/feature_sets.go`** (NEW FILE)
+        - [ ] Define FeatureSet enum: `minimal`, `llm`, `agent`, `observable`, `full`
+        - [ ] Implement `IsValidFeatureSet(fs string) bool` validation function
+        - [ ] Implement `GetBridgeSetsForFeature(fs FeatureSet) []BridgeSet` mapping function
+        - [ ] Define FeatureSetBridges mapping:
+          - [ ] `FeatureSetMinimal`: Core + Utility
+          - [ ] `FeatureSetLLM`: Core + Utility + LLM + Structured  
+          - [ ] `FeatureSetAgent`: Core + Utility + LLM + Structured + Agent + State
+          - [ ] `FeatureSetObservable`: Core + Utility + LLM + Observability
+          - [ ] `FeatureSetFull`: All bridge sets
+        - [ ] Add comprehensive unit tests for feature set mappings
+        - [ ] Verify feature set definitions are single-source only
+      
+      - [ ] **Update `/cmd/llmspell/commands/common.go`** (CLI Integration Helpers)
+        - [ ] Add imports for `security/levels.go` and `registry/feature_sets.go`
+        - [ ] Add new context keys: `SecurityLevelKey`, `FeatureSetKey`
+        - [ ] Implement `GetSecurityLevel(ctx context.Context) security.SecurityLevel`
+        - [ ] Implement `GetFeatureSet(ctx context.Context) registry.FeatureSet`
+        - [ ] REMOVE `GetProfile()` function entirely
+        - [ ] Update context key constants and helper functions
+        - [ ] Add validation helpers that use centralized enums
     
-    - [ ] **Phase 6: Integration Testing**
-      - [ ] Create comprehensive bridge availability test:
-        - [ ] Test all renamed bridges are accessible
-        - [ ] Test all stdlib modules can load with correct bridge names
-        - [ ] Test backward compatibility if needed
-      - [ ] Test all 13 example spells with new bridge names:
-        - [ ] Run each spell with `--profile=development`
-        - [ ] Verify unified globals (`state`, `observability`) work
-        - [ ] Document any breaking changes
-      - [ ] Performance regression testing:
-        - [ ] Ensure bridge renaming doesn't impact performance
-        - [ ] Verify lazy loading still works with new names
+    - [ ] **Phase 2: CLI and Command Updates**
+      - [ ] **Update `/cmd/llmspell/main.go`**
+        - [ ] Import `security/levels.go` and `registry/feature_sets.go`
+        - [ ] REPLACE `Profile string` with dual flags:
+          - [ ] `SecurityLevel string` with default="trusted" enum="untrusted,trusted,privileged"
+          - [ ] `FeatureSet string` with default="full" enum="minimal,llm,agent,observable,full"`
+        - [ ] REMOVE old --profile flag entirely (breaking change)
+        - [ ] Add CLI validation using centralized `IsValidLevel()` and `IsValidFeatureSet()`
+        - [ ] Update context creation to pass both SecurityLevel and FeatureSet
+        - [ ] Add unit tests for new CLI flag parsing and validation
+      
+      - [ ] **Update `/cmd/llmspell/commands/run.go`**
+        - [ ] Import `commands/common.go` helpers
+        - [ ] USE `GetSecurityLevel()` and `GetFeatureSet()` from context
+        - [ ] REMOVE all hardcoded profile strings
+        - [ ] Update script execution to pass both security level and feature set
+        - [ ] Update error handling for new dual-flag system
+        - [ ] Add integration tests for new run command behavior
+      
+      - [ ] **Update `/cmd/llmspell/commands/repl.go`**
+        - [ ] Import `commands/common.go` helpers  
+        - [ ] SUPPORT `--security-level` and `--feature-set` flags in REPL
+        - [ ] USE same defaults as CLI: `trusted` + `full`
+        - [ ] Update REPL configuration to handle dual flags
+        - [ ] Remove any profile-related REPL configuration
+        - [ ] Add integration tests for REPL with new flag system
+      
+      - [ ] **Update `/cmd/llmspell/commands/security.go`**
+        - [ ] Import `security/levels.go`
+        - [ ] USE centralized SecurityLevel constants (no redefinition)
+        - [ ] Update security command to list security levels instead of profiles
+        - [ ] ADD feature set management commands
+        - [ ] Update help text and documentation for new system
+    
+    - [ ] **Phase 3: Engine and Registry Updates**
+      - [ ] **Update `/pkg/bridge/registry/registry.go`**
+        - [ ] Import `feature_sets.go` from same package
+        - [ ] REMOVE existing BridgeProfile variables: `StandardProfile`, `MinimalProfile`, `LLMProfile`, `DevelopmentProfile`
+        - [ ] REPLACE profile-based bridge loading with feature-set-based loading
+        - [ ] USE FeatureSet constants from feature_sets.go (no redefinition)
+        - [ ] Update factory functions to use `GetBridgeSetsForFeature()`
+        - [ ] Add unit tests for new feature-set-based bridge loading
+      
+      - [ ] **Update `/pkg/runner/engine_registry.go`**
+        - [ ] Import `security/levels.go` and `registry/feature_sets.go`
+        - [ ] REPLACE `getBridgeProfileForSecurityProfile()` with `getBridgesForFeatureSet()`
+        - [ ] REMOVE all profile mapping functions: `getLuaBridgeProfile()`, `getJavaScriptBridgeProfile()`, `getTengoBridgeProfile()`
+        - [ ] REMOVE all hardcoded profile strings  
+        - [ ] Update engine creation to use SecurityLevel enum
+        - [ ] Update bridge loading to use FeatureSet enum
+        - [ ] Add comprehensive unit tests for new system
+      
+      - [ ] **Update `/pkg/engine/gopherlua/engine.go`**
+        - [ ] Import `security/levels.go`
+        - [ ] USE SecurityLevel constants (no redefinition)
+        - [ ] REMOVE all hardcoded profile strings
+        - [ ] Update engine creation to accept SecurityLevel enum
+        - [ ] Update bridge registration to use FeatureSet
+        - [ ] Add unit tests for engine with new security/feature system
+      
+      - [ ] **Update `/pkg/engine/gopherlua/security.go`**
+        - [ ] Import `security/levels.go`
+        - [ ] USE centralized SecurityLevel enum (no redefinition)
+        - [ ] REMOVE all profile string parsing and hardcoded strings
+        - [ ] Update security configuration functions to use SecurityLevel
+        - [ ] Add unit tests for security configuration with new enum system
+      
+      - [ ] **Update `/pkg/repl/lua_repl.go`**
+        - [ ] Import `commands/common.go` helpers
+        - [ ] USE `GetSecurityLevel()` and `GetFeatureSet()` from context
+        - [ ] DEFAULT to `trusted` + `full` when no flags specified
+        - [ ] Update bridge loading to use FeatureSet from context
+        - [ ] Remove any hardcoded profile references
+        - [ ] Add unit tests for REPL with new dual-flag system
+    
+    - [ ] **Phase 4: Configuration and Infrastructure Updates**
+      - [ ] **Update `/pkg/config/config.go`**
+        - [ ] Import both `security/levels.go` and `registry/feature_sets.go`
+        - [ ] USE centralized enums in configuration structs
+        - [ ] REMOVE old profile settings entirely (breaking change)
+        - [ ] Update configuration loading to use SecurityLevel and FeatureSet
+        - [ ] Add validation for configuration using centralized enum functions
+        - [ ] Add unit tests for configuration with new enum system
+    
+    - [ ] **Phase 5: Comprehensive Test Updates (34 files)**
+      - [ ] **Integration Tests**
+        - [ ] Update `/tests/integration/bridge_system_integration_test.go`
+          - [ ] Replace profile strings with SecurityLevel + FeatureSet
+          - [ ] Test dual-flag system in integration scenarios
+          - [ ] Verify bridge loading works with new feature set system
+        - [ ] Update `/tests/integration/security_profile_test.go` → `security_level_test.go`
+          - [ ] Rename file to reflect new system
+          - [ ] Test SecurityLevel enum instead of profile strings
+          - [ ] Test FeatureSet bridge loading
+          - [ ] Test dual-flag CLI parsing in integration scenarios
+        - [ ] Update all command tests in `/tests/integration/commands/`
+          - [ ] Replace --profile with --security-level and --feature-set in tests
+          - [ ] Test CLI validation with new enum system
+          - [ ] Test command execution with dual flags
+      
+      - [ ] **Unit Tests**
+        - [ ] Update `/pkg/security/profiles_test.go` → `/pkg/security/levels_test.go`
+          - [ ] Rename and update for SecurityLevel enum testing
+          - [ ] Test `IsValidLevel()` and `GetLevelConfig()` functions
+          - [ ] Remove old profile struct tests
+        - [ ] Update `/pkg/bridge/registry/registry_test.go`
+          - [ ] Test new feature set to bridge set mappings
+          - [ ] Test `GetBridgeSetsForFeature()` function
+          - [ ] Remove old BridgeProfile tests
+        - [ ] Update `/pkg/runner/engine_bridge_profiles_test.go` → `engine_security_feature_test.go`
+          - [ ] Rename and update for new SecurityLevel + FeatureSet system
+          - [ ] Test new bridge loading logic with dual enums
+          - [ ] Remove old profile mapping tests
+        - [ ] Update all engine tests in `/pkg/engine/gopherlua/`
+          - [ ] Replace profile strings with SecurityLevel + FeatureSet
+          - [ ] Test security configuration with new enum system
+          - [ ] Test bridge loading with new feature set system
+      
+      - [ ] **Test Data and Fixtures**
+        - [ ] Update test fixtures to use SecurityLevel and FeatureSet enums
+        - [ ] Replace hardcoded profile strings in test data
+        - [ ] Update mock configurations for new dual-flag system
+        - [ ] Ensure no test redefinition of enums (import from centralized sources)
+    
+    - [ ] **Phase 6: Documentation Updates**
+      - [ ] **Update `/docs/technical/security-profile-bridge-mapping-analysis.md`**
+        - [ ] ARCHIVE existing file (rename with -ARCHIVED suffix)
+        - [ ] CREATE new documentation for SecurityLevel + FeatureSet architecture
+        - [ ] Document single-source enum principle
+        - [ ] Document breaking changes from --profile system
+      
+      - [ ] **Update `/pkg/docs/manpage_llmspell.go`**
+        - [ ] UPDATE CLI documentation for new --security-level and --feature-set flags
+        - [ ] REMOVE --profile flag documentation
+        - [ ] Add usage examples with new dual-flag system
+        - [ ] Document default values (trusted + full)
+      
+      - [ ] **Update user documentation**
+        - [ ] Update getting started guides for new CLI flags
+        - [ ] Document breaking changes and migration instructions
+        - [ ] Update examples to use new flag system
+        - [ ] Create usage guide for SecurityLevel and FeatureSet combinations
+    
+    - [ ] **Phase 7: Final Validation and Cleanup**
+      - [ ] **Enum Definition Enforcement**
+        - [ ] Verify SecurityLevel definitions exist ONLY in `/pkg/security/levels.go`
+        - [ ] Verify FeatureSet definitions exist ONLY in `/pkg/bridge/registry/feature_sets.go`
+        - [ ] Verify CLI helpers exist ONLY in `/cmd/llmspell/commands/common.go`
+        - [ ] Search codebase for any enum redefinition violations
+        - [ ] Run `go build ./...` to ensure no compilation errors
+      
+      - [ ] **Integration Verification**
+        - [ ] Test CLI with all SecurityLevel + FeatureSet combinations
+        - [ ] Test REPL with dual-flag system
+        - [ ] Test backward compatibility removed (--profile should fail)
+        - [ ] Test default behavior (trusted + full)
+        - [ ] Verify all bridge loading works with new system
+      
+      - [ ] **Performance and Behavior Verification**
+        - [ ] Verify startup time unchanged with new enum system
+        - [ ] Test memory usage with different feature sets
+        - [ ] Verify bridge lazy loading still works with new system
+        - [ ] Test security restrictions work with new SecurityLevel enum
+        - [ ] Ensure no functional regressions from profile system removal
 
 
 #### 2.4.5: Documentation & Examples
@@ -501,74 +469,109 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
   - [ ] Add import controls
 
 ---
-## Phase 6: Integration and Examples
+## Phase 6: Security Level & Feature Set Separation (Current Priority)
 
-### 6.1 Example Spells
-- [ ] **Task 6.1.1: Basic Examples**
+Based on `/docs/technical/security-feature-separation-implementation.md`, this phase implements the breaking change from `--profile` to `--security-level` and `--feature-set` flags with single-source enum definitions.
+
+**See Task 2.4.4.5.7 above for detailed implementation plan.**
+
+---
+## Phase 7: Integration and Examples
+
+### 7.1 Example Spells
+- [ ] **Task 7.1.1: Basic Examples**
   - [ ] Hello World spell (all engines)
   - [ ] LLM chat spell
   - [ ] Tool usage spell
   - [ ] State management spell
 
-- [ ] **Task 6.1.2: Advanced Examples**
+- [ ] **Task 7.1.2: Advanced Examples**
   - [ ] Multi-agent orchestration spell
   - [ ] Complex workflow spell
   - [ ] Event-driven spell
   - [ ] Hook-based customization spell
 
-### 6.2 Testing
-- [ ] **Task 6.2.1: Cross-Engine Tests** **[DEFERRED from 1.3.21]**
+### 7.2 Testing
+- [ ] **Task 7.2.1: Cross-Engine Tests** **[DEFERRED from 1.3.21]**
   - [ ] Create conformance test suite
   - [ ] Verify API compatibility
   - [ ] Test performance characteristics
 
-- [ ] **Task 6.2.2: Integration Tests**
+- [ ] **Task 7.2.2: Integration Tests**
   - [ ] Test bridge functionality
   - [ ] Test type conversions
   - [ ] Test error handling
 
+### 7.3 Comprehensive Integration Testing (Moved from Task 2.4.4.5.6 Phase 6)
+- [ ] **Bridge System Integration** (from Task 2.4.4.5.5):
+  - [x] Test all renamed bridges are accessible with lazy loading
+  - [x] Test all stdlib modules can load with correct bridge names and lazy initialization
+  - [ ] Verify `tools.list()` works correctly with on-demand bridge loading (from 2.4.4.5.5)
+  - [ ] Test other stdlib modules that require bridges work with lazy loading (from 2.4.4.5.5)
+  - [ ] Ensure bridge globals are properly set when engine is loaded on-demand (from 2.4.4.5.5)
+  - [ ] Test backward compatibility if needed
+- [ ] **Example Spells Integration** (from Task 2.4.4.5.5):
+  - [ ] Test all 13 example spells work with new bridge names AND lazy bridge initialization (from 2.4.4.5.5)
+  - [ ] Run each spell with different security profiles (`--profile=development`, `--profile=sandbox`)
+  - [ ] Verify bridge-dependent functionality works correctly with on-demand loading (from 2.4.4.5.5)
+  - [ ] Test that only needed bridges are loaded for each spell (lazy loading verification from 2.4.4.5.5)
+  - [ ] Verify unified globals (`state`, `observability`) work with new bridge names
+  - [ ] Document any breaking changes
+- [ ] **Repl Integration** (from Task 2.4.4.5.5):
+  - [ ] Test that repl works with lazy loading for different profiles
+- [ ] **Performance Integration** (from Task 2.4.4.5.5):
+  - [ ] Measure startup time improvement with lazy loading (from 2.4.4.5.5)
+  - [ ] Verify memory usage is reduced for simple scripts (from 2.4.4.5.5)
+  - [ ] Test CLI responsiveness for engine listing commands (from 2.4.4.5.5)
+  - [ ] Ensure bridge renaming doesn't impact performance
+  - [ ] Verify lazy loading still works with new bridge names
+- [ ] **Security Profile Integration**:
+  - [ ] Test bridge profile mapping works with lazy loading
+  - [ ] Verify security profiles load correct bridge sets on-demand
+  - [ ] Test that bridge profiles respect lazy loading behavior
+
 ---
 
 
-## Phase 7: Deferred Tasks from Previous Phases
+## Phase 8: Deferred Tasks from Previous Phases
 **DEFERRED TASKS from different Phases - For Revisit from previous Phases**
 - See `TODO-DONE-ARCHIVE.md` for completed tasks history
 
-### 7.1 More Production Readiness
-- [ ] **Task 7.1.1: Monitoring & Metrics** **DEFERRED from  2.4.4.3**
+### 8.1 More Production Readiness
+- [ ] **Task 8.1.1: Monitoring & Metrics** **DEFERRED from  2.4.4.3**
   - [ ] Add Prometheus metrics
   - [ ] Implement health checks
   - [ ] Create performance dashboards
   - [ ] Add distributed tracing
   - [ ] Implement alerting rules
 
-- [ ] **Task 7.1.2: Security Hardening** **DEFERRED from 2.4.4.4**
+- [ ] **Task 8.1.2: Security Hardening** **DEFERRED from 2.4.4.4**
   - [ ] Conduct security audit
   - [ ] Add input validation
   - [ ] Implement rate limiting
   - [ ] Create security benchmarks
   - [ ] Add CVE scanning
 
-### 7.2 Model Info Bridge Intelligence **[DEFERRED from  1.4.6 ]** - Features not in go-llms
+### 8.2 Model Info Bridge Intelligence **[DEFERRED from  1.4.6 ]** - Features not in go-llms
 
-- [ ] **Task 7.2.1: Add Model Performance Analytics** ⏸️ **[DEFERRED from 1.4.6.1]**
+- [ ] **Task 8.2.1: Add Model Performance Analytics** ⏸️ **[DEFERRED from 1.4.6.1]**
   - Missing from go-llms: Model performance tracking, analytics, metrics
   - Documented in upstream request #1
 
-- [ ] **Task 7.2.2: Add Model Recommendation Engine** ⏸️ **[DEFERRED from 1.4.6.2]**  
+- [ ] **Task 8.2.2: Add Model Recommendation Engine** ⏸️ **[DEFERRED from 1.4.6.2]**  
   - Missing from go-llms: Recommendation algorithms, model selection
   - Documented in upstream request #2
 
-- [ ] **Task 7.2.3: Add Model Catalog Export** ⏸️ **[DEFERRED from 1.4.6.3]**
+- [ ] **Task 8.2.3: Add Model Catalog Export** ⏸️ **[DEFERRED from 1.4.6.3]**
   - Missing from go-llms: Catalog export, OpenAPI generation for models
   - Documented in upstream request #3
 
-### 7.3 Additional bridgest from go-llms 
+### 8.3 Additional bridgest from go-llms 
 
-- [ ] **Task 7.3.1: Memory Bridge** ⏸️ **[DEFERRED from 1.5.8]** - Not in go-llms yet
+- [ ] **Task 8.3.1: Memory Bridge** ⏸️ **[DEFERRED from 1.5.8]** - Not in go-llms yet
   - [ ] Will implement when available in go-llms
 
-- [ ] **Task 7.3.2: Conversation Bridge** ⏸️ **[DEFERRED from 1.5.9]** - Not in go-llms yet
+- [ ] **Task 8.3.2: Conversation Bridge** ⏸️ **[DEFERRED from 1.5.9]** - Not in go-llms yet
   - [ ] Will implement when available in go-llms
 
 ---

@@ -20,7 +20,7 @@ import (
 func TestStateAdapter_Creation(t *testing.T) {
 	t.Run("create_state_adapter", func(t *testing.T) {
 		// Create state bridge mock
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
@@ -77,7 +77,7 @@ func TestStateAdapter_Creation(t *testing.T) {
 	})
 
 	t.Run("state_module_structure", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMetadata(engine.BridgeMetadata{
 				Name: "State Bridge",
@@ -140,7 +140,7 @@ func TestStateAdapter_Creation(t *testing.T) {
 
 func TestStateAdapter_StateCreation(t *testing.T) {
 	t.Run("create_simple_state", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("createState", engine.MethodInfo{
 				Name: "createState",
@@ -181,7 +181,7 @@ func TestStateAdapter_StateCreation(t *testing.T) {
 	})
 
 	t.Run("create_state_with_initial_data", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("createState", engine.MethodInfo{
 				Name: "createState",
@@ -230,7 +230,7 @@ func TestStateAdapter_StateCreation(t *testing.T) {
 
 func TestStateAdapter_StateOperations(t *testing.T) {
 	t.Run("get_set_operations", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("get", engine.MethodInfo{
 				Name: "get",
@@ -294,7 +294,7 @@ func TestStateAdapter_StateOperations(t *testing.T) {
 	})
 
 	t.Run("keys_values_operations", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("keys", engine.MethodInfo{
 				Name: "keys",
@@ -348,7 +348,7 @@ func TestStateAdapter_StateOperations(t *testing.T) {
 
 func TestStateAdapter_StateTransforms(t *testing.T) {
 	t.Run("apply_transform", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("applyTransform", engine.MethodInfo{
 				Name: "applyTransform",
@@ -393,7 +393,7 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 	})
 
 	t.Run("register_custom_transform", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("registerTransform", engine.MethodInfo{
 				Name: "registerTransform",
@@ -434,7 +434,7 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 
 func TestStateAdapter_StatePersistence(t *testing.T) {
 	t.Run("save_load_state", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("saveState", engine.MethodInfo{
 				Name: "saveState",
@@ -560,7 +560,7 @@ func TestStateAdapter_StateContext(t *testing.T) {
 
 func TestStateAdapter_StateMerging(t *testing.T) {
 	t.Run("merge_states", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("mergeStates", engine.MethodInfo{
 				Name: "mergeStates",
@@ -615,7 +615,7 @@ func TestStateAdapter_StateMerging(t *testing.T) {
 
 func TestStateAdapter_ErrorHandling(t *testing.T) {
 	t.Run("handle_bridge_errors", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("get", engine.MethodInfo{
 				Name: "get",
@@ -650,7 +650,7 @@ func TestStateAdapter_ErrorHandling(t *testing.T) {
 
 func TestStateAdapter_ConvenienceMethods(t *testing.T) {
 	t.Run("enhanced_state_object", func(t *testing.T) {
-		stateBridge := testutils.NewMockBridge("state").
+		stateBridge := testutils.NewMockBridge("state_manager").
 			WithInitialized(true).
 			WithMethod("createState", engine.MethodInfo{
 				Name: "createState",
