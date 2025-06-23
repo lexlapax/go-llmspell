@@ -354,6 +354,84 @@ func createTestExecutor(t *testing.T) *ScriptExecutor {
 	return NewScriptExecutor(config, manager, selector)
 }
 
+func TestExecutor_SecurityProfileMapping(t *testing.T) {
+	t.Run("maps_security_profiles_to_engine_levels", func(t *testing.T) {
+		testCases := []struct {
+			profile        string
+			expectedLevel  string
+			description    string
+		}{
+			{"sandbox", "strict", "sandbox profile should map to strict security level"},
+			{"development", "standard", "development profile should map to standard security level"},
+			{"production", "standard", "production profile should map to standard security level"},
+			{"minimal", "minimal", "minimal profile should map to minimal security level"},
+			{"", "standard", "empty profile should default to standard security level"},
+			{"unknown", "standard", "unknown profile should default to standard security level"},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.profile, func(t *testing.T) {
+				// Create a test registry with a mock engine factory
+				registry := engine.NewRegistry(engine.RegistryConfig{})
+				err := registry.Initialize()
+				require.NoError(t, err)
+
+				// Track the config that was passed
+				var capturedConfig engine.EngineConfig
+				
+				// Create a custom factory that captures the config
+				factory := &testEngineFactoryWithCapture{
+					capturedConfig: &capturedConfig,
+				}
+				err = registry.Register(factory)
+				require.NoError(t, err)
+
+				// Create manager and executor
+				manager := NewEngineRegistryManager(registry, nil)
+				selector := NewEngineSelector(manager)
+				config := DefaultRunnerConfig()
+				// For the empty profile test, we want to ensure it actually tests the default case
+				if tc.profile == "" {
+					config.DefaultSecurityProfile = ""
+				}
+				executor := NewScriptExecutor(config, manager, selector)
+
+				// Execute with specific security profile
+				ctx := context.Background()
+				options := &RunnerOptions{
+					SecurityProfile: tc.profile,
+					Engine:          "test",
+				}
+				
+				_, err = executor.ExecuteWithOptions(ctx, "return 'test'", options)
+				require.NoError(t, err)
+
+				// Verify the security level was set correctly
+				assert.NotNil(t, capturedConfig.EngineOptions)
+				assert.Equal(t, tc.expectedLevel, capturedConfig.EngineOptions["security_level"], tc.description)
+			})
+		}
+	})
+}
+
+// testEngineFactoryWithCapture captures the config passed to Create
+type testEngineFactoryWithCapture struct {
+	capturedConfig *engine.EngineConfig
+}
+
+func (f *testEngineFactoryWithCapture) Create(config engine.EngineConfig) (engine.ScriptEngine, error) {
+	*f.capturedConfig = config
+	return &mockEngine{name: "test"}, nil
+}
+
+func (f *testEngineFactoryWithCapture) Name() string { return "test" }
+func (f *testEngineFactoryWithCapture) Version() string { return "1.0.0" }
+func (f *testEngineFactoryWithCapture) Description() string { return "Test engine" }
+func (f *testEngineFactoryWithCapture) FileExtensions() []string { return []string{".test"} }
+func (f *testEngineFactoryWithCapture) Features() []engine.EngineFeature { return nil }
+func (f *testEngineFactoryWithCapture) GetDefaultConfig() engine.EngineConfig { return engine.EngineConfig{} }
+func (f *testEngineFactoryWithCapture) ValidateConfig(config engine.EngineConfig) error { return nil }
+
 // Benchmark tests
 func BenchmarkScriptExecutor_Execute(b *testing.B) {
 	executor := createTestExecutor(&testing.T{})

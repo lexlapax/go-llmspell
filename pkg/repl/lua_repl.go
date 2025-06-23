@@ -53,7 +53,11 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 				FileSystemMode: engine.FSModeReadWrite,
 				DebugMode:      false,
 				MetricsMode:    true,
+				EngineOptions:  make(map[string]interface{}),
 			}
+			
+			// Set security level for development profile
+			engineConfig.EngineOptions["security_level"] = "standard"
 
 			// Get engine with bridges loaded lazily (using development profile for REPL)
 			eng, err := engineManager.GetEngine("lua", engineConfig, "development")

@@ -191,6 +191,21 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 		securityProfile = e.config.DefaultSecurityProfile
 	}
 
+	// Map security profile to engine security level
+	switch securityProfile {
+	case "sandbox":
+		config.EngineOptions["security_level"] = "strict"
+	case "development":
+		config.EngineOptions["security_level"] = "standard"
+	case "production":
+		config.EngineOptions["security_level"] = "standard"
+	case "minimal":
+		config.EngineOptions["security_level"] = "minimal"
+	default:
+		// Default to standard for unknown profiles
+		config.EngineOptions["security_level"] = "standard"
+	}
+
 	// Get engine with bridges loaded lazily
 	engine, err := e.engineManager.GetEngine(engineName, config, securityProfile)
 	if err != nil {

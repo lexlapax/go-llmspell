@@ -256,6 +256,135 @@ Based on the bridge-first architecture in `docs/MIGRATION_PLAN_V0.3.3.md`, this 
       - [ ] Verify memory usage is reduced for simple scripts
       - [ ] Test CLI responsiveness for engine listing commands
 
+  - [ ] **Task 2.4.4.5.6: Bridge Architecture Naming Standardization**
+    - [ ] **Phase 1: Bridge Layer Naming Updates** (`/pkg/bridge/*`)
+      - [ ] Update LLM bridges:
+        - [ ] Change `GetID() "llm"` → `"llm_core"` in `llm/llm.go`
+        - [ ] Change `GetID() "providers"` → `"llm_providers"` in `llm/providers.go`
+        - [ ] Change `GetID() "pool"` → `"llm_pool"` in `llm/pool.go`
+        - [ ] Update corresponding tests in `llm/*_test.go`
+        - [ ] Rename test files to match the implementation file names if they've changed.
+        - [ ] Run `go test ./pkg/bridge/llm/...` to verify
+      - [ ] Update Util bridges:
+        - [ ] Change `GetID() "slog"` → `"util_slog"` in `util/slog.go`
+        - [ ] Change `GetID() "script_logger"` → `"util_script_logger"` in `util/script_logger.go`  
+        - [ ] Change `GetID() "debug"` → `"util_debug"` in `util/debug.go`
+        - [ ] Change `GetID() "util"` → `"util_core"` in `util/util.go`
+        - [ ] Keep `"util_auth"`, `"util_llm"`, `"util_json"`, `"util_errors"` as-is (already consistent)
+        - [ ] Rename test files to match the implementation file names if they've changed.
+        - [ ] Update corresponding tests in `util/*_test.go`
+        - [ ] Run `go test ./pkg/bridge/util/...` to verify
+      - [ ] Update Agent bridges:
+        - [ ] Change `GetID() "agent"` → `"agent_core"` in `agent/agent.go`
+        - [ ] Change `GetID() "tools"` → `"agent_tools"` in `agent/tools.go`
+        - [ ] Change `GetID() "tools_registry"` → `"agent_tools_registry"` in `agent/tool_registry.go`
+        - [ ] Change `GetID() "events"` → `"agent_events"` in `agent/events.go`
+        - [ ] Change `GetID() "workflow"` → `"agent_workflow"` in `agent/workflow.go`
+        - [ ] Change `GetID() "hooks"` → `"agent_hooks"` in `agent/hooks.go`
+        - [ ] Rename test files to match the implementation file names if they've changed.
+        - [ ] Update corresponding tests in `agent/*_test.go`
+        - [ ] Run `go test ./pkg/bridge/agent/...` to verify
+      - [ ] Update Observability bridges:
+        - [ ] Change `GetID() "metrics"` → `"observability_metrics"` in `observability/metrics.go`
+        - [ ] Change `GetID() "tracing"` → `"observability_tracing"` in `observability/tracing.go`
+        - [ ] Change `GetID() "guardrails"` → `"observability_guardrails"` in `observability/guardrails.go`
+        - [ ] Rename test files to match the implementation file names if they've changed.
+        - [ ] Update corresponding tests in `observability/*_test.go`
+        - [ ] Run `go test ./pkg/bridge/observability/...` to verify
+      - [ ] Update State bridges:
+        - [ ] Keep `"state_context"` and `"state_manager"` as-is (already namespaced)
+        - [ ] Run `go test ./pkg/bridge/state/...` to verify nothing broke
+      - [ ] Update Structured bridges:
+        - [ ] Change `GetID() "schema"` → `"structured_schema"` in `structured/schema.go`
+        - [ ] Rename test files to match the implementation file names if they've changed.
+        - [ ] Update corresponding tests in `structured/*_test.go`
+        - [ ] Run `go test ./pkg/bridge/structured/...` to verify
+      - [ ] Update root bridges:
+        - [ ] Change `GetID() "modelinfo"` → `"llm_modelinfo"` in `bridge/modelinfo.go`
+        - [ ] Rename test files to match the implementation file names if they've changed.
+        - [ ] Update corresponding tests
+        - [ ] Run `go test ./pkg/bridge/...` to verify
+    
+    - [ ] **Phase 2: Bridge Adapter Updates** (`/pkg/engine/gopherlua/adapters/*`)
+      - [ ] Update adapter registrations to match new bridge IDs:
+        - [ ] Update `agent/*` adapters to use new IDs (`agent_core`, `agent_tools`, etc.)
+        - [ ] Update `llm/*` adapters to use new IDs (`llm_core`, `llm_providers`, etc.)
+        - [ ] Update `utils/*` adapters to use new IDs (`util_core`, `util_debug`, etc.)
+        - [ ] Update `observability/*` adapters to use new IDs (`observability_metrics`, etc.)
+        - [ ] Update any bridge ID references in adapter implementations
+        - [ ] Rename test files to match the implementation file names if they've changed.
+        - [ ] Run adapter tests: `go test ./pkg/engine/gopherlua/adapters/...`
+      - [ ] Update bridge registry mappings:
+        - [ ] Update `pkg/bridge/registry/registry.go` factory functions to use new IDs
+        - [ ] Verify bridge sets still group bridges correctly
+        - [ ] Run registry tests: `go test ./pkg/bridge/registry/...`
+    
+    - [ ] **Phase 3: Stdlib Module Updates** (`/pkg/engine/gopherlua/stdlib/*.lua`)
+      - [ ] Update bridge references in Lua modules:
+        - [ ] Update `llm.lua`: 
+          - [ ] Change `bridges.llm_bridge` → `bridges.llm_core`
+          - [ ] Change `bridges.llm_util_bridge` → `bridges.util_llm`
+        - [ ] Update `logging.lua`:
+          - [ ] Change `bridges.util_debug` → `bridges.util_debug` (no change)
+          - [ ] Change `bridges.util_script_logger` → `bridges.util_script_logger` (no change)
+          - [ ] Change `bridges.util_slog` → `bridges.util_slog` (no change)
+        - [ ] Update `observability.lua`:
+          - [ ] Change `bridges.metrics` → `bridges.observability_metrics`
+          - [ ] Change `bridges.tracing` → `bridges.observability_tracing`
+          - [ ] Change `bridges.guardrails` → `bridges.observability_guardrails`
+          - [ ] Change `bridges.slog` → `bridges.util_slog`
+          - [ ] Change `bridges.events` → `bridges.agent_events`
+        - [ ] Update `agent.lua`:
+          - [ ] Change `bridges.agent` → `bridges.agent_core`
+          - [ ] Change `bridges.workflow` → `bridges.agent_workflow`
+        - [ ] Update `events.lua`:
+          - [ ] Change `bridges.events` → `bridges.agent_events`
+        - [ ] Update `tools.lua`:
+          - [ ] Change `bridges.tools` → `bridges.agent_tools`
+        - [ ] Update `data.lua`:
+          - [ ] Change `bridges.util` → `bridges.util_core`
+        - [ ] Update `auth.lua`:
+          - [ ] Remove reference to non-existent `bridges.security`
+          - [ ] Keep `bridges.util_auth` as-is
+      - [ ] Run stdlib tests: `go test ./pkg/engine/gopherlua/stdlib/...`
+    
+    - [ ] **Phase 4: Add Missing Components**
+      - [ ] Create `structured.lua` stdlib module:
+        - [ ] Create `/pkg/engine/gopherlua/stdlib/structured.lua`
+        - [ ] Implement wrapper functions for `bridges.structured_schema`
+        - [ ] Add unit tests in `structured_test.go`
+        - [ ] Add to stdlib loader configuration
+      - [ ] Decide on missing bridge implementations:
+        - [ ] Determine if `security` bridge is needed for `auth.lua`
+        - [ ] Document decision in code comments
+    
+    - [ ] **Phase 5: Fix Security Profile Mapping**
+      - [ ] Debug why CLI `--profile` isn't reaching executor:
+        - [ ] Add debug logging in `cmd/llmspell/main.go` to trace profile value
+        - [ ] Add debug logging in `runner/executor.go` to verify profile mapping execution
+        - [ ] Test with `--debug` flag to see actual security level applied
+      - [ ] Fix the security profile propagation:
+        - [ ] Ensure CLI profile value is passed through context correctly
+        - [ ] Verify `ExecuteWithOptions` receives correct security profile
+        - [ ] Confirm mapping in `executor.go:194-207` is executed
+      - [ ] Add integration test for security profile mapping:
+        - [ ] Test that `--profile=development` allows `require()`
+        - [ ] Test that `--profile=sandbox` blocks `require()`
+        - [ ] Test stdlib module loading with different profiles
+    
+    - [ ] **Phase 6: Integration Testing**
+      - [ ] Create comprehensive bridge availability test:
+        - [ ] Test all renamed bridges are accessible
+        - [ ] Test all stdlib modules can load with correct bridge names
+        - [ ] Test backward compatibility if needed
+      - [ ] Test all 13 example spells with new bridge names:
+        - [ ] Run each spell with `--profile=development`
+        - [ ] Verify unified globals (`state`, `observability`) work
+        - [ ] Document any breaking changes
+      - [ ] Performance regression testing:
+        - [ ] Ensure bridge renaming doesn't impact performance
+        - [ ] Verify lazy loading still works with new names
+
 
 #### 2.4.5: Documentation & Examples
 - [x] **Task 2.4.5.1: CODE documentation** **[COMPLETED - 2025-06-22]**
