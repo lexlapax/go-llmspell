@@ -235,7 +235,7 @@ func (bm *BridgeManager) LoadBridgeModules(L *lua.LState) error {
 		}
 
 		bridgesTable.RawSetString(bridgeID, module)
-		
+
 		// Also set as individual global for stdlib compatibility
 		L.SetGlobal(bridgeID, module)
 	}

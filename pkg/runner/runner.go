@@ -110,7 +110,14 @@ type RunnerOptions struct {
 	Engine string
 
 	// SecurityProfile overrides the default security profile
+	// Deprecated: Use SecurityLevel and FeatureSet instead
 	SecurityProfile string
+
+	// SecurityLevel overrides the default security level
+	SecurityLevel string
+
+	// FeatureSet overrides the default feature set
+	FeatureSet string
 
 	// ProgressHandler receives progress updates during execution
 	ProgressHandler func(Progress)
@@ -150,9 +157,26 @@ func WithEngine(engine string) RunnerOption {
 
 // WithSecurityProfile sets a specific security profile for the execution.
 // This determines the sandboxing and access controls applied to the script.
+// Deprecated: Use WithSecurityLevel and WithFeatureSet instead.
 func WithSecurityProfile(profile string) RunnerOption {
 	return func(opts *RunnerOptions) {
 		opts.SecurityProfile = profile
+	}
+}
+
+// WithSecurityLevel sets a specific security level for the execution.
+// This determines the sandboxing and access controls applied to the script.
+func WithSecurityLevel(level string) RunnerOption {
+	return func(opts *RunnerOptions) {
+		opts.SecurityLevel = level
+	}
+}
+
+// WithFeatureSet sets a specific feature set for the execution.
+// This determines which bridge sets are available to the script.
+func WithFeatureSet(featureSet string) RunnerOption {
+	return func(opts *RunnerOptions) {
+		opts.FeatureSet = featureSet
 	}
 }
 

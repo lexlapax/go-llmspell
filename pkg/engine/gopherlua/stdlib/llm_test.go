@@ -201,7 +201,7 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 	bridgesTable.(*lua.LTable).RawSetString("llm_core", llmBridge)
 	bridgesTable.(*lua.LTable).RawSetString("provider_bridge", llmBridge) // Same for simplicity
 	bridgesTable.(*lua.LTable).RawSetString("pool_bridge", llmBridge)     // Same for simplicity
-	bridgesTable.(*lua.LTable).RawSetString("util_llm", llmBridge) // Same for simplicity
+	bridgesTable.(*lua.LTable).RawSetString("util_llm", llmBridge)        // Same for simplicity
 }
 
 // setupLLMLibrary loads the LLM library and sets it as global

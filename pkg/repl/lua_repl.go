@@ -55,12 +55,17 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 				MetricsMode:    true,
 				EngineOptions:  make(map[string]interface{}),
 			}
-			
+
 			// Set security level for development profile
 			engineConfig.EngineOptions["security_level"] = "standard"
 
-			// Get engine with bridges loaded lazily (using development profile for REPL)
-			eng, err := engineManager.GetEngine("lua", engineConfig, "development")
+			// Get engine with bridges loaded lazily
+			// Use profile from config or default to development-like settings
+			securityProfile := config.SecurityLevel
+			if securityProfile == "" {
+				securityProfile = "development" // Default for backward compatibility
+			}
+			eng, err := engineManager.GetEngine("lua", engineConfig, securityProfile)
 			if err != nil {
 				_ = baseREPL.Close()
 				return nil, errors.Wrap(err, errors.CategoryEngine, "failed to get Lua engine from registry")
@@ -77,7 +82,7 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 			// with the engine, not the standalone Lua state.
 			// For now, we'll use the engine for bridge-aware operations and the Lua state for
 			// basic REPL evaluations.
-			
+
 			// Try to load bridges into the REPL's Lua state if the engine supports it
 			if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
 				if err := luaEngine.LoadBridgeModulesIntoState(luaState); err != nil {
@@ -110,7 +115,7 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 		// Create persistent Lua state for REPL
 		luaState = lua.NewState()
 		luaState.OpenLibs()
-		
+
 		// Load bridges if available
 		if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
 			if err := luaEngine.LoadBridgeModulesIntoState(luaState); err != nil {

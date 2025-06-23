@@ -326,7 +326,7 @@ function structured.validate_batch(schema, data_array)
             index = i,
             valid = is_valid,
             result = result,
-            error = error_msg or err
+            error = error_msg or err,
         }
     end
 
@@ -339,8 +339,8 @@ function structured.builder()
         schema = {
             type = "object",
             properties = {},
-            required = {}
-        }
+            required = {},
+        },
     }
 
     function builder:add_property(name, property_type, required, constraints)
@@ -353,16 +353,26 @@ function structured.builder()
 
     function builder:add_string(name, required, min_length, max_length, pattern)
         local constraints = {}
-        if min_length then constraints.minLength = min_length end
-        if max_length then constraints.maxLength = max_length end
-        if pattern then constraints.pattern = pattern end
+        if min_length then
+            constraints.minLength = min_length
+        end
+        if max_length then
+            constraints.maxLength = max_length
+        end
+        if pattern then
+            constraints.pattern = pattern
+        end
         return self:add_property(name, "string", required, constraints)
     end
 
     function builder:add_number(name, required, minimum, maximum)
         local constraints = {}
-        if minimum then constraints.minimum = minimum end
-        if maximum then constraints.maximum = maximum end
+        if minimum then
+            constraints.minimum = minimum
+        end
+        if maximum then
+            constraints.maximum = maximum
+        end
         return self:add_property(name, "number", required, constraints)
     end
 
@@ -371,14 +381,18 @@ function structured.builder()
     end
 
     function builder:add_array(name, required, items, min_items, max_items)
-        local constraints = {items = items}
-        if min_items then constraints.minItems = min_items end
-        if max_items then constraints.maxItems = max_items end
+        local constraints = { items = items }
+        if min_items then
+            constraints.minItems = min_items
+        end
+        if max_items then
+            constraints.maxItems = max_items
+        end
         return self:add_property(name, "array", required, constraints)
     end
 
     function builder:add_object(name, required, properties)
-        local constraints = {properties = properties}
+        local constraints = { properties = properties }
         return self:add_property(name, "object", required, constraints)
     end
 

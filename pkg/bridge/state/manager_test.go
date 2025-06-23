@@ -89,12 +89,12 @@ func setupTestBridgeWithEngine(t *testing.T) (*StateManagerBridge, context.Conte
 	eng := newStateTestEngine()
 	err := eng.Initialize(types.EngineConfig{})
 	require.NoError(t, err)
-	
-	// Register the MockScriptEngine directly by casting to the interface  
+
+	// Register the MockScriptEngine directly by casting to the interface
 	var scriptEngine types.ScriptEngine = eng.MockScriptEngine
 	err = bridge.RegisterWithEngine(scriptEngine)
 	require.NoError(t, err)
-	
+
 	// Store bridge reference for CallFunction to use
 	eng.bridge = bridge
 
@@ -1060,7 +1060,6 @@ type stateTestEngine struct {
 	bridge    types.Bridge
 }
 
-
 func newStateTestEngine() *stateTestEngine {
 	return &stateTestEngine{
 		MockScriptEngine: testutils.NewMockScriptEngine(),
@@ -1300,10 +1299,10 @@ func (e *stateTestEngine) CallFunction(name string, ctx context.Context, params 
 	// Handle state.* functions through bridge
 	if strings.HasPrefix(name, "state.") && e.bridge != nil {
 		methodName := strings.TrimPrefix(name, "state.")
-		
+
 		// Convert params to ScriptValues based on method signature
 		var args []types.ScriptValue
-		
+
 		// Handle methods that expect individual parameters
 		switch methodName {
 		case "set":
@@ -1354,17 +1353,17 @@ func (e *stateTestEngine) CallFunction(name string, ctx context.Context, params 
 				}
 			}
 		}
-		
+
 		// Call bridge method
 		result, err := e.bridge.ExecuteMethod(ctx, methodName, args)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Convert result back to Go type
 		return e.convertResultToGo(result), nil
 	}
-	
+
 	// Check functions map for non-state functions
 	fn, exists := e.functions[name]
 	if !exists {

@@ -28,7 +28,7 @@ func TestRenamedBridgesAccessibleWithLazyLoading(t *testing.T) {
 	}{
 		{
 			name:            "StandardProfile_Sandbox",
-			securityProfile: "sandbox", 
+			securityProfile: "sandbox",
 			expectedCount:   23, // All bridges should be available in standard profile
 			description:     "Sandbox should load StandardProfile with all bridges",
 		},
@@ -113,15 +113,15 @@ return {
 			options := &runner.RunnerOptions{
 				SecurityProfile: tc.securityProfile,
 			}
-			
+
 			result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
 			require.NoError(t, err, tc.description)
-			
+
 			executionTime := time.Since(startTime)
 
 			// Verify result structure
 			require.NotNil(t, result.Value, "Result should not be nil")
-			
+
 			// Handle engine.ObjectValue type
 			var resultMap map[string]interface{}
 			if objVal, ok := result.Value.(engine.ObjectValue); ok {
@@ -137,7 +137,7 @@ return {
 			require.True(t, exists, "test_name should exist in result")
 			assert.Equal(t, "bridge_accessibility_test", testName)
 
-			profileUsed, exists := resultMap["security_profile"]  
+			profileUsed, exists := resultMap["security_profile"]
 			require.True(t, exists, "security_profile should exist in result")
 			assert.Equal(t, tc.securityProfile, profileUsed)
 
@@ -162,12 +162,12 @@ return {
 
 				// Verify key renamed bridges are present
 				renamedBridges := []string{
-					"llm_core",         // was "llm"
-					"llm_providers",    // was "providers" 
-					"util_core",        // was "util"
-					"util_slog",        // was "slog"
-					"agent_core",       // was "agent"
-					"agent_tools",      // was "tools"
+					"llm_core",          // was "llm"
+					"llm_providers",     // was "providers"
+					"util_core",         // was "util"
+					"util_slog",         // was "slog"
+					"agent_core",        // was "agent"
+					"agent_tools",       // was "tools"
 					"structured_schema", // was "schema"
 				}
 
@@ -182,7 +182,7 @@ return {
 	}
 }
 
-// TestBridgeGlobalsSetWithLazyLoading tests that bridge globals are properly 
+// TestBridgeGlobalsSetWithLazyLoading tests that bridge globals are properly
 // set when engines are loaded on-demand.
 func TestBridgeGlobalsSetWithLazyLoading(t *testing.T) {
 	testScript := `
@@ -240,14 +240,14 @@ return globals_test
 	options := &runner.RunnerOptions{
 		SecurityProfile: "development",
 	}
-	
+
 	result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
 	require.NoError(t, err)
 
 	// Verify results
 	require.NotNil(t, result.Value)
 	t.Logf("Bridge globals test result: %T, value: %+v", result.Value, result.Value)
-	
+
 	// Handle engine.ObjectValue type
 	var resultMap map[string]interface{}
 	if objVal, ok := result.Value.(engine.ObjectValue); ok {
@@ -275,9 +275,9 @@ return globals_test
 
 	assert.True(t, bridgeMap["llm_core"].(bool), "llm_core bridge should be accessible")
 	assert.True(t, bridgeMap["util_core"].(bool), "util_core bridge should be accessible")
-	
+
 	// Note: agent_core might not be available in development profile, that's OK
-	
+
 	// Verify stdlib can load and access bridges
 	llmLoads, exists := resultMap["llm_stdlib_loads"]
 	require.True(t, exists)
@@ -360,11 +360,11 @@ return results
 
 	// Test with different security profiles
 	profiles := []struct {
-		name               string
-		profile            string
-		expectToolsModule  bool
-		expectToolsList    bool
-		description        string
+		name              string
+		profile           string
+		expectToolsModule bool
+		expectToolsList   bool
+		description       string
 	}{
 		{
 			name:              "StandardProfile_Sandbox",
@@ -405,13 +405,13 @@ return results
 			options := &runner.RunnerOptions{
 				SecurityProfile: tc.profile,
 			}
-			
+
 			result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
 			require.NoError(t, err, tc.description)
 
 			// Parse results
 			require.NotNil(t, result.Value)
-			
+
 			var resultMap map[string]interface{}
 			if objVal, ok := result.Value.(engine.ObjectValue); ok {
 				resultMap = objVal.ToGo().(map[string]interface{})
@@ -422,7 +422,7 @@ return results
 			// Verify tools module availability matches expectations
 			toolsAvailable, exists := resultMap["tools_module_available"]
 			require.True(t, exists)
-			assert.Equal(t, tc.expectToolsModule, toolsAvailable.(bool), 
+			assert.Equal(t, tc.expectToolsModule, toolsAvailable.(bool),
 				"Tools module availability should match profile expectations")
 
 			// Debug: print what we got
@@ -434,7 +434,7 @@ return results
 			if errorMsg, exists := resultMap["tools_list_error"]; exists {
 				t.Logf("Tools list error: %v", errorMsg)
 			}
-			
+
 			// Verify tools.list() functionality
 			toolsListWorks, exists := resultMap["tools_list_works"]
 			require.True(t, exists)
@@ -459,7 +459,7 @@ return results
 			// Verify bridge availability
 			agentToolsBridge, exists := resultMap["agent_tools_bridge_available"]
 			require.True(t, exists)
-			
+
 			// Agent tools bridge should be available in sandbox but not necessarily in development
 			if tc.profile == "sandbox" {
 				assert.True(t, agentToolsBridge.(bool), "agent_tools bridge should be available in sandbox")
@@ -471,7 +471,7 @@ return results
 	}
 }
 
-// TestStdlibModulesWithRenamedBridges tests that all stdlib modules can load 
+// TestStdlibModulesWithRenamedBridges tests that all stdlib modules can load
 // with the new bridge names and lazy initialization.
 func TestStdlibModulesWithRenamedBridges(t *testing.T) {
 
@@ -551,10 +551,10 @@ return {
 
 	// Test with different security profiles to ensure modules work across profiles
 	profiles := []struct {
-		name                     string
-		profile                  string
-		expectedSuccessfulLoads  int
-		description              string
+		name                    string
+		profile                 string
+		expectedSuccessfulLoads int
+		description             string
 	}{
 		{
 			name:                    "StandardProfile_Sandbox",
@@ -563,7 +563,7 @@ return {
 			description:             "Sandbox profile should block stdlib module loading (security restriction)",
 		},
 		{
-			name:                    "DevelopmentProfile_Development", 
+			name:                    "DevelopmentProfile_Development",
 			profile:                 "development",
 			expectedSuccessfulLoads: 15, // All modules should load via require
 			description:             "Development profile should load all modules via require",
@@ -593,13 +593,13 @@ return {
 			options := &runner.RunnerOptions{
 				SecurityProfile: tc.profile,
 			}
-			
+
 			result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
 			require.NoError(t, err, tc.description)
 
 			// Parse results
 			require.NotNil(t, result.Value)
-			
+
 			var resultMap map[string]interface{}
 			if objVal, ok := result.Value.(engine.ObjectValue); ok {
 				resultMap = objVal.ToGo().(map[string]interface{})
@@ -622,11 +622,11 @@ return {
 			for _, modInterface := range modules {
 				mod, ok := modInterface.(map[string]interface{})
 				require.True(t, ok)
-				
+
 				moduleName := mod["name"].(string)
 				loaded := mod["loaded"].(bool)
 				accessMethod := mod["access_method"].(string)
-				
+
 				if loaded {
 					successCount++
 					t.Logf("Module %s loaded successfully via %s", moduleName, accessMethod)

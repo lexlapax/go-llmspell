@@ -34,7 +34,7 @@ func TestRunCmd_Run_NoRegistry(t *testing.T) {
 	err := cmd.Run(ctx)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "engine registry not found")
+	assert.Contains(t, err.Error(), "script runner not found in context")
 }
 
 func TestRunCmd_ParameterConversion(t *testing.T) {

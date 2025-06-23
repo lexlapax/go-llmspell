@@ -192,7 +192,7 @@ func TestGlobalFlags(t *testing.T) {
 		assert.False(t, cli.Quiet)
 	})
 
-	t.Run("profile_flag", func(t *testing.T) {
+	t.Run("security_and_feature_flags", func(t *testing.T) {
 		// Create temp script file
 		tmpDir := t.TempDir()
 		scriptFile := filepath.Join(tmpDir, "test.lua")
@@ -202,10 +202,28 @@ func TestGlobalFlags(t *testing.T) {
 		cli := &CLI{}
 		parser := mustNewParser(t, cli)
 
-		_, err = parser.Parse([]string{"--profile", "development", "run", scriptFile})
+		_, err = parser.Parse([]string{"--security-level", "privileged", "--feature-set", "minimal", "run", scriptFile})
 		require.NoError(t, err)
 
-		assert.Equal(t, "development", cli.Profile)
+		assert.Equal(t, "privileged", cli.SecurityLevel)
+		assert.Equal(t, "minimal", cli.FeatureSet)
+	})
+
+	t.Run("default_security_and_feature_flags", func(t *testing.T) {
+		// Create temp script file
+		tmpDir := t.TempDir()
+		scriptFile := filepath.Join(tmpDir, "test.lua")
+		err := os.WriteFile(scriptFile, []byte("print('test')"), 0644)
+		require.NoError(t, err)
+
+		cli := &CLI{}
+		parser := mustNewParser(t, cli)
+
+		_, err = parser.Parse([]string{"run", scriptFile})
+		require.NoError(t, err)
+
+		assert.Equal(t, "trusted", cli.SecurityLevel) // Default
+		assert.Equal(t, "full", cli.FeatureSet)       // Default
 	})
 }
 

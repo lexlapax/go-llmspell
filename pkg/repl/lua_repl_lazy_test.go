@@ -17,7 +17,7 @@ import (
 func TestLuaREPLWithLazyBridgeLoading(t *testing.T) {
 	// Create engine registry
 	engineRegistry := engine.NewRegistry(engine.RegistryConfig{})
-	
+
 	// Create engine manager with lazy loading
 	config := runner.DefaultRunnerConfig()
 	engineManager := runner.NewEngineRegistryManager(engineRegistry, config)
@@ -39,7 +39,7 @@ func TestLuaREPLWithLazyBridgeLoading(t *testing.T) {
 	// Create test streams to avoid readline race conditions
 	input := strings.NewReader("")
 	output := &strings.Builder{}
-	
+
 	// Create REPL config with engine registry
 	replConfig := REPLConfig{
 		Engine:         "lua",
@@ -114,7 +114,7 @@ func TestLuaREPLWithoutEngineRegistry(t *testing.T) {
 	// Create test streams to avoid readline race conditions
 	input := strings.NewReader("")
 	output := &strings.Builder{}
-	
+
 	// Create REPL config without engine registry
 	replConfig := REPLConfig{
 		Engine:      "lua",
@@ -171,7 +171,7 @@ func TestLuaREPLWithoutEngineRegistry(t *testing.T) {
 func TestLuaREPLBridgeUsage(t *testing.T) {
 	// Create engine registry
 	engineRegistry := engine.NewRegistry(engine.RegistryConfig{})
-	
+
 	// Create engine manager
 	config := runner.DefaultRunnerConfig()
 	engineManager := runner.NewEngineRegistryManager(engineRegistry, config)
@@ -201,7 +201,7 @@ func TestLuaREPLBridgeUsage(t *testing.T) {
 	// Create test streams to avoid readline race conditions
 	input := strings.NewReader("")
 	output := &strings.Builder{}
-	
+
 	// Create REPL
 	replConfig := REPLConfig{
 		Engine:         "lua",

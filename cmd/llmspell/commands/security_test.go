@@ -1,3 +1,6 @@
+// ABOUTME: Unit tests for the security command implementation.
+// ABOUTME: Tests list, show, and validate actions for security levels and feature sets.
+
 package commands
 
 import (
@@ -35,62 +38,83 @@ func TestSecurityCmd_Run_List(t *testing.T) {
 	require.NoError(t, err)
 
 	output := stdout.String()
-	assert.Contains(t, output, "Available security profiles:")
-	assert.Contains(t, output, "sandbox")
-	assert.Contains(t, output, "development")
-	assert.Contains(t, output, "production")
+	assert.Contains(t, output, "Available security levels:")
+	assert.Contains(t, output, "untrusted")
+	assert.Contains(t, output, "trusted")
+	assert.Contains(t, output, "privileged")
+
+	assert.Contains(t, output, "Available feature sets:")
+	assert.Contains(t, output, "minimal")
+	assert.Contains(t, output, "llm")
+	assert.Contains(t, output, "agent")
+	assert.Contains(t, output, "observable")
+	assert.Contains(t, output, "full")
 }
 
 func TestSecurityCmd_Run_Show_Default(t *testing.T) {
 	cmd := &SecurityCmd{
-		Action:  "show",
-		Profile: "",
+		Action:        "show",
+		SecurityLevel: "",
+		FeatureSet:    "full",
 	}
 
 	// Set up output capture
 	var stdout bytes.Buffer
 	cmd.Out = &stdout
 
-	// Context with profile
-	ctx := context.WithValue(context.Background(), ProfileKey, "development")
+	// Context with security level
+	ctx := context.WithValue(context.Background(), SecurityLevelKey, "trusted")
 	err := cmd.Run(ctx)
 
 	require.NoError(t, err)
 
 	output := stdout.String()
-	assert.Contains(t, output, "Profile: development")
-	assert.Contains(t, output, "Balanced for development")
+	assert.Contains(t, output, "Security Level: trusted")
 	assert.Contains(t, output, "Permissions:")
+	assert.Contains(t, output, "Network: true")
+	assert.Contains(t, output, "Filesystem: true")
+
+	assert.Contains(t, output, "Feature Set: full")
+	assert.Contains(t, output, "Enabled Bridge Sets:")
 }
 
 func TestSecurityCmd_Run_Show_Specific(t *testing.T) {
 	tests := []struct {
-		profile string
-		desc    string
-		perms   []string
+		level      string
+		featureSet string
+		network    string
+		filesystem string
+		exec       string
 	}{
 		{
-			profile: "sandbox",
-			desc:    "Maximum security restrictions",
-			perms:   []string{"read:script", "execute:llm"},
+			level:      "untrusted",
+			featureSet: "minimal",
+			network:    "Network: false",
+			filesystem: "Filesystem: false",
+			exec:       "Execute: false",
 		},
 		{
-			profile: "development",
-			desc:    "Balanced for development",
-			perms:   []string{"read:*", "write:temp", "execute:*", "network:llm"},
+			level:      "trusted",
+			featureSet: "full",
+			network:    "Network: true",
+			filesystem: "Filesystem: true",
+			exec:       "Execute: false",
 		},
 		{
-			profile: "production",
-			desc:    "Production security settings",
-			perms:   []string{"read:*", "write:output", "execute:*", "network:*"},
+			level:      "privileged",
+			featureSet: "full",
+			network:    "Network: true",
+			filesystem: "Filesystem: true",
+			exec:       "Execute: true",
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.profile, func(t *testing.T) {
+		t.Run(tt.level, func(t *testing.T) {
 			cmd := &SecurityCmd{
-				Action:  "show",
-				Profile: tt.profile,
+				Action:        "show",
+				SecurityLevel: tt.level,
+				FeatureSet:    tt.featureSet,
 			}
 
 			var stdout bytes.Buffer
@@ -102,49 +126,41 @@ func TestSecurityCmd_Run_Show_Specific(t *testing.T) {
 			require.NoError(t, err)
 
 			output := stdout.String()
-			assert.Contains(t, output, "Profile: "+tt.profile)
-			assert.Contains(t, output, tt.desc)
-			for _, perm := range tt.perms {
-				assert.Contains(t, output, perm)
-			}
+			assert.Contains(t, output, "Security Level: "+tt.level)
+			assert.Contains(t, output, tt.network)
+			assert.Contains(t, output, tt.filesystem)
+			assert.Contains(t, output, tt.exec)
+
+			assert.Contains(t, output, "Feature Set: "+tt.featureSet)
 		})
 	}
 }
 
-func TestSecurityCmd_Run_Show_Unknown(t *testing.T) {
+func TestSecurityCmd_Run_Validate_NoInput(t *testing.T) {
 	cmd := &SecurityCmd{
-		Action:  "show",
-		Profile: "invalid",
+		Action:        "validate",
+		SecurityLevel: "",
+		FeatureSet:    "",
 	}
 
 	ctx := context.Background()
 	err := cmd.Run(ctx)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown profile: invalid")
-}
-
-func TestSecurityCmd_Run_Validate_NoProfile(t *testing.T) {
-	cmd := &SecurityCmd{
-		Action:  "validate",
-		Profile: "",
-	}
-
-	ctx := context.Background()
-	err := cmd.Run(ctx)
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "profile name required")
+	assert.Contains(t, err.Error(), "security level or feature set required")
 }
 
 func TestSecurityCmd_Run_Validate_Valid(t *testing.T) {
-	profiles := []string{"sandbox", "development", "production"}
+	levels := []string{"untrusted", "trusted", "privileged"}
+	featureSets := []string{"minimal", "llm", "agent", "observable", "full"}
 
-	for _, profile := range profiles {
-		t.Run(profile, func(t *testing.T) {
+	// Test security levels
+	for _, level := range levels {
+		t.Run("level_"+level, func(t *testing.T) {
 			cmd := &SecurityCmd{
-				Action:  "validate",
-				Profile: profile,
+				Action:        "validate",
+				SecurityLevel: level,
+				FeatureSet:    "",
 			}
 
 			var stdout bytes.Buffer
@@ -156,22 +172,61 @@ func TestSecurityCmd_Run_Validate_Valid(t *testing.T) {
 			require.NoError(t, err)
 
 			output := strings.TrimSpace(stdout.String())
-			assert.Equal(t, "✓ Profile '"+profile+"' is valid", output)
+			assert.Equal(t, "✓ Security level '"+level+"' is valid", output)
+		})
+	}
+
+	// Test feature sets
+	for _, fs := range featureSets {
+		t.Run("featureset_"+fs, func(t *testing.T) {
+			cmd := &SecurityCmd{
+				Action:        "validate",
+				SecurityLevel: "",
+				FeatureSet:    fs,
+			}
+
+			var stdout bytes.Buffer
+			cmd.Out = &stdout
+
+			ctx := context.Background()
+			err := cmd.Run(ctx)
+
+			require.NoError(t, err)
+
+			output := strings.TrimSpace(stdout.String())
+			assert.Equal(t, "✓ Feature set '"+fs+"' is valid", output)
 		})
 	}
 }
 
 func TestSecurityCmd_Run_Validate_Invalid(t *testing.T) {
-	cmd := &SecurityCmd{
-		Action:  "validate",
-		Profile: "invalid",
-	}
+	t.Run("invalid_security_level", func(t *testing.T) {
+		cmd := &SecurityCmd{
+			Action:        "validate",
+			SecurityLevel: "invalid",
+			FeatureSet:    "",
+		}
 
-	ctx := context.Background()
-	err := cmd.Run(ctx)
+		ctx := context.Background()
+		err := cmd.Run(ctx)
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid profile: invalid")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid security level")
+	})
+
+	t.Run("invalid_feature_set", func(t *testing.T) {
+		cmd := &SecurityCmd{
+			Action:        "validate",
+			SecurityLevel: "",
+			FeatureSet:    "invalid",
+		}
+
+		ctx := context.Background()
+		err := cmd.Run(ctx)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid feature set")
+	})
 }
 
 func TestSecurityCmd_Run_UnknownAction(t *testing.T) {
@@ -184,4 +239,24 @@ func TestSecurityCmd_Run_UnknownAction(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown action: invalid")
+}
+
+func TestSecurityCmd_Run_Validate_BothValid(t *testing.T) {
+	cmd := &SecurityCmd{
+		Action:        "validate",
+		SecurityLevel: "trusted",
+		FeatureSet:    "full",
+	}
+
+	var stdout bytes.Buffer
+	cmd.Out = &stdout
+
+	ctx := context.Background()
+	err := cmd.Run(ctx)
+
+	require.NoError(t, err)
+
+	output := stdout.String()
+	assert.Contains(t, output, "✓ Security level 'trusted' is valid")
+	assert.Contains(t, output, "✓ Feature set 'full' is valid")
 }

@@ -151,39 +151,39 @@ type (
 	// Engine interface types from go-llmspell/pkg/engine.
 	// These types enable bridges to implement the engine.Bridge interface
 	// without importing pkg/engine directly, preventing circular dependencies.
-	ScriptEngine     = engine.ScriptEngine
-	Bridge           = engine.Bridge
-	BridgeMetadata   = engine.BridgeMetadata
-	Registry         = engine.Registry
-	TypeConverter    = engine.TypeConverter
-	EngineConfig     = engine.EngineConfig
-	ContextOptions   = engine.ContextOptions
-	ExecutionOptions = engine.ExecutionOptions
-	ExecutionResult  = engine.ExecutionResult
-	ResourceLimits   = engine.ResourceLimits
-	EngineMetrics    = engine.EngineMetrics
-	ScriptContext    = engine.ScriptContext
-	MethodInfo       = engine.MethodInfo
-	ParameterInfo    = engine.ParameterInfo
-	TypeMapping      = engine.TypeMapping
-	TypeInfo         = engine.TypeInfo
-	Function         = engine.Function
-	FunctionSignature = engine.FunctionSignature
-	Permission       = engine.Permission
-	ScriptValue      = engine.ScriptValue
-	EventBus         = engine.EventBus
-	EventHandler     = engine.EventHandler
-	EngineEvent      = engine.EngineEvent
-	SubscriptionInfo = engine.SubscriptionInfo
-	TypeRegistry     = engine.TypeRegistry
-	TypeConverterFunc = engine.TypeConverterFunc
-	ProfilingConfig  = engine.ProfilingConfig
-	ProfilingReport  = engine.ProfilingReport
-	MemoryStats      = engine.MemoryStats
-	Hotspot          = engine.Hotspot
-	OptimizationHint = engine.OptimizationHint
+	ScriptEngine         = engine.ScriptEngine
+	Bridge               = engine.Bridge
+	BridgeMetadata       = engine.BridgeMetadata
+	Registry             = engine.Registry
+	TypeConverter        = engine.TypeConverter
+	EngineConfig         = engine.EngineConfig
+	ContextOptions       = engine.ContextOptions
+	ExecutionOptions     = engine.ExecutionOptions
+	ExecutionResult      = engine.ExecutionResult
+	ResourceLimits       = engine.ResourceLimits
+	EngineMetrics        = engine.EngineMetrics
+	ScriptContext        = engine.ScriptContext
+	MethodInfo           = engine.MethodInfo
+	ParameterInfo        = engine.ParameterInfo
+	TypeMapping          = engine.TypeMapping
+	TypeInfo             = engine.TypeInfo
+	Function             = engine.Function
+	FunctionSignature    = engine.FunctionSignature
+	Permission           = engine.Permission
+	ScriptValue          = engine.ScriptValue
+	EventBus             = engine.EventBus
+	EventHandler         = engine.EventHandler
+	EngineEvent          = engine.EngineEvent
+	SubscriptionInfo     = engine.SubscriptionInfo
+	TypeRegistry         = engine.TypeRegistry
+	TypeConverterFunc    = engine.TypeConverterFunc
+	ProfilingConfig      = engine.ProfilingConfig
+	ProfilingReport      = engine.ProfilingReport
+	MemoryStats          = engine.MemoryStats
+	Hotspot              = engine.Hotspot
+	OptimizationHint     = engine.OptimizationHint
 	ClientLibraryOptions = engine.ClientLibraryOptions
-	EngineError      = engine.EngineError
+	EngineError          = engine.EngineError
 
 	// ScriptValue types from go-llmspell/pkg/engine.
 	// These enable bridges to work with script values without importing engine directly.

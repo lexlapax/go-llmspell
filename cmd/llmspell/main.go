@@ -14,9 +14,11 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/lexlapax/go-llmspell/cmd/llmspell/commands"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/config"
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // Version information set during build
@@ -34,11 +36,12 @@ var (
 // for automatic CLI parsing and help generation.
 type CLI struct {
 	// Global flags
-	DebugMode  bool   `help:"Enable debug mode" env:"LLMSPELL_DEBUG" name:"debug"`
-	ConfigFile string `help:"Config file path" type:"path" env:"LLMSPELL_CONFIG" name:"config"`
-	Quiet      bool   `help:"Suppress non-error output" short:"q"`
-	Verbose    bool   `help:"Enable verbose output" short:"v"`
-	Profile    string `help:"Security profile to use" default:"sandbox" enum:"sandbox,development,production"`
+	DebugMode     bool   `help:"Enable debug mode" env:"LLMSPELL_DEBUG" name:"debug"`
+	ConfigFile    string `help:"Config file path" type:"path" env:"LLMSPELL_CONFIG" name:"config"`
+	Quiet         bool   `help:"Suppress non-error output" short:"q"`
+	Verbose       bool   `help:"Enable verbose output" short:"v"`
+	SecurityLevel string `help:"Security level for script execution" default:"trusted" enum:"untrusted,trusted,privileged" name:"security-level"`
+	FeatureSet    string `help:"Feature set to enable" default:"full" enum:"minimal,llm,agent,observable,full" name:"feature-set"`
 
 	// Commands
 	Run        commands.RunCmd        `cmd:"" help:"Execute a spell script"`
@@ -118,8 +121,21 @@ func main() {
 	runnerConfig.EnableDebug = cli.DebugMode
 	runnerConfig.EnableMetrics = true
 
-	// Setup engine registry with bridges
-	engineManager, err := runner.SetupEngineRegistry(runnerConfig, cli.Profile)
+	// Validate security level and feature set
+	if _, err := commands.ValidateSecurityLevel(cli.SecurityLevel); err != nil {
+		parser.Fatalf("invalid security level: %v", err)
+		osExit(1)
+		return
+	}
+
+	if _, err := commands.ValidateFeatureSet(cli.FeatureSet); err != nil {
+		parser.Fatalf("invalid feature set: %v", err)
+		osExit(1)
+		return
+	}
+
+	// Setup engine registry (bridges will be loaded on-demand)
+	engineManager, err := runner.SetupEngineRegistry(runnerConfig, "")
 	if err != nil {
 		parser.Fatalf("failed to setup engine registry: %v", err)
 		osExit(1)
@@ -193,7 +209,8 @@ func createCommandContext(ctx context.Context, cfg *config.Config, cli *CLI, scr
 	ctx = context.WithValue(ctx, commands.ConfigKey, cfg)
 	ctx = context.WithValue(ctx, commands.DebugKey, cli.DebugMode)
 	ctx = context.WithValue(ctx, commands.VerboseKey, cli.Verbose)
-	ctx = context.WithValue(ctx, commands.ProfileKey, cli.Profile)
+	ctx = context.WithValue(ctx, commands.SecurityLevelKey, security.SecurityLevel(cli.SecurityLevel))
+	ctx = context.WithValue(ctx, commands.FeatureSetKey, registry.FeatureSet(cli.FeatureSet))
 	ctx = context.WithValue(ctx, commands.RunnerKey, scriptRunner)
 	return ctx
 }

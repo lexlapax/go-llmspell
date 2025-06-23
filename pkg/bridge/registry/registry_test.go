@@ -15,9 +15,9 @@ import (
 
 func TestBridgeSetConstants(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		bridgeSet BridgeSet
-		expected string
+		expected  string
 	}{
 		{"Core bridge set", BridgeSetCore, "core"},
 		{"LLM bridge set", BridgeSetLLM, "llm"},
@@ -38,39 +38,39 @@ func TestBridgeSetConstants(t *testing.T) {
 
 func TestPredefinedBridgeProfiles(t *testing.T) {
 	tests := []struct {
-		name            string
-		profile         BridgeProfile
-		expectedName    string
-		expectedSets    []BridgeSet
-		minSetCount     int
+		name         string
+		profile      BridgeProfile
+		expectedName string
+		expectedSets []BridgeSet
+		minSetCount  int
 	}{
 		{
-			name:            "Standard profile",
-			profile:         StandardProfile,
-			expectedName:    "standard",
-			expectedSets:    []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetAgent, BridgeSetObservability, BridgeSetState, BridgeSetStructured},
-			minSetCount:     7,
+			name:         "Standard profile",
+			profile:      StandardProfile,
+			expectedName: "standard",
+			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetAgent, BridgeSetObservability, BridgeSetState, BridgeSetStructured},
+			minSetCount:  7,
 		},
 		{
-			name:            "Minimal profile",
-			profile:         MinimalProfile,
-			expectedName:    "minimal",
-			expectedSets:    []BridgeSet{BridgeSetCore, BridgeSetUtility},
-			minSetCount:     2,
+			name:         "Minimal profile",
+			profile:      MinimalProfile,
+			expectedName: "minimal",
+			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetUtility},
+			minSetCount:  2,
 		},
 		{
-			name:            "LLM profile",
-			profile:         LLMProfile,
-			expectedName:    "llm",
-			expectedSets:    []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetStructured},
-			minSetCount:     4,
+			name:         "LLM profile",
+			profile:      LLMProfile,
+			expectedName: "llm",
+			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetStructured},
+			minSetCount:  4,
 		},
 		{
-			name:            "Development profile",
-			profile:         DevelopmentProfile,
-			expectedName:    "development",
-			expectedSets:    []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetObservability},
-			minSetCount:     4,
+			name:         "Development profile",
+			profile:      DevelopmentProfile,
+			expectedName: "development",
+			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetObservability},
+			minSetCount:  4,
 		},
 	}
 
@@ -79,7 +79,7 @@ func TestPredefinedBridgeProfiles(t *testing.T) {
 			assert.Equal(t, tt.expectedName, tt.profile.Name)
 			assert.NotEmpty(t, tt.profile.Description)
 			assert.Len(t, tt.profile.BridgeSets, tt.minSetCount)
-			
+
 			// Check that expected sets are present
 			for _, expectedSet := range tt.expectedSets {
 				assert.Contains(t, tt.profile.BridgeSets, expectedSet)
@@ -90,10 +90,10 @@ func TestPredefinedBridgeProfiles(t *testing.T) {
 
 func TestCreateCoreBridges(t *testing.T) {
 	bridges, err := createCoreBridges()
-	
+
 	require.NoError(t, err)
 	require.NotEmpty(t, bridges)
-	
+
 	// Should contain modelinfo bridge
 	found := false
 	for _, bridge := range bridges {
@@ -107,17 +107,17 @@ func TestCreateCoreBridges(t *testing.T) {
 
 func TestCreateLLMBridges(t *testing.T) {
 	bridges, err := createLLMBridges()
-	
+
 	require.NoError(t, err)
 	require.NotEmpty(t, bridges)
 	assert.GreaterOrEqual(t, len(bridges), 3, "Should have at least 3 LLM bridges")
-	
+
 	// Check for expected bridge IDs
 	bridgeIDs := make(map[string]bool)
 	for _, bridge := range bridges {
 		bridgeIDs[bridge.GetID()] = true
 	}
-	
+
 	assert.True(t, bridgeIDs["llm_core"], "Should have llm bridge")
 	assert.True(t, bridgeIDs["llm_providers"], "Should have providers bridge")
 	assert.True(t, bridgeIDs["llm_pool"], "Should have pool bridge")
@@ -125,11 +125,11 @@ func TestCreateLLMBridges(t *testing.T) {
 
 func TestCreateUtilityBridges(t *testing.T) {
 	bridges, err := createUtilityBridges()
-	
+
 	require.NoError(t, err)
 	require.NotEmpty(t, bridges)
 	assert.GreaterOrEqual(t, len(bridges), 5, "Should have multiple utility bridges")
-	
+
 	// Check that bridges have valid IDs
 	for _, bridge := range bridges {
 		assert.NotEmpty(t, bridge.GetID(), "Each bridge should have a non-empty ID")
@@ -138,17 +138,17 @@ func TestCreateUtilityBridges(t *testing.T) {
 
 func TestCreateAgentBridges(t *testing.T) {
 	bridges, err := createAgentBridges()
-	
+
 	require.NoError(t, err)
 	require.NotEmpty(t, bridges)
 	assert.GreaterOrEqual(t, len(bridges), 5, "Should have multiple agent bridges")
-	
+
 	// Check for expected bridge IDs
 	bridgeIDs := make(map[string]bool)
 	for _, bridge := range bridges {
 		bridgeIDs[bridge.GetID()] = true
 	}
-	
+
 	assert.True(t, bridgeIDs["agent_core"], "Should have agent bridge")
 	assert.True(t, bridgeIDs["agent_events"], "Should have events bridge")
 	assert.True(t, bridgeIDs["agent_tools"], "Should have tools bridge")
@@ -156,17 +156,17 @@ func TestCreateAgentBridges(t *testing.T) {
 
 func TestCreateObservabilityBridges(t *testing.T) {
 	bridges, err := createObservabilityBridges()
-	
+
 	require.NoError(t, err)
 	require.NotEmpty(t, bridges)
 	assert.GreaterOrEqual(t, len(bridges), 3, "Should have multiple observability bridges")
-	
+
 	// Check for expected bridge IDs
 	bridgeIDs := make(map[string]bool)
 	for _, bridge := range bridges {
 		bridgeIDs[bridge.GetID()] = true
 	}
-	
+
 	assert.True(t, bridgeIDs["observability_metrics"], "Should have metrics bridge")
 	assert.True(t, bridgeIDs["observability_tracing"], "Should have tracing bridge")
 	assert.True(t, bridgeIDs["observability_guardrails"], "Should have guardrails bridge")
@@ -174,10 +174,10 @@ func TestCreateObservabilityBridges(t *testing.T) {
 
 func TestCreateStateBridges(t *testing.T) {
 	bridges, err := createStateBridges()
-	
+
 	require.NoError(t, err)
 	require.NotEmpty(t, bridges)
-	
+
 	// Check for state context bridge
 	found := false
 	for _, bridge := range bridges {
@@ -191,10 +191,10 @@ func TestCreateStateBridges(t *testing.T) {
 
 func TestCreateStructuredBridges(t *testing.T) {
 	bridges, err := createStructuredBridges()
-	
+
 	require.NoError(t, err)
 	require.NotEmpty(t, bridges)
-	
+
 	// Check for schema bridge
 	found := false
 	for _, bridge := range bridges {
@@ -246,12 +246,12 @@ func TestRegisterBridgeSets(t *testing.T) {
 			require.NoError(t, err)
 
 			err = RegisterBridgeSets(mockEngine, tt.bridgeSets)
-			
+
 			if tt.expectError {
 				assert.Error(t, err, tt.description)
 			} else {
 				assert.NoError(t, err, tt.description)
-				
+
 				// Verify bridges were registered
 				bridges := mockEngine.ListBridges()
 				assert.NotEmpty(t, bridges, "Should have registered bridges")
@@ -277,8 +277,8 @@ func TestRegisterBridgeProfile(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "Register custom profile",
-			profile:     BridgeProfile{
+			name: "Register custom profile",
+			profile: BridgeProfile{
 				Name:        "custom",
 				Description: "Custom test profile",
 				BridgeSets:  []BridgeSet{BridgeSetCore, BridgeSetUtility},
@@ -303,12 +303,12 @@ func TestRegisterBridgeProfile(t *testing.T) {
 			require.NoError(t, err)
 
 			err = RegisterBridgeProfile(mockEngine, tt.profile)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify bridges were registered
 				bridges := mockEngine.ListBridges()
 				assert.NotEmpty(t, bridges, "Should have registered bridges")
@@ -328,23 +328,23 @@ func TestRegisterStandardBridges(t *testing.T) {
 	// Verify bridges were registered
 	bridges := mockEngine.ListBridges()
 	assert.NotEmpty(t, bridges, "Should have registered standard bridges")
-	
+
 	// Should have bridges from all sets in standard profile
 	assert.GreaterOrEqual(t, len(bridges), 10, "Standard profile should register many bridges")
 }
 
 func TestGetAvailableBridgeProfiles(t *testing.T) {
 	profiles := GetAvailableBridgeProfiles()
-	
+
 	require.NotEmpty(t, profiles)
 	assert.Len(t, profiles, 4, "Should have 4 predefined profiles")
-	
+
 	// Check that all expected profiles are present
 	profileNames := make(map[string]bool)
 	for _, profile := range profiles {
 		profileNames[profile.Name] = true
 	}
-	
+
 	assert.True(t, profileNames["standard"], "Should include standard profile")
 	assert.True(t, profileNames["minimal"], "Should include minimal profile")
 	assert.True(t, profileNames["llm"], "Should include llm profile")
@@ -353,27 +353,27 @@ func TestGetAvailableBridgeProfiles(t *testing.T) {
 
 func TestGetBridgeProfileByName(t *testing.T) {
 	tests := []struct {
-		name          string
-		profileName   string
-		expectError   bool
+		name            string
+		profileName     string
+		expectError     bool
 		expectedProfile *BridgeProfile
 	}{
 		{
-			name:          "Get standard profile",
-			profileName:   "standard",
-			expectError:   false,
+			name:            "Get standard profile",
+			profileName:     "standard",
+			expectError:     false,
 			expectedProfile: &StandardProfile,
 		},
 		{
-			name:          "Get minimal profile",
-			profileName:   "minimal",
-			expectError:   false,
+			name:            "Get minimal profile",
+			profileName:     "minimal",
+			expectError:     false,
 			expectedProfile: &MinimalProfile,
 		},
 		{
-			name:          "Get unknown profile",
-			profileName:   "unknown",
-			expectError:   true,
+			name:            "Get unknown profile",
+			profileName:     "unknown",
+			expectError:     true,
 			expectedProfile: nil,
 		},
 	}
@@ -381,7 +381,7 @@ func TestGetBridgeProfileByName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			profile, err := GetBridgeProfileByName(tt.profileName)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "not found")
@@ -449,10 +449,10 @@ func TestBridgeFactoryFunctions(t *testing.T) {
 	for _, tt := range factoryTests {
 		t.Run(tt.name, func(t *testing.T) {
 			bridges, err := tt.factory()
-			
+
 			assert.NoError(t, err, "Factory should not return error")
 			assert.GreaterOrEqual(t, len(bridges), tt.minBridges, tt.description)
-			
+
 			// Verify all bridges have valid IDs and metadata
 			bridgeIDs := make(map[string]bool)
 			for _, bridge := range bridges {
@@ -460,7 +460,7 @@ func TestBridgeFactoryFunctions(t *testing.T) {
 				assert.NotEmpty(t, id, "Bridge should have non-empty ID")
 				assert.False(t, bridgeIDs[id], "Bridge IDs should be unique within a set")
 				bridgeIDs[id] = true
-				
+
 				metadata := bridge.GetMetadata()
 				assert.NotEmpty(t, metadata.Name, "Bridge should have metadata name")
 			}
@@ -472,11 +472,11 @@ func TestErrorHandling(t *testing.T) {
 	t.Run("Uninitialized engine registration", func(t *testing.T) {
 		mockEngine := testutils.NewMockScriptEngine()
 		// Don't initialize the engine
-		
+
 		err := RegisterBridgeSets(mockEngine, []BridgeSet{BridgeSetCore})
 		assert.Error(t, err, "Should fail to register bridges on uninitialized engine")
 	})
-	
+
 	t.Run("Empty bridge sets", func(t *testing.T) {
 		mockEngine := testutils.NewMockScriptEngine()
 		err := mockEngine.Initialize(types.EngineConfig{})
@@ -484,7 +484,7 @@ func TestErrorHandling(t *testing.T) {
 
 		err = RegisterBridgeSets(mockEngine, []BridgeSet{})
 		assert.NoError(t, err, "Should handle empty bridge sets gracefully")
-		
+
 		bridges := mockEngine.ListBridges()
 		assert.Empty(t, bridges, "No bridges should be registered")
 	})

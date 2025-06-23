@@ -44,11 +44,12 @@ func (c *RunCmd) Run(ctx context.Context) error {
 		params[k] = v
 	}
 
-	// Get security profile from context
-	securityProfile := GetProfile(ctx)
+	// Get security level and feature set from context
+	securityLevel := GetSecurityLevel(ctx)
+	featureSet := GetFeatureSet(ctx)
 
 	// Execute the script
-	c.Debug(ctx, "Executing script: %s with profile: %s", c.Script, securityProfile)
+	c.Debug(ctx, "Executing script: %s with security level: %s, feature set: %s", c.Script, securityLevel, featureSet)
 
 	// If engine is specified, we need to read the file and use Execute
 	if c.Engine != "" {
@@ -58,11 +59,12 @@ func (c *RunCmd) Run(ctx context.Context) error {
 			return errors.Wrap(err, errors.CategoryIO, "failed to read script file")
 		}
 
-		// Create options with security profile
+		// Create options with security level and feature set
 		options := &runner.RunnerOptions{
-			Parameters:      params,
-			Engine:          c.Engine,
-			SecurityProfile: securityProfile,
+			Parameters:    params,
+			Engine:        c.Engine,
+			SecurityLevel: string(securityLevel),
+			FeatureSet:    string(featureSet),
 		}
 
 		// Execute the script content directly with options
@@ -82,10 +84,11 @@ func (c *RunCmd) Run(ctx context.Context) error {
 			return errors.Wrap(err, errors.CategoryIO, "failed to read script file")
 		}
 
-		// Create options with security profile for file execution
+		// Create options with security level and feature set for file execution
 		options := &runner.RunnerOptions{
-			Parameters:      params,
-			SecurityProfile: securityProfile,
+			Parameters:    params,
+			SecurityLevel: string(securityLevel),
+			FeatureSet:    string(featureSet),
 		}
 
 		// Execute the file content with options

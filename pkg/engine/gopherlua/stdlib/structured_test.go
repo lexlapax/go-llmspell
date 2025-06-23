@@ -89,13 +89,13 @@ func setupMockStructuredBridge(L *lua.LState, mockBridge *MockStructuredBridge) 
 		if name == "test-schema" {
 			result := L.NewTable()
 			result.RawSetString("type", lua.LString("object"))
-			
+
 			props := L.NewTable()
 			nameProp := L.NewTable()
 			nameProp.RawSetString("type", lua.LString("string"))
 			props.RawSetString("name", nameProp)
 			result.RawSetString("properties", props)
-			
+
 			req := L.NewTable()
 			req.RawSetInt(1, lua.LString("name"))
 			result.RawSetString("required", req)
@@ -207,7 +207,7 @@ func TestStructuredModule_SchemaBuilder(t *testing.T) {
 
 		result := L.NewTable()
 		result.RawSetString("type", lua.LString(propertyType))
-		
+
 		// Add constraints
 		constraints.ForEach(func(k, v lua.LValue) {
 			if key, ok := k.(lua.LString); ok {
@@ -224,7 +224,7 @@ func TestStructuredModule_SchemaBuilder(t *testing.T) {
 	structuredBridge.RawSetString("createSchema", L.NewFunction(func(L *lua.LState) int {
 		_ = L.CheckTable(1) // self
 		schemaData := L.CheckTable(2)
-		
+
 		L.Push(schemaData) // Return schema as-is
 		L.Push(lua.LNil)   // no error
 		return 2
@@ -278,7 +278,7 @@ func TestStructuredModule_Conversion(t *testing.T) {
 		_ = L.CheckTable(1) // self
 		_ = L.CheckTable(2) // schema
 
-		L.Push(lua.LString(`{"type":"object","properties":{"name":{"type":"string"}}}`)) 
+		L.Push(lua.LString(`{"type":"object","properties":{"name":{"type":"string"}}}`))
 		L.Push(lua.LNil) // no error
 		return 2
 	}))
@@ -295,12 +295,12 @@ func TestStructuredModule_Conversion(t *testing.T) {
 
 	// Mock convertJSONSchema method
 	structuredBridge.RawSetString("convertJSONSchema", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self
+		_ = L.CheckTable(1)  // self
 		_ = L.CheckString(2) // json schema string
 
 		result := L.NewTable()
 		result.RawSetString("type", lua.LString("object"))
-		
+
 		props := L.NewTable()
 		nameProp := L.NewTable()
 		nameProp.RawSetString("type", lua.LString("string"))
@@ -359,14 +359,14 @@ func TestStructuredModule_BatchValidation(t *testing.T) {
 
 	// Mock validateJSON method
 	structuredBridge.RawSetString("validateJSON", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self
-		_ = L.CheckTable(2) // schema
+		_ = L.CheckTable(1)     // self
+		_ = L.CheckTable(2)     // schema
 		data := L.CheckTable(3) // data
 		validationCount++
 
 		result := L.NewTable()
 		errors := L.NewTable()
-		
+
 		// Check if data has required "name" field
 		if nameField := L.GetField(data, "name"); nameField != lua.LNil {
 			result.RawSetString("valid", lua.LTrue)
@@ -453,7 +453,7 @@ func TestStructuredModule_AsyncValidation(t *testing.T) {
 
 	// Load promise module first
 	LoadModule(t, L, "promise")
-	
+
 	// Load structured module
 	LoadModule(t, L, "structured")
 
@@ -703,7 +703,7 @@ func TestStructuredModule_ConvenienceFunctions(t *testing.T) {
 	structuredBridge.RawSetString("createSchema", L.NewFunction(func(L *lua.LState) int {
 		_ = L.CheckTable(1) // self
 		schemaData := L.CheckTable(2)
-		
+
 		L.Push(schemaData) // Return schema as-is
 		L.Push(lua.LNil)   // no error
 		return 2
@@ -799,7 +799,7 @@ func TestStructuredModule_Integration(t *testing.T) {
 	// Create a more complete mock structured bridge
 	schemas := make(map[string]lua.LValue)
 	structuredBridge := createFullMockStructuredBridge(L, schemas)
-	
+
 	// Register bridge
 	bridges := L.NewTable()
 	bridges.RawSetString("structured_schema", structuredBridge)
@@ -871,7 +871,7 @@ func createFullMockStructuredBridge(L *lua.LState, schemas map[string]lua.LValue
 
 		result := L.NewTable()
 		result.RawSetString("type", lua.LString(propertyType))
-		
+
 		// Add constraints
 		constraints.ForEach(func(k, v lua.LValue) {
 			if key, ok := k.(lua.LString); ok {
@@ -888,7 +888,7 @@ func createFullMockStructuredBridge(L *lua.LState, schemas map[string]lua.LValue
 	structuredBridge.RawSetString("createSchema", L.NewFunction(func(L *lua.LState) int {
 		_ = L.CheckTable(1) // self
 		schemaData := L.CheckTable(2)
-		
+
 		L.Push(schemaData) // Return schema as-is
 		L.Push(lua.LNil)   // no error
 		return 2

@@ -1,93 +1,104 @@
-// ABOUTME: Implementation of the security command for managing security profiles.
-// ABOUTME: Supports list, show, and validate actions for security profile management.
+// ABOUTME: Implementation of the security command for managing security levels and feature sets.
+// ABOUTME: Supports list, show, and validate actions for security configuration.
 
 package commands
 
 import (
 	"context"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/errors"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
-// SecurityCmd manages security profiles.
-// It provides commands to list available profiles, show profile details,
-// and validate profile configurations.
+// SecurityCmd manages security levels and feature sets.
+// It provides commands to list available options, show details,
+// and validate configurations.
 type SecurityCmd struct {
 	BaseCommand
-	Action  string `arg:"" help:"Action to perform: list (show all profiles), show (display profile details), validate (check profile validity)" enum:"list,show,validate" default:"list"`
-	Profile string `arg:"" optional:"" help:"Security profile name (sandbox, development, production)"`
+	Action        string `arg:"" help:"Action to perform: list (show all options), show (display details), validate (check validity)" enum:"list,show,validate" default:"list"`
+	SecurityLevel string `arg:"" optional:"" help:"Security level name (untrusted, trusted, privileged)"`
+	FeatureSet    string `help:"Feature set name (minimal, llm, agent, observable, full)" default:"full"`
 }
 
 // Run executes the command.
-// It performs the requested security action: list all profiles,
-// show details of a specific profile, or validate a profile name.
+// It performs the requested security action: list all options,
+// show details of a specific configuration, or validate settings.
 func (c *SecurityCmd) Run(ctx context.Context) error {
 	switch c.Action {
 	case "list":
-		c.Println("Available security profiles:")
-		// TODO: Use actual security package when available
-		profiles := []struct{ name, desc string }{
-			{"sandbox", "Maximum security restrictions"},
-			{"development", "Balanced for development"},
-			{"production", "Production security settings"},
+		c.Println("Available security levels:")
+		for _, level := range GetAvailableSecurityLevels() {
+			desc := GetSecurityLevelDescription(security.SecurityLevel(level))
+			c.Printf("  - %s: %s\n", level, desc)
 		}
-		for _, p := range profiles {
-			c.Printf("  - %s (%s)\n", p.name, p.desc)
+
+		c.Println("\nAvailable feature sets:")
+		for _, fs := range GetAvailableFeatureSets() {
+			desc := GetFeatureSetDescription(registry.FeatureSet(fs))
+			c.Printf("  - %s: %s\n", fs, desc)
 		}
 		return nil
 
 	case "show":
-		if c.Profile == "" {
-			c.Profile = GetProfile(ctx)
+		if c.SecurityLevel == "" {
+			c.SecurityLevel = string(GetSecurityLevel(ctx))
 		}
 
-		// TODO: Use actual security package when available
-		c.Printf("Profile: %s\n", c.Profile)
-		switch c.Profile {
-		case "sandbox":
-			c.Printf("Description: Maximum security restrictions\n")
+		// Show security level details
+		c.Printf("Security Level: %s\n", c.SecurityLevel)
+		config := security.GetLevelConfig(security.SecurityLevel(c.SecurityLevel))
+		if config != nil {
+			c.Printf("Description: %s\n", config.Description)
 			c.Println("\nPermissions:")
-			c.Println("  - read:script")
-			c.Println("  - execute:llm")
-		case "development":
-			c.Printf("Description: Balanced for development\n")
-			c.Println("\nPermissions:")
-			c.Println("  - read:*")
-			c.Println("  - write:temp")
-			c.Println("  - execute:*")
-			c.Println("  - network:llm")
-		case "production":
-			c.Printf("Description: Production security settings\n")
-			c.Println("\nPermissions:")
-			c.Println("  - read:*")
-			c.Println("  - write:output")
-			c.Println("  - execute:*")
-			c.Println("  - network:*")
-		default:
-			return errors.Newf(errors.CategorySecurity, "unknown profile: %s", c.Profile)
+			c.Printf("  - Network: %v\n", config.AllowNetwork)
+			c.Printf("  - Filesystem: %v\n", config.AllowFilesystem)
+			c.Printf("  - Environment: %v\n", config.AllowEnvironment)
+			c.Printf("  - Execute: %v\n", config.AllowExec)
+			c.Printf("  - Unsafe: %v\n", config.AllowUnsafe)
+
+			c.Println("\nResource Limits:")
+			c.Printf("  - Memory: %d MB\n", config.MemoryLimit/(1024*1024))
+			c.Printf("  - CPU: %d%%\n", config.CPULimit)
+			c.Printf("  - Timeout: %d seconds\n", config.TimeoutSeconds)
+		}
+
+		// Show feature set details
+		c.Printf("\nFeature Set: %s\n", c.FeatureSet)
+		desc := registry.GetFeatureSetDescription(registry.FeatureSet(c.FeatureSet))
+		c.Printf("Description: %s\n", desc)
+
+		bridgeSets := registry.GetBridgeSetsForFeature(registry.FeatureSet(c.FeatureSet))
+		if len(bridgeSets) > 0 {
+			c.Println("\nEnabled Bridge Sets:")
+			for _, bs := range bridgeSets {
+				c.Printf("  - %s\n", bs)
+			}
 		}
 
 		return nil
 
 	case "validate":
-		if c.Profile == "" {
-			return errors.New(errors.CategoryUsage, "profile name required")
+		if c.SecurityLevel == "" && c.FeatureSet == "" {
+			return errors.New(errors.CategoryUsage, "security level or feature set required")
 		}
 
-		// TODO: Use actual security package when available
-		validProfiles := []string{"sandbox", "development", "production"}
-		valid := false
-		for _, p := range validProfiles {
-			if p == c.Profile {
-				valid = true
-				break
+		// Validate security level if provided
+		if c.SecurityLevel != "" {
+			if _, err := ValidateSecurityLevel(c.SecurityLevel); err != nil {
+				return errors.Wrap(err, errors.CategoryValidation, "invalid security level")
 			}
-		}
-		if !valid {
-			return errors.Newf(errors.CategoryValidation, "invalid profile: %s", c.Profile)
+			c.Printf("✓ Security level '%s' is valid\n", c.SecurityLevel)
 		}
 
-		c.Printf("✓ Profile '%s' is valid\n", c.Profile)
+		// Validate feature set if provided
+		if c.FeatureSet != "" {
+			if _, err := ValidateFeatureSet(c.FeatureSet); err != nil {
+				return errors.Wrap(err, errors.CategoryValidation, "invalid feature set")
+			}
+			c.Printf("✓ Feature set '%s' is valid\n", c.FeatureSet)
+		}
+
 		return nil
 
 	default:

@@ -77,6 +77,12 @@ type REPLConfig struct {
 	// Optional engine registry for bridge support
 	// If provided, REPL will use engines from this registry with lazy bridge loading
 	EngineRegistry interface{}
+
+	// Security level for script execution
+	SecurityLevel string
+
+	// Feature set to enable
+	FeatureSet string
 }
 
 // Validate checks if the REPL configuration is valid.

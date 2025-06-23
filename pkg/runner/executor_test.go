@@ -357,9 +357,9 @@ func createTestExecutor(t *testing.T) *ScriptExecutor {
 func TestExecutor_SecurityProfileMapping(t *testing.T) {
 	t.Run("maps_security_profiles_to_engine_levels", func(t *testing.T) {
 		testCases := []struct {
-			profile        string
-			expectedLevel  string
-			description    string
+			profile       string
+			expectedLevel string
+			description   string
 		}{
 			{"sandbox", "strict", "sandbox profile should map to strict security level"},
 			{"development", "standard", "development profile should map to standard security level"},
@@ -378,7 +378,7 @@ func TestExecutor_SecurityProfileMapping(t *testing.T) {
 
 				// Track the config that was passed
 				var capturedConfig engine.EngineConfig
-				
+
 				// Create a custom factory that captures the config
 				factory := &testEngineFactoryWithCapture{
 					capturedConfig: &capturedConfig,
@@ -402,7 +402,7 @@ func TestExecutor_SecurityProfileMapping(t *testing.T) {
 					SecurityProfile: tc.profile,
 					Engine:          "test",
 				}
-				
+
 				_, err = executor.ExecuteWithOptions(ctx, "return 'test'", options)
 				require.NoError(t, err)
 
@@ -424,12 +424,14 @@ func (f *testEngineFactoryWithCapture) Create(config engine.EngineConfig) (engin
 	return &mockEngine{name: "test"}, nil
 }
 
-func (f *testEngineFactoryWithCapture) Name() string { return "test" }
-func (f *testEngineFactoryWithCapture) Version() string { return "1.0.0" }
-func (f *testEngineFactoryWithCapture) Description() string { return "Test engine" }
-func (f *testEngineFactoryWithCapture) FileExtensions() []string { return []string{".test"} }
+func (f *testEngineFactoryWithCapture) Name() string                     { return "test" }
+func (f *testEngineFactoryWithCapture) Version() string                  { return "1.0.0" }
+func (f *testEngineFactoryWithCapture) Description() string              { return "Test engine" }
+func (f *testEngineFactoryWithCapture) FileExtensions() []string         { return []string{".test"} }
 func (f *testEngineFactoryWithCapture) Features() []engine.EngineFeature { return nil }
-func (f *testEngineFactoryWithCapture) GetDefaultConfig() engine.EngineConfig { return engine.EngineConfig{} }
+func (f *testEngineFactoryWithCapture) GetDefaultConfig() engine.EngineConfig {
+	return engine.EngineConfig{}
+}
 func (f *testEngineFactoryWithCapture) ValidateConfig(config engine.EngineConfig) error { return nil }
 
 // Benchmark tests

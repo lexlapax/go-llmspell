@@ -12,8 +12,8 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/bridge/observability"
 	"github.com/lexlapax/go-llmspell/pkg/bridge/state"
 	"github.com/lexlapax/go-llmspell/pkg/bridge/structured"
-	"github.com/lexlapax/go-llmspell/pkg/bridge/util"
 	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/util"
 )
 
 // BridgeSet represents a collection of related bridges

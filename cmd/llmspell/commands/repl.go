@@ -18,11 +18,13 @@ import (
 // with support for history, syntax highlighting, and auto-completion.
 type REPLCmd struct {
 	BaseCommand
-	Engine      string `short:"e" help:"Script engine to use"`
-	HistoryFile string `short:"f" help:"History file path"`
-	NoHistory   bool   `help:"Disable history saving"`
-	NoHighlight bool   `help:"Disable syntax highlighting"`
-	NoComplete  bool   `help:"Disable auto-completion"`
+	Engine        string `short:"e" help:"Script engine to use"`
+	HistoryFile   string `short:"f" help:"History file path"`
+	NoHistory     bool   `help:"Disable history saving"`
+	NoHighlight   bool   `help:"Disable syntax highlighting"`
+	NoComplete    bool   `help:"Disable auto-completion"`
+	SecurityLevel string `help:"Security level for REPL execution" default:"trusted" enum:"untrusted,trusted,privileged"`
+	FeatureSet    string `help:"Feature set to enable in REPL" default:"full" enum:"minimal,llm,agent,observable,full"`
 }
 
 // Run executes the command.
@@ -45,13 +47,28 @@ func (c *REPLCmd) Run(ctx context.Context) error {
 
 	// Create REPL configuration from main config
 	replConfig := repl.NewREPLConfigFromConfig(cfg, engine)
-	
+
 	// Get runner from context to access engine registry if available
 	if runner := GetRunner(ctx); runner != nil {
 		// Extract engine registry from runner if it has the method
 		if registryProvider, ok := runner.(interface{ GetEngineRegistry() interface{} }); ok {
 			replConfig.EngineRegistry = registryProvider.GetEngineRegistry()
 		}
+	}
+
+	// Set security level and feature set
+	if c.SecurityLevel != "" {
+		replConfig.SecurityLevel = c.SecurityLevel
+	} else {
+		// Get from context if not explicitly set
+		replConfig.SecurityLevel = string(GetSecurityLevel(ctx))
+	}
+
+	if c.FeatureSet != "" {
+		replConfig.FeatureSet = c.FeatureSet
+	} else {
+		// Get from context if not explicitly set
+		replConfig.FeatureSet = string(GetFeatureSet(ctx))
 	}
 
 	// Override with command-line options if provided

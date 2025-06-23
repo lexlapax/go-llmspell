@@ -13,7 +13,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/config"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // contextKey is the type for context value keys
@@ -27,8 +29,12 @@ const (
 	DebugKey contextKey = "debug"
 	// VerboseKey stores the verbose output flag
 	VerboseKey contextKey = "verbose"
-	// ProfileKey stores the security profile name
+	// ProfileKey stores the security profile name (deprecated, use SecurityLevelKey and FeatureSetKey)
 	ProfileKey contextKey = "profile"
+	// SecurityLevelKey stores the security level
+	SecurityLevelKey contextKey = "securityLevel"
+	// FeatureSetKey stores the feature set
+	FeatureSetKey contextKey = "featureSet"
 	// RunnerKey stores the runner instance
 	RunnerKey contextKey = "runner"
 	// EngineRegistryKey stores the engine registry instance (deprecated, use RunnerKey)
@@ -77,11 +83,36 @@ func IsVerbose(ctx context.Context) bool {
 
 // GetProfile gets the security profile from context.
 // Returns "sandbox" as default if not found.
+// Deprecated: Use GetSecurityLevel and GetFeatureSet instead.
 func GetProfile(ctx context.Context) string {
 	if profile, ok := ctx.Value(ProfileKey).(string); ok {
 		return profile
 	}
 	return "sandbox"
+}
+
+// GetSecurityLevel gets the security level from context.
+// Returns SecurityLevelTrusted as default if not found.
+func GetSecurityLevel(ctx context.Context) security.SecurityLevel {
+	if level, ok := ctx.Value(SecurityLevelKey).(security.SecurityLevel); ok {
+		return level
+	}
+	if levelStr, ok := ctx.Value(SecurityLevelKey).(string); ok {
+		return security.SecurityLevel(levelStr)
+	}
+	return security.SecurityLevelTrusted
+}
+
+// GetFeatureSet gets the feature set from context.
+// Returns FeatureSetFull as default if not found.
+func GetFeatureSet(ctx context.Context) registry.FeatureSet {
+	if fs, ok := ctx.Value(FeatureSetKey).(registry.FeatureSet); ok {
+		return fs
+	}
+	if fsStr, ok := ctx.Value(FeatureSetKey).(string); ok {
+		return registry.FeatureSet(fsStr)
+	}
+	return registry.FeatureSetFull
 }
 
 // GetRunner gets the runner from context.
@@ -245,4 +276,60 @@ func getDefaultConfigPath() string {
 	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "llmspell", "config.yaml")
+}
+
+// ValidateSecurityLevel validates a security level string.
+// Returns the validated SecurityLevel or an error if invalid.
+func ValidateSecurityLevel(level string) (security.SecurityLevel, error) {
+	if !security.IsValidLevel(level) {
+		return "", fmt.Errorf("invalid security level: %s (valid options: untrusted, trusted, privileged)", level)
+	}
+	return security.SecurityLevel(level), nil
+}
+
+// ValidateFeatureSet validates a feature set string.
+// Returns the validated FeatureSet or an error if invalid.
+func ValidateFeatureSet(fs string) (registry.FeatureSet, error) {
+	if !registry.IsValidFeatureSet(fs) {
+		return "", fmt.Errorf("invalid feature set: %s (valid options: minimal, llm, agent, observable, full)", fs)
+	}
+	return registry.FeatureSet(fs), nil
+}
+
+// GetAvailableSecurityLevels returns all available security levels.
+// This is used for help text and command completion.
+func GetAvailableSecurityLevels() []string {
+	return []string{
+		string(security.SecurityLevelUntrusted),
+		string(security.SecurityLevelTrusted),
+		string(security.SecurityLevelPrivileged),
+	}
+}
+
+// GetAvailableFeatureSets returns all available feature sets.
+// This is used for help text and command completion.
+func GetAvailableFeatureSets() []string {
+	return []string{
+		string(registry.FeatureSetMinimal),
+		string(registry.FeatureSetLLM),
+		string(registry.FeatureSetAgent),
+		string(registry.FeatureSetObservable),
+		string(registry.FeatureSetFull),
+	}
+}
+
+// GetSecurityLevelDescription returns a description of a security level.
+// This is used for help text to explain what each level means.
+func GetSecurityLevelDescription(level security.SecurityLevel) string {
+	config := security.GetLevelConfig(level)
+	if config != nil {
+		return config.Description
+	}
+	return "Unknown security level"
+}
+
+// GetFeatureSetDescription returns a description of a feature set.
+// This is used for help text to explain what each set includes.
+func GetFeatureSetDescription(fs registry.FeatureSet) string {
+	return registry.GetFeatureSetDescription(fs)
 }
