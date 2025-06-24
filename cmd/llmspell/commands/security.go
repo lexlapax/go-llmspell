@@ -18,7 +18,6 @@ type SecurityCmd struct {
 	BaseCommand
 	Action        string `arg:"" help:"Action to perform: list (show all options), show (display details), validate (check validity)" enum:"list,show,validate" default:"list"`
 	SecurityLevel string `arg:"" optional:"" help:"Security level name (untrusted, trusted, privileged)"`
-	FeatureSet    string `help:"Feature set name (minimal, llm, agent, observable, full)" default:"full"`
 }
 
 // Run executes the command.
@@ -64,11 +63,12 @@ func (c *SecurityCmd) Run(ctx context.Context) error {
 		}
 
 		// Show feature set details
-		c.Printf("\nFeature Set: %s\n", c.FeatureSet)
-		desc := registry.GetFeatureSetDescription(registry.FeatureSet(c.FeatureSet))
+		featureSet := GetFeatureSet(ctx)
+		c.Printf("\nFeature Set: %s\n", featureSet)
+		desc := registry.GetFeatureSetDescription(featureSet)
 		c.Printf("Description: %s\n", desc)
 
-		bridgeSets := registry.GetBridgeSetsForFeature(registry.FeatureSet(c.FeatureSet))
+		bridgeSets := registry.GetBridgeSetsForFeature(featureSet)
 		if len(bridgeSets) > 0 {
 			c.Println("\nEnabled Bridge Sets:")
 			for _, bs := range bridgeSets {
@@ -79,7 +79,8 @@ func (c *SecurityCmd) Run(ctx context.Context) error {
 		return nil
 
 	case "validate":
-		if c.SecurityLevel == "" && c.FeatureSet == "" {
+		featureSet := GetFeatureSet(ctx)
+		if c.SecurityLevel == "" && string(featureSet) == "" {
 			return errors.New(errors.CategoryUsage, "security level or feature set required")
 		}
 
@@ -92,11 +93,11 @@ func (c *SecurityCmd) Run(ctx context.Context) error {
 		}
 
 		// Validate feature set if provided
-		if c.FeatureSet != "" {
-			if _, err := ValidateFeatureSet(c.FeatureSet); err != nil {
+		if string(featureSet) != "" {
+			if _, err := ValidateFeatureSet(string(featureSet)); err != nil {
 				return errors.Wrap(err, errors.CategoryValidation, "invalid feature set")
 			}
-			c.Printf("✓ Feature set '%s' is valid\n", c.FeatureSet)
+			c.Printf("✓ Feature set '%s' is valid\n", featureSet)
 		}
 
 		return nil

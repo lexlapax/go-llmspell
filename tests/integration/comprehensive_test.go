@@ -33,11 +33,11 @@ func TestBridgeAgentCoverage(t *testing.T) {
 
 				// Test bridge ID
 				id := bridge.GetID()
-				assert.Equal(t, "agent", id)
+				assert.Equal(t, "agent_core", id)
 
 				// Test metadata
 				metadata := bridge.GetMetadata()
-				assert.Equal(t, "agent", metadata.Name)
+				assert.Equal(t, "agent_core", metadata.Name)
 				assert.NotEmpty(t, metadata.Version)
 
 				// Test initialization
@@ -71,11 +71,11 @@ func TestBridgeLLMCoverage(t *testing.T) {
 
 				// Test bridge ID
 				id := bridge.GetID()
-				assert.Equal(t, "llm", id)
+				assert.Equal(t, "llm_core", id)
 
 				// Test metadata
 				metadata := bridge.GetMetadata()
-				assert.Equal(t, "llm", metadata.Name)
+				assert.Equal(t, "llm_core", metadata.Name)
 
 				// Test initialization
 				ctx := context.Background()

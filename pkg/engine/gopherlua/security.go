@@ -9,10 +9,12 @@ import (
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
+
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
-// SecurityLevel defines the security restrictions level.
-// Each level provides progressively more restrictive sandboxing.
+// Local SecurityLevel mapping to centralized security levels
+// This maps the centralized security.SecurityLevel to internal engine levels
 type SecurityLevel int
 
 const (
@@ -26,12 +28,19 @@ const (
 	SecurityLevelCustom
 )
 
-// Security profile names
-const (
-	SecurityProfileMinimal  = "minimal"
-	SecurityProfileStandard = "standard"
-	SecurityProfileStrict   = "strict"
-)
+// mapSecurityLevel maps centralized security levels to local engine levels
+func mapSecurityLevel(level security.SecurityLevel) SecurityLevel {
+	switch level {
+	case security.SecurityLevelUntrusted:
+		return SecurityLevelStrict
+	case security.SecurityLevelTrusted:
+		return SecurityLevelStandard
+	case security.SecurityLevelPrivileged:
+		return SecurityLevelMinimal
+	default:
+		return SecurityLevelStandard // Default to standard
+	}
+}
 
 // ResourceLimits defines execution resource limits
 type ResourceLimits struct {
@@ -74,9 +83,9 @@ type ResourceMonitor struct {
 	mu               sync.Mutex
 }
 
-// Predefined security profiles
-var securityProfiles = map[string]SecurityConfig{
-	SecurityProfileMinimal: {
+// Predefined security profiles using centralized security levels
+var securityProfiles = map[SecurityLevel]SecurityConfig{
+	SecurityLevelMinimal: {
 		Level:            SecurityLevelMinimal,
 		AllowedLibraries: []string{"base", "coroutine", "table", "io", "os", "string", "math", "package"},
 		DeniedFunctions: map[string]bool{
@@ -93,7 +102,7 @@ var securityProfiles = map[string]SecurityConfig{
 			CheckInterval:   10000,
 		},
 	},
-	SecurityProfileStandard: {
+	SecurityLevelStandard: {
 		Level:            SecurityLevelStandard,
 		AllowedLibraries: []string{"base", "coroutine", "table", "string", "math", "os", "package"},
 		DeniedFunctions: map[string]bool{
@@ -113,7 +122,7 @@ var securityProfiles = map[string]SecurityConfig{
 			CheckInterval:   5000,
 		},
 	},
-	SecurityProfileStrict: {
+	SecurityLevelStrict: {
 		Level:            SecurityLevelStrict,
 		AllowedLibraries: []string{"base", "coroutine", "table", "string", "math", "package"},
 		DeniedFunctions:  map[string]bool{}, // OS library not loaded at all
@@ -131,19 +140,7 @@ var securityProfiles = map[string]SecurityConfig{
 func NewSecurityManager(config SecurityConfig) *SecurityManager {
 	// Apply defaults based on security level if not provided
 	if config.Level != SecurityLevelCustom {
-		var profileName string
-		switch config.Level {
-		case SecurityLevelMinimal:
-			profileName = SecurityProfileMinimal
-		case SecurityLevelStandard:
-			profileName = SecurityProfileStandard
-		case SecurityLevelStrict:
-			profileName = SecurityProfileStrict
-		default:
-			profileName = SecurityProfileStandard
-		}
-
-		if profile, ok := securityProfiles[profileName]; ok {
+		if profile, ok := securityProfiles[config.Level]; ok {
 			// Apply profile defaults only if not explicitly set
 			if config.ResourceLimits.CheckInterval == 0 {
 				config.ResourceLimits = profile.ResourceLimits
@@ -167,13 +164,32 @@ func NewSecurityManager(config SecurityConfig) *SecurityManager {
 	}
 }
 
-// NewSecurityManagerFromProfile creates a security manager from a named profile
-func NewSecurityManagerFromProfile(profile string) (*SecurityManager, error) {
-	config, ok := securityProfiles[profile]
+// NewSecurityManagerFromLevel creates a security manager from a centralized security level
+func NewSecurityManagerFromLevel(level security.SecurityLevel) (*SecurityManager, error) {
+	engineLevel := mapSecurityLevel(level)
+	config, ok := securityProfiles[engineLevel]
 	if !ok {
-		return nil, fmt.Errorf("unknown security profile: %s", profile)
+		return nil, fmt.Errorf("unknown security level: %s", level)
 	}
 	return NewSecurityManager(config), nil
+}
+
+// NewSecurityManagerFromProfile creates a security manager from a named profile (deprecated)
+// Use NewSecurityManagerFromLevel with centralized security levels instead
+func NewSecurityManagerFromProfile(profile string) (*SecurityManager, error) {
+	// Map old profile strings to centralized security levels
+	var level security.SecurityLevel
+	switch profile {
+	case "minimal":
+		level = security.SecurityLevelPrivileged
+	case "standard":
+		level = security.SecurityLevelTrusted
+	case "strict":
+		level = security.SecurityLevelUntrusted
+	default:
+		return nil, fmt.Errorf("unknown security profile: %s", profile)
+	}
+	return NewSecurityManagerFromLevel(level)
 }
 
 // LoadLibraries loads allowed libraries into the Lua state

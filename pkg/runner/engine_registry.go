@@ -13,6 +13,7 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // EngineRegistryManager wraps the engine registry for use by the runner.
@@ -20,9 +21,9 @@ import (
 // registration, execution, and statistics gathering.
 type EngineRegistryManager struct {
 	registry    *engine.Registry
-	bridgeCache map[string]bool // tracks which engine+profile combinations have bridges loaded
+	bridgeCache map[string]bool // tracks which engine+featureset combinations have bridges loaded
 	cacheMutex  sync.RWMutex    // protects bridgeCache from concurrent access
-	config      *RunnerConfig   // configuration for engine-specific bridge profiles
+	config      *RunnerConfig   // configuration for engine-specific feature sets
 }
 
 // NewEngineRegistryManager creates a new engine registry manager.
@@ -60,18 +61,18 @@ func (m *EngineRegistryManager) RegisterEngines(factories map[string]engine.Engi
 }
 
 // GetEngine gets or creates an engine instance with bridges loaded on-demand.
-// It ensures bridges are registered for the engine based on the security profile,
+// It ensures bridges are registered for the engine based on the security level and feature set,
 // and caches bridge registration to prevent redundant loading.
-func (m *EngineRegistryManager) GetEngine(name string, config engine.EngineConfig, securityProfile string) (engine.ScriptEngine, error) {
+func (m *EngineRegistryManager) GetEngine(name string, config engine.EngineConfig, securityLevel security.SecurityLevel, featureSet registry.FeatureSet) (engine.ScriptEngine, error) {
 	// Get engine instance first
 	scriptEngine, err := m.registry.GetEngine(name, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get engine %s: %w", name, err)
 	}
 
-	// Create cache key from engine instance and security profile
+	// Create cache key from engine instance, security level, and feature set
 	// Use the engine's address as a unique identifier
-	cacheKey := fmt.Sprintf("%p:%s", scriptEngine, securityProfile)
+	cacheKey := fmt.Sprintf("%p:%s:%s", scriptEngine, securityLevel, featureSet)
 
 	// Check if bridges are already loaded for this engine instance+profile combination
 	m.cacheMutex.RLock()
@@ -80,28 +81,22 @@ func (m *EngineRegistryManager) GetEngine(name string, config engine.EngineConfi
 
 	// If bridges not loaded for this combination, load them now
 	if !bridgesLoaded {
-		if err := m.loadBridgesForEngine(scriptEngine, securityProfile, cacheKey); err != nil {
-			return nil, fmt.Errorf("failed to load bridges for engine %s with profile %s: %w", name, securityProfile, err)
+		if err := m.loadBridgesForEngine(scriptEngine, securityLevel, featureSet, cacheKey); err != nil {
+			return nil, fmt.Errorf("failed to load bridges for engine %s with security level %s and feature set %s: %w", name, securityLevel, featureSet, err)
 		}
 	}
 
 	return scriptEngine, nil
 }
 
-// loadBridgesForEngine loads bridges for an engine based on security profile.
-// It maps security profiles to bridge profiles and registers the appropriate bridges.
-func (m *EngineRegistryManager) loadBridgesForEngine(scriptEngine engine.ScriptEngine, securityProfile, cacheKey string) error {
-	// Get engine name for engine-aware bridge profile selection
-	engineName := scriptEngine.Name()
+// loadBridgesForEngine loads bridges for an engine based on security level and feature set.
+// It registers the appropriate bridges based on the feature set.
+func (m *EngineRegistryManager) loadBridgesForEngine(scriptEngine engine.ScriptEngine, securityLevel security.SecurityLevel, featureSet registry.FeatureSet, cacheKey string) error {
+	// TODO: In the future, we might want to filter bridges based on security level
+	// For now, security level is enforced at runtime, not at bridge registration time
 
-	// Map security profile to bridge profile (engine-aware)
-	bridgeProfile, err := m.getBridgeProfileForSecurityProfile(securityProfile, engineName)
-	if err != nil {
-		return fmt.Errorf("failed to get bridge profile for security profile %s and engine %s: %w", securityProfile, engineName, err)
-	}
-
-	// Register bridges using the profile
-	if err := registry.RegisterBridgeProfile(scriptEngine, bridgeProfile); err != nil {
+	// Register bridges using the feature set
+	if err := registry.RegisterBridgesByFeatureSet(scriptEngine, featureSet); err != nil {
 		// If bridges are already registered, that's OK for our lazy loading approach
 		// The engine instance may have been reused from the registry pool
 		if bridgeAlreadyRegisteredError(err) {
@@ -111,7 +106,7 @@ func (m *EngineRegistryManager) loadBridgesForEngine(scriptEngine engine.ScriptE
 			m.cacheMutex.Unlock()
 			return nil
 		}
-		return fmt.Errorf("failed to register bridge profile %s: %w", bridgeProfile.Name, err)
+		return fmt.Errorf("failed to register bridges for feature set %s: %w", featureSet, err)
 	}
 
 	// Cache that bridges are loaded for this combination
@@ -120,125 +115,6 @@ func (m *EngineRegistryManager) loadBridgesForEngine(scriptEngine engine.ScriptE
 	m.cacheMutex.Unlock()
 
 	return nil
-}
-
-// getBridgeProfileForSecurityProfile maps security profiles to bridge profiles.
-// It provides appropriate bridge sets based on the security context and engine type.
-// Different engines may use different bridge profiles for the same security profile.
-func (m *EngineRegistryManager) getBridgeProfileForSecurityProfile(securityProfile, engineName string) (registry.BridgeProfile, error) {
-	// Check if custom mapping exists in configuration
-	if m.config != nil && m.config.EngineBridgeProfiles != nil {
-		if engineProfiles, exists := m.config.EngineBridgeProfiles[engineName]; exists {
-			if profileName, exists := engineProfiles[securityProfile]; exists {
-				return m.getProfileByName(profileName)
-			}
-		}
-	}
-
-	// Fallback to default engine-specific mappings
-	switch engineName {
-	case "lua":
-		return m.getLuaBridgeProfile(securityProfile)
-	case "javascript":
-		return m.getJavaScriptBridgeProfile(securityProfile)
-	case "tengo":
-		return m.getTengoBridgeProfile(securityProfile)
-	default:
-		// Fallback to Lua behavior for unknown engines
-		return m.getLuaBridgeProfile(securityProfile)
-	}
-}
-
-// getLuaBridgeProfile returns bridge profiles for Lua engine.
-// Maintains current behavior for backward compatibility.
-func (m *EngineRegistryManager) getLuaBridgeProfile(securityProfile string) (registry.BridgeProfile, error) {
-	switch securityProfile {
-	case "sandbox":
-		// Sandbox profile uses standard bridges with full functionality
-		return registry.StandardProfile, nil
-	case "development":
-		// Development profile includes debugging and observability bridges
-		return registry.DevelopmentProfile, nil
-	case "production":
-		// Production profile uses standard bridges (same as sandbox for now)
-		return registry.StandardProfile, nil
-	case "minimal":
-		// Minimal profile uses only essential bridges
-		return registry.MinimalProfile, nil
-	case "llm":
-		// LLM profile optimized for LLM operations
-		return registry.LLMProfile, nil
-	default:
-		// Default to standard profile for unknown security profiles
-		return registry.StandardProfile, nil
-	}
-}
-
-// getJavaScriptBridgeProfile returns bridge profiles for JavaScript engine.
-// JavaScript engines default to LLM-focused profiles for AI applications.
-func (m *EngineRegistryManager) getJavaScriptBridgeProfile(securityProfile string) (registry.BridgeProfile, error) {
-	switch securityProfile {
-	case "sandbox":
-		// JavaScript sandbox uses LLM profile (lighter than full standard)
-		return registry.LLMProfile, nil
-	case "development":
-		// Development profile includes debugging and observability bridges
-		return registry.DevelopmentProfile, nil
-	case "production":
-		// Production JavaScript focuses on LLM operations
-		return registry.LLMProfile, nil
-	case "minimal":
-		// Minimal profile uses only essential bridges
-		return registry.MinimalProfile, nil
-	case "llm":
-		// LLM profile optimized for LLM operations
-		return registry.LLMProfile, nil
-	default:
-		// JavaScript default to LLM-focused profile
-		return registry.LLMProfile, nil
-	}
-}
-
-// getTengoBridgeProfile returns bridge profiles for Tengo engine.
-// Tengo engines default to minimal profiles for lightweight execution.
-func (m *EngineRegistryManager) getTengoBridgeProfile(securityProfile string) (registry.BridgeProfile, error) {
-	switch securityProfile {
-	case "sandbox":
-		// Tengo sandbox uses minimal profile for lightweight execution
-		return registry.MinimalProfile, nil
-	case "development":
-		// Development profile includes debugging and observability bridges
-		return registry.DevelopmentProfile, nil
-	case "production":
-		// Production Tengo focuses on minimal footprint
-		return registry.MinimalProfile, nil
-	case "minimal":
-		// Minimal profile uses only essential bridges
-		return registry.MinimalProfile, nil
-	case "llm":
-		// LLM profile for LLM operations
-		return registry.LLMProfile, nil
-	default:
-		// Tengo default to minimal profile
-		return registry.MinimalProfile, nil
-	}
-}
-
-// getProfileByName returns a bridge profile by name.
-// It maps profile names to their corresponding BridgeProfile instances.
-func (m *EngineRegistryManager) getProfileByName(profileName string) (registry.BridgeProfile, error) {
-	switch profileName {
-	case "standard":
-		return registry.StandardProfile, nil
-	case "minimal":
-		return registry.MinimalProfile, nil
-	case "llm":
-		return registry.LLMProfile, nil
-	case "development":
-		return registry.DevelopmentProfile, nil
-	default:
-		return registry.BridgeProfile{}, fmt.Errorf("unknown bridge profile: %s", profileName)
-	}
 }
 
 // FindEngineByExtension finds the best engine for a file extension.
@@ -294,11 +170,22 @@ func (m *EngineRegistryManager) Shutdown() error {
 // It merges runner-level settings with engine-specific overrides to create
 // a complete engine configuration with appropriate defaults.
 func BuildEngineConfig(runnerConfig *RunnerConfig, engineConfig map[string]interface{}) engine.EngineConfig {
+	// Determine sandbox mode based on security level
+	sandboxMode := true // Default to true for security
+	if runnerConfig != nil && runnerConfig.DefaultSecurityLevel != "" {
+		switch runnerConfig.DefaultSecurityLevel {
+		case "trusted", "privileged":
+			sandboxMode = false
+		case "untrusted":
+			sandboxMode = true
+		}
+	}
+
 	config := engine.EngineConfig{
 		MemoryLimit:    64 * 1024 * 1024, // 64MB default
 		TimeoutLimit:   30 * time.Second, // 30 seconds default
 		GoroutineLimit: 100,              // 100 goroutines default
-		SandboxMode:    true,
+		SandboxMode:    sandboxMode,
 		FileSystemMode: engine.FSModeReadOnly,
 		EngineOptions:  make(map[string]interface{}),
 		DebugMode:      false,

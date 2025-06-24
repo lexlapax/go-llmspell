@@ -7,9 +7,12 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // Config represents the complete configuration for go-llmspell.
@@ -103,9 +106,15 @@ type TengoEngineConfig struct {
 }
 
 // SecurityConfig holds security-related configuration.
-// It defines security profiles and filesystem access controls.
+// It defines security levels, feature sets, and filesystem access controls.
 type SecurityConfig struct {
-	// Security profile (sandbox, development, production)
+	// Security level (untrusted, trusted, privileged)
+	Level string `yaml:"level" json:"level" env:"LLMSPELL_SECURITY_LEVEL"`
+
+	// Feature set (minimal, llm, agent, observable, full)
+	FeatureSet string `yaml:"feature_set" json:"feature_set" env:"LLMSPELL_FEATURE_SET"`
+
+	// Deprecated: Use Level instead
 	Profile string `yaml:"profile" json:"profile" env:"LLMSPELL_SECURITY_PROFILE"`
 
 	// Filesystem access mode
@@ -310,7 +319,9 @@ func GetDefaultConfig() *Config {
 		},
 
 		Security: SecurityConfig{
-			Profile:           "sandbox",
+			Level:             "trusted",
+			FeatureSet:        "full",
+			Profile:           "sandbox", // Deprecated
 			FileSystemMode:    engine.FSModeSandbox,
 			AllowedModules:    []string{"string", "table", "math", "utf8"},
 			DisabledModules:   []string{"io", "os", "debug", "package"},
@@ -413,8 +424,41 @@ func GetDefaultConfig() *Config {
 // It ensures all settings are within acceptable ranges and compatible
 // with each other.
 func (c *Config) Validate() error {
-	// TODO: Implement comprehensive validation
-	// This will be implemented as part of the config validation task
+	// Validate security level if specified
+	if c.Security.Level != "" && !security.IsValidLevel(c.Security.Level) {
+		return fmt.Errorf("invalid security level: %s", c.Security.Level)
+	}
+
+	// Validate feature set if specified
+	if c.Security.FeatureSet != "" && !registry.IsValidFeatureSet(c.Security.FeatureSet) {
+		return fmt.Errorf("invalid feature set: %s", c.Security.FeatureSet)
+	}
+
+	// Handle backward compatibility: if Level is empty but Profile is set
+	if c.Security.Level == "" && c.Security.Profile != "" {
+		// Map old profile to new system
+		switch c.Security.Profile {
+		case "sandbox":
+			c.Security.Level = "untrusted"
+			c.Security.FeatureSet = "full"
+		case "development", "production":
+			c.Security.Level = "trusted"
+			c.Security.FeatureSet = "full"
+		case "minimal":
+			c.Security.Level = "trusted"
+			c.Security.FeatureSet = "minimal"
+		}
+	}
+
+	// Set defaults if not specified
+	if c.Security.Level == "" {
+		c.Security.Level = "trusted"
+	}
+	if c.Security.FeatureSet == "" {
+		c.Security.FeatureSet = "full"
+	}
+
+	// TODO: Implement additional validation
 	return nil
 }
 
@@ -426,7 +470,7 @@ func (c *Config) GetEngineConfig(engineName string) engine.EngineConfig {
 		MemoryLimit:     c.Engine.MemoryLimit,
 		TimeoutLimit:    c.Engine.TimeoutLimit,
 		GoroutineLimit:  c.Engine.GoroutineLimit,
-		SandboxMode:     c.Security.Profile != "development",
+		SandboxMode:     c.Security.Level == "untrusted",
 		AllowedModules:  c.Security.AllowedModules,
 		DisabledModules: c.Security.DisabledModules,
 		FileSystemMode:  c.Security.FileSystemMode,

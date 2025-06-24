@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/lexlapax/go-llmspell/cmd/llmspell/commands"
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/config"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,22 +23,25 @@ import (
 func TestRenamedBridgesAccessibleWithLazyLoading(t *testing.T) {
 
 	tests := []struct {
-		name            string
-		securityProfile string
-		expectedCount   int
-		description     string
+		name          string
+		securityLevel security.SecurityLevel
+		featureSet    registry.FeatureSet
+		expectedCount int
+		description   string
 	}{
 		{
-			name:            "StandardProfile_Sandbox",
-			securityProfile: "sandbox",
-			expectedCount:   23, // All bridges should be available in standard profile
-			description:     "Sandbox should load StandardProfile with all bridges",
+			name:          "Untrusted_Full",
+			securityLevel: security.SecurityLevelUntrusted,
+			featureSet:    registry.FeatureSetFull,
+			expectedCount: 23, // All bridges should be available with full feature set
+			description:   "Untrusted security with full features should load all bridges",
 		},
 		{
-			name:            "DevelopmentProfile_Development",
-			securityProfile: "development",
-			expectedCount:   15, // Core + LLM + Utility + Observability only
-			description:     "Development should load DevelopmentProfile with debugging bridges",
+			name:          "Trusted_Observable",
+			securityLevel: security.SecurityLevelTrusted,
+			featureSet:    registry.FeatureSetObservable,
+			expectedCount: 15, // Core + LLM + Utility + Observability only
+			description:   "Trusted security with observable features should load debugging bridges",
 		},
 	}
 
@@ -77,7 +82,8 @@ end
 
 return {
 	test_name = "bridge_accessibility_test",
-	security_profile = "` + tc.securityProfile + `",
+	security_level = "` + string(tc.securityLevel) + `",
+	feature_set = "` + string(tc.featureSet) + `",
 	available_count = #available_bridges,
 	available_bridges = available_bridges,
 	lazy_loading_active = true
@@ -88,8 +94,16 @@ return {
 			runnerConfig := runner.DefaultRunnerConfig()
 			runnerConfig.EnableDebug = true
 
-			// Setup engine registry with the test profile
-			engineManager, err := runner.SetupEngineRegistry(runnerConfig, tc.securityProfile)
+			// Setup engine registry (using profile for backward compatibility until function is fully updated)
+			profile := "sandbox" // Default fallback
+			if tc.securityLevel == security.SecurityLevelUntrusted {
+				profile = "sandbox"
+			} else if tc.securityLevel == security.SecurityLevelTrusted {
+				profile = "development"
+			} else if tc.securityLevel == security.SecurityLevelPrivileged {
+				profile = "production"
+			}
+			engineManager, err := runner.SetupEngineRegistry(runnerConfig, profile)
 			require.NoError(t, err)
 
 			// Create engine selector and script executor
@@ -101,17 +115,19 @@ return {
 			err = scriptExecutor.Initialize(ctx)
 			require.NoError(t, err)
 
-			// Create command context with the security profile
+			// Create command context with security level and feature set
 			ctx = context.WithValue(ctx, commands.ConfigKey, config.GetDefaultConfig())
 			ctx = context.WithValue(ctx, commands.DebugKey, true)
-			ctx = context.WithValue(ctx, commands.ProfileKey, tc.securityProfile)
+			ctx = context.WithValue(ctx, commands.SecurityLevelKey, tc.securityLevel)
+			ctx = context.WithValue(ctx, commands.FeatureSetKey, tc.featureSet)
 
 			// Measure execution time to verify lazy loading performance
 			startTime := time.Now()
 
 			// Execute script using ScriptExecutor directly
 			options := &runner.RunnerOptions{
-				SecurityProfile: tc.securityProfile,
+				SecurityLevel: string(tc.securityLevel),
+				FeatureSet:    string(tc.featureSet),
 			}
 
 			result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
@@ -137,9 +153,13 @@ return {
 			require.True(t, exists, "test_name should exist in result")
 			assert.Equal(t, "bridge_accessibility_test", testName)
 
-			profileUsed, exists := resultMap["security_profile"]
-			require.True(t, exists, "security_profile should exist in result")
-			assert.Equal(t, tc.securityProfile, profileUsed)
+			securityLevel, exists := resultMap["security_level"]
+			require.True(t, exists, "security_level should exist in result")
+			assert.Equal(t, string(tc.securityLevel), securityLevel)
+
+			featureSet, exists := resultMap["feature_set"]
+			require.True(t, exists, "feature_set should exist in result")
+			assert.Equal(t, string(tc.featureSet), featureSet)
 
 			availableCount, exists := resultMap["available_count"]
 			require.True(t, exists, "available_count should exist in result")
@@ -148,8 +168,8 @@ return {
 			// Verify lazy loading is working (should be reasonably fast)
 			assert.Less(t, executionTime, 5*time.Second, "Execution should be fast with lazy loading")
 
-			// Verify specific renamed bridges are accessible for standard profile
-			if tc.securityProfile == "sandbox" {
+			// Verify specific renamed bridges are accessible for full feature set
+			if tc.featureSet == registry.FeatureSetFull {
 				availableBridges, exists := resultMap["available_bridges"]
 				require.True(t, exists, "available_bridges should exist")
 				bridgeList, ok := availableBridges.([]interface{})
@@ -223,7 +243,7 @@ return globals_test
 	runnerConfig := runner.DefaultRunnerConfig()
 	runnerConfig.EnableDebug = true
 
-	// Setup engine registry
+	// Setup engine registry (using trusted/development profile for this test)
 	engineManager, err := runner.SetupEngineRegistry(runnerConfig, "development")
 	require.NoError(t, err)
 
@@ -238,7 +258,8 @@ return globals_test
 
 	// Execute test
 	options := &runner.RunnerOptions{
-		SecurityProfile: "development",
+		SecurityLevel: string(security.SecurityLevelTrusted),
+		FeatureSet:    string(registry.FeatureSetObservable),
 	}
 
 	result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
@@ -361,24 +382,27 @@ return results
 	// Test with different security profiles
 	profiles := []struct {
 		name              string
-		profile           string
+		securityLevel     security.SecurityLevel
+		featureSet        registry.FeatureSet
 		expectToolsModule bool
 		expectToolsList   bool
 		description       string
 	}{
 		{
-			name:              "StandardProfile_Sandbox",
-			profile:           "sandbox",
-			expectToolsModule: false, // tools module not available via require in sandbox
+			name:              "Untrusted_Minimal",
+			securityLevel:     security.SecurityLevelUntrusted,
+			featureSet:        registry.FeatureSetMinimal,
+			expectToolsModule: false, // tools module not available with minimal feature set
 			expectToolsList:   false,
-			description:       "Sandbox profile should restrict tools module access",
+			description:       "Untrusted security with minimal features should restrict tools module access",
 		},
 		{
-			name:              "DevelopmentProfile_Development",
-			profile:           "development",
-			expectToolsModule: true, // tools module should be available via require
+			name:              "Trusted_Agent",
+			securityLevel:     security.SecurityLevelTrusted,
+			featureSet:        registry.FeatureSetAgent,
+			expectToolsModule: true, // tools module should be available with agent feature set
 			expectToolsList:   true, // tools.list() should work
-			description:       "Development profile should allow full tools functionality",
+			description:       "Trusted security with agent features should allow full tools functionality",
 		},
 	}
 
@@ -388,8 +412,16 @@ return results
 			runnerConfig := runner.DefaultRunnerConfig()
 			runnerConfig.EnableDebug = true
 
-			// Setup engine registry
-			engineManager, err := runner.SetupEngineRegistry(runnerConfig, tc.profile)
+			// Setup engine registry (using profile for backward compatibility until function is fully updated)
+			profile := "sandbox" // Default fallback
+			if tc.securityLevel == security.SecurityLevelUntrusted {
+				profile = "sandbox"
+			} else if tc.securityLevel == security.SecurityLevelTrusted {
+				profile = "development"
+			} else if tc.securityLevel == security.SecurityLevelPrivileged {
+				profile = "production"
+			}
+			engineManager, err := runner.SetupEngineRegistry(runnerConfig, profile)
 			require.NoError(t, err)
 
 			// Create engine selector and script executor
@@ -403,7 +435,8 @@ return results
 
 			// Execute test
 			options := &runner.RunnerOptions{
-				SecurityProfile: tc.profile,
+				SecurityLevel: string(tc.securityLevel),
+				FeatureSet:    string(tc.featureSet),
 			}
 
 			result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
@@ -460,9 +493,9 @@ return results
 			agentToolsBridge, exists := resultMap["agent_tools_bridge_available"]
 			require.True(t, exists)
 
-			// Agent tools bridge should be available in sandbox but not necessarily in development
-			if tc.profile == "sandbox" {
-				assert.True(t, agentToolsBridge.(bool), "agent_tools bridge should be available in sandbox")
+			// Agent tools bridge should be available with agent or full feature sets
+			if tc.featureSet == registry.FeatureSetAgent || tc.featureSet == registry.FeatureSetFull {
+				assert.True(t, agentToolsBridge.(bool), "agent_tools bridge should be available with agent features")
 			}
 
 			// Cleanup
@@ -549,24 +582,27 @@ return {
 }
 `
 
-	// Test with different security profiles to ensure modules work across profiles
+	// Test with different security levels and feature sets to ensure modules work across configurations
 	profiles := []struct {
 		name                    string
-		profile                 string
+		securityLevel           security.SecurityLevel
+		featureSet              registry.FeatureSet
 		expectedSuccessfulLoads int
 		description             string
 	}{
 		{
-			name:                    "StandardProfile_Sandbox",
-			profile:                 "sandbox",
-			expectedSuccessfulLoads: 0, // Modules are not pre-loaded in sandbox - require() blocked, no globals
-			description:             "Sandbox profile should block stdlib module loading (security restriction)",
+			name:                    "Untrusted_Minimal",
+			securityLevel:           security.SecurityLevelUntrusted,
+			featureSet:              registry.FeatureSetMinimal,
+			expectedSuccessfulLoads: 0, // Modules are not pre-loaded with minimal features - require() blocked, no globals
+			description:             "Untrusted security with minimal features should block stdlib module loading (security restriction)",
 		},
 		{
-			name:                    "DevelopmentProfile_Development",
-			profile:                 "development",
+			name:                    "Trusted_Full",
+			securityLevel:           security.SecurityLevelTrusted,
+			featureSet:              registry.FeatureSetFull,
 			expectedSuccessfulLoads: 15, // All modules should load via require
-			description:             "Development profile should load all modules via require",
+			description:             "Trusted security with full features should load all modules via require",
 		},
 	}
 
@@ -576,8 +612,16 @@ return {
 			runnerConfig := runner.DefaultRunnerConfig()
 			runnerConfig.EnableDebug = true
 
-			// Setup engine registry
-			engineManager, err := runner.SetupEngineRegistry(runnerConfig, tc.profile)
+			// Setup engine registry (using profile for backward compatibility until function is fully updated)
+			profile := "sandbox" // Default fallback
+			if tc.securityLevel == security.SecurityLevelUntrusted {
+				profile = "sandbox"
+			} else if tc.securityLevel == security.SecurityLevelTrusted {
+				profile = "development"
+			} else if tc.securityLevel == security.SecurityLevelPrivileged {
+				profile = "production"
+			}
+			engineManager, err := runner.SetupEngineRegistry(runnerConfig, profile)
 			require.NoError(t, err)
 
 			// Create engine selector and script executor
@@ -591,7 +635,8 @@ return {
 
 			// Execute test
 			options := &runner.RunnerOptions{
-				SecurityProfile: tc.profile,
+				SecurityLevel: string(tc.securityLevel),
+				FeatureSet:    string(tc.featureSet),
 			}
 
 			result, err := scriptExecutor.ExecuteWithOptions(ctx, testScript, options)
@@ -648,18 +693,18 @@ return {
 			bridges, ok := bridgeTests.(map[string]interface{})
 			require.True(t, ok)
 
-			// For sandbox profile, all renamed bridges should be accessible
-			if tc.profile == "sandbox" {
-				assert.True(t, bridges["llm_core_accessible"].(bool), "llm_core bridge should be accessible in sandbox")
-				assert.True(t, bridges["agent_tools_accessible"].(bool), "agent_tools bridge should be accessible in sandbox")
-				assert.True(t, bridges["util_core_accessible"].(bool), "util_core bridge should be accessible in sandbox")
+			// For full feature set, all renamed bridges should be accessible
+			if tc.featureSet == registry.FeatureSetFull {
+				assert.True(t, bridges["llm_core_accessible"].(bool), "llm_core bridge should be accessible with full features")
+				assert.True(t, bridges["agent_tools_accessible"].(bool), "agent_tools bridge should be accessible with full features")
+				assert.True(t, bridges["util_core_accessible"].(bool), "util_core bridge should be accessible with full features")
 			}
 
-			// For development profile, LLM and utility bridges should be accessible
-			if tc.profile == "development" {
-				assert.True(t, bridges["llm_core_accessible"].(bool), "llm_core bridge should be accessible in development")
-				assert.True(t, bridges["util_core_accessible"].(bool), "util_core bridge should be accessible in development")
-				// agent_tools may not be accessible in development profile, that's OK
+			// For trusted security level, LLM and utility bridges should be accessible
+			if tc.securityLevel == security.SecurityLevelTrusted {
+				assert.True(t, bridges["llm_core_accessible"].(bool), "llm_core bridge should be accessible with trusted security")
+				assert.True(t, bridges["util_core_accessible"].(bool), "util_core bridge should be accessible with trusted security")
+				// agent_tools may not be accessible unless agent feature set is used, that's OK
 			}
 
 			// Cleanup

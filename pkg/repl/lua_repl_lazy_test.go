@@ -8,9 +8,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // TestLuaREPLWithLazyBridgeLoading tests that the REPL works with lazy bridge loading
@@ -78,7 +80,7 @@ func TestLuaREPLWithLazyBridgeLoading(t *testing.T) {
 
 	// Test 3: Force engine to load bridges and make them available to REPL
 	// Get the engine - with lazy loading, bridges are loaded when engine is requested
-	eng, err := engineManager.GetEngine("lua", engine.EngineConfig{}, "development")
+	eng, err := engineManager.GetEngine("lua", engine.EngineConfig{}, security.SecurityLevelTrusted, registry.FeatureSetFull)
 	if err != nil {
 		t.Fatalf("Failed to get engine: %v", err)
 	}
@@ -191,7 +193,7 @@ func TestLuaREPLBridgeUsage(t *testing.T) {
 	}
 
 	// Get engine with bridges
-	eng, err := engineManager.GetEngine("lua", engine.EngineConfig{}, "development")
+	eng, err := engineManager.GetEngine("lua", engine.EngineConfig{}, security.SecurityLevelTrusted, registry.FeatureSetFull)
 	if err != nil {
 		t.Fatalf("Failed to get engine: %v", err)
 	}

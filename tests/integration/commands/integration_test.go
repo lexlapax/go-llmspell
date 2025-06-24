@@ -83,14 +83,14 @@ engine:
 			io.popen("whoami")
 		`)
 
-		// Validate with sandbox profile
-		stdout1, stderr1, _ := h.RunCommand("validate", script, "--profile", "sandbox")
+		// Validate with untrusted security level and minimal features
+		stdout1, stderr1, _ := h.RunCommand("validate", script, "--security-level", "untrusted", "--feature-set", "minimal")
 		output1 := stdout1 + stderr1
 		assert.Contains(t, output1, "security") // Should warn
 
-		// Validate with development profile
-		_, _, _ = h.RunCommand("validate", script, "--profile", "development")
-		// Development might be more permissive
+		// Validate with trusted security level and full features
+		_, _, _ = h.RunCommand("validate", script, "--security-level", "trusted", "--feature-set", "full")
+		// Trusted might be more permissive
 	})
 }
 
@@ -139,13 +139,14 @@ security:
 
 		script := h.CreateSpell("test.lua", `print("test")`)
 
-		// Run with explicit profile flag
+		// Run with explicit security level and feature set flags
 		stdout, stderr, err := h.RunCommand("run", script,
 			"--config", config,
-			"--profile", "production")
+			"--security-level", "privileged",
+			"--feature-set", "llm")
 
 		h.AssertSuccess(stdout, stderr, err)
-		// Would use production profile from flag
+		// Would use privileged security level and llm feature set from flags
 	})
 }
 

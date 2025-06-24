@@ -36,39 +36,40 @@ func TestBridgeSetConstants(t *testing.T) {
 	}
 }
 
-func TestPredefinedBridgeProfiles(t *testing.T) {
+func TestFeatureSetBridgeSets(t *testing.T) {
 	tests := []struct {
 		name         string
-		profile      BridgeProfile
-		expectedName string
+		featureSet   FeatureSet
 		expectedSets []BridgeSet
 		minSetCount  int
 	}{
 		{
-			name:         "Standard profile",
-			profile:      StandardProfile,
-			expectedName: "standard",
+			name:         "Full feature set",
+			featureSet:   FeatureSetFull,
 			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetAgent, BridgeSetObservability, BridgeSetState, BridgeSetStructured},
 			minSetCount:  7,
 		},
 		{
-			name:         "Minimal profile",
-			profile:      MinimalProfile,
-			expectedName: "minimal",
+			name:         "Minimal feature set",
+			featureSet:   FeatureSetMinimal,
 			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetUtility},
 			minSetCount:  2,
 		},
 		{
-			name:         "LLM profile",
-			profile:      LLMProfile,
-			expectedName: "llm",
+			name:         "LLM feature set",
+			featureSet:   FeatureSetLLM,
 			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetStructured},
 			minSetCount:  4,
 		},
 		{
-			name:         "Development profile",
-			profile:      DevelopmentProfile,
-			expectedName: "development",
+			name:         "Agent feature set",
+			featureSet:   FeatureSetAgent,
+			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetStructured, BridgeSetAgent, BridgeSetState},
+			minSetCount:  6,
+		},
+		{
+			name:         "Observable feature set",
+			featureSet:   FeatureSetObservable,
 			expectedSets: []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetObservability},
 			minSetCount:  4,
 		},
@@ -76,13 +77,12 @@ func TestPredefinedBridgeProfiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expectedName, tt.profile.Name)
-			assert.NotEmpty(t, tt.profile.Description)
-			assert.Len(t, tt.profile.BridgeSets, tt.minSetCount)
+			bridgeSets := GetBridgeSetsForFeature(tt.featureSet)
+			assert.Len(t, bridgeSets, tt.minSetCount)
 
 			// Check that expected sets are present
 			for _, expectedSet := range tt.expectedSets {
-				assert.Contains(t, tt.profile.BridgeSets, expectedSet)
+				assert.Contains(t, bridgeSets, expectedSet)
 			}
 		})
 	}
@@ -260,39 +260,36 @@ func TestRegisterBridgeSets(t *testing.T) {
 	}
 }
 
-func TestRegisterBridgeProfile(t *testing.T) {
+func TestRegisterBridgesByFeatureSet(t *testing.T) {
 	tests := []struct {
 		name        string
-		profile     BridgeProfile
+		featureSet  FeatureSet
 		expectError bool
 	}{
 		{
-			name:        "Register standard profile",
-			profile:     StandardProfile,
+			name:        "Register full feature set",
+			featureSet:  FeatureSetFull,
 			expectError: false,
 		},
 		{
-			name:        "Register minimal profile",
-			profile:     MinimalProfile,
+			name:        "Register minimal feature set",
+			featureSet:  FeatureSetMinimal,
 			expectError: false,
 		},
 		{
-			name: "Register custom profile",
-			profile: BridgeProfile{
-				Name:        "custom",
-				Description: "Custom test profile",
-				BridgeSets:  []BridgeSet{BridgeSetCore, BridgeSetUtility},
-			},
+			name:        "Register LLM feature set",
+			featureSet:  FeatureSetLLM,
 			expectError: false,
 		},
 		{
-			name: "Register profile with unknown bridge set",
-			profile: BridgeProfile{
-				Name:        "invalid",
-				Description: "Invalid test profile",
-				BridgeSets:  []BridgeSet{"unknown"},
-			},
-			expectError: true,
+			name:        "Register agent feature set",
+			featureSet:  FeatureSetAgent,
+			expectError: false,
+		},
+		{
+			name:        "Register observable feature set",
+			featureSet:  FeatureSetObservable,
+			expectError: false,
 		},
 	}
 
@@ -302,7 +299,7 @@ func TestRegisterBridgeProfile(t *testing.T) {
 			err := mockEngine.Initialize(types.EngineConfig{})
 			require.NoError(t, err)
 
-			err = RegisterBridgeProfile(mockEngine, tt.profile)
+			err = RegisterBridgesByFeatureSet(mockEngine, tt.featureSet)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -329,70 +326,75 @@ func TestRegisterStandardBridges(t *testing.T) {
 	bridges := mockEngine.ListBridges()
 	assert.NotEmpty(t, bridges, "Should have registered standard bridges")
 
-	// Should have bridges from all sets in standard profile
-	assert.GreaterOrEqual(t, len(bridges), 10, "Standard profile should register many bridges")
+	// Should have bridges from all sets in full feature set
+	assert.GreaterOrEqual(t, len(bridges), 10, "Full feature set should register many bridges")
 }
 
-func TestGetAvailableBridgeProfiles(t *testing.T) {
-	profiles := GetAvailableBridgeProfiles()
-
-	require.NotEmpty(t, profiles)
-	assert.Len(t, profiles, 4, "Should have 4 predefined profiles")
-
-	// Check that all expected profiles are present
-	profileNames := make(map[string]bool)
-	for _, profile := range profiles {
-		profileNames[profile.Name] = true
-	}
-
-	assert.True(t, profileNames["standard"], "Should include standard profile")
-	assert.True(t, profileNames["minimal"], "Should include minimal profile")
-	assert.True(t, profileNames["llm"], "Should include llm profile")
-	assert.True(t, profileNames["development"], "Should include development profile")
-}
-
-func TestGetBridgeProfileByName(t *testing.T) {
+func TestRegisterBridgesWithRegistry(t *testing.T) {
 	tests := []struct {
-		name            string
-		profileName     string
-		expectError     bool
-		expectedProfile *BridgeProfile
+		name        string
+		featureSet  FeatureSet
+		expectError bool
 	}{
 		{
-			name:            "Get standard profile",
-			profileName:     "standard",
-			expectError:     false,
-			expectedProfile: &StandardProfile,
+			name:        "Register with full feature set",
+			featureSet:  FeatureSetFull,
+			expectError: false,
 		},
 		{
-			name:            "Get minimal profile",
-			profileName:     "minimal",
-			expectError:     false,
-			expectedProfile: &MinimalProfile,
-		},
-		{
-			name:            "Get unknown profile",
-			profileName:     "unknown",
-			expectError:     true,
-			expectedProfile: nil,
+			name:        "Register with minimal feature set",
+			featureSet:  FeatureSetMinimal,
+			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			profile, err := GetBridgeProfileByName(tt.profileName)
+			// Use mock engine directly without registry
+			mockEngine := testutils.NewMockScriptEngine()
+			err := mockEngine.Initialize(types.EngineConfig{})
+			require.NoError(t, err)
+
+			err = RegisterBridgesByFeatureSet(mockEngine, tt.featureSet)
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "not found")
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedProfile.Name, profile.Name)
-				assert.Equal(t, tt.expectedProfile.Description, profile.Description)
-				assert.Equal(t, tt.expectedProfile.BridgeSets, profile.BridgeSets)
+				// Verify bridges were registered
+				bridges := mockEngine.ListBridges()
+				assert.NotEmpty(t, bridges, "Should have registered bridges")
 			}
 		})
 	}
+}
+
+func TestRegisterBridgesWithAllEngines(t *testing.T) {
+	// Test with multiple engines directly
+	mockEngine1 := testutils.NewMockScriptEngine()
+	err := mockEngine1.Initialize(types.EngineConfig{})
+	require.NoError(t, err)
+
+	mockEngine2 := testutils.NewMockScriptEngine()
+	err = mockEngine2.Initialize(types.EngineConfig{})
+	require.NoError(t, err)
+
+	// Register with specific feature sets per engine
+	err = RegisterBridgesByFeatureSet(mockEngine1, FeatureSetMinimal)
+	assert.NoError(t, err)
+
+	err = RegisterBridgesByFeatureSet(mockEngine2, FeatureSetFull)
+	assert.NoError(t, err)
+
+	// Verify both engines have bridges registered
+	bridges1 := mockEngine1.ListBridges()
+	bridges2 := mockEngine2.ListBridges()
+
+	assert.NotEmpty(t, bridges1, "Engine1 should have bridges")
+	assert.NotEmpty(t, bridges2, "Engine2 should have bridges")
+
+	// Engine2 (full) should have more bridges than Engine1 (minimal)
+	assert.Greater(t, len(bridges2), len(bridges1), "Full feature set should have more bridges than minimal")
 }
 
 func TestBridgeFactoryFunctions(t *testing.T) {

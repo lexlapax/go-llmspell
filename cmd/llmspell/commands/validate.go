@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // ValidateCmd validates a spell or script.
@@ -25,15 +27,18 @@ type ValidateCmd struct {
 // It determines the file type based on extension,
 // then validates using the appropriate validator.
 func (c *ValidateCmd) Run(ctx context.Context) error {
-	// Get engine registry from context
-	engineRegistryInterface := GetEngineRegistry(ctx)
-	if engineRegistryInterface == nil {
-		return errors.New(errors.CategoryConfig, "engine registry not found in context")
+	// Get runner from context
+	runnerInterface := GetRunner(ctx)
+	if runnerInterface == nil {
+		return errors.New(errors.CategoryConfig, "runner not found in context")
 	}
 
-	engineRegistry, ok := engineRegistryInterface.(*runner.EngineRegistryManager)
-	if !ok {
-		return errors.New(errors.CategoryConfig, "invalid engine registry type")
+	// Extract engine registry from runner
+	var engineRegistry *runner.EngineRegistryManager
+	if registryProvider, ok := runnerInterface.(interface{ GetEngineRegistry() *runner.EngineRegistryManager }); ok {
+		engineRegistry = registryProvider.GetEngineRegistry()
+	} else {
+		return errors.New(errors.CategoryConfig, "runner does not provide engine registry")
 	}
 
 	// Check if it's a spell file or script
@@ -79,7 +84,7 @@ func (c *ValidateCmd) Run(ctx context.Context) error {
 	config := engine.EngineConfig{
 		DebugMode: IsDebug(ctx),
 	}
-	scriptEngine, err := engineRegistry.GetEngine(engineName, config, "minimal")
+	scriptEngine, err := engineRegistry.GetEngine(engineName, config, security.SecurityLevelTrusted, registry.FeatureSetMinimal)
 	if err != nil {
 		return errors.Wrap(err, errors.CategoryEngine, "failed to get engine")
 	}

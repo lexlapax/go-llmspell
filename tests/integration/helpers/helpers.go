@@ -90,7 +90,11 @@ func (h *TestHelper) RunCommand(args ...string) (string, string, error) {
 func (h *TestHelper) RunCommandWithInput(input string, args ...string) (string, string, error) {
 	h.t.Helper()
 
-	cmd := exec.Command(h.binPath, args...)
+	// Create a context with timeout to prevent hanging
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, h.binPath, args...)
 	cmd.Dir = h.tempDir
 	cmd.Env = h.env
 	cmd.Stdin = strings.NewReader(input)
@@ -100,6 +104,9 @@ func (h *TestHelper) RunCommandWithInput(input string, args ...string) (string, 
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		return stdout.String(), stderr.String(), fmt.Errorf("command timed out after 10 seconds")
+	}
 	return stdout.String(), stderr.String(), err
 }
 

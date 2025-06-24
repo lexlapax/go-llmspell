@@ -8,7 +8,66 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
+
+// mapProfileToLevelAndFeatureSet maps old security profiles to new security levels and feature sets.
+// This provides backward compatibility for existing configurations.
+func mapProfileToLevelAndFeatureSet(profile string) (securityLevel, featureSet string) {
+	switch profile {
+	case "sandbox":
+		return "untrusted", "full"
+	case "development":
+		return "trusted", "full"
+	case "production":
+		return "trusted", "full"
+	case "minimal":
+		return "trusted", "minimal"
+	case "llm":
+		return "trusted", "llm"
+	default:
+		// Default to trusted/full for unknown profiles
+		return "trusted", "full"
+	}
+}
+
+// mapSecurityLevelToEngineLevel maps new security levels to engine-expected security levels.
+// This ensures engines receive the security level names they understand.
+func mapSecurityLevelToEngineLevel(securityLevel string) string {
+	switch securityLevel {
+	case "untrusted":
+		return "strict"
+	case "trusted":
+		return "standard"
+	case "privileged":
+		return "standard" // Privileged uses standard for now, could be enhanced later
+	default:
+		// Default to standard for unknown levels
+		return "standard"
+	}
+}
+
+// mapProfileDirectToEngineLevel maps old security profiles directly to engine-expected security levels.
+// This provides backward compatibility and handles special cases like "minimal".
+func mapProfileDirectToEngineLevel(profile string) string {
+	switch profile {
+	case "sandbox":
+		return "strict"
+	case "development":
+		return "standard"
+	case "production":
+		return "standard"
+	case "minimal":
+		return "minimal" // Special case: minimal maps directly to minimal
+	case "":
+		return "standard" // Default for empty profile
+	default:
+		// Default to standard for unknown profiles
+		return "standard"
+	}
+}
 
 // ScriptExecutor implements the Runner interface for executing scripts.
 // It manages engine lifecycle, concurrent execution limits, progress tracking,
@@ -72,8 +131,10 @@ func (e *ScriptExecutor) Initialize(ctx context.Context) error {
 // to ExecuteWithOptions for the actual execution.
 func (e *ScriptExecutor) Execute(ctx context.Context, script string, params map[string]interface{}) (interface{}, error) {
 	options := &RunnerOptions{
-		Parameters: params,
-		Engine:     e.config.DefaultEngine,
+		Parameters:    params,
+		Engine:        e.config.DefaultEngine,
+		SecurityLevel: e.config.DefaultSecurityLevel,
+		FeatureSet:    e.config.DefaultFeatureSet,
 	}
 
 	result, err := e.ExecuteWithOptions(ctx, script, options)
@@ -95,12 +156,11 @@ func (e *ScriptExecutor) ExecuteFile(ctx context.Context, filepath string, param
 	}
 
 	options := &RunnerOptions{
-		Parameters: params,
-		Engine:     engineName,
+		Parameters:    params,
+		Engine:        engineName,
+		SecurityLevel: e.config.DefaultSecurityLevel,
+		FeatureSet:    e.config.DefaultFeatureSet,
 	}
-
-	// Get security profile from config
-	securityProfile := e.config.DefaultSecurityProfile
 
 	// Build engine config
 	var engineConfig map[string]interface{}
@@ -110,7 +170,17 @@ func (e *ScriptExecutor) ExecuteFile(ctx context.Context, filepath string, param
 	config := BuildEngineConfig(e.config, engineConfig)
 
 	// Get engine with bridges loaded lazily
-	scriptEngine, err := e.engineManager.GetEngine(engineName, config, securityProfile)
+	// Use defaults for file execution
+	securityLevel := e.config.DefaultSecurityLevel
+	if securityLevel == "" {
+		securityLevel = "trusted"
+	}
+	featureSet := e.config.DefaultFeatureSet
+	if featureSet == "" {
+		featureSet = "full"
+	}
+
+	scriptEngine, err := e.engineManager.GetEngine(engineName, config, security.SecurityLevel(securityLevel), registry.FeatureSet(featureSet))
 	if err != nil {
 		e.updateMetrics(engineName, 0, err)
 		return nil, fmt.Errorf("failed to get engine %s: %w", engineName, err)
@@ -185,29 +255,66 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 	config := BuildEngineConfig(e.config, engineConfig)
 	config = ApplyOptionsToConfig(config, options)
 
-	// Determine security profile
-	securityProfile := options.SecurityProfile
-	if securityProfile == "" {
-		securityProfile = e.config.DefaultSecurityProfile
+	// Determine security level and feature set
+	securityLevel := options.SecurityLevel
+	featureSet := options.FeatureSet
+	usingProfile := false
+
+	// Handle backward compatibility with SecurityProfile
+	if securityLevel == "" && options.SecurityProfile != "" {
+		// Map old profile to new system
+		securityLevel, featureSet = mapProfileToLevelAndFeatureSet(options.SecurityProfile)
+		usingProfile = true
 	}
 
-	// Map security profile to engine security level
-	switch securityProfile {
-	case "sandbox":
-		config.EngineOptions["security_level"] = "strict"
-	case "development":
-		config.EngineOptions["security_level"] = "standard"
-	case "production":
-		config.EngineOptions["security_level"] = "standard"
-	case "minimal":
-		config.EngineOptions["security_level"] = "minimal"
-	default:
-		// Default to standard for unknown profiles
-		config.EngineOptions["security_level"] = "standard"
+	// Use defaults if not specified
+	if securityLevel == "" {
+		securityLevel = e.config.DefaultSecurityLevel
+		if securityLevel == "" {
+			// Fallback for old configs
+			securityLevel = "trusted"
+		}
 	}
+
+	if featureSet == "" {
+		featureSet = e.config.DefaultFeatureSet
+		if featureSet == "" {
+			// Fallback for old configs
+			featureSet = "full"
+		}
+	}
+
+	// Validate security level
+	if !security.IsValidLevel(securityLevel) {
+		result.Error = fmt.Errorf("invalid security level: %s", securityLevel)
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(startTime)
+		e.updateMetrics(engineName, result.Duration, result.Error)
+		return result, result.Error
+	}
+
+	// Validate feature set
+	if !registry.IsValidFeatureSet(featureSet) {
+		result.Error = fmt.Errorf("invalid feature set: %s", featureSet)
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(startTime)
+		e.updateMetrics(engineName, result.Duration, result.Error)
+		return result, result.Error
+	}
+
+	// Store security level in engine options for runtime enforcement
+	var engineSecurityLevel string
+	if usingProfile {
+		// For backward compatibility, map profile directly to engine level
+		engineSecurityLevel = mapProfileDirectToEngineLevel(options.SecurityProfile)
+	} else {
+		// Map new security level to engine-expected level format
+		engineSecurityLevel = mapSecurityLevelToEngineLevel(securityLevel)
+	}
+	config.EngineOptions["security_level"] = engineSecurityLevel
 
 	// Get engine with bridges loaded lazily
-	engine, err := e.engineManager.GetEngine(engineName, config, securityProfile)
+	engine, err := e.engineManager.GetEngine(engineName, config, security.SecurityLevel(securityLevel), registry.FeatureSet(featureSet))
 	if err != nil {
 		result.Error = fmt.Errorf("failed to get engine %s: %w", engineName, err)
 		result.EndTime = time.Now()

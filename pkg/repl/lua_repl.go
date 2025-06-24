@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
 	"github.com/lexlapax/go-llmspell/pkg/errors"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -45,7 +47,7 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 	if config.EngineRegistry != nil {
 		// Try to use the engine registry for lazy bridge loading
 		if engineManager, ok := config.EngineRegistry.(interface {
-			GetEngine(name string, config engine.EngineConfig, securityProfile string) (engine.ScriptEngine, error)
+			GetEngine(name string, config engine.EngineConfig, securityLevel security.SecurityLevel, featureSet registry.FeatureSet) (engine.ScriptEngine, error)
 		}); ok {
 			// Create engine config for REPL use
 			engineConfig := engine.EngineConfig{
@@ -56,16 +58,21 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 				EngineOptions:  make(map[string]interface{}),
 			}
 
-			// Set security level for development profile
-			engineConfig.EngineOptions["security_level"] = "standard"
+			// Default to trusted + full for REPL when no flags specified
+			securityLevel := security.SecurityLevelTrusted
+			featureSet := registry.FeatureSetFull
 
-			// Get engine with bridges loaded lazily
-			// Use profile from config or default to development-like settings
-			securityProfile := config.SecurityLevel
-			if securityProfile == "" {
-				securityProfile = "development" // Default for backward compatibility
+			// Override with config values if provided
+			if config.SecurityLevel != "" && security.IsValidLevel(config.SecurityLevel) {
+				securityLevel = security.SecurityLevel(config.SecurityLevel)
 			}
-			eng, err := engineManager.GetEngine("lua", engineConfig, securityProfile)
+
+			// Get feature set from config if provided
+			if config.FeatureSet != "" && registry.IsValidFeatureSet(config.FeatureSet) {
+				featureSet = registry.FeatureSet(config.FeatureSet)
+			}
+
+			eng, err := engineManager.GetEngine("lua", engineConfig, securityLevel, featureSet)
 			if err != nil {
 				_ = baseREPL.Close()
 				return nil, errors.Wrap(err, errors.CategoryEngine, "failed to get Lua engine from registry")
@@ -131,6 +138,14 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 		engine:          scriptEngine,
 		luaState:        luaState,
 		useBridgeEngine: config.EngineRegistry != nil,
+	}
+
+	// Set the custom evaluator to use LuaREPL's Evaluate method
+	baseREPL.SetEvaluator(luaREPL.Evaluate)
+
+	// Override Lua's print function to redirect to REPL output
+	if luaState != nil {
+		luaREPL.redirectPrintFunction()
 	}
 
 	return luaREPL, nil
@@ -199,6 +214,26 @@ func (l *LuaREPL) Close() error {
 	return l.BaseREPL.Close()
 }
 
+// redirectPrintFunction overrides Lua's global print function to write to the REPL's output stream.
+// This ensures that print statements in the REPL are captured correctly for testing and
+// redirected output scenarios.
+func (l *LuaREPL) redirectPrintFunction() {
+	l.luaState.SetGlobal("print", l.luaState.NewFunction(func(L *lua.LState) int {
+		// Get all arguments
+		n := L.GetTop()
+		parts := make([]string, n)
+		for i := 1; i <= n; i++ {
+			parts[i-1] = L.Get(i).String()
+		}
+
+		// Write to REPL output with tab separation (matching Lua's print behavior)
+		output := strings.Join(parts, "\t")
+		fmt.Fprintln(l.BaseREPL.config.Output, output)
+
+		return 0
+	}))
+}
+
 // executeCommand executes REPL commands with Lua-specific extensions.
 // It handles Lua-specific commands like .load and delegates others
 // to the base REPL implementation.
@@ -210,7 +245,7 @@ func (l *LuaREPL) executeCommand(ctx context.Context, input, command string) (st
 		return l.handleEnginesCommand(ctx)
 	default:
 		// Use base implementation for other commands
-		return l.BaseREPL.Evaluate(ctx, input)
+		return l.BaseREPL.executeCommand(ctx, input, command)
 	}
 }
 

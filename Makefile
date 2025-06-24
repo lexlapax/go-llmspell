@@ -56,6 +56,12 @@ test-unit:
 	$(GOTEST) $(TEST_FLAGS) ./pkg/...
 	@echo "✅ Unit tests complete"
 
+# Run cmd tests
+test-cmd:
+	@echo "Running cmd tests..."
+	$(GOTEST) $(TEST_FLAGS) ./cmd/...
+	@echo "✅ Cmd tests complete"
+
 # Run integration tests
 test-integration:
 	@echo "Running integration tests..."
@@ -66,8 +72,8 @@ test-integration:
 		echo "⚠️  No integration tests found in ./tests/integration/"; \
 	fi
 
-# Run all tests (unit + integration)
-test-all: test-unit test-integration
+# Run all tests (unit + cmd + integration)
+test-all: test-unit test-cmd test-integration
 
 # Generate test coverage
 coverage:
@@ -254,8 +260,9 @@ help:
 	@echo "  make build        - Build the binary"
 	@echo "  make clean        - Clean build artifacts"
 	@echo "  make test         - Run unit tests"
+	@echo "  make test-cmd     - Run cmd tests"
 	@echo "  make test-integration - Run integration tests"
-	@echo "  make test-all     - Run all tests (unit + integration)"
+	@echo "  make test-all     - Run all tests (unit + cmd + integration)"
 	@echo "  make coverage     - Generate test coverage report"
 	@echo "  make fmt          - Format code (Go + Lua)"
 	@echo "  make vet          - Run go vet"

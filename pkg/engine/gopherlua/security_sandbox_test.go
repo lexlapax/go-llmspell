@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	lua "github.com/yuin/gopher-lua"
+
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 func TestSandboxEnforcer_ApplySandbox(t *testing.T) {
@@ -408,7 +410,7 @@ func TestSandboxEnforcer_EscapePrevention(t *testing.T) {
 
 func TestSandboxEnforcer_Integration(t *testing.T) {
 	// Test full integration with SecurityManager
-	sm, err := NewSecurityManagerFromProfile(SecurityProfileStandard)
+	sm, err := NewSecurityManagerFromLevel(security.SecurityLevelTrusted)
 	require.NoError(t, err)
 
 	opts := lua.Options{SkipOpenLibs: true}

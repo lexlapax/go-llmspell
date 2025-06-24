@@ -13,7 +13,75 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	lua "github.com/yuin/gopher-lua"
+
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
+
+func TestSecurityManager_NewWithSecurityLevels(t *testing.T) {
+	tests := []struct {
+		name          string
+		securityLevel security.SecurityLevel
+		wantErr       bool
+		errContains   string
+		validate      func(t *testing.T, sm *SecurityManager)
+	}{
+		{
+			name:          "creates_with_untrusted_level",
+			securityLevel: security.SecurityLevelUntrusted,
+			validate: func(t *testing.T, sm *SecurityManager) {
+				assert.Equal(t, SecurityLevelStrict, sm.config.Level)
+				assert.Contains(t, sm.config.AllowedLibraries, "base")
+				assert.Contains(t, sm.config.AllowedLibraries, "string")
+				assert.NotContains(t, sm.config.AllowedLibraries, "io")
+				assert.NotContains(t, sm.config.AllowedLibraries, "os")
+				assert.NotContains(t, sm.config.AllowedLibraries, "debug")
+			},
+		},
+		{
+			name:          "creates_with_trusted_level",
+			securityLevel: security.SecurityLevelTrusted,
+			validate: func(t *testing.T, sm *SecurityManager) {
+				assert.Equal(t, SecurityLevelStandard, sm.config.Level)
+				assert.Contains(t, sm.config.AllowedLibraries, "base")
+				assert.Contains(t, sm.config.AllowedLibraries, "string")
+				assert.NotContains(t, sm.config.AllowedLibraries, "io")
+				assert.Contains(t, sm.config.AllowedLibraries, "os") // Limited OS functions
+				assert.NotContains(t, sm.config.AllowedLibraries, "debug")
+			},
+		},
+		{
+			name:          "creates_with_privileged_level",
+			securityLevel: security.SecurityLevelPrivileged,
+			validate: func(t *testing.T, sm *SecurityManager) {
+				assert.Equal(t, SecurityLevelMinimal, sm.config.Level)
+				assert.Contains(t, sm.config.AllowedLibraries, "base")
+				assert.Contains(t, sm.config.AllowedLibraries, "io")
+				assert.Contains(t, sm.config.AllowedLibraries, "os")
+				assert.NotContains(t, sm.config.AllowedLibraries, "debug")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sm, err := NewSecurityManagerFromLevel(tt.securityLevel)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, sm)
+
+			if tt.validate != nil {
+				tt.validate(t, sm)
+			}
+		})
+	}
+}
 
 func TestSecurityManager_NewWithProfiles(t *testing.T) {
 	tests := []struct {
@@ -25,7 +93,7 @@ func TestSecurityManager_NewWithProfiles(t *testing.T) {
 	}{
 		{
 			name:    "creates_with_minimal_profile",
-			profile: SecurityProfileMinimal,
+			profile: "minimal",
 			validate: func(t *testing.T, sm *SecurityManager) {
 				assert.Equal(t, SecurityLevelMinimal, sm.config.Level)
 				assert.Contains(t, sm.config.AllowedLibraries, "base")
@@ -36,7 +104,7 @@ func TestSecurityManager_NewWithProfiles(t *testing.T) {
 		},
 		{
 			name:    "creates_with_standard_profile",
-			profile: SecurityProfileStandard,
+			profile: "standard",
 			validate: func(t *testing.T, sm *SecurityManager) {
 				assert.Equal(t, SecurityLevelStandard, sm.config.Level)
 				assert.Contains(t, sm.config.AllowedLibraries, "base")
@@ -48,7 +116,7 @@ func TestSecurityManager_NewWithProfiles(t *testing.T) {
 		},
 		{
 			name:    "creates_with_strict_profile",
-			profile: SecurityProfileStrict,
+			profile: "strict",
 			validate: func(t *testing.T, sm *SecurityManager) {
 				assert.Equal(t, SecurityLevelStrict, sm.config.Level)
 				assert.Contains(t, sm.config.AllowedLibraries, "base")
@@ -150,7 +218,7 @@ func TestSecurityManager_LoadLibraries(t *testing.T) {
 	}{
 		{
 			name:    "minimal_loads_most_libraries",
-			profile: SecurityProfileMinimal,
+			profile: "minimal",
 			validate: func(t *testing.T, L *lua.LState) {
 				// Should have most libraries
 				assert.NotEqual(t, lua.LNil, L.GetGlobal("string"))
@@ -164,7 +232,7 @@ func TestSecurityManager_LoadLibraries(t *testing.T) {
 		},
 		{
 			name:    "standard_restricts_dangerous_libraries",
-			profile: SecurityProfileStandard,
+			profile: "standard",
 			validate: func(t *testing.T, L *lua.LState) {
 				// Should have safe libraries
 				assert.NotEqual(t, lua.LNil, L.GetGlobal("string"))
@@ -180,7 +248,7 @@ func TestSecurityManager_LoadLibraries(t *testing.T) {
 		},
 		{
 			name:    "strict_minimal_libraries_only",
-			profile: SecurityProfileStrict,
+			profile: "strict",
 			validate: func(t *testing.T, L *lua.LState) {
 				// Only essential libraries
 				assert.NotEqual(t, lua.LNil, L.GetGlobal("string"))
@@ -214,7 +282,7 @@ func TestSecurityManager_LoadLibraries(t *testing.T) {
 }
 
 func TestSecurityManager_DeniedFunctions(t *testing.T) {
-	sm, err := NewSecurityManagerFromProfile(SecurityProfileStandard)
+	sm, err := NewSecurityManagerFromProfile("standard")
 	require.NoError(t, err)
 
 	opts := lua.Options{SkipOpenLibs: true}
@@ -275,7 +343,7 @@ func TestSecurityManager_ApplySandbox(t *testing.T) {
 	}{
 		{
 			name:    "allows_safe_operations",
-			profile: SecurityProfileStandard,
+			profile: "standard",
 			testCode: `
 				local x = 1 + 1
 				local s = string.upper("hello")
@@ -286,7 +354,7 @@ func TestSecurityManager_ApplySandbox(t *testing.T) {
 		},
 		{
 			name:    "blocks_file_operations_in_standard",
-			profile: SecurityProfileStandard,
+			profile: "standard",
 			testCode: `
 				local f = io.open("test.txt", "w")
 			`,
@@ -294,7 +362,7 @@ func TestSecurityManager_ApplySandbox(t *testing.T) {
 		},
 		{
 			name:    "allows_file_operations_in_minimal",
-			profile: SecurityProfileMinimal,
+			profile: "minimal",
 			testCode: `
 				-- This would work if io is available
 				if io then

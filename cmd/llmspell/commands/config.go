@@ -45,7 +45,8 @@ func (c *ConfigCmd) Run(ctx context.Context) error {
 
 		// Show security settings
 		c.Println("  security:")
-		c.Printf("    profile: %s\n", cfg.Security.Profile)
+		c.Printf("    level: %s\n", cfg.Security.Level)
+		c.Printf("    feature_set: %s\n", cfg.Security.FeatureSet)
 		if cfg.Security.FileSystemMode != "" {
 			c.Printf("    filesystem_mode: %s\n", cfg.Security.FileSystemMode)
 		}

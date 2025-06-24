@@ -44,6 +44,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // LuaEngine implements the engine.ScriptEngine interface for Lua scripting.
@@ -159,22 +160,32 @@ func (e *LuaEngine) Initialize(config engine.EngineConfig) error {
 
 	// Create SecurityManager based on config
 	securityConfig := SecurityConfig{
-		Level: SecurityLevelStandard, // Default
+		Level: SecurityLevelStandard, // Default - still using local constants for now, will be updated in security.go
 	}
 
 	if config.SandboxMode {
 		securityConfig.Level = SecurityLevelStrict
 	}
 
-	// Override with engine-specific options
-	if secLevel, ok := config.EngineOptions["security_level"].(string); ok {
+	// Override with engine-specific options using centralized security levels
+	if secLevel, ok := config.EngineOptions["security_level"].(security.SecurityLevel); ok {
 		switch secLevel {
-		case "minimal":
-			securityConfig.Level = SecurityLevelMinimal
-		case "standard":
-			securityConfig.Level = SecurityLevelStandard
-		case "strict":
+		case security.SecurityLevelUntrusted:
+			securityConfig.Level = SecurityLevelStrict // Map untrusted to strict
+		case security.SecurityLevelTrusted:
+			securityConfig.Level = SecurityLevelStandard // Map trusted to standard
+		case security.SecurityLevelPrivileged:
+			securityConfig.Level = SecurityLevelMinimal // Map privileged to minimal
+		}
+	} else if secLevelStr, ok := config.EngineOptions["security_level"].(string); ok && security.IsValidLevel(secLevelStr) {
+		// Handle string values using centralized validation
+		switch security.SecurityLevel(secLevelStr) {
+		case security.SecurityLevelUntrusted:
 			securityConfig.Level = SecurityLevelStrict
+		case security.SecurityLevelTrusted:
+			securityConfig.Level = SecurityLevelStandard
+		case security.SecurityLevelPrivileged:
+			securityConfig.Level = SecurityLevelMinimal
 		}
 	}
 

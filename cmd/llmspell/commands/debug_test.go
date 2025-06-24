@@ -46,7 +46,7 @@ func TestDebugCmd_Run_NoEngineRegistry(t *testing.T) {
 	err = cmd.Run(ctx)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "engine registry not found in context")
+	assert.Contains(t, err.Error(), "runner not found in context")
 }
 
 func TestDebugCmd_Run_InvalidScript(t *testing.T) {
@@ -84,7 +84,7 @@ func TestDebugCmd_Run_DebugHeader(t *testing.T) {
 
 	// Will error due to no engine registry
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "engine registry not found in context")
+	assert.Contains(t, err.Error(), "runner not found in context")
 }
 
 func TestDebugCmd_Run_WithEnv(t *testing.T) {
@@ -113,7 +113,7 @@ func TestDebugCmd_Run_WithEnv(t *testing.T) {
 
 	// Will error due to no engine registry
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "engine registry not found in context")
+	assert.Contains(t, err.Error(), "runner not found in context")
 }
 
 func TestDebugCmd_Run_PrintsDebugHeader(t *testing.T) {
@@ -171,5 +171,5 @@ func TestDebugCmd_Run_VerboseContext(t *testing.T) {
 
 	// Verify context usage in engine config setup
 	// The error occurs before we can test verbose output
-	assert.Contains(t, err.Error(), "engine registry not found in context")
+	assert.Contains(t, err.Error(), "runner not found in context")
 }

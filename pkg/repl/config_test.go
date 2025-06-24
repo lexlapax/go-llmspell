@@ -33,9 +33,8 @@ func TestNewREPLConfigFromConfig(t *testing.T) {
 				SyntaxHighlight: true,
 				AutoComplete:    true,
 				MultiLine:       true,
-				Input:           os.Stdin,
-				Output:          os.Stdout,
-				Error:           os.Stderr,
+				// Input/Output/Error are not set by NewREPLConfigFromConfig
+				// They are set by NewBaseREPL if not provided
 			},
 		},
 		{
@@ -52,9 +51,8 @@ func TestNewREPLConfigFromConfig(t *testing.T) {
 				SyntaxHighlight: true,
 				AutoComplete:    true,
 				MultiLine:       true,
-				Input:           os.Stdin,
-				Output:          os.Stdout,
-				Error:           os.Stderr,
+				// Input/Output/Error are not set by NewREPLConfigFromConfig
+				// They are set by NewBaseREPL if not provided
 			},
 		},
 		{
@@ -86,9 +84,8 @@ func TestNewREPLConfigFromConfig(t *testing.T) {
 				SyntaxHighlight: false,
 				AutoComplete:    false,
 				MultiLine:       false,
-				Input:           os.Stdin,
-				Output:          os.Stdout,
-				Error:           os.Stderr,
+				// Input/Output/Error are not set by NewREPLConfigFromConfig
+				// They are set by NewBaseREPL if not provided
 			},
 		},
 		{
@@ -119,9 +116,8 @@ func TestNewREPLConfigFromConfig(t *testing.T) {
 				SyntaxHighlight: true,
 				AutoComplete:    true,
 				MultiLine:       true,
-				Input:           os.Stdin,
-				Output:          os.Stdout,
-				Error:           os.Stderr,
+				// Input/Output/Error are not set by NewREPLConfigFromConfig
+				// They are set by NewBaseREPL if not provided
 			},
 		},
 	}
@@ -139,9 +135,10 @@ func TestNewREPLConfigFromConfig(t *testing.T) {
 			assert.Equal(t, tt.expected.SyntaxHighlight, result.SyntaxHighlight)
 			assert.Equal(t, tt.expected.AutoComplete, result.AutoComplete)
 			assert.Equal(t, tt.expected.MultiLine, result.MultiLine)
-			assert.Equal(t, tt.expected.Input, result.Input)
-			assert.Equal(t, tt.expected.Output, result.Output)
-			assert.Equal(t, tt.expected.Error, result.Error)
+			// Input/Output/Error are not set by NewREPLConfigFromConfig
+			assert.Nil(t, result.Input)
+			assert.Nil(t, result.Output)
+			assert.Nil(t, result.Error)
 		})
 	}
 }

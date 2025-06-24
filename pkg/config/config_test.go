@@ -61,7 +61,9 @@ func TestGetDefaultConfig(t *testing.T) {
 
 	t.Run("security_settings", func(t *testing.T) {
 		security := config.Security
-		assert.Equal(t, "sandbox", security.Profile)
+		assert.Equal(t, "trusted", security.Level)
+		assert.Equal(t, "full", security.FeatureSet)
+		assert.Equal(t, "sandbox", security.Profile) // Deprecated but still present
 		assert.Equal(t, engine.FSModeSandbox, security.FileSystemMode)
 		assert.Equal(t, []string{"string", "table", "math", "utf8"}, security.AllowedModules)
 		assert.Equal(t, []string{"io", "os", "debug", "package"}, security.DisabledModules)
@@ -177,7 +179,7 @@ func TestConfig_GetEngineConfig(t *testing.T) {
 		assert.Equal(t, config.Engine.MemoryLimit, engineConfig.MemoryLimit)
 		assert.Equal(t, config.Engine.TimeoutLimit, engineConfig.TimeoutLimit)
 		assert.Equal(t, config.Engine.GoroutineLimit, engineConfig.GoroutineLimit)
-		assert.True(t, engineConfig.SandboxMode) // sandbox profile
+		assert.False(t, engineConfig.SandboxMode) // trusted level
 		assert.Equal(t, config.Security.AllowedModules, engineConfig.AllowedModules)
 		assert.Equal(t, config.Security.DisabledModules, engineConfig.DisabledModules)
 		assert.Equal(t, config.Security.FileSystemMode, engineConfig.FileSystemMode)
@@ -214,11 +216,18 @@ func TestConfig_GetEngineConfig(t *testing.T) {
 		assert.Equal(t, config.Engine.Tengo.ImportLimit, engineConfig.EngineOptions["import_limit"])
 	})
 
-	t.Run("development_profile", func(t *testing.T) {
-		config.Security.Profile = "development"
+	t.Run("untrusted_level", func(t *testing.T) {
+		config.Security.Level = "untrusted"
 		engineConfig := config.GetEngineConfig("lua")
 
-		assert.False(t, engineConfig.SandboxMode) // development profile disables sandbox
+		assert.True(t, engineConfig.SandboxMode) // untrusted level enables sandbox
+	})
+
+	t.Run("trusted_level", func(t *testing.T) {
+		config.Security.Level = "trusted"
+		engineConfig := config.GetEngineConfig("lua")
+
+		assert.False(t, engineConfig.SandboxMode) // trusted level disables sandbox
 	})
 
 	t.Run("debug_mode_effects", func(t *testing.T) {
@@ -249,7 +258,65 @@ func TestConfig_Validate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	// TODO: Add more validation tests when Validate() is implemented
+	t.Run("invalid_security_level", func(t *testing.T) {
+		config := GetDefaultConfig()
+		config.Security.Level = "invalid"
+		err := config.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid security level")
+	})
+
+	t.Run("invalid_feature_set", func(t *testing.T) {
+		config := GetDefaultConfig()
+		config.Security.FeatureSet = "invalid"
+		err := config.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid feature set")
+	})
+
+	t.Run("backward_compatibility_sandbox", func(t *testing.T) {
+		config := GetDefaultConfig()
+		config.Security.Level = ""
+		config.Security.FeatureSet = ""
+		config.Security.Profile = "sandbox"
+		err := config.Validate()
+		assert.NoError(t, err)
+		assert.Equal(t, "untrusted", config.Security.Level)
+		assert.Equal(t, "full", config.Security.FeatureSet)
+	})
+
+	t.Run("backward_compatibility_development", func(t *testing.T) {
+		config := GetDefaultConfig()
+		config.Security.Level = ""
+		config.Security.FeatureSet = ""
+		config.Security.Profile = "development"
+		err := config.Validate()
+		assert.NoError(t, err)
+		assert.Equal(t, "trusted", config.Security.Level)
+		assert.Equal(t, "full", config.Security.FeatureSet)
+	})
+
+	t.Run("backward_compatibility_minimal", func(t *testing.T) {
+		config := GetDefaultConfig()
+		config.Security.Level = ""
+		config.Security.FeatureSet = ""
+		config.Security.Profile = "minimal"
+		err := config.Validate()
+		assert.NoError(t, err)
+		assert.Equal(t, "trusted", config.Security.Level)
+		assert.Equal(t, "minimal", config.Security.FeatureSet)
+	})
+
+	t.Run("defaults_applied_when_empty", func(t *testing.T) {
+		config := GetDefaultConfig()
+		config.Security.Level = ""
+		config.Security.FeatureSet = ""
+		config.Security.Profile = ""
+		err := config.Validate()
+		assert.NoError(t, err)
+		assert.Equal(t, "trusted", config.Security.Level)
+		assert.Equal(t, "full", config.Security.FeatureSet)
+	})
 }
 
 func TestConfigStructFields(t *testing.T) {
@@ -311,7 +378,9 @@ func TestConfigDefaults(t *testing.T) {
 
 	t.Run("secure_defaults", func(t *testing.T) {
 		security := config.Security
-		assert.Equal(t, "sandbox", security.Profile)
+		assert.Equal(t, "trusted", security.Level)
+		assert.Equal(t, "full", security.FeatureSet)
+		assert.Equal(t, "sandbox", security.Profile) // Deprecated
 		assert.False(t, security.NetworkAccess)
 		assert.False(t, security.FileAccess)
 		assert.False(t, security.ProcessAccess)

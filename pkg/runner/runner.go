@@ -56,13 +56,17 @@ type RunnerConfig struct {
 	EngineConfigs map[string]map[string]interface{} `json:"engine_configs" yaml:"engine_configs"`
 
 	// Security settings
+	DefaultSecurityLevel string `json:"default_security_level" yaml:"default_security_level"`
+	DefaultFeatureSet    string `json:"default_feature_set" yaml:"default_feature_set"`
+
+	// Deprecated: Use DefaultSecurityLevel instead
 	DefaultSecurityProfile string                 `json:"default_security_profile" yaml:"default_security_profile"`
 	SecurityProfiles       map[string]interface{} `json:"security_profiles" yaml:"security_profiles"`
 
-	// Engine-specific bridge profile mappings
-	// Maps engine name -> security profile -> bridge profile name
-	// Example: {"lua": {"sandbox": "standard", "minimal": "minimal"}}
-	EngineBridgeProfiles map[string]map[string]string `json:"engine_bridge_profiles,omitempty" yaml:"engine_bridge_profiles,omitempty"`
+	// Engine-specific feature set mappings (optional)
+	// Maps engine name -> feature set override
+	// Example: {"tengo": "minimal"}
+	EngineFeatureSets map[string]string `json:"engine_feature_sets,omitempty" yaml:"engine_feature_sets,omitempty"`
 }
 
 // Validate checks if the configuration is valid.
@@ -90,7 +94,9 @@ func DefaultRunnerConfig() *RunnerConfig {
 		EnableProgressBars:     true,
 		DefaultEngine:          "lua",
 		EngineConfigs:          make(map[string]map[string]interface{}),
-		DefaultSecurityProfile: "sandbox",
+		DefaultSecurityLevel:   "trusted",
+		DefaultFeatureSet:      "full",
+		DefaultSecurityProfile: "sandbox", // Deprecated
 		SecurityProfiles:       make(map[string]interface{}),
 		Environment:            make(map[string]string),
 	}

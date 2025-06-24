@@ -67,13 +67,13 @@ engine: unsupported
 		assert.Contains(t, output, "invalid")
 	})
 
-	t.Run("validate security profile", func(t *testing.T) {
+	t.Run("validate security level and features", func(t *testing.T) {
 		script := h.CreateSpell("secure.lua", `
 			-- Attempting to access restricted functionality
 			os.execute("rm -rf /")
 		`)
 
-		stdout, stderr, _ := h.RunCommand("validate", script, "--profile", "sandbox")
+		stdout, stderr, _ := h.RunCommand("validate", script, "--security-level", "untrusted", "--feature-set", "minimal")
 
 		// Should warn about security issues
 		output := stdout + stderr

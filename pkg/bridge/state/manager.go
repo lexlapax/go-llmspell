@@ -976,16 +976,26 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 2 {
 			return nil, fmt.Errorf("applyTransform requires name and state parameters")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeString {
+		if args[0] == nil {
 			return nil, fmt.Errorf("name must be string")
 		}
-		name := args[0].(types.StringValue).Value()
-		if args[1] == nil || args[1].Type() != types.TypeObject {
+
+		// Extract name from ScriptValue
+		nameVal := args[0].ToGo()
+		name, ok := nameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		if args[1] == nil {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := make(map[string]interface{})
-		for k, v := range args[1].(types.ObjectValue).Fields() {
-			stateObj[k] = v.ToGo()
+
+		// Extract state object from ScriptValue
+		stateVal := args[1].ToGo()
+		stateObj, ok := stateVal.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("state must be object")
 		}
 		result, err := b.applyTransform(ctx, map[string]interface{}{"name": name, "state": stateObj})
 		if err != nil {
@@ -1206,14 +1216,32 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 3 {
 			return nil, fmt.Errorf("setMetadata requires state, key, and value parameters")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeObject {
+		if args[0] == nil {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != types.TypeString {
+		if args[1] == nil {
 			return nil, fmt.Errorf("key must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
-		key := args[1].(types.StringValue).Value()
+
+		// Extract key from ScriptValue
+		keyVal := args[1].ToGo()
+		key, ok := keyVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("key must be string")
+		}
+
+		// Extract state object - handle it flexibly
+		var stateObj map[string]interface{}
+		if args[0].Type() == types.TypeObject {
+			stateObj = b.extractStateObject(args[0].(types.ObjectValue))
+		} else {
+			// Try to extract as map from ToGo()
+			stateVal := args[0].ToGo()
+			stateObj, ok = stateVal.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("state must be object")
+			}
+		}
 		value := args[2].ToGo()
 		_, err := b.setMetadata(ctx, map[string]interface{}{"state": stateObj, "key": key, "value": value})
 		if err != nil {
@@ -1278,14 +1306,33 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 2 {
 			return nil, fmt.Errorf("getArtifact requires state and id parameters")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeObject {
+		if args[0] == nil {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != types.TypeString {
+		if args[1] == nil {
 			return nil, fmt.Errorf("id must be string")
 		}
-		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
-		id := args[1].(types.StringValue).Value()
+
+		// Extract id from ScriptValue
+		idVal := args[1].ToGo()
+		id, ok := idVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("id must be string")
+		}
+
+		// Extract state object - handle it flexibly
+		var stateObj map[string]interface{}
+		if args[0].Type() == types.TypeObject {
+			stateObj = b.extractStateObject(args[0].(types.ObjectValue))
+		} else {
+			// Try to extract as map from ToGo()
+			stateVal := args[0].ToGo()
+			var ok bool
+			stateObj, ok = stateVal.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("state must be object")
+			}
+		}
 		result, err := b.getArtifact(ctx, map[string]interface{}{"state": stateObj, "id": id})
 		if err != nil {
 			return nil, err
@@ -1310,17 +1357,44 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 2 {
 			return nil, fmt.Errorf("addMessage requires state and message parameters")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeObject {
+		if args[0] == nil {
 			return nil, fmt.Errorf("state must be object")
 		}
-		if args[1] == nil || args[1].Type() != types.TypeObject {
+		if args[1] == nil {
 			return nil, fmt.Errorf("message must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
-		messageObj := make(map[string]interface{})
-		for k, v := range args[1].(types.ObjectValue).Fields() {
-			messageObj[k] = v.ToGo()
+
+		// Extract state object - handle it flexibly
+		var stateObj map[string]interface{}
+		if args[0].Type() == types.TypeObject {
+			stateObj = b.extractStateObject(args[0].(types.ObjectValue))
+		} else {
+			// Try to extract as map from ToGo()
+			stateVal := args[0].ToGo()
+			var ok bool
+			stateObj, ok = stateVal.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("state must be object")
+			}
 		}
+
+		// Extract message object - handle it flexibly
+		var messageObj map[string]interface{}
+		if args[1].Type() == types.TypeObject {
+			messageObj = make(map[string]interface{})
+			for k, v := range args[1].(types.ObjectValue).Fields() {
+				messageObj[k] = v.ToGo()
+			}
+		} else {
+			// Try to extract as map from ToGo()
+			messageVal := args[1].ToGo()
+			var ok bool
+			messageObj, ok = messageVal.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("message must be object")
+			}
+		}
+
 		_, err := b.addMessage(ctx, map[string]interface{}{"state": stateObj, "message": messageObj})
 		if err != nil {
 			return nil, err
@@ -1331,10 +1405,24 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 1 {
 			return nil, fmt.Errorf("messages requires state parameter")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeObject {
+		if args[0] == nil {
 			return nil, fmt.Errorf("state must be object")
 		}
-		stateObj := b.extractStateObject(args[0].(types.ObjectValue))
+
+		// Extract state object - handle it flexibly
+		var stateObj map[string]interface{}
+		if args[0].Type() == types.TypeObject {
+			stateObj = b.extractStateObject(args[0].(types.ObjectValue))
+		} else {
+			// Try to extract as map from ToGo()
+			stateVal := args[0].ToGo()
+			var ok bool
+			stateObj, ok = stateVal.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("state must be object")
+			}
+		}
+
 		result, err := b.messages(ctx, map[string]interface{}{"state": stateObj})
 		if err != nil {
 			return nil, err
@@ -1345,10 +1433,17 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 2 {
 			return nil, fmt.Errorf("registerTransform requires name and transform parameters")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeString {
+		if args[0] == nil {
 			return nil, fmt.Errorf("name must be string")
 		}
-		name := args[0].(types.StringValue).Value()
+
+		// Extract name from ScriptValue
+		nameVal := args[0].ToGo()
+		name, ok := nameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
 		transform := args[1].ToGo()
 		_, err := b.registerTransform(ctx, map[string]interface{}{"name": name, "transform": transform})
 		if err != nil {
@@ -1360,10 +1455,17 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 2 {
 			return nil, fmt.Errorf("registerValidator requires name and validator parameters")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeString {
+		if args[0] == nil {
 			return nil, fmt.Errorf("name must be string")
 		}
-		name := args[0].(types.StringValue).Value()
+
+		// Extract name from ScriptValue
+		nameVal := args[0].ToGo()
+		name, ok := nameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
 		validator := args[1].ToGo()
 		_, err := b.registerValidator(ctx, map[string]interface{}{"name": name, "validator": validator})
 		if err != nil {
@@ -1375,14 +1477,33 @@ func (b *StateManagerBridge) ExecuteMethod(ctx context.Context, name string, arg
 		if len(args) < 2 {
 			return nil, fmt.Errorf("validateState requires name and state parameters")
 		}
-		if args[0] == nil || args[0].Type() != types.TypeString {
+		if args[0] == nil {
 			return nil, fmt.Errorf("name must be string")
 		}
-		if args[1] == nil || args[1].Type() != types.TypeObject {
+		if args[1] == nil {
 			return nil, fmt.Errorf("state must be object")
 		}
-		name := args[0].(types.StringValue).Value()
-		stateObj := b.extractStateObject(args[1].(types.ObjectValue))
+
+		// Extract name from ScriptValue
+		nameVal := args[0].ToGo()
+		name, ok := nameVal.(string)
+		if !ok {
+			return nil, fmt.Errorf("name must be string")
+		}
+
+		// Extract state object - handle it flexibly
+		var stateObj map[string]interface{}
+		if args[1].Type() == types.TypeObject {
+			stateObj = b.extractStateObject(args[1].(types.ObjectValue))
+		} else {
+			// Try to extract as map from ToGo()
+			stateVal := args[1].ToGo()
+			stateObj, ok = stateVal.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("state must be object")
+			}
+		}
+
 		_, err := b.validateState(ctx, map[string]interface{}{"name": name, "state": stateObj})
 		if err != nil {
 			return nil, err

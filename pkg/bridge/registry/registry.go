@@ -30,43 +30,12 @@ const (
 	BridgeSetAll           BridgeSet = "all"           // All available bridges
 )
 
-// BridgeProfile defines which bridge sets should be registered for an engine type
-type BridgeProfile struct {
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	BridgeSets  []BridgeSet `json:"bridge_sets"`
+// RegisterBridgesByFeatureSet registers bridges based on a feature set.
+// This replaces the old profile-based system with a more flexible approach.
+func RegisterBridgesByFeatureSet(scriptEngine types.ScriptEngine, featureSet FeatureSet) error {
+	bridgeSets := GetBridgeSetsForFeature(featureSet)
+	return RegisterBridgeSets(scriptEngine, bridgeSets)
 }
-
-// Standard bridge profiles for different use cases
-var (
-	// StandardProfile includes all bridges needed for normal operation
-	StandardProfile = BridgeProfile{
-		Name:        "standard",
-		Description: "Standard bridge set for full-featured script execution",
-		BridgeSets:  []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetAgent, BridgeSetObservability, BridgeSetState, BridgeSetStructured},
-	}
-
-	// MinimalProfile includes only essential bridges
-	MinimalProfile = BridgeProfile{
-		Name:        "minimal",
-		Description: "Minimal bridge set for lightweight execution",
-		BridgeSets:  []BridgeSet{BridgeSetCore, BridgeSetUtility},
-	}
-
-	// LLMProfile optimized for LLM operations
-	LLMProfile = BridgeProfile{
-		Name:        "llm",
-		Description: "Bridge set optimized for LLM operations",
-		BridgeSets:  []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetStructured},
-	}
-
-	// DevelopmentProfile includes debugging and observability bridges
-	DevelopmentProfile = BridgeProfile{
-		Name:        "development",
-		Description: "Bridge set for development and debugging",
-		BridgeSets:  []BridgeSet{BridgeSetCore, BridgeSetLLM, BridgeSetUtility, BridgeSetObservability},
-	}
-)
 
 // BridgeFactory creates bridges for a specific bridge set
 type BridgeFactory func() ([]types.Bridge, error)
@@ -210,43 +179,39 @@ func RegisterBridgeSets(scriptEngine types.ScriptEngine, bridgeSets []BridgeSet)
 	return nil
 }
 
-// RegisterBridgeProfile registers bridges according to a predefined profile
-func RegisterBridgeProfile(scriptEngine types.ScriptEngine, profile BridgeProfile) error {
-	return RegisterBridgeSets(scriptEngine, profile.BridgeSets)
-}
-
 // RegisterStandardBridges registers all standard bridges (backward compatibility)
 // This ensures that bridges are available to scripts via the global bridges table.
 func RegisterStandardBridges(scriptEngine types.ScriptEngine) error {
-	return RegisterBridgeProfile(scriptEngine, StandardProfile)
+	// Use full feature set as the standard
+	return RegisterBridgesByFeatureSet(scriptEngine, FeatureSetFull)
 }
 
-// RegisterBridgesWithRegistry registers bridges with an engine obtained from the registry using a profile
-func RegisterBridgesWithRegistry(registry *types.Registry, engineName string, config types.EngineConfig, profile BridgeProfile) error {
+// RegisterBridgesWithRegistry registers bridges with an engine obtained from the registry using a feature set
+func RegisterBridgesWithRegistry(registry *types.Registry, engineName string, config types.EngineConfig, featureSet FeatureSet) error {
 	// Get engine instance
 	scriptEngine, err := registry.GetEngine(engineName, config)
 	if err != nil {
 		return fmt.Errorf("failed to get engine %s: %w", engineName, err)
 	}
 
-	// Register bridges using profile
-	return RegisterBridgeProfile(scriptEngine, profile)
+	// Register bridges using feature set
+	return RegisterBridgesByFeatureSet(scriptEngine, featureSet)
 }
 
 // RegisterStandardBridgesWithRegistry registers standard bridges with an engine obtained from the registry.
 // This is a convenience function for backward compatibility.
 func RegisterStandardBridgesWithRegistry(registry *types.Registry, engineName string, config types.EngineConfig) error {
-	return RegisterBridgesWithRegistry(registry, engineName, config, StandardProfile)
+	return RegisterBridgesWithRegistry(registry, engineName, config, FeatureSetFull)
 }
 
-// RegisterBridgesWithAllEngines registers bridges with all engines in the registry using engine-specific profiles
-func RegisterBridgesWithAllEngines(registry *types.Registry, engineProfiles map[string]BridgeProfile) error {
+// RegisterBridgesWithAllEngines registers bridges with all engines in the registry using engine-specific feature sets
+func RegisterBridgesWithAllEngines(registry *types.Registry, engineFeatureSets map[string]FeatureSet) error {
 	engines := registry.ListEngines()
 	for _, engineInfo := range engines {
-		profile, exists := engineProfiles[engineInfo.Name]
+		featureSet, exists := engineFeatureSets[engineInfo.Name]
 		if !exists {
-			// Use standard profile as default
-			profile = StandardProfile
+			// Use full feature set as default
+			featureSet = FeatureSetFull
 		}
 
 		// Create default config for bridge registration
@@ -255,31 +220,10 @@ func RegisterBridgesWithAllEngines(registry *types.Registry, engineProfiles map[
 			DebugMode:   false,
 		}
 
-		if err := RegisterBridgesWithRegistry(registry, engineInfo.Name, config, profile); err != nil {
+		if err := RegisterBridgesWithRegistry(registry, engineInfo.Name, config, featureSet); err != nil {
 			return fmt.Errorf("failed to register bridges with engine %s: %w", engineInfo.Name, err)
 		}
 	}
 
 	return nil
-}
-
-// GetAvailableBridgeProfiles returns all available bridge profiles
-func GetAvailableBridgeProfiles() []BridgeProfile {
-	return []BridgeProfile{
-		StandardProfile,
-		MinimalProfile,
-		LLMProfile,
-		DevelopmentProfile,
-	}
-}
-
-// GetBridgeProfileByName returns a bridge profile by name
-func GetBridgeProfileByName(name string) (BridgeProfile, error) {
-	profiles := GetAvailableBridgeProfiles()
-	for _, profile := range profiles {
-		if profile.Name == name {
-			return profile, nil
-		}
-	}
-	return BridgeProfile{}, fmt.Errorf("bridge profile %s not found", name)
 }

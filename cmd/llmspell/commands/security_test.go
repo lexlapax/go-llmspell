@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,15 +56,15 @@ func TestSecurityCmd_Run_Show_Default(t *testing.T) {
 	cmd := &SecurityCmd{
 		Action:        "show",
 		SecurityLevel: "",
-		FeatureSet:    "full",
 	}
 
 	// Set up output capture
 	var stdout bytes.Buffer
 	cmd.Out = &stdout
 
-	// Context with security level
+	// Context with security level and feature set
 	ctx := context.WithValue(context.Background(), SecurityLevelKey, "trusted")
+	ctx = context.WithValue(ctx, FeatureSetKey, registry.FeatureSetFull)
 	err := cmd.Run(ctx)
 
 	require.NoError(t, err)
@@ -81,28 +82,28 @@ func TestSecurityCmd_Run_Show_Default(t *testing.T) {
 func TestSecurityCmd_Run_Show_Specific(t *testing.T) {
 	tests := []struct {
 		level      string
-		featureSet string
+		featureSet registry.FeatureSet
 		network    string
 		filesystem string
 		exec       string
 	}{
 		{
 			level:      "untrusted",
-			featureSet: "minimal",
+			featureSet: registry.FeatureSetMinimal,
 			network:    "Network: false",
 			filesystem: "Filesystem: false",
 			exec:       "Execute: false",
 		},
 		{
 			level:      "trusted",
-			featureSet: "full",
+			featureSet: registry.FeatureSetFull,
 			network:    "Network: true",
 			filesystem: "Filesystem: true",
 			exec:       "Execute: false",
 		},
 		{
 			level:      "privileged",
-			featureSet: "full",
+			featureSet: registry.FeatureSetFull,
 			network:    "Network: true",
 			filesystem: "Filesystem: true",
 			exec:       "Execute: true",
@@ -114,13 +115,12 @@ func TestSecurityCmd_Run_Show_Specific(t *testing.T) {
 			cmd := &SecurityCmd{
 				Action:        "show",
 				SecurityLevel: tt.level,
-				FeatureSet:    tt.featureSet,
 			}
 
 			var stdout bytes.Buffer
 			cmd.Out = &stdout
 
-			ctx := context.Background()
+			ctx := context.WithValue(context.Background(), FeatureSetKey, tt.featureSet)
 			err := cmd.Run(ctx)
 
 			require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestSecurityCmd_Run_Show_Specific(t *testing.T) {
 			assert.Contains(t, output, tt.filesystem)
 			assert.Contains(t, output, tt.exec)
 
-			assert.Contains(t, output, "Feature Set: "+tt.featureSet)
+			assert.Contains(t, output, "Feature Set: "+string(tt.featureSet))
 		})
 	}
 }
@@ -140,14 +140,18 @@ func TestSecurityCmd_Run_Validate_NoInput(t *testing.T) {
 	cmd := &SecurityCmd{
 		Action:        "validate",
 		SecurityLevel: "",
-		FeatureSet:    "",
 	}
+
+	// Since GetFeatureSet always returns a default value (full),
+	// this test should now pass with no error
+	var stdout bytes.Buffer
+	cmd.Out = &stdout
 
 	ctx := context.Background()
 	err := cmd.Run(ctx)
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "security level or feature set required")
+	require.NoError(t, err)
+	assert.Contains(t, stdout.String(), "✓ Feature set 'full' is valid")
 }
 
 func TestSecurityCmd_Run_Validate_Valid(t *testing.T) {
@@ -160,7 +164,6 @@ func TestSecurityCmd_Run_Validate_Valid(t *testing.T) {
 			cmd := &SecurityCmd{
 				Action:        "validate",
 				SecurityLevel: level,
-				FeatureSet:    "",
 			}
 
 			var stdout bytes.Buffer
@@ -171,8 +174,10 @@ func TestSecurityCmd_Run_Validate_Valid(t *testing.T) {
 
 			require.NoError(t, err)
 
-			output := strings.TrimSpace(stdout.String())
-			assert.Equal(t, "✓ Security level '"+level+"' is valid", output)
+			output := stdout.String()
+			// When validating security level, it also validates the default feature set
+			assert.Contains(t, output, "✓ Security level '"+level+"' is valid")
+			assert.Contains(t, output, "✓ Feature set 'full' is valid")
 		})
 	}
 
@@ -182,13 +187,12 @@ func TestSecurityCmd_Run_Validate_Valid(t *testing.T) {
 			cmd := &SecurityCmd{
 				Action:        "validate",
 				SecurityLevel: "",
-				FeatureSet:    fs,
 			}
 
 			var stdout bytes.Buffer
 			cmd.Out = &stdout
 
-			ctx := context.Background()
+			ctx := context.WithValue(context.Background(), FeatureSetKey, registry.FeatureSet(fs))
 			err := cmd.Run(ctx)
 
 			require.NoError(t, err)
@@ -204,7 +208,6 @@ func TestSecurityCmd_Run_Validate_Invalid(t *testing.T) {
 		cmd := &SecurityCmd{
 			Action:        "validate",
 			SecurityLevel: "invalid",
-			FeatureSet:    "",
 		}
 
 		ctx := context.Background()
@@ -218,10 +221,9 @@ func TestSecurityCmd_Run_Validate_Invalid(t *testing.T) {
 		cmd := &SecurityCmd{
 			Action:        "validate",
 			SecurityLevel: "",
-			FeatureSet:    "invalid",
 		}
 
-		ctx := context.Background()
+		ctx := context.WithValue(context.Background(), FeatureSetKey, registry.FeatureSet("invalid"))
 		err := cmd.Run(ctx)
 
 		require.Error(t, err)
@@ -245,13 +247,12 @@ func TestSecurityCmd_Run_Validate_BothValid(t *testing.T) {
 	cmd := &SecurityCmd{
 		Action:        "validate",
 		SecurityLevel: "trusted",
-		FeatureSet:    "full",
 	}
 
 	var stdout bytes.Buffer
 	cmd.Out = &stdout
 
-	ctx := context.Background()
+	ctx := context.WithValue(context.Background(), FeatureSetKey, registry.FeatureSetFull)
 	err := cmd.Run(ctx)
 
 	require.NoError(t, err)

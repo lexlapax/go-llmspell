@@ -321,9 +321,13 @@ func GetAvailableFeatureSets() []string {
 // GetSecurityLevelDescription returns a description of a security level.
 // This is used for help text to explain what each level means.
 func GetSecurityLevelDescription(level security.SecurityLevel) string {
-	config := security.GetLevelConfig(level)
-	if config != nil {
-		return config.Description
+	// Check if it's a valid security level first
+	switch level {
+	case security.SecurityLevelUntrusted, security.SecurityLevelTrusted, security.SecurityLevelPrivileged:
+		config := security.GetLevelConfig(level)
+		if config != nil {
+			return config.Description
+		}
 	}
 	return "Unknown security level"
 }

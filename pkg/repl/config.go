@@ -25,9 +25,8 @@ func NewREPLConfigFromConfig(cfg *config.Config, engine string) REPLConfig {
 		SyntaxHighlight: cfg.REPL.SyntaxHighlight,
 		AutoComplete:    cfg.REPL.AutoComplete,
 		MultiLine:       cfg.REPL.MultiLine,
-		Input:           os.Stdin,
-		Output:          os.Stdout,
-		Error:           os.Stderr,
+		// Don't set Input/Output/Error here - let BaseREPL set defaults
+		// This allows tests to provide custom streams
 	}
 
 	// If engine not specified, use default from config

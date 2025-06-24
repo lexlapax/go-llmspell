@@ -136,7 +136,7 @@ func TestCLIEngineRegistration(t *testing.T) {
 		assert.NoError(t, err, "stderr: %s", stderr.String())
 		output := stdout.String()
 		assert.Contains(t, output, "lua", "Should list Lua engine")
-		assert.Contains(t, output, "Lua 5.1 scripting engine", "Should show description")
+		assert.Contains(t, output, "Lua 5.1 scripting engine powered by gopher-lua", "Should show description")
 	})
 
 	t.Run("execute_with_explicit_engine", func(t *testing.T) {

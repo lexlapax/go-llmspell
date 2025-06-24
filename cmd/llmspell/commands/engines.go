@@ -23,10 +23,10 @@ type EnginesCmd struct {
 // It queries the engine registry and displays information
 // about all available script engines.
 func (c *EnginesCmd) Run(ctx context.Context) error {
-	// Get engine registry from context
-	engineRegistryInterface := GetEngineRegistry(ctx)
-	if engineRegistryInterface == nil {
-		// Fall back to hardcoded list if no registry
+	// Get runner from context
+	runnerInterface := GetRunner(ctx)
+	if runnerInterface == nil {
+		// Fall back to hardcoded list if no runner
 		c.Println("Available engines:")
 		c.Println("  - lua (Lua 5.1)")
 		c.Println("  - javascript (ES6+) [not implemented]")
@@ -34,9 +34,12 @@ func (c *EnginesCmd) Run(ctx context.Context) error {
 		return nil
 	}
 
-	engineRegistry, ok := engineRegistryInterface.(*runner.EngineRegistryManager)
-	if !ok {
-		return errors.New(errors.CategoryConfig, "invalid engine registry type")
+	// Extract engine registry from runner
+	var engineRegistry *runner.EngineRegistryManager
+	if registryProvider, ok := runnerInterface.(interface{ GetEngineRegistry() *runner.EngineRegistryManager }); ok {
+		engineRegistry = registryProvider.GetEngineRegistry()
+	} else {
+		return errors.New(errors.CategoryConfig, "runner does not provide engine registry")
 	}
 
 	// List registered engines

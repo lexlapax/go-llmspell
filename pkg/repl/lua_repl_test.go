@@ -256,3 +256,159 @@ func TestLuaREPL_StatePreservation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, result, "2")
 }
+
+func TestLuaREPL_DualFlagSystem(t *testing.T) {
+	tests := []struct {
+		name           string
+		securityLevel  string
+		featureSet     string
+		expectCreation bool
+	}{
+		{
+			name:           "trusted_and_full",
+			securityLevel:  "trusted",
+			featureSet:     "full",
+			expectCreation: true,
+		},
+		{
+			name:           "untrusted_and_minimal",
+			securityLevel:  "untrusted",
+			featureSet:     "minimal",
+			expectCreation: true,
+		},
+		{
+			name:           "privileged_and_llm",
+			securityLevel:  "privileged",
+			featureSet:     "llm",
+			expectCreation: true,
+		},
+		{
+			name:           "invalid_security_level",
+			securityLevel:  "invalid",
+			featureSet:     "full",
+			expectCreation: true, // Should still work with fallback
+		},
+		{
+			name:           "invalid_feature_set",
+			securityLevel:  "trusted",
+			featureSet:     "invalid",
+			expectCreation: true, // Should still work with fallback
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdin, stdout, stderr bytes.Buffer
+			config := REPLConfig{
+				Engine:        "lua",
+				Prompt:        "test> ",
+				SecurityLevel: tt.securityLevel,
+				FeatureSet:    tt.featureSet,
+				Input:         &stdin,
+				Output:        &stdout,
+				Error:         &stderr,
+			}
+
+			repl, err := NewLuaREPL(config)
+
+			if tt.expectCreation {
+				assert.NoError(t, err, "REPL creation should succeed")
+				assert.NotNil(t, repl, "REPL should not be nil")
+				if repl != nil {
+					err = repl.Close()
+					assert.NoError(t, err, "REPL close should succeed")
+				}
+			} else {
+				assert.Error(t, err, "REPL creation should fail")
+				assert.Nil(t, repl, "REPL should be nil")
+			}
+		})
+	}
+}
+
+func TestLuaREPL_DefaultSecurityAndFeatureSet(t *testing.T) {
+	// Test that REPL defaults to trusted + full when no flags specified
+	var stdin, stdout, stderr bytes.Buffer
+	config := REPLConfig{
+		Engine: "lua",
+		Prompt: "test> ",
+		// SecurityLevel and FeatureSet not specified
+		Input:  &stdin,
+		Output: &stdout,
+		Error:  &stderr,
+	}
+
+	repl, err := NewLuaREPL(config)
+	require.NoError(t, err)
+	require.NotNil(t, repl)
+	defer repl.Close()
+
+	// Verify REPL was created successfully with defaults
+	ctx := context.Background()
+	result, err := repl.Evaluate(ctx, "return 'default test'")
+	require.NoError(t, err)
+	assert.Contains(t, result, "default test")
+}
+
+func TestLuaREPL_SecurityLevelValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		securityLevel string
+		expectWorking bool
+	}{
+		{
+			name:          "valid_untrusted",
+			securityLevel: "untrusted",
+			expectWorking: true,
+		},
+		{
+			name:          "valid_trusted",
+			securityLevel: "trusted",
+			expectWorking: true,
+		},
+		{
+			name:          "valid_privileged",
+			securityLevel: "privileged",
+			expectWorking: true,
+		},
+		{
+			name:          "empty_falls_back_to_default",
+			securityLevel: "",
+			expectWorking: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdin, stdout, stderr bytes.Buffer
+			config := REPLConfig{
+				Engine:        "lua",
+				Prompt:        "test> ",
+				SecurityLevel: tt.securityLevel,
+				FeatureSet:    "full", // Always use full for these tests
+				Input:         &stdin,
+				Output:        &stdout,
+				Error:         &stderr,
+			}
+
+			repl, err := NewLuaREPL(config)
+			require.NoError(t, err)
+			require.NotNil(t, repl)
+			defer repl.Close()
+
+			// Test basic functionality
+			ctx := context.Background()
+			result, err := repl.Evaluate(ctx, "return 2 + 2")
+
+			if tt.expectWorking {
+				assert.NoError(t, err, "Basic evaluation should work")
+				assert.Contains(t, result, "4")
+			} else {
+				// Note: Even restricted security levels should allow basic math
+				// This test mainly verifies the security level is accepted
+				_ = err
+				_ = result
+			}
+		})
+	}
+}

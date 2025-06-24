@@ -46,7 +46,8 @@ func TestVersionCommand(t *testing.T) {
 		h.AssertSuccess(stdout, stderr, err)
 		// Should show build details
 		h.AssertOutput(stdout, "version")
-		h.AssertOutput(stdout, "commit")
+		// commit is only shown if GitCommit is set during build
+		// h.AssertOutput(stdout, "commit")
 		h.AssertOutput(stdout, "built")
 		h.AssertOutput(stdout, "go version")
 	})

@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
@@ -49,7 +50,14 @@ func (c *RunCmd) Run(ctx context.Context) error {
 	featureSet := GetFeatureSet(ctx)
 
 	// Execute the script
-	c.Debug(ctx, "Executing script: %s with security level: %s, feature set: %s", c.Script, securityLevel, featureSet)
+	c.Debug(ctx, "Executing script: %s with security level: %s, feature set: %s, timeout: %ds", c.Script, securityLevel, featureSet, c.Timeout)
+	
+	// Create context with timeout if specified
+	if c.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(c.Timeout)*time.Second)
+		defer cancel()
+	}
 
 	// If engine is specified, we need to read the file and use Execute
 	if c.Engine != "" {

@@ -37,15 +37,22 @@ func (c *DebugCmd) Run(ctx context.Context) error {
 		return errors.Wrap(err, errors.CategoryIO, "failed to read script")
 	}
 
-	// Get engine registry from context
-	engineRegistryInterface := GetEngineRegistry(ctx)
-	if engineRegistryInterface == nil {
-		return errors.New(errors.CategoryConfig, "engine registry not found in context")
+	// Get runner from context
+	runnerInterface := GetRunner(ctx)
+	if runnerInterface == nil {
+		return errors.New(errors.CategoryConfig, "runner not found in context")
 	}
 
-	engineRegistry, ok := engineRegistryInterface.(*runner.EngineRegistryManager)
-	if !ok {
-		return errors.New(errors.CategoryConfig, "invalid engine registry type")
+	// Extract engine registry from runner
+	var engineRegistry *runner.EngineRegistryManager
+	if registryProvider, ok := runnerInterface.(interface{ GetEngineRegistry() interface{} }); ok {
+		if em, ok := registryProvider.GetEngineRegistry().(*runner.EngineRegistryManager); ok {
+			engineRegistry = em
+		} else {
+			return errors.New(errors.CategoryConfig, "runner engine registry is not the expected type")
+		}
+	} else {
+		return errors.New(errors.CategoryConfig, "runner does not provide engine registry")
 	}
 
 	// Print debug header

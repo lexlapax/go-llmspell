@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	bridgeregistry "github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -184,7 +186,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get the engine
-		eng, err := manager.GetEngine("lua", engine.EngineConfig{}, "sandbox")
+		eng, err := manager.GetEngine("lua", engine.EngineConfig{}, security.SecurityLevelUntrusted, bridgeregistry.FeatureSetFull)
 		assert.NoError(t, err)
 		assert.NotNil(t, eng)
 	})
@@ -195,7 +197,7 @@ func TestEngineRegistryManager(t *testing.T) {
 		require.NoError(t, err)
 		manager := NewEngineRegistryManager(registry, nil)
 
-		eng, err := manager.GetEngine("nonexistent", engine.EngineConfig{}, "sandbox")
+		eng, err := manager.GetEngine("nonexistent", engine.EngineConfig{}, security.SecurityLevelUntrusted, bridgeregistry.FeatureSetFull)
 		assert.Error(t, err)
 		assert.Nil(t, eng)
 		assert.Contains(t, err.Error(), "not found")
@@ -408,7 +410,7 @@ func BenchmarkEngineRegistryManager_GetEngine(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = manager.GetEngine("lua", engine.EngineConfig{}, "sandbox")
+		_, _ = manager.GetEngine("lua", engine.EngineConfig{}, security.SecurityLevelUntrusted, bridgeregistry.FeatureSetFull)
 	}
 }
 

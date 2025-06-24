@@ -31,7 +31,7 @@ func TestValidateCmd_Run_NoRegistry(t *testing.T) {
 	err := cmd.Run(ctx)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "engine registry not found")
+	assert.Contains(t, err.Error(), "runner not found in context")
 }
 
 func TestValidateCmd_PathRequired(t *testing.T) {

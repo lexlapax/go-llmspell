@@ -18,13 +18,11 @@ import (
 // with support for history, syntax highlighting, and auto-completion.
 type REPLCmd struct {
 	BaseCommand
-	Engine        string `short:"e" help:"Script engine to use"`
-	HistoryFile   string `short:"f" help:"History file path"`
-	NoHistory     bool   `help:"Disable history saving"`
-	NoHighlight   bool   `help:"Disable syntax highlighting"`
-	NoComplete    bool   `help:"Disable auto-completion"`
-	SecurityLevel string `help:"Security level for REPL execution" default:"trusted" enum:"untrusted,trusted,privileged"`
-	FeatureSet    string `help:"Feature set to enable in REPL" default:"full" enum:"minimal,llm,agent,observable,full"`
+	Engine      string `short:"e" help:"Script engine to use"`
+	HistoryFile string `short:"f" help:"History file path"`
+	NoHistory   bool   `help:"Disable history saving"`
+	NoHighlight bool   `help:"Disable syntax highlighting"`
+	NoComplete  bool   `help:"Disable auto-completion"`
 }
 
 // Run executes the command.
@@ -56,20 +54,9 @@ func (c *REPLCmd) Run(ctx context.Context) error {
 		}
 	}
 
-	// Set security level and feature set
-	if c.SecurityLevel != "" {
-		replConfig.SecurityLevel = c.SecurityLevel
-	} else {
-		// Get from context if not explicitly set
-		replConfig.SecurityLevel = string(GetSecurityLevel(ctx))
-	}
-
-	if c.FeatureSet != "" {
-		replConfig.FeatureSet = c.FeatureSet
-	} else {
-		// Get from context if not explicitly set
-		replConfig.FeatureSet = string(GetFeatureSet(ctx))
-	}
+	// Set security level and feature set from global context
+	replConfig.SecurityLevel = string(GetSecurityLevel(ctx))
+	replConfig.FeatureSet = string(GetFeatureSet(ctx))
 
 	// Override with command-line options if provided
 	if c.HistoryFile != "" {

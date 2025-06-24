@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
+	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
 // TestEngineSelectorWithFactoryOnlyRegistration verifies that engine selector
@@ -338,7 +341,7 @@ func TestGetEngineLazyLoading(t *testing.T) {
 	t.Run("LazyBridgeLoading", func(t *testing.T) {
 		// First call should load bridges
 		engineConfig := BuildEngineConfig(config, nil)
-		engine1, err := engineManager.GetEngine("lua", engineConfig, "sandbox")
+		engine1, err := engineManager.GetEngine("lua", engineConfig, security.SecurityLevelUntrusted, registry.FeatureSetFull)
 		if err != nil {
 			t.Errorf("Failed to get engine with bridges: %v", err)
 		}
@@ -347,7 +350,7 @@ func TestGetEngineLazyLoading(t *testing.T) {
 		}
 
 		// Second call with same profile should use cached bridges
-		engine2, err := engineManager.GetEngine("lua", engineConfig, "sandbox")
+		engine2, err := engineManager.GetEngine("lua", engineConfig, security.SecurityLevelUntrusted, registry.FeatureSetFull)
 		if err != nil {
 			t.Errorf("Failed to get engine with bridges on second call: %v", err)
 		}
@@ -362,7 +365,7 @@ func TestGetEngineLazyLoading(t *testing.T) {
 		baseConfig := BuildEngineConfig(config, nil)
 
 		// First call with sandbox profile should succeed
-		engine1, err := engineManager.GetEngine("lua", baseConfig, "sandbox")
+		engine1, err := engineManager.GetEngine("lua", baseConfig, security.SecurityLevelUntrusted, registry.FeatureSetFull)
 		if err != nil {
 			t.Errorf("Failed to get engine with bridges for sandbox profile: %v", err)
 		}
@@ -376,7 +379,7 @@ func TestGetEngineLazyLoading(t *testing.T) {
 
 		for _, profile := range profiles {
 			t.Run(profile, func(t *testing.T) {
-				engine, err := engineManager.GetEngine("lua", baseConfig, profile)
+				engine, err := engineManager.GetEngine("lua", baseConfig, security.SecurityLevelUntrusted, registry.FeatureSetFull)
 				if err != nil {
 					t.Errorf("Failed to get engine with bridges for profile %s: %v", profile, err)
 				}
@@ -395,14 +398,14 @@ func TestGetEngineLazyLoading(t *testing.T) {
 		engineConfig := BuildEngineConfig(config, nil)
 
 		// Get engine first to create cache entry
-		scriptEngine, err := engineManager.GetEngine("lua", engineConfig, "sandbox")
+		scriptEngine, err := engineManager.GetEngine("lua", engineConfig, security.SecurityLevelUntrusted, registry.FeatureSetFull)
 		if err != nil {
 			t.Errorf("Failed to get engine: %v", err)
 		}
 
 		// Verify cache is working by checking internal state
-		// Cache key is now based on engine instance address
-		cacheKey := fmt.Sprintf("%p:sandbox", scriptEngine)
+		// Cache key is now based on engine instance address, security level, and feature set
+		cacheKey := fmt.Sprintf("%p:%s:%s", scriptEngine, security.SecurityLevelUntrusted, registry.FeatureSetFull)
 		engineManager.cacheMutex.RLock()
 		cached := engineManager.bridgeCache[cacheKey]
 		engineManager.cacheMutex.RUnlock()
@@ -412,7 +415,7 @@ func TestGetEngineLazyLoading(t *testing.T) {
 		}
 
 		// Second call should use cached bridges
-		scriptEngine2, err := engineManager.GetEngine("lua", engineConfig, "sandbox")
+		scriptEngine2, err := engineManager.GetEngine("lua", engineConfig, security.SecurityLevelUntrusted, registry.FeatureSetFull)
 		if err != nil {
 			t.Errorf("Failed to get engine on second call: %v", err)
 		}

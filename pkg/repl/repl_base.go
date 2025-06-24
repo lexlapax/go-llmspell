@@ -27,6 +27,7 @@ type BaseREPL struct {
 	highlighter *SyntaxHighlighter
 	mu          sync.RWMutex
 	closed      bool
+	evaluator   func(ctx context.Context, input string) (string, error) // Custom evaluator function
 }
 
 // NewBaseREPL creates a new base REPL instance.
@@ -64,23 +65,40 @@ func NewBaseREPL(config REPLConfig) (*BaseREPL, error) {
 		if err := repl.setupReadline(); err != nil {
 			return nil, errors.Wrap(err, errors.CategoryConfig, "failed to setup readline")
 		}
+	} else {
+		// Disable syntax highlighting for non-terminal output
+		// as ANSI escape codes can cause issues in tests
+		repl.config.SyntaxHighlight = false
 	}
 
 	return repl, nil
+}
+
+// SetEvaluator sets a custom evaluator function for the REPL.
+// This allows engine-specific implementations to override the evaluation logic.
+func (r *BaseREPL) SetEvaluator(evaluator func(ctx context.Context, input string) (string, error)) {
+	r.evaluator = evaluator
 }
 
 // Start begins the interactive REPL session.
 // It runs the main REPL loop, reading input, evaluating expressions,
 // and printing results until the user exits or the context is cancelled.
 func (r *BaseREPL) Start(ctx context.Context) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
+	// Check if closed under lock, but release immediately
+	r.mu.RLock()
 	if r.closed {
+		r.mu.RUnlock()
 		return errors.New(errors.CategoryConfig, "REPL is closed")
 	}
+	r.mu.RUnlock()
 
 	_, _ = fmt.Fprintf(r.config.Output, "Starting %s REPL. Type .help for commands.\n", r.config.Engine)
+
+	// Create scanner once for non-readline mode
+	var scanner *bufio.Scanner
+	if r.readline == nil {
+		scanner = bufio.NewScanner(r.config.Input)
+	}
 
 	for {
 		select {
@@ -91,28 +109,35 @@ func (r *BaseREPL) Start(ctx context.Context) error {
 
 		// Read input
 		var input string
-		var err error
+		var readErr error
 
 		if r.readline != nil {
 			r.readline.SetPrompt(r.config.Prompt)
-			input, err = r.readline.Readline()
+			input, readErr = r.readline.Readline()
 		} else {
 			// Fallback for testing
 			_, _ = fmt.Fprint(r.config.Output, r.config.Prompt)
-			scanner := bufio.NewScanner(r.config.Input)
-			if scanner.Scan() {
+			// Flush output after prompt
+			if flusher, ok := r.config.Output.(interface{ Flush() error }); ok {
+				_ = flusher.Flush()
+			}
+			if scanner != nil && scanner.Scan() {
 				input = scanner.Text()
 			} else {
-				err = io.EOF
+				if scanner != nil && scanner.Err() != nil {
+					readErr = scanner.Err()
+				} else {
+					readErr = io.EOF
+				}
 			}
 		}
 
-		if err != nil {
-			if err == io.EOF || err == readline.ErrInterrupt {
+		if readErr != nil {
+			if readErr == io.EOF || readErr == readline.ErrInterrupt {
 				_, _ = fmt.Fprintln(r.config.Output, "\nGoodbye!")
 				return nil
 			}
-			return errors.Wrap(err, errors.CategoryIO, "input error")
+			return errors.Wrap(readErr, errors.CategoryIO, "input error")
 		}
 
 		// Skip empty lines
@@ -138,8 +163,14 @@ func (r *BaseREPL) Start(ctx context.Context) error {
 		// Add to history
 		r.AddHistory(input)
 
-		// Evaluate input
-		result, err := r.Evaluate(ctx, input)
+		// Evaluate input using custom evaluator if set
+		var result string
+		var err error
+		if r.evaluator != nil {
+			result, err = r.evaluator(ctx, input)
+		} else {
+			result, err = r.Evaluate(ctx, input)
+		}
 		if err != nil {
 			if strings.Contains(err.Error(), "exit requested") {
 				_, _ = fmt.Fprintln(r.config.Output, "Goodbye!")
@@ -152,6 +183,11 @@ func (r *BaseREPL) Start(ctx context.Context) error {
 		// Print result if not empty
 		if result != "" {
 			_, _ = fmt.Fprintln(r.config.Output, result)
+		}
+
+		// Flush output if it's a flusher (helps with testing)
+		if flusher, ok := r.config.Output.(interface{ Flush() error }); ok {
+			_ = flusher.Flush()
 		}
 	}
 }
