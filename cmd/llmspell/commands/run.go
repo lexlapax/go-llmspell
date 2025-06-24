@@ -73,12 +73,18 @@ func (c *RunCmd) Run(ctx context.Context) error {
 			Engine:        c.Engine,
 			SecurityLevel: string(securityLevel),
 			FeatureSet:    string(featureSet),
+			Timeout:       time.Duration(c.Timeout) * time.Second,
 		}
 
 		// Execute the script content directly with options
 		result, err := scriptExecutor.ExecuteWithOptions(ctx, string(scriptContent), options)
 		if err != nil {
 			return errors.Wrap(err, errors.CategoryScript, "failed to execute script")
+		}
+
+		// Check if execution resulted in an error (like timeout)
+		if result.Error != nil {
+			return errors.Wrap(result.Error, errors.CategoryScript, "script execution failed")
 		}
 
 		// Print result if not nil
@@ -95,6 +101,7 @@ func (c *RunCmd) Run(ctx context.Context) error {
 		// Create options with security level and feature set for file execution
 		options := &runner.RunnerOptions{
 			Parameters:    params,
+			Timeout:       time.Duration(c.Timeout) * time.Second,
 			SecurityLevel: string(securityLevel),
 			FeatureSet:    string(featureSet),
 		}
@@ -103,6 +110,11 @@ func (c *RunCmd) Run(ctx context.Context) error {
 		result, err := scriptExecutor.ExecuteWithOptions(ctx, string(scriptContent), options)
 		if err != nil {
 			return errors.Wrap(err, errors.CategoryScript, "failed to execute script")
+		}
+
+		// Check if execution resulted in an error (like timeout)
+		if result.Error != nil {
+			return errors.Wrap(result.Error, errors.CategoryScript, "script execution failed")
 		}
 
 		// Print result if not nil

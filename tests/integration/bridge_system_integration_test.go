@@ -392,9 +392,9 @@ return results
 			name:              "Untrusted_Minimal",
 			securityLevel:     security.SecurityLevelUntrusted,
 			featureSet:        registry.FeatureSetMinimal,
-			expectToolsModule: false, // tools module not available with minimal feature set
-			expectToolsList:   false,
-			description:       "Untrusted security with minimal features should restrict tools module access",
+			expectToolsModule: true,  // tools module is always available (stdlib)
+			expectToolsList:   false, // but tools.list() should fail without bridge
+			description:       "Untrusted security with minimal features should restrict tools bridge access",
 		},
 		{
 			name:              "Trusted_Agent",

@@ -35,8 +35,12 @@ func (c *ValidateCmd) Run(ctx context.Context) error {
 
 	// Extract engine registry from runner
 	var engineRegistry *runner.EngineRegistryManager
-	if registryProvider, ok := runnerInterface.(interface{ GetEngineRegistry() *runner.EngineRegistryManager }); ok {
-		engineRegistry = registryProvider.GetEngineRegistry()
+	if registryProvider, ok := runnerInterface.(interface{ GetEngineRegistry() interface{} }); ok {
+		if em, ok := registryProvider.GetEngineRegistry().(*runner.EngineRegistryManager); ok {
+			engineRegistry = em
+		} else {
+			return errors.New(errors.CategoryConfig, "runner engine registry is not the expected type")
+		}
 	} else {
 		return errors.New(errors.CategoryConfig, "runner does not provide engine registry")
 	}

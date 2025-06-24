@@ -17,7 +17,7 @@ import (
 // template types and configuration options.
 type NewCmd struct {
 	BaseCommand
-	Name        string `arg:"" name:"name" help:"Name of the spell to create"`
+	Name        string `arg:"" name:"name" help:"Name of the spell to create" optional:""`
 	Type        string `short:"t" help:"Template type (basic, advanced, agent, workflow, interactive)" default:"basic"`
 	Engine      string `short:"e" help:"Script engine (lua, javascript, tengo)" default:"lua"`
 	Description string `short:"d" help:"Spell description" default:"A new spell"`

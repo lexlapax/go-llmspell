@@ -1,0 +1,1 @@
+local tools_module = nil; local success, result = pcall(require, "tools"); if success then tools_module = result; print("Tools available"); else print("Tools not available:", result); end; if tools_module and tools_module.list then local ok, err = pcall(tools_module.list); print("tools.list result:", ok, err); end
