@@ -44,6 +44,11 @@ func (c *SecurityCmd) Run(ctx context.Context) error {
 			c.SecurityLevel = string(GetSecurityLevel(ctx))
 		}
 
+		// Validate security level
+		if !security.IsValidLevel(c.SecurityLevel) {
+			return errors.Newf(errors.CategoryUsage, "invalid security level: %s", c.SecurityLevel)
+		}
+
 		// Show security level details
 		c.Printf("Security Level: %s\n", c.SecurityLevel)
 		config := security.GetLevelConfig(security.SecurityLevel(c.SecurityLevel))

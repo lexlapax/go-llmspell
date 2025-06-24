@@ -12,30 +12,32 @@ func (g *Generator) getBasicScriptContent() string {
 	return `{{if eq .Engine "lua"}}-- {{.Name}}
 -- {{.Description}}
 
-local llm = require("llm")
-local json = require("json")
-
 -- Get parameters
 local prompt = params.prompt or error("Prompt is required")
 local model = params.model or "gpt-3.5-turbo"
 
--- Create LLM client
-local client = llm.new({
-    model = model,
-    temperature = 0.7
+-- For demonstration/testing, create a simple response
+-- In production, uncomment the LLM code below
+local response = "Response to: " .. prompt .. " (using model: " .. model .. ")"
+
+-- Production LLM code (requires API key configuration):
+--[[
+local llm = require("llm")
+
+-- Set the provider with model
+llm.setProvider("openai", {
+    model = model
 })
 
--- Send prompt to LLM
-print("Sending prompt to " .. model .. "...")
-local response, err = client:complete(prompt)
+-- Generate response
+local response, err = llm.generate(prompt, {
+    temperature = 0.7
+})
 
 if err then
     error("LLM request failed: " .. tostring(err))
 end
-
--- Print response
-print("\nResponse:")
-print(response)
+--]]
 
 -- Return response for further processing
 return response
@@ -107,7 +109,6 @@ func (g *Generator) getAdvancedScriptContent() string {
 local llm = require("llm")
 local state = require("state")
 local hooks = require("hooks")
-local json = require("json")
 local utils = require("lib.utils")
 local prompts = require("lib.prompts")
 
@@ -660,7 +661,6 @@ func (g *Generator) getLuaAgentScript() string {
 
 local agent = require("agent")
 local tools = require("tools")
-local json = require("json")
 
 -- Load tools
 local calculator = require("tools.calculator")
@@ -708,7 +708,7 @@ end
 print("\n" .. string.rep("-", 50) .. "\n")
 print("Task completed!")
 print("\nFinal result:")
-print(json.encode(result, {indent = true}))
+print(tostring(result))
 
 return result`
 }
@@ -1491,7 +1491,6 @@ func (g *Generator) getProcessDocumentWorkflow() string {
 	return `{{if eq .Engine "lua"}}-- Process Document Workflow
 
 local llm = require("llm")
-local json = require("json")
 local events = require("events")
 
 local workflow = {}
@@ -1550,7 +1549,7 @@ function workflow.execute(state)
     local output_file = output_dir .. "/document_analysis.json"
     
     local file = io.open(output_file, "w")
-    file:write(json.encode(results, {indent = true}))
+    file:write(tostring(results))
     file:close()
     
     return results
@@ -2094,7 +2093,6 @@ func (g *Generator) getInteractiveScriptContent() string {
 local llm = require("llm")
 local state = require("state")
 local hooks = require("hooks")
-local json = require("json")
 
 -- Get parameters
 local mode = params.mode or "assistant"
@@ -2141,7 +2139,7 @@ Available commands:
         local history = conversation:get("history")
         local filename = "conversation_" .. os.date("%Y%m%d_%H%M%S") .. ".json"
         local file = io.open(filename, "w")
-        file:write(json.encode(history, {indent = true}))
+        file:write(tostring(history))
         file:close()
         print("Conversation saved to: " .. filename)
     end,

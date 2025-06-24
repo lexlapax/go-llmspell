@@ -320,6 +320,24 @@ func (e *LuaEngine) ExecuteFile(ctx context.Context, path string, params map[str
 	return e.Execute(ctx, string(content), params)
 }
 
+// Validate validates a Lua script for syntax errors
+func (e *LuaEngine) Validate(script string) error {
+	// Use the script validator to check syntax
+	validator := NewScriptValidator(DefaultValidatorConfig())
+	result, err := validator.ValidateScript(script, "<script>")
+	if err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+	
+	// If there are validation errors, return the first one
+	if !result.Valid && len(result.Errors) > 0 {
+		firstError := result.Errors[0]
+		return fmt.Errorf("%s at line %d, column %d", firstError.Message, firstError.Line, firstError.Column)
+	}
+	
+	return nil
+}
+
 // Shutdown gracefully shuts down the engine
 func (e *LuaEngine) Shutdown() error {
 	e.mu.Lock()

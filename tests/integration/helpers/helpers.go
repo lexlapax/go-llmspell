@@ -244,6 +244,7 @@ description: A test spell
 author: Test Author
 version: 1.0.0
 engine: lua
+entry_point: main.lua
 
 security:
   profile: sandbox
@@ -251,7 +252,7 @@ security:
     - file:read
 
 parameters:
-  message:
+  - name: message
     type: string
     description: Test message
     default: "Hello"

@@ -24,22 +24,37 @@ author: {{.Author}}
 license: {{.License}}
 version: 1.0.0
 engine: {{.Engine}}
+entry_point: main.{{if eq .Engine "javascript"}}js{{else if eq .Engine "js"}}js{{else if eq .Engine "tengo"}}tengo{{else}}lua{{end}}
+timeout: 60s
 
-security:
-  profile: sandbox
-  permissions:
-    - llm:chat
-    - file:read
+# Security configuration
+# Note: These can be overridden by --security-level and --feature-set CLI flags
+security_profile: untrusted  # Maps to security level
+# feature_set is controlled by CLI flag, not spell.yaml
 
+# Dependencies (optional)
+dependencies: []
+
+# Parameters that can be passed to the spell
 parameters:
-  prompt:
+  - name: prompt
     type: string
     description: The prompt to send to the LLM
     required: true
-  model:
+  - name: model
     type: string
     description: The model to use
     default: gpt-3.5-turbo
+
+# Tags for categorization (optional)
+tags:
+  - llm
+  - basic
+
+# Additional metadata (optional)
+metadata:
+  category: example
+  difficulty: beginner
 `,
 			},
 			"main.script": {
@@ -96,35 +111,57 @@ author: {{.Author}}
 license: {{.License}}
 version: 1.0.0
 engine: {{.Engine}}
+entry_point: main.{{if eq .Engine "javascript"}}js{{else if eq .Engine "js"}}js{{else if eq .Engine "tengo"}}tengo{{else}}lua{{end}}
+timeout: 300s
 
-security:
-  profile: development
-  permissions:
-    - llm:*
-    - file:*
-    - state:*
-    - hooks:*
+# Security configuration  
+# Note: For advanced features, consider using --security-level trusted --feature-set full
+security_profile: trusted
 
+# Dependencies
+dependencies:
+  - lib/utils
+  - lib/prompts
+
+# Parameters
 parameters:
-  mode:
+  - name: mode
     type: string
     description: Operation mode
     enum: [chat, analyze, summarize]
     default: chat
-  input_file:
+  - name: input_file
     type: string
     description: Input file path (optional)
-  output_file:
+    required: false
+  - name: output_file
     type: string
     description: Output file path (optional)
-  model:
+    required: false
+  - name: model
     type: string
     description: The model to use
     default: gpt-4
-  temperature:
+  - name: temperature
     type: number
     description: Temperature for generation
     default: 0.7
+    validation: "value >= 0 and value <= 2"
+
+# Tags
+tags:
+  - llm
+  - advanced
+  - stateful
+
+# Metadata
+metadata:
+  category: example
+  difficulty: intermediate
+  features:
+    - state-management
+    - error-handling
+    - file-operations
 `,
 			},
 			"main.script": {
@@ -221,29 +258,49 @@ author: {{.Author}}
 license: {{.License}}
 version: 1.0.0
 engine: {{.Engine}}
+entry_point: main.{{if eq .Engine "javascript"}}js{{else if eq .Engine "js"}}js{{else if eq .Engine "tengo"}}tengo{{else}}lua{{end}}
+timeout: 600s  # 10 minutes for agent tasks
 
-security:
-  profile: development
-  permissions:
-    - llm:*
-    - agent:*
-    - tools:*
-    - file:*
-    - network:read
+# Security configuration
+# Note: Agents need --security-level trusted --feature-set agent for full functionality
+security_profile: trusted
 
+# Dependencies
+dependencies:
+  - tools/calculator
+  - tools/web_search
+  - tools/file_reader
+
+# Parameters
 parameters:
-  task:
+  - name: task
     type: string
     description: The task for the agent to complete
     required: true
-  tools:
+  - name: tools
     type: array
     description: List of tools to enable
     default: ["calculator", "web_search", "file_reader"]
-  max_iterations:
+  - name: max_iterations
     type: number
     description: Maximum iterations for the agent
     default: 10
+    validation: "value > 0 and value <= 100"
+
+# Tags
+tags:
+  - llm
+  - agent
+  - autonomous
+
+# Metadata
+metadata:
+  category: example
+  difficulty: advanced
+  features:
+    - agent-workflow
+    - tool-usage
+    - iterative-reasoning
 `,
 			},
 			"main.script": {
@@ -338,30 +395,50 @@ author: {{.Author}}
 license: {{.License}}
 version: 1.0.0
 engine: {{.Engine}}
+entry_point: main.{{if eq .Engine "javascript"}}js{{else if eq .Engine "js"}}js{{else if eq .Engine "tengo"}}tengo{{else}}lua{{end}}
+timeout: 900s  # 15 minutes for complex workflows
 
-security:
-  profile: development
-  permissions:
-    - llm:*
-    - workflow:*
-    - state:*
-    - events:*
-    - file:*
+# Security configuration
+# Note: Workflows need --security-level trusted --feature-set full for all features
+security_profile: trusted
 
+# Dependencies
+dependencies:
+  - workflows/process_document
+  - workflows/generate_report
+  - workflows/analyze_data
+
+# Parameters
 parameters:
-  workflow:
+  - name: workflow
     type: string
     description: The workflow to execute
     enum: [process_document, generate_report, analyze_data]
     default: process_document
-  input:
+  - name: input
     type: string
     description: Input data or file path
     required: true
-  output_dir:
+  - name: output_dir
     type: string
     description: Output directory
     default: ./output
+
+# Tags
+tags:
+  - llm
+  - workflow
+  - multi-step
+  - stateful
+
+# Metadata
+metadata:
+  category: example
+  difficulty: advanced
+  features:
+    - workflow-orchestration
+    - state-persistence
+    - checkpoint-recovery
 `,
 			},
 			"main.script": {
@@ -466,25 +543,43 @@ author: {{.Author}}
 license: {{.License}}
 version: 1.0.0
 engine: {{.Engine}}
+entry_point: main.{{if eq .Engine "javascript"}}js{{else if eq .Engine "js"}}js{{else if eq .Engine "tengo"}}tengo{{else}}lua{{end}}
+timeout: 3600s  # 1 hour for interactive sessions
 
-security:
-  profile: development
-  permissions:
-    - llm:*
-    - state:*
-    - hooks:*
-    - ui:terminal
+# Security configuration
+# Note: Interactive mode needs --security-level trusted --feature-set full
+security_profile: trusted
 
+# Dependencies (none for basic interactive)
+dependencies: []
+
+# Parameters
 parameters:
-  mode:
+  - name: mode
     type: string
     description: Interaction mode
     enum: [chat, quiz, assistant]
     default: assistant
-  personality:
+  - name: personality
     type: string
     description: Assistant personality
     default: helpful
+    validation: "value in ['helpful', 'professional', 'friendly', 'concise']"
+
+# Tags
+tags:
+  - llm
+  - interactive
+  - conversational
+
+# Metadata
+metadata:
+  category: example
+  difficulty: intermediate
+  features:
+    - terminal-ui
+    - conversation-history
+    - command-system
 `,
 			},
 			"main.script": {

@@ -78,8 +78,8 @@ func TestEnginesWithScripts(t *testing.T) {
 			return "Valid script"
 		`)
 
-		// Validate with explicit engine
-		stdout, stderr, err := h.RunCommand("validate", script, "--engine", "lua")
+		// Validate script (validate command doesn't have --engine flag)
+		stdout, stderr, err := h.RunCommand("validate", script)
 
 		h.AssertSuccess(stdout, stderr, err)
 		h.AssertOutput(stdout, "valid")

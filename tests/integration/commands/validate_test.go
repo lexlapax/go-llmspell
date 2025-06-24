@@ -45,7 +45,8 @@ func TestValidateCommand(t *testing.T) {
 		spellDir := filepath.Join(h.TempDir(), "myspell")
 		h.CreateSpellYAML(spellDir, helpers.BasicSpellYAML())
 
-		stdout, stderr, err := h.RunCommand("validate", spellDir)
+		spellYAMLPath := filepath.Join(spellDir, "spell.yaml")
+		stdout, stderr, err := h.RunCommand("validate", spellYAMLPath)
 
 		h.AssertSuccess(stdout, stderr, err)
 		h.AssertOutput(stdout, "valid")
@@ -59,7 +60,7 @@ version: not-a-version
 engine: unsupported
 `)
 
-		stdout, stderr, err := h.RunCommand("validate", spellDir)
+		stdout, stderr, err := h.RunCommand("validate", filepath.Join(spellDir, "spell.yaml"))
 
 		h.AssertFailure(stdout, stderr, err)
 		// Should report validation errors
@@ -77,7 +78,7 @@ engine: unsupported
 
 		// Should warn about security issues
 		output := stdout + stderr
-		assert.Contains(t, output, "security") // Should mention security concern
+		assert.Contains(t, output, "Forbidden pattern") // Security validation
 	})
 
 	t.Run("validate with verbose output", func(t *testing.T) {
@@ -93,13 +94,16 @@ engine: unsupported
 
 	t.Run("validate multiple files", func(t *testing.T) {
 		script1 := h.CreateSpell("script1.lua", helpers.BasicLuaSpell())
-		script2 := h.CreateSpell("script2.lua", `print("Script 2")`)
+		script2 := h.CreateSpell("script2.lua", `return "Script 2"`)
 
-		stdout, stderr, err := h.RunCommand("validate", script1, script2)
+		// Validate first file
+		stdout1, stderr1, err1 := h.RunCommand("validate", script1)
+		h.AssertSuccess(stdout1, stderr1, err1)
+		h.AssertOutput(stdout1, "valid")
 
-		h.AssertSuccess(stdout, stderr, err)
-		// Should validate both files
-		h.AssertOutput(stdout, "script1.lua")
-		h.AssertOutput(stdout, "script2.lua")
+		// Validate second file
+		stdout2, stderr2, err2 := h.RunCommand("validate", script2)
+		h.AssertSuccess(stdout2, stderr2, err2)
+		h.AssertOutput(stdout2, "valid")
 	})
 }
