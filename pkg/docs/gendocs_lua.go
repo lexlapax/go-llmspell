@@ -208,7 +208,7 @@ func NewLuaDocGenerator(bridgeManager BridgeManager) *LuaDocGenerator {
 	return &LuaDocGenerator{
 		BridgeManager: bridgeManager,
 		ModulePaths: []string{
-			"pkg/engine/gopherlua/stdlib",
+			"pkg/engine/lua/stdlib",
 			"pkg/bridge",
 		},
 		OutputFormats: []string{"markdown", "json", "html"},
@@ -461,7 +461,7 @@ func (g *LuaDocGenerator) generateMethodExample(moduleName, methodName string, p
 func (g *LuaDocGenerator) ExtractStdlibAPIs() ([]LuaModule, error) {
 	var modules []LuaModule
 
-	stdlibPath := "pkg/engine/gopherlua/stdlib"
+	stdlibPath := "pkg/engine/lua/stdlib"
 
 	// Find all Lua files in stdlib
 	luaFiles, err := filepath.Glob(filepath.Join(stdlibPath, "*.lua"))
