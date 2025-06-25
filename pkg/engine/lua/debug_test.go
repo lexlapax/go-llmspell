@@ -1,7 +1,7 @@
 // ABOUTME: This file contains comprehensive tests for the Lua script debugger.
 // ABOUTME: It tests breakpoints, step debugging, variable inspection, and watch expressions.
 
-package gopherlua
+package lua
 
 import (
 	"fmt"

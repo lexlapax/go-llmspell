@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Events bridge adapter that exposes go-llms event system functionality to Lua scripts
 // ABOUTME: Validates event bus, subscription, emission, filtering, aggregation, recording, and replay operations
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -14,7 +14,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -177,7 +178,7 @@ func TestEventsAdapter_EventPublication(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -211,7 +212,7 @@ func TestEventsAdapter_EventPublication(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -257,7 +258,7 @@ func TestEventsAdapter_EventSubscription(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -301,7 +302,7 @@ func TestEventsAdapter_EventSubscription(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -351,7 +352,7 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -395,7 +396,7 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -456,7 +457,7 @@ func TestEventsAdapter_EventQuery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -502,7 +503,7 @@ func TestEventsAdapter_EventQuery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -550,7 +551,7 @@ func TestEventsAdapter_EventRecording(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -609,7 +610,7 @@ func TestEventsAdapter_EventReplay(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -676,7 +677,7 @@ func TestEventsAdapter_EventAggregation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -732,7 +733,7 @@ func TestEventsAdapter_EventSerialization(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -793,7 +794,7 @@ func TestEventsAdapter_SubscriptionInfo(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -835,7 +836,7 @@ func TestEventsAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 
@@ -882,7 +883,7 @@ func TestEventsAdapter_EventCorrelation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "events")
 		require.NoError(t, err)
 

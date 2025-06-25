@@ -1,7 +1,7 @@
 // ABOUTME: Utility bridge adapter that exposes go-llms utility functionality to Lua scripts
 // ABOUTME: Provides auth, debug, errors, json, llm utils, logging, slog, and general utility functionality
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 // UtilsAdapter combines multiple utility bridges into a unified adapter.
@@ -33,7 +34,7 @@ type UtilsAdapter struct {
 	loggerBridge  engine.Bridge
 	slogBridge    engine.Bridge
 	utilBridge    engine.Bridge
-	typeConverter *gopherlua.LuaTypeConverter
+	typeConverter *converters.LuaTypeConverter
 }
 
 // NewUtilsAdapter creates a new utility adapter with the provided bridges.
@@ -52,7 +53,7 @@ func NewUtilsAdapter(authBridge, debugBridge, errorsBridge, jsonBridge, llmBridg
 		loggerBridge:  loggerBridge,
 		slogBridge:    slogBridge,
 		utilBridge:    utilBridge,
-		typeConverter: gopherlua.NewLuaTypeConverter(),
+		typeConverter: converters.NewLuaTypeConverter(),
 	}
 }
 
@@ -2068,9 +2069,9 @@ func (ua *UtilsAdapter) tableToScriptValue(L *lua.LState, table *lua.LTable) eng
 }
 
 // RegisterAsModule registers the adapter as a module in the module system
-func (ua *UtilsAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (ua *UtilsAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Create module definition using our CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  "Comprehensive utility functions for auth, debug, errors, json, logging and general purposes",
 		Dependencies: []string{}, // Utils module has no dependencies by default

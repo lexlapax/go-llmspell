@@ -1,7 +1,7 @@
 // ABOUTME: ComplexConverter handles conversion of complex Go types (maps, slices, structs, interfaces)
 // ABOUTME: Provides struct tag support, field mapping, circular reference detection, and nested type handling
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

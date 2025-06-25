@@ -1,7 +1,7 @@
 // ABOUTME: Compilation optimization infrastructure for Lua scripts including pattern-based optimization and enhanced caching
 // ABOUTME: Provides compilation pipeline with source transformations and performance tracking
 
-package gopherlua
+package converters
 
 import (
 	"crypto/sha256"

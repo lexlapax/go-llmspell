@@ -1,7 +1,7 @@
 // ABOUTME: Tests for SecurityManager which enforces security policies for Lua VM instances
 // ABOUTME: Validates library restrictions, resource limits, and sandbox enforcement
 
-package gopherlua
+package lua
 
 import (
 	"context"

@@ -1,7 +1,7 @@
 // ABOUTME: Bridge registration and management for LuaEngine
 // ABOUTME: Handles bridge lifecycle, module creation, method wrapping, and Lua-side access
 
-package gopherlua
+package lua
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 // ModuleCreator defines a function that creates Lua modules from bridge IDs via adapters.
@@ -23,14 +24,14 @@ type ModuleCreator func(bridgeID string) (lua.LGFunction, error)
 type BridgeManager struct {
 	bridges       map[string]engine.Bridge
 	modules       map[string]*lua.LTable
-	converter     *LuaTypeConverter
+	converter     *converters.LuaTypeConverter
 	moduleCreator ModuleCreator
 	mu            sync.RWMutex
 }
 
 // NewBridgeManager creates a new bridge manager.
 // It initializes with a type converter for handling Go-Lua type conversions.
-func NewBridgeManager(converter *LuaTypeConverter) *BridgeManager {
+func NewBridgeManager(converter *converters.LuaTypeConverter) *BridgeManager {
 	return &BridgeManager{
 		bridges:   make(map[string]engine.Bridge),
 		modules:   make(map[string]*lua.LTable),
@@ -41,7 +42,7 @@ func NewBridgeManager(converter *LuaTypeConverter) *BridgeManager {
 // NewBridgeManagerWithModuleCreator creates a new bridge manager with adapter support.
 // The moduleCreator callback allows the manager to create Lua modules via adapters
 // instead of directly from bridges, enabling the adapter pattern without import cycles.
-func NewBridgeManagerWithModuleCreator(converter *LuaTypeConverter, moduleCreator ModuleCreator) *BridgeManager {
+func NewBridgeManagerWithModuleCreator(converter *converters.LuaTypeConverter, moduleCreator ModuleCreator) *BridgeManager {
 	return &BridgeManager{
 		bridges:       make(map[string]engine.Bridge),
 		modules:       make(map[string]*lua.LTable),

@@ -1,7 +1,7 @@
 // ABOUTME: Tests for sandbox enforcement functionality in the SecurityManager
 // ABOUTME: Validates ApplySandbox, environment filtering, and metatable protection
 
-package gopherlua
+package lua
 
 import (
 	"testing"

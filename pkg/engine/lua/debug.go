@@ -4,7 +4,7 @@
 // Package gopherlua provides a Lua engine implementation for go-llmspell.
 // This file implements comprehensive debugging capabilities including breakpoints,
 // step-through debugging, variable inspection, and performance profiling.
-package gopherlua
+package lua
 
 import (
 	"context"

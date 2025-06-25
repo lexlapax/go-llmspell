@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Workflow bridge adapter that exposes go-llms workflow functionality to Lua scripts
 // ABOUTME: Validates workflow creation, execution, step management, templates, and serialization
 
-package adapters
+package impl
 
 import (
 	"context"

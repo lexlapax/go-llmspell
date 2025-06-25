@@ -12,7 +12,7 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
@@ -366,7 +366,7 @@ func SetupEngineRegistry(config *RunnerConfig, profile string) (*EngineRegistryM
 	}
 
 	// Register lightweight engine factories only (no bridges)
-	luaFactory := gopherlua.NewLuaEngineFactory()
+	luaFactory := lua.NewLuaEngineFactory()
 	if err := registry.Register(luaFactory); err != nil {
 		return nil, fmt.Errorf("failed to register Lua engine factory: %w", err)
 	}

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 		SandboxMode:  true,
 	}
 
-	eng := gopherlua.NewLuaEngine()
+	eng := lua.NewLuaEngine()
 	if err := eng.Initialize(config); err != nil {
 		log.Fatalf("Failed to initialize Lua engine: %v", err)
 	}

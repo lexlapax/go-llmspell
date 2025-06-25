@@ -1,7 +1,7 @@
 // ABOUTME: Bridge adapter system that wraps go-llms bridges for Lua script access
 // ABOUTME: Provides automatic method discovery, type conversion, and Lua module generation
 
-package gopherlua
+package adapters
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 // BridgeAdapter wraps a go-llms bridge for Lua script access.
@@ -18,7 +19,7 @@ import (
 // and provides validation and caching for improved performance.
 type BridgeAdapter struct {
 	bridge      engine.Bridge
-	converter   *LuaTypeConverter
+	converter   *converters.LuaTypeConverter
 	methodCache map[string]lua.LGFunction
 	methodInfo  map[string]engine.MethodInfo
 	validation  bool
@@ -30,7 +31,7 @@ type BridgeAdapter struct {
 func NewBridgeAdapter(b engine.Bridge) *BridgeAdapter {
 	adapter := &BridgeAdapter{
 		bridge:      b,
-		converter:   NewLuaTypeConverter(),
+		converter:   converters.NewLuaTypeConverter(),
 		methodCache: make(map[string]lua.LGFunction),
 		methodInfo:  make(map[string]engine.MethodInfo),
 		validation:  false,
@@ -86,14 +87,14 @@ func (ba *BridgeAdapter) GetMethodInfo(name string) (engine.MethodInfo, error) {
 }
 
 // SetTypeConverter sets a custom type converter
-func (ba *BridgeAdapter) SetTypeConverter(converter *LuaTypeConverter) {
+func (ba *BridgeAdapter) SetTypeConverter(converter *converters.LuaTypeConverter) {
 	ba.mu.Lock()
 	defer ba.mu.Unlock()
 	ba.converter = converter
 }
 
 // GetTypeConverter returns the type converter
-func (ba *BridgeAdapter) GetTypeConverter() *LuaTypeConverter {
+func (ba *BridgeAdapter) GetTypeConverter() *converters.LuaTypeConverter {
 	ba.mu.RLock()
 	defer ba.mu.RUnlock()
 	return ba.converter
@@ -224,20 +225,6 @@ func (ba *BridgeAdapter) WrapMethod(methodName string) lua.LGFunction {
 	return fn
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
-func (ba *BridgeAdapter) RegisterAsModule(ms *ModuleSystem, name string) error {
-	// Get bridge dependencies from metadata
-	metadata := ba.GetMetadata()
-	deps := metadata.Dependencies
-
-	// Create module definition
-	module := ModuleDefinition{
-		Name:         name,
-		Description:  metadata.Description,
-		Dependencies: deps,
-		LoadFunc:     ba.CreateLuaModule(),
-	}
-
-	// Register with module system
-	return ms.Register(module)
-}
+// Note: RegisterAsModule method has been removed to avoid import cycles.
+// Module registration should be done at the engine level using the
+// CreateLuaModule() method provided by the adapter.

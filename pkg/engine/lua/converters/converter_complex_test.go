@@ -1,7 +1,7 @@
 // ABOUTME: Tests for complex type conversion handlers - map, slice, struct, interface{} converters
 // ABOUTME: Validates nested structures, struct tags, field mapping, and complex type handling
 
-package gopherlua
+package converters
 
 import (
 	"reflect"

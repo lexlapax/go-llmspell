@@ -1,7 +1,7 @@
 // ABOUTME: Async runtime for coroutine management in GopherLua engine
 // ABOUTME: Provides promise-coroutine integration, async execution contexts, and cancellation support
 
-package gopherlua
+package lua
 
 import (
 	"context"

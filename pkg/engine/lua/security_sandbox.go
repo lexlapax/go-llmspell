@@ -4,7 +4,7 @@
 // Package gopherlua provides a Lua engine implementation for go-llmspell.
 // This file implements comprehensive sandbox enforcement for secure Lua execution,
 // including environment filtering, metatable protection, and escape prevention.
-package gopherlua
+package lua
 
 import (
 	"fmt"

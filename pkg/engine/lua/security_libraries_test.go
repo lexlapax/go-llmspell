@@ -1,7 +1,7 @@
 // ABOUTME: Tests for library restriction functionality in the SecurityManager
 // ABOUTME: Validates safe library loading and dangerous function removal
 
-package gopherlua
+package lua
 
 import (
 	"testing"

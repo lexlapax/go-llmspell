@@ -1,7 +1,7 @@
 // ABOUTME: Hooks bridge adapter that exposes go-llms hook functionality to Lua scripts
 // ABOUTME: Provides hook registration, priority ordering, lifecycle execution, and management operations
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -9,7 +9,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 // HooksAdapter specializes BridgeAdapter for hooks functionality.
@@ -18,7 +20,7 @@ import (
 // in the processing pipeline.
 // bridge_id=bridges.agent_hooks
 type HooksAdapter struct {
-	*gopherlua.BridgeAdapter
+	*adapters.BridgeAdapter
 }
 
 // NewHooksAdapter creates a new hooks adapter with the provided bridge.
@@ -31,7 +33,7 @@ func NewHooksAdapter(bridge engine.Bridge) *HooksAdapter {
 
 	// Create base adapter if bridge is provided
 	if bridge != nil {
-		adapter.BridgeAdapter = gopherlua.NewBridgeAdapter(bridge)
+		adapter.BridgeAdapter = adapters.NewBridgeAdapter(bridge)
 	}
 
 	// Add hooks-specific methods if not already present
@@ -279,11 +281,11 @@ func (ha *HooksAdapter) tableToScriptValue(L *lua.LState, table *lua.LTable) eng
 	table.ForEach(func(k, v lua.LValue) {
 		if key, ok := k.(lua.LString); ok {
 			// Convert value to ScriptValue
-			var converter *gopherlua.LuaTypeConverter
+			var converter *converters.LuaTypeConverter
 			if ha.BridgeAdapter != nil {
 				converter = ha.GetTypeConverter()
 			} else {
-				converter = gopherlua.NewLuaTypeConverter()
+				converter = converters.NewLuaTypeConverter()
 			}
 
 			sv, err := converter.ToLuaScriptValue(L, v)
@@ -300,7 +302,7 @@ func (ha *HooksAdapter) tableToScriptValue(L *lua.LState, table *lua.LTable) eng
 // The ms parameter is the module system to register with. The name parameter
 // specifies the module name that scripts will use to import this functionality.
 // Returns an error if registration fails.
-func (ha *HooksAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (ha *HooksAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
 	if ha.GetBridge() != nil {
@@ -313,7 +315,7 @@ func (ha *HooksAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string
 	}
 
 	// Create module definition using our overridden CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  bridgeMetadata.Description,
 		Dependencies: []string{},           // Hooks module has no dependencies by default

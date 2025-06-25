@@ -1,7 +1,7 @@
 // ABOUTME: PrimitiveConverter provides specialized conversion handlers for primitive types (bool, number, string, nil)
 // ABOUTME: Offers granular control over type validation, error reporting, and conversion behavior for basic types
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

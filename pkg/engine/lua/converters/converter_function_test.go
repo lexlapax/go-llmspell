@@ -1,7 +1,7 @@
 // ABOUTME: Tests for function conversion handlers - Go function to LFunction wrapping
 // ABOUTME: Validates argument conversion, return value handling, panic recovery, and variadic functions
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

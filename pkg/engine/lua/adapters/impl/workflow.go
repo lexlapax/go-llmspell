@@ -1,7 +1,7 @@
 // ABOUTME: Workflow bridge adapter that exposes go-llms workflow functionality to Lua scripts
 // ABOUTME: Provides workflow creation, execution, step management, templates, and serialization capabilities
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
 )
 
 // WorkflowAdapter exposes workflow bridge functionality to Lua.
@@ -18,7 +19,7 @@ import (
 // and processing pipelines.
 // bridge_id=bridges.agent_workflow
 type WorkflowAdapter struct {
-	*gopherlua.BridgeAdapter
+	*adapters.BridgeAdapter
 }
 
 // NewWorkflowAdapter creates a new workflow adapter with the provided bridge.
@@ -27,7 +28,7 @@ type WorkflowAdapter struct {
 // as a Lua module.
 func NewWorkflowAdapter(bridge engine.Bridge) *WorkflowAdapter {
 	adapter := &WorkflowAdapter{
-		BridgeAdapter: gopherlua.NewBridgeAdapter(bridge),
+		BridgeAdapter: adapters.NewBridgeAdapter(bridge),
 	}
 	return adapter
 }
@@ -1349,7 +1350,7 @@ func (wa *WorkflowAdapter) validateWorkflow(L *lua.LState) int {
 }
 
 // RegisterAsModule registers the adapter as a module in the module system
-func (wa *WorkflowAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (wa *WorkflowAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
 	if wa.GetBridge() != nil {
@@ -1362,7 +1363,7 @@ func (wa *WorkflowAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name str
 	}
 
 	// Create module definition using our overridden CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  bridgeMetadata.Description,
 		Dependencies: []string{},           // Workflow module has no dependencies by default

@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LLM bridge adapter providers functionality that extends the LLM bridge
 // ABOUTME: Validates provider creation, templates, multi-provider support, and metadata management
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 // Mock providers bridge for testing
@@ -254,7 +254,7 @@ func TestLLMAdapter_ProvidersEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -404,7 +404,7 @@ func TestLLMAdapter_ProvidersEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -462,7 +462,7 @@ func TestLLMAdapter_ProvidersEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 

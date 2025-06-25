@@ -1,7 +1,7 @@
 // ABOUTME: LuaTypeConverter implements engine.TypeConverter for Go ↔ Lua type conversions
 // ABOUTME: Handles ToLua, FromLua, circular reference detection, conversion caching, and custom type registration
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

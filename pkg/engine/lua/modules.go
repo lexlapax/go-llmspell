@@ -1,7 +1,7 @@
 // ABOUTME: Module system for managing Lua module registration, loading, and dependency resolution
 // ABOUTME: Provides lazy loading, circular dependency detection, and profile-based module management
 
-package gopherlua
+package lua
 
 import (
 	"fmt"

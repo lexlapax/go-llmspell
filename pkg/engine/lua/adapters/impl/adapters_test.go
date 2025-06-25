@@ -1,7 +1,7 @@
 // ABOUTME: Comprehensive testing for all bridge adapters including cross-adapter interactions
 // ABOUTME: Validates adapter interoperability, error propagation, and type conversions
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -14,7 +14,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -24,7 +25,7 @@ func TestAllAdaptersIntegration(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Create mock bridges for all adapters
 		llmBridge := testutils.NewMockBridge("llm_core").WithInitialized(true)
@@ -135,7 +136,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Mock LLM bridge that returns structured data
 		llmBridge := testutils.NewMockBridge("llm_core").
@@ -206,7 +207,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Mock tools bridge
 		toolsBridge := testutils.NewMockBridge("agent_tools").
@@ -280,7 +281,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Mock state bridge
 		stateBridge := testutils.NewMockBridge("state_manager").
@@ -390,7 +391,7 @@ func TestAdapterErrorPropagation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Create bridge that returns errors
 		errorBridge := testutils.NewMockBridge("test").
@@ -422,7 +423,7 @@ func TestAdapterErrorPropagation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Create bridge that expects specific types
 		typeBridge := testutils.NewMockBridge("llm_core").
@@ -472,7 +473,7 @@ func TestAdapterTypeConversions(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Mock bridge that works with nested structures
 		complexBridge := testutils.NewMockBridge("complex").
@@ -533,7 +534,7 @@ func TestAdapterTypeConversions(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Mock bridge that returns array of objects
 		arrayBridge := testutils.NewMockBridge("array").
@@ -587,7 +588,7 @@ func TestAdapterPerformance(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 
 		// Create a bridge that simulates work
 		perfBridge := testutils.NewMockBridge("perf").
@@ -653,52 +654,52 @@ func TestAdapterDocumentation(t *testing.T) {
 		create func() error
 	}{
 		{"llm", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewLLMAdapter(testutils.NewMockBridge("llm_core").WithInitialized(true), nil, nil)
 			return adapter.RegisterAsModule(ms, "llm")
 		}},
 		{"state", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewStateAdapter(testutils.NewMockBridge("state").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "state")
 		}},
 		{"events", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewEventsAdapter(testutils.NewMockBridge("events").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "events")
 		}},
 		{"structured", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewStructuredAdapter(testutils.NewMockBridge("structured").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "structured")
 		}},
 		{"agent", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewAgentAdapter(testutils.NewMockBridge("agent_core").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "agent")
 		}},
 		{"hooks", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewHooksAdapter(testutils.NewMockBridge("hooks").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "hooks")
 		}},
 		{"workflow", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewWorkflowAdapter(testutils.NewMockBridge("workflow").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "workflow")
 		}},
 		{"tools", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewToolsAdapter(testutils.NewMockBridge("tools").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "tools")
 		}},
 		{"observability", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewObservabilityAdapter(testutils.NewMockBridge("observability").WithInitialized(true), nil, nil)
 			return adapter.RegisterAsModule(ms, "observability")
 		}},
 		{"modelinfo", func() error {
-			ms := gopherlua.NewModuleSystem()
+			ms := enginelua.NewModuleSystem()
 			adapter := NewModelInfoAdapter(testutils.NewMockBridge("modelinfo").WithInitialized(true))
 			return adapter.RegisterAsModule(ms, "modelinfo")
 		}},
@@ -724,7 +725,7 @@ func (ta *testAdapter) GetAdapterName() string {
 func (ta *testAdapter) CreateLuaModule() lua.LGFunction {
 	return func(L *lua.LState) int {
 		module := L.NewTable()
-		converter := gopherlua.NewLuaTypeConverter()
+		converter := converters.NewLuaTypeConverter()
 
 		// Add failingMethod
 		L.SetField(module, "failingMethod", L.NewFunction(func(L *lua.LState) int {
@@ -823,9 +824,9 @@ func (ta *testAdapter) CreateLuaModule() lua.LGFunction {
 	}
 }
 
-func (ta *testAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (ta *testAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Create module definition
-	def := gopherlua.ModuleDefinition{
+	def := enginelua.ModuleDefinition{
 		Name:        name,
 		Description: "Test adapter module",
 		Version:     "1.0.0",

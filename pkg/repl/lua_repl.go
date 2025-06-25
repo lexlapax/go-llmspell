@@ -10,7 +10,8 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/errors"
 	"github.com/lexlapax/go-llmspell/pkg/security"
 	lua "github.com/yuin/gopher-lua"
@@ -91,7 +92,7 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 			// basic REPL evaluations.
 
 			// Try to load bridges into the REPL's Lua state if the engine supports it
-			if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
+			if luaEngine, ok := eng.(*enginelua.LuaEngine); ok {
 				if err := luaEngine.LoadBridgeModulesIntoState(luaState); err != nil {
 					// Log warning but don't fail - REPL can still function without bridges
 					// TODO: Add proper logging
@@ -104,7 +105,7 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 	// Fallback to creating engine directly if no registry or type assertion failed
 	if scriptEngine == nil {
 		// Create Lua engine using factory pattern
-		factory := gopherlua.NewLuaEngineFactory()
+		factory := enginelua.NewLuaEngineFactory()
 		engineConfig := factory.GetDefaultConfig()
 
 		// Override some settings for REPL use
@@ -124,7 +125,7 @@ func NewLuaREPL(config REPLConfig) (*LuaREPL, error) {
 		luaState.OpenLibs()
 
 		// Load bridges if available
-		if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
+		if luaEngine, ok := eng.(*enginelua.LuaEngine); ok {
 			if err := luaEngine.LoadBridgeModulesIntoState(luaState); err != nil {
 				// Log warning but don't fail - REPL can still function without bridges
 				// TODO: Add proper logging

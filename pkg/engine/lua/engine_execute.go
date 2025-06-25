@@ -1,7 +1,7 @@
 // ABOUTME: Execution pipeline for LuaEngine implementing state acquisition, security, parameter injection, and result extraction
 // ABOUTME: Handles the complete lifecycle of script execution with proper error handling and resource management
 
-package gopherlua
+package lua
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 // ExecutionContext holds context for a single script execution.
@@ -45,8 +46,8 @@ type ExecutionContext struct {
 // ExecutionPipeline manages the complete script execution flow
 type ExecutionPipeline struct {
 	engine    *LuaEngine
-	converter *LuaTypeConverter
-	cache     *ChunkCache
+	converter *converters.LuaTypeConverter
+	cache     *converters.ChunkCache
 	pool      *LStatePool
 	bridges   *BridgeManager
 }

@@ -1,7 +1,7 @@
 // ABOUTME: State bridge adapter that exposes go-llms state management functionality to Lua scripts
 // ABOUTME: Provides state creation, context management, transforms, validation, persistence, and merging operations
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -10,7 +10,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 // StateAdapter specializes BridgeAdapter for state management functionality.
@@ -20,7 +22,7 @@ import (
 // bridge_id=bridges.state_manager
 // bridge_id=state_context
 type StateAdapter struct {
-	*gopherlua.BridgeAdapter
+	*adapters.BridgeAdapter
 
 	// Optional related bridges for enhanced functionality
 	contextBridge engine.Bridge // StateContextBridge for shared contexts
@@ -36,7 +38,7 @@ func NewStateAdapter(bridge engine.Bridge) *StateAdapter {
 
 	// Create base adapter if bridge is provided
 	if bridge != nil {
-		adapter.BridgeAdapter = gopherlua.NewBridgeAdapter(bridge)
+		adapter.BridgeAdapter = adapters.NewBridgeAdapter(bridge)
 	}
 
 	// Add state-specific methods if not already present
@@ -353,11 +355,11 @@ func (sa *StateAdapter) addContextMethods(L *lua.LState, module *lua.LTable) {
 		value := L.Get(2)
 
 		// Convert value to ScriptValue
-		var converter *gopherlua.LuaTypeConverter
+		var converter *converters.LuaTypeConverter
 		if sa.BridgeAdapter != nil {
 			converter = sa.GetTypeConverter()
 		} else {
-			converter = gopherlua.NewLuaTypeConverter()
+			converter = converters.NewLuaTypeConverter()
 		}
 
 		valueScriptValue, err := converter.ToLuaScriptValue(L, value)
@@ -439,11 +441,11 @@ func (sa *StateAdapter) addContextMethods(L *lua.LState, module *lua.LTable) {
 			}
 
 			// Check if we have a type converter available
-			var converter *gopherlua.LuaTypeConverter
+			var converter *converters.LuaTypeConverter
 			if sa.BridgeAdapter != nil {
 				converter = sa.GetTypeConverter()
 			} else {
-				converter = gopherlua.NewLuaTypeConverter()
+				converter = converters.NewLuaTypeConverter()
 			}
 
 			luaResult, err := converter.FromLuaScriptValue(L, result)
@@ -488,11 +490,11 @@ func (sa *StateAdapter) addContextMethods(L *lua.LState, module *lua.LTable) {
 			}
 
 			// Check if we have a type converter available
-			var converter *gopherlua.LuaTypeConverter
+			var converter *converters.LuaTypeConverter
 			if sa.BridgeAdapter != nil {
 				converter = sa.GetTypeConverter()
 			} else {
-				converter = gopherlua.NewLuaTypeConverter()
+				converter = converters.NewLuaTypeConverter()
 			}
 
 			luaResult, err := converter.FromLuaScriptValue(L, result)
@@ -915,11 +917,11 @@ func (sa *StateAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[string]
 	table.ForEach(func(k, v lua.LValue) {
 		if key, ok := k.(lua.LString); ok {
 			// Convert value to ScriptValue
-			var converter *gopherlua.LuaTypeConverter
+			var converter *converters.LuaTypeConverter
 			if sa.BridgeAdapter != nil {
 				converter = sa.GetTypeConverter()
 			} else {
-				converter = gopherlua.NewLuaTypeConverter()
+				converter = converters.NewLuaTypeConverter()
 			}
 
 			sv, err := converter.ToLuaScriptValue(L, v)
@@ -936,7 +938,7 @@ func (sa *StateAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[string]
 // The ms parameter is the module system to register with. The name parameter
 // specifies the module name that scripts will use to import this functionality.
 // Returns an error if registration fails.
-func (sa *StateAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (sa *StateAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
 	if sa.GetBridge() != nil {
@@ -949,7 +951,7 @@ func (sa *StateAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string
 	}
 
 	// Create module definition using our overridden CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  bridgeMetadata.Description,
 		Dependencies: []string{},           // State module has no dependencies by default

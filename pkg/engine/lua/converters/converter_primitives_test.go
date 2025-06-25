@@ -1,7 +1,7 @@
 // ABOUTME: Tests for primitive type conversion handlers - specialized bool, number, string converters
 // ABOUTME: Validates type validation, error reporting, and edge cases for primitive types
 
-package gopherlua
+package converters
 
 import (
 	"math"

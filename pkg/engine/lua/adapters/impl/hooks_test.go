@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Hooks bridge adapter that exposes go-llms hook functionality to Lua scripts
 // ABOUTME: Validates hook registration, priority ordering, lifecycle execution, and management operations
 
-package adapters
+package impl
 
 import (
 	"context"

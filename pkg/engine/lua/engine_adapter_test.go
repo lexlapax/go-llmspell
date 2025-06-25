@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LuaEngine adapter management functionality during bridge registration
 // ABOUTME: Validates adapter creation, caching, retrieval, and lifecycle management
 
-package gopherlua
+package lua
 
 import (
 	"context"

@@ -1,7 +1,7 @@
 // ABOUTME: SecurityManager enforces security policies for Lua VM instances
 // ABOUTME: Provides configurable library restrictions, resource limits, and sandboxing
 
-package gopherlua
+package lua
 
 import (
 	"fmt"

@@ -1,7 +1,7 @@
 // ABOUTME: This file contains comprehensive tests for the Lua script validator.
 // ABOUTME: It tests syntax validation, security checks, performance warnings, and linting rules.
 
-package gopherlua
+package lua
 
 import (
 	"fmt"

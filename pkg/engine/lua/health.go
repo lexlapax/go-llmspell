@@ -1,7 +1,7 @@
 // ABOUTME: State health management system for monitoring and evaluating Lua state health
 // ABOUTME: Tracks execution metrics, calculates health scores, and provides recycling recommendations
 
-package gopherlua
+package lua
 
 import (
 	"math"

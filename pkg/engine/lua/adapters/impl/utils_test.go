@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Utility bridge adapter that exposes go-llms utility functionality to Lua scripts
 // ABOUTME: Validates auth, debug, errors, json, llm utils, logging, and general utility functionality
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -187,7 +187,7 @@ func TestUtilsAdapter_Auth(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -237,7 +237,7 @@ func TestUtilsAdapter_Auth(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -284,7 +284,7 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -326,7 +326,7 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -371,7 +371,7 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -413,7 +413,7 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -465,7 +465,7 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -502,7 +502,7 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -542,7 +542,7 @@ func TestUtilsAdapter_General(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -582,7 +582,7 @@ func TestUtilsAdapter_General(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -621,7 +621,7 @@ func TestUtilsAdapter_General(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -656,7 +656,7 @@ func TestUtilsAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 
@@ -699,7 +699,7 @@ func TestUtilsAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "utils")
 		require.NoError(t, err)
 

@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LuaEngineFactory implementation, ensuring proper factory pattern functionality
 // ABOUTME: Validates engine creation, configuration handling, and metadata correctness
 
-package gopherlua
+package lua
 
 import (
 	"testing"

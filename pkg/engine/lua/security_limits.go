@@ -4,7 +4,7 @@
 // Package gopherlua provides a Lua engine implementation for go-llmspell.
 // This file implements resource limit enforcement for Lua script execution,
 // using context timeouts, memory monitoring, and execution controls.
-package gopherlua
+package lua
 
 import (
 	"context"

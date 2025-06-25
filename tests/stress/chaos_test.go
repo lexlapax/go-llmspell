@@ -17,7 +17,7 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/bridge/agent"
 	"github.com/lexlapax/go-llmspell/pkg/bridge/llm"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -27,7 +27,7 @@ func TestChaosRandomScriptExecution(t *testing.T) {
 		t.Skip("Skipping chaos test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	err := luaEngine.Initialize(engine.EngineConfig{
@@ -248,7 +248,7 @@ func TestChaosResourceExhaustion(t *testing.T) {
 	for configIndex, config := range configs {
 		t.Logf("Testing resource exhaustion with config %d", configIndex)
 
-		luaEngine := gopherlua.NewLuaEngine()
+		luaEngine := lua.NewLuaEngine()
 		require.NotNil(t, luaEngine)
 
 		err := luaEngine.Initialize(config)
@@ -307,7 +307,7 @@ func TestChaosConcurrentChaos(t *testing.T) {
 		t.Skip("Skipping chaos test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	err := luaEngine.Initialize(engine.EngineConfig{
@@ -402,7 +402,7 @@ func TestChaosEngineRestart(t *testing.T) {
 	for cycle := 0; cycle < numRestartCycles; cycle++ {
 		t.Logf("Starting chaos restart cycle %d", cycle)
 
-		luaEngine := gopherlua.NewLuaEngine()
+		luaEngine := lua.NewLuaEngine()
 		require.NotNil(t, luaEngine)
 
 		// Random configuration for each cycle

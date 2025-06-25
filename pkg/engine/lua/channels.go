@@ -1,7 +1,7 @@
 // ABOUTME: Channel integration for Go channel ↔ LChannel bridge in GopherLua engine
 // ABOUTME: Provides select operations, buffered channels, and deadlock detection
 
-package gopherlua
+package lua
 
 import (
 	"context"

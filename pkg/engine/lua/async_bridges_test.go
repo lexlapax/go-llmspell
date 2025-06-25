@@ -1,7 +1,7 @@
 // ABOUTME: Tests for async bridge methods in GopherLua engine
 // ABOUTME: Tests async wrapping, promisification, streaming, and cancellation for bridge operations
 
-package gopherlua
+package lua
 
 import (
 	"context"

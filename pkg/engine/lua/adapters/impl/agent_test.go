@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Agent bridge adapter that exposes go-llms agent functionality to Lua scripts
 // ABOUTME: Validates agent lifecycle, communication, state management, events, profiling, and workflow operations
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -234,7 +234,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -283,7 +283,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -348,7 +348,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -388,7 +388,7 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -427,7 +427,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -469,7 +469,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -538,7 +538,7 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -596,7 +596,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -656,7 +656,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -734,7 +734,7 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -797,7 +797,7 @@ func TestAgentAdapter_Events(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -890,7 +890,7 @@ func TestAgentAdapter_Events(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -964,7 +964,7 @@ func TestAgentAdapter_Profiling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -1054,7 +1054,7 @@ func TestAgentAdapter_Workflow(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -1101,7 +1101,7 @@ func TestAgentAdapter_Hooks(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -1140,7 +1140,7 @@ func TestAgentAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -1175,7 +1175,7 @@ func TestAgentAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -1209,7 +1209,7 @@ func TestAgentAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 
@@ -1258,7 +1258,7 @@ func TestAgentAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "agent")
 		require.NoError(t, err)
 

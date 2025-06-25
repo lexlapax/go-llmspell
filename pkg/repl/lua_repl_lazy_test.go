@@ -10,7 +10,7 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge/registry"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 	"github.com/lexlapax/go-llmspell/pkg/security"
 )
@@ -33,7 +33,7 @@ func TestLuaREPLWithLazyBridgeLoading(t *testing.T) {
 	}()
 
 	// Register Lua engine factory
-	factory := gopherlua.NewLuaEngineFactory()
+	factory := lua.NewLuaEngineFactory()
 	if err := engineRegistry.Register(factory); err != nil {
 		t.Fatalf("Failed to register Lua engine factory: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestLuaREPLWithLazyBridgeLoading(t *testing.T) {
 	}
 
 	// Load bridges into REPL state
-	if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
+	if luaEngine, ok := eng.(*lua.LuaEngine); ok {
 		if err := luaEngine.LoadBridgeModulesIntoState(repl.luaState); err != nil {
 			t.Errorf("Failed to load bridges into REPL: %v", err)
 		}
@@ -187,7 +187,7 @@ func TestLuaREPLBridgeUsage(t *testing.T) {
 	}()
 
 	// Register Lua engine factory
-	factory := gopherlua.NewLuaEngineFactory()
+	factory := lua.NewLuaEngineFactory()
 	if err := engineRegistry.Register(factory); err != nil {
 		t.Fatalf("Failed to register Lua engine factory: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestLuaREPLBridgeUsage(t *testing.T) {
 	defer repl.Close()
 
 	// Load bridges into REPL state
-	if luaEngine, ok := eng.(*gopherlua.LuaEngine); ok {
+	if luaEngine, ok := eng.(*lua.LuaEngine); ok {
 		if err := luaEngine.LoadBridgeModulesIntoState(repl.luaState); err != nil {
 			t.Errorf("Failed to load bridges into REPL: %v", err)
 		}

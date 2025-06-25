@@ -1,7 +1,7 @@
 // ABOUTME: Observability bridge adapter that exposes go-llms guardrails, metrics, and tracing to Lua scripts
 // ABOUTME: Provides safety system configuration, performance monitoring, and distributed tracing capabilities
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 // ObservabilityAdapter bridges go-llms observability functionality to Lua.
@@ -504,7 +504,7 @@ func (oa *ObservabilityAdapter) GetMethods() []string {
 // The ms parameter is the module system to register with. The name parameter
 // specifies the module name that scripts will use to import this functionality.
 // Returns an error if registration fails.
-func (oa *ObservabilityAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (oa *ObservabilityAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
 	if oa.guardrailsBridge != nil {
@@ -517,7 +517,7 @@ func (oa *ObservabilityAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, nam
 	}
 
 	// Create module definition using our overridden CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  bridgeMetadata.Description,
 		Dependencies: []string{},           // Observability module has no dependencies by default

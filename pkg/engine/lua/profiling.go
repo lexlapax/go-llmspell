@@ -1,7 +1,7 @@
 // ABOUTME: Profiling infrastructure for Lua engine performance analysis including execution time, memory usage, and hot path tracking
 // ABOUTME: Provides comprehensive profiling API with minimal overhead for production use
 
-package gopherlua
+package lua
 
 import (
 	"encoding/json"

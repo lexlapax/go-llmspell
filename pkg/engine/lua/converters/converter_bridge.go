@@ -4,7 +4,7 @@
 // Package gopherlua provides a Lua engine implementation for go-llmspell.
 // This file implements conversion between Go bridge objects and Lua userdata,
 // enabling seamless integration of go-llms bridges with Lua scripts.
-package gopherlua
+package converters
 
 import (
 	"fmt"

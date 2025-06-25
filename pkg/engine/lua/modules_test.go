@@ -1,7 +1,7 @@
 // ABOUTME: Tests for the module system which manages registration, loading, and dependency resolution of Lua modules
 // ABOUTME: Validates module lifecycle, lazy loading, circular dependency detection, and profile-based loading
 
-package gopherlua
+package lua
 
 import (
 	"fmt"

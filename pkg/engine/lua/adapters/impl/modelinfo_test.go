@@ -1,7 +1,7 @@
 // ABOUTME: Tests for ModelInfo bridge adapter that exposes go-llms model discovery and comparison functionality to Lua scripts
 // ABOUTME: Validates model discovery, capability querying, model comparison, and recommendation functionality
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -189,7 +189,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -239,7 +239,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -287,7 +287,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -339,7 +339,7 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -406,7 +406,7 @@ func TestModelInfoAdapter_Selection(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -468,7 +468,7 @@ func TestModelInfoAdapter_Selection(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -508,7 +508,7 @@ func TestModelInfoAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -543,7 +543,7 @@ func TestModelInfoAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -588,7 +588,7 @@ func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -640,7 +640,7 @@ func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -695,7 +695,7 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -761,7 +761,7 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 
@@ -831,7 +831,7 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "modelinfo")
 		require.NoError(t, err)
 

@@ -1,7 +1,7 @@
 // ABOUTME: Comprehensive tests for ScriptValue to Lua LValue bi-directional conversion
 // ABOUTME: Tests circular reference detection, type conversion accuracy, and edge cases
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

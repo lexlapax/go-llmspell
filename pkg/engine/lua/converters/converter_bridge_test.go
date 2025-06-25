@@ -1,12 +1,13 @@
 // ABOUTME: Tests for bridge type conversion handlers - Bridge to LUserData, metatable generation, method wrapping
 // ABOUTME: Validates bridge object conversions, method exposure, type safety, and bridge type registry
 
-package gopherlua
+package converters
 
 import (
 	"testing"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	lua "github.com/yuin/gopher-lua"
@@ -19,7 +20,7 @@ func TestBridgeConverter_BasicOperations(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
+	bridge := testutils.NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
 		Name:        "Test Bridge",
 		Version:     "1.0.0",
 		Description: "A bridge for testing",
@@ -42,7 +43,7 @@ func TestBridgeConverter_BasicOperations(t *testing.T) {
 		result, err := converter.FromLua(userdata)
 		require.NoError(t, err)
 
-		convertedBridge, ok := result.(*MockBridge)
+		convertedBridge, ok := result.(*testutils.MockBridge)
 		require.True(t, ok, "Result should be MockBridge")
 		assert.Equal(t, bridge.GetID(), convertedBridge.GetID())
 	})
@@ -59,7 +60,7 @@ func TestBridgeConverter_MetatableGeneration(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
+	bridge := testutils.NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
 		Name:        "Test Bridge",
 		Version:     "1.0.0",
 		Description: "A bridge for testing",
@@ -107,7 +108,7 @@ func TestBridgeConverter_MethodWrapping(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
+	bridge := testutils.NewMockBridge("test_bridge").WithMetadata(engine.BridgeMetadata{
 		Name:        "Test Bridge",
 		Version:     "1.0.0",
 		Description: "A bridge for testing",
@@ -166,9 +167,7 @@ func TestBridgeConverter_TypeSafety(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := &MockBridge{
-		id: "test_bridge",
-	}
+	bridge := testutils.NewMockBridge("test_bridge")
 
 	t.Run("type_safety_checks", func(t *testing.T) {
 		// Test type checking for bridge objects
@@ -207,8 +206,8 @@ func TestBridgeConverter_BridgeRegistry(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge1 := &MockBridge{id: "bridge1"}
-	bridge2 := &MockBridge{id: "bridge2"}
+	bridge1 := testutils.NewMockBridge("bridge1")
+	bridge2 := testutils.NewMockBridge("bridge2")
 
 	t.Run("register_bridge_type", func(t *testing.T) {
 		err := converter.RegisterBridgeType("MockBridge", bridge1)
@@ -300,7 +299,7 @@ func TestBridgeConverter_ConcurrentAccess(t *testing.T) {
 	L := lua.NewState()
 	defer L.Close()
 
-	bridge := &MockBridge{id: "concurrent_bridge"}
+	bridge := testutils.NewMockBridge("concurrent_bridge")
 
 	t.Run("concurrent_bridge_registration", func(t *testing.T) {
 		// Test concurrent registration/access
@@ -309,7 +308,7 @@ func TestBridgeConverter_ConcurrentAccess(t *testing.T) {
 
 		for i := 0; i < numGoroutines; i++ {
 			go func(id int) {
-				testBridge := &MockBridge{id: string(rune('a' + id))}
+				testBridge := testutils.NewMockBridge(string(rune('a' + id)))
 				err := converter.RegisterBridgeType(string(rune('A'+id)), testBridge)
 				errors <- err
 			}(i)

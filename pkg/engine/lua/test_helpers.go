@@ -1,7 +1,7 @@
 // ABOUTME: GopherLua test helpers providing ScriptValue creation and bridge testing utilities
 // ABOUTME: Avoids import cycles by providing package-local helper functions for consistent testing
 
-package gopherlua
+package lua
 
 import (
 	"context"

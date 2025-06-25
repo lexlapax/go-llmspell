@@ -4,7 +4,7 @@
 // Package gopherlua provides a Lua engine implementation for go-llmspell.
 // This file implements asynchronous wrappers for bridge methods, enabling
 // non-blocking execution patterns including promises, streams, and cancellation.
-package gopherlua
+package lua
 
 import (
 	"context"

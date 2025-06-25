@@ -4,7 +4,7 @@
 // Package adapters provides Lua-specific adapters for go-llms bridges.
 // It contains specialized adapter implementations that integrate bridges with the Lua engine,
 // handling type conversions and providing Lua-friendly APIs for agent, event, LLM, and other functionalities.
-package adapters
+package impl
 
 import (
 	"context"
@@ -12,7 +12,9 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 // AgentAdapter specializes BridgeAdapter for agent functionality.
@@ -20,7 +22,7 @@ import (
 // communication, state handling, events, profiling, and workflow execution.
 // bridge_id=bridges.agent_core
 type AgentAdapter struct {
-	*gopherlua.BridgeAdapter
+	*adapters.BridgeAdapter
 }
 
 // NewAgentAdapter creates a new agent adapter.
@@ -32,7 +34,7 @@ func NewAgentAdapter(bridge engine.Bridge) *AgentAdapter {
 
 	// Create base adapter if bridge is provided
 	if bridge != nil {
-		adapter.BridgeAdapter = gopherlua.NewBridgeAdapter(bridge)
+		adapter.BridgeAdapter = adapters.NewBridgeAdapter(bridge)
 	}
 
 	// Add agent-specific methods if not already present
@@ -1258,11 +1260,11 @@ func (aa *AgentAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[string]
 	table.ForEach(func(k, v lua.LValue) {
 		if key, ok := k.(lua.LString); ok {
 			// Convert value to ScriptValue
-			var converter *gopherlua.LuaTypeConverter
+			var converter *converters.LuaTypeConverter
 			if aa.BridgeAdapter != nil {
 				converter = aa.GetTypeConverter()
 			} else {
-				converter = gopherlua.NewLuaTypeConverter()
+				converter = converters.NewLuaTypeConverter()
 			}
 
 			sv, err := converter.ToLuaScriptValue(L, v)
@@ -1286,11 +1288,11 @@ func (aa *AgentAdapter) mapToTable(L *lua.LState, m map[string]engine.ScriptValu
 
 	for k, v := range m {
 		// Convert ScriptValue to LValue
-		var converter *gopherlua.LuaTypeConverter
+		var converter *converters.LuaTypeConverter
 		if aa.BridgeAdapter != nil {
 			converter = aa.GetTypeConverter()
 		} else {
-			converter = gopherlua.NewLuaTypeConverter()
+			converter = converters.NewLuaTypeConverter()
 		}
 
 		lval, err := converter.FromLuaScriptValue(L, v)
@@ -1303,7 +1305,7 @@ func (aa *AgentAdapter) mapToTable(L *lua.LState, m map[string]engine.ScriptValu
 }
 
 // RegisterAsModule registers the adapter as a module in the module system
-func (aa *AgentAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (aa *AgentAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
 	if aa.GetBridge() != nil {
@@ -1316,7 +1318,7 @@ func (aa *AgentAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string
 	}
 
 	// Create module definition using our overridden CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  bridgeMetadata.Description,
 		Dependencies: []string{},           // Agent module has no dependencies by default

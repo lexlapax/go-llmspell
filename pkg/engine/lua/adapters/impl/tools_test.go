@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Tools bridge adapter that exposes go-llms tool functionality to Lua scripts
 // ABOUTME: Validates tool discovery, execution, registration, validation, and metrics capabilities
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -195,7 +195,7 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -247,7 +247,7 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -298,7 +298,7 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -364,7 +364,7 @@ func TestToolsAdapter_ToolExecution(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -418,7 +418,7 @@ func TestToolsAdapter_ToolExecution(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -467,7 +467,7 @@ func TestToolsAdapter_CustomTools(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -564,7 +564,7 @@ func TestToolsAdapter_Validation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -628,7 +628,7 @@ func TestToolsAdapter_Metrics(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -694,7 +694,7 @@ func TestToolsAdapter_Categories(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -741,7 +741,7 @@ func TestToolsAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -774,7 +774,7 @@ func TestToolsAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -812,7 +812,7 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -867,7 +867,7 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -1048,7 +1048,7 @@ func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 
@@ -1118,7 +1118,7 @@ func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "tools")
 		require.NoError(t, err)
 

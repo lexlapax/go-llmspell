@@ -1,7 +1,7 @@
 // ABOUTME: LStatePool manages a pool of reusable Lua VM instances for performance and resource efficiency
 // ABOUTME: Provides adaptive scaling, health monitoring, lifecycle management, and graceful shutdown
 
-package gopherlua
+package lua
 
 import (
 	"context"

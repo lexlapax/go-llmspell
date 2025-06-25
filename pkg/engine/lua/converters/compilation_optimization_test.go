@@ -1,7 +1,7 @@
 // ABOUTME: Tests for compilation optimization infrastructure including AST optimization, dead code elimination, and caching
 // ABOUTME: Validates compiler performance improvements, optimization effectiveness, and static analysis capabilities
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

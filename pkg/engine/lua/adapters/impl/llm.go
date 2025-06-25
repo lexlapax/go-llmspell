@@ -1,15 +1,15 @@
 // ABOUTME: LLM bridge adapter that exposes go-llms LLM functionality to Lua scripts
 // ABOUTME: Provides agent creation, completion methods, streaming, model selection, provider management, and pool functionality
 
-package adapters
+package impl
 
 import (
 	"context"
 
-	lua "github.com/yuin/gopher-lua"
-
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
+	lua "github.com/yuin/gopher-lua"
 )
 
 // LLMAdapter specializes BridgeAdapter for LLM functionality.
@@ -21,7 +21,7 @@ import (
 // bridge_id=bridges.llm_pool
 
 type LLMAdapter struct {
-	*gopherlua.BridgeAdapter
+	*adapters.BridgeAdapter
 
 	// References to related bridges for enhanced functionality
 	providersBridge engine.Bridge
@@ -35,7 +35,7 @@ type LLMAdapter struct {
 // as a Lua module.
 func NewLLMAdapter(bridge engine.Bridge, providersBridge engine.Bridge, poolBridge engine.Bridge) *LLMAdapter {
 	// Create base adapter
-	baseAdapter := gopherlua.NewBridgeAdapter(bridge)
+	baseAdapter := adapters.NewBridgeAdapter(bridge)
 
 	// Create LLM adapter
 	adapter := &LLMAdapter{
@@ -1611,12 +1611,12 @@ func (la *LLMAdapter) tableToMap(table *lua.LTable) map[string]engine.ScriptValu
 // The ms parameter is the module system to register with. The name parameter
 // specifies the module name that scripts will use to import this functionality.
 // Returns an error if registration fails.
-func (la *LLMAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (la *LLMAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	bridgeMetadata := la.GetBridge().GetMetadata()
 
 	// Create module definition using our overridden CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  bridgeMetadata.Description,
 		Dependencies: []string{},           // LLM module has no dependencies by default

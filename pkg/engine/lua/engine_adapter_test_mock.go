@@ -1,7 +1,7 @@
 // ABOUTME: Mock adapter for testing LuaEngine adapter management functionality
 // ABOUTME: Provides simple mock implementations for testing adapter creation and retrieval
 
-package gopherlua
+package lua
 
 // mockAdapter is a simple mock adapter for testing
 type mockAdapter struct {

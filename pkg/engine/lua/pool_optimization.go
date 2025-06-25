@@ -1,7 +1,7 @@
 // ABOUTME: Optimized state pool with predictive scaling, pre-warming, memory pooling, and adaptive configuration
 // ABOUTME: Provides intelligent pool management with machine learning-inspired prediction and resource optimization
 
-package gopherlua
+package lua
 
 import (
 	"context"

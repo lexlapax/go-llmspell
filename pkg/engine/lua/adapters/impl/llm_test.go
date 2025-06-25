@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LLM bridge adapter that exposes go-llms LLM functionality to Lua scripts
 // ABOUTME: Validates agent creation, completion methods, streaming, model selection, and token counting
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 func TestLLMAdapter_Creation(t *testing.T) {
@@ -105,7 +105,7 @@ func TestLLMAdapter_AgentCreation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -148,7 +148,7 @@ func TestLLMAdapter_AgentCreation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -190,7 +190,7 @@ func TestLLMAdapter_Completion(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -228,7 +228,7 @@ func TestLLMAdapter_Completion(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -270,7 +270,7 @@ func TestLLMAdapter_Streaming(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -324,7 +324,7 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -369,7 +369,7 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -409,7 +409,7 @@ func TestLLMAdapter_TokenCounting(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -444,7 +444,7 @@ func TestLLMAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -492,7 +492,7 @@ func TestLLMAdapter_ChainedOperations(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -840,7 +840,7 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -941,7 +941,7 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -1001,7 +1001,7 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 
@@ -1050,7 +1050,7 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "llm")
 		require.NoError(t, err)
 

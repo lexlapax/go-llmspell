@@ -1,7 +1,7 @@
 // ABOUTME: Optimized type converter with conversion caching, fast paths for common types, and reduced allocations
 // ABOUTME: Provides significant performance improvements for high-frequency type conversions between Go and Lua
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LuaEngine which implements the ScriptEngine interface for Lua script execution
 // ABOUTME: Validates engine lifecycle, script execution, bridge integration, and resource management
 
-package gopherlua
+package lua
 
 import (
 	"context"

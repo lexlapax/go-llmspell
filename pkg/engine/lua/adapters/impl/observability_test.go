@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Observability bridge adapter that exposes go-llms guardrails, metrics, and tracing to Lua scripts
 // ABOUTME: Validates safety system configuration, metric recording, and distributed tracing capabilities
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -176,7 +176,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -227,7 +227,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -273,7 +273,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -323,7 +323,7 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -374,7 +374,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -421,7 +421,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -468,7 +468,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -513,7 +513,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -562,7 +562,7 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -609,7 +609,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -660,7 +660,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -706,7 +706,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -752,7 +752,7 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -788,7 +788,7 @@ func TestObservabilityAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -827,7 +827,7 @@ func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -868,7 +868,7 @@ func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -925,7 +925,7 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -1000,7 +1000,7 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 
@@ -1074,7 +1074,7 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "observability")
 		require.NoError(t, err)
 

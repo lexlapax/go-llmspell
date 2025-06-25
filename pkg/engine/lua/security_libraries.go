@@ -4,7 +4,7 @@
 // Package gopherlua provides a Lua engine implementation for go-llmspell.
 // This file implements secure loading of Lua standard libraries, removing
 // dangerous functions and providing safe replacements based on security levels.
-package gopherlua
+package lua
 
 import (
 	"fmt"

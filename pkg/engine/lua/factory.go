@@ -1,7 +1,7 @@
 // ABOUTME: LStateFactory creates and configures new Lua VM instances with security and optimization
 // ABOUTME: Handles library loading, initialization scripts, and warmup strategies for performance
 
-package gopherlua
+package lua
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua/stdlib"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/stdlib"
 	lua "github.com/yuin/gopher-lua"
 )
 

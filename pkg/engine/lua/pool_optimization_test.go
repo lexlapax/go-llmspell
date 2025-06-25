@@ -1,7 +1,7 @@
 // ABOUTME: Tests for optimized state pool implementation including predictive scaling, pre-warming, and memory pooling
 // ABOUTME: Validates pool optimization features, performance improvements, and adaptive behavior
 
-package gopherlua
+package lua
 
 import (
 	"context"

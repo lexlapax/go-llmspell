@@ -1,7 +1,7 @@
 // ABOUTME: Tests for optimized type conversion infrastructure including conversion caching, fast paths, and reduced allocations
 // ABOUTME: Validates conversion performance improvements, cache hit rates, and memory efficiency
 
-package gopherlua
+package converters
 
 import (
 	// "context"

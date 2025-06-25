@@ -15,7 +15,7 @@
 //
 // Example usage:
 //
-//	engine := gopherlua.NewEngine()
+//	engine := lua.NewEngine()
 //	err := engine.Initialize(engine.EngineConfig{
 //	    SandboxMode: true,
 //	    MemoryLimit: 100 * 1024 * 1024, // 100MB
@@ -30,7 +30,7 @@
 //	    log.Fatal(err)
 //	}
 //	fmt.Println(result) // Output: Hello from Lua!
-package gopherlua
+package lua
 
 import (
 	"context"
@@ -44,6 +44,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 	"github.com/lexlapax/go-llmspell/pkg/security"
 )
 
@@ -54,7 +55,7 @@ type LuaEngine struct {
 	// Core components
 	pool         *LStatePool
 	factory      *LStateFactory
-	converter    *LuaTypeConverter
+	converter    *converters.LuaTypeConverter
 	eventBus     engine.EventBus
 	typeRegistry engine.TypeRegistry
 
@@ -85,7 +86,7 @@ type LuaEngine struct {
 	profilingConfig  engine.ProfilingConfig
 
 	// Chunk caching
-	chunkCache *ChunkCache
+	chunkCache *converters.ChunkCache
 
 	// Performance profiling
 	profiler ProfilerInterface
@@ -109,13 +110,13 @@ type EngineMetrics struct {
 // NewLuaEngine creates a new Lua script engine with default configuration.
 // The engine must be initialized with Initialize() before use.
 func NewLuaEngine() *LuaEngine {
-	converter := NewLuaTypeConverter()
+	converter := converters.NewLuaTypeConverter()
 	
 	return &LuaEngine{
 		converter:     converter,
 		bridgeManager: NewBridgeManager(converter),
 		adapters:      make(map[string]interface{}),
-		chunkCache: NewChunkCache(ChunkCacheConfig{
+		chunkCache: converters.NewChunkCache(converters.ChunkCacheConfig{
 			MaxSize:         100,
 			TTL:             30 * time.Minute,
 			EnableDiskCache: false,

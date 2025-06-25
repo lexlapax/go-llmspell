@@ -15,7 +15,7 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/bridge/llm"
 	"github.com/lexlapax/go-llmspell/pkg/bridge/state"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -129,7 +129,7 @@ func TestGopherLuaEngineCoverage(t *testing.T) {
 		{
 			name: "engine_creation",
 			test: func(t *testing.T) {
-				luaEngine := gopherlua.NewLuaEngine()
+				luaEngine := lua.NewLuaEngine()
 				require.NotNil(t, luaEngine)
 
 				// Test engine name and version
@@ -160,7 +160,7 @@ func TestGopherLuaEngineCoverage(t *testing.T) {
 		{
 			name: "engine_timeout_handling",
 			test: func(t *testing.T) {
-				luaEngine := gopherlua.NewLuaEngine()
+				luaEngine := lua.NewLuaEngine()
 				require.NotNil(t, luaEngine)
 
 				// Initialize with very short timeout
@@ -192,7 +192,7 @@ func TestGopherLuaEngineCoverage(t *testing.T) {
 		{
 			name: "engine_syntax_errors",
 			test: func(t *testing.T) {
-				luaEngine := gopherlua.NewLuaEngine()
+				luaEngine := lua.NewLuaEngine()
 				require.NotNil(t, luaEngine)
 
 				err := luaEngine.Initialize(engine.EngineConfig{
@@ -271,7 +271,7 @@ func TestStdlibModuleCoverage(t *testing.T) {
 		{
 			name: "stdlib_module_loading",
 			test: func(t *testing.T) {
-				luaEngine := gopherlua.NewLuaEngine()
+				luaEngine := lua.NewLuaEngine()
 				require.NotNil(t, luaEngine)
 
 				err := luaEngine.Initialize(engine.EngineConfig{

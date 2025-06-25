@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Structured bridge adapter that exposes go-llms schema validation and generation functionality to Lua scripts
 // ABOUTME: Validates schema creation, validation, generation, repository operations, tag-based generation, and import/export functionality
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -179,7 +179,7 @@ func TestStructuredAdapter_SchemaCreation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -236,7 +236,7 @@ func TestStructuredAdapter_SchemaCreation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -281,7 +281,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -342,7 +342,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -395,7 +395,7 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -458,7 +458,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -513,7 +513,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -567,7 +567,7 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -635,7 +635,7 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -685,7 +685,7 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -725,7 +725,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -772,7 +772,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -820,7 +820,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -869,7 +869,7 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -930,7 +930,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -983,7 +983,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -1035,7 +1035,7 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -1080,7 +1080,7 @@ func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -1115,7 +1115,7 @@ func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -1151,7 +1151,7 @@ func TestStructuredAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 
@@ -1202,7 +1202,7 @@ func TestStructuredAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "structured")
 		require.NoError(t, err)
 

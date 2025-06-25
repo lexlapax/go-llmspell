@@ -1,7 +1,7 @@
 // ABOUTME: Tests for resource limit enforcement in the SecurityManager
 // ABOUTME: Validates timeout, memory monitoring, and execution limits using alternative approaches
 
-package gopherlua
+package lua
 
 import (
 	"context"

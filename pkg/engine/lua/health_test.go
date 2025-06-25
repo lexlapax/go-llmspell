@@ -1,7 +1,7 @@
 // ABOUTME: Tests for state health management system - monitors and evaluates Lua state health
 // ABOUTME: Validates health metrics, scoring algorithms, recycling decisions, and monitoring functionality
 
-package gopherlua
+package lua
 
 import (
 	"testing"

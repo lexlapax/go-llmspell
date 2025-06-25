@@ -1,7 +1,7 @@
 // ABOUTME: Tests for async runtime functionality in GopherLua engine
 // ABOUTME: Tests coroutine management, promise integration, and async execution contexts
 
-package gopherlua
+package lua
 
 import (
 	"context"

@@ -1,7 +1,7 @@
 // ABOUTME: Tests for channel integration functionality in GopherLua engine
 // ABOUTME: Tests Go channel ↔ LChannel bridge, select operations, and channel management
 
-package gopherlua
+package lua
 
 import (
 	"context"

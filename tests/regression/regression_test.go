@@ -14,13 +14,13 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/bridge/agent"
 	"github.com/lexlapax/go-llmspell/pkg/bridge/llm"
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
 // TestEngineBasicFunctionality tests that basic engine functionality doesn't regress
 func TestEngineBasicFunctionality(t *testing.T) {
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine, "Engine creation should never return nil")
 
 	// Test engine metadata
@@ -192,7 +192,7 @@ func TestEngineConfigurationRegression(t *testing.T) {
 
 	for _, tc := range configs {
 		t.Run(tc.name, func(t *testing.T) {
-			luaEngine := gopherlua.NewLuaEngine()
+			luaEngine := lua.NewLuaEngine()
 			require.NotNil(t, luaEngine)
 
 			err := luaEngine.Initialize(tc.config)
@@ -214,7 +214,7 @@ func TestEngineConfigurationRegression(t *testing.T) {
 
 // TestErrorHandlingRegression tests that error handling behavior remains consistent
 func TestErrorHandlingRegression(t *testing.T) {
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	err := luaEngine.Initialize(engine.EngineConfig{
@@ -263,7 +263,7 @@ func TestPerformanceRegression(t *testing.T) {
 		t.Skip("Skipping performance regression test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	err := luaEngine.Initialize(engine.EngineConfig{
@@ -324,7 +324,7 @@ func TestAPICompatibilityRegression(t *testing.T) {
 	// This is a compile-time test - if the API changes, this won't compile
 
 	// Engine API
-	var eng engine.ScriptEngine = gopherlua.NewLuaEngine()
+	var eng engine.ScriptEngine = lua.NewLuaEngine()
 	_ = eng
 
 	// Bridge API
@@ -354,7 +354,7 @@ func TestConcurrencyRegression(t *testing.T) {
 		t.Skip("Skipping concurrency regression test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	err := luaEngine.Initialize(engine.EngineConfig{

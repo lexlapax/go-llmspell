@@ -1,7 +1,7 @@
 // ABOUTME: LuaEngineFactory implements the EngineFactory interface for creating Lua script engines
 // ABOUTME: Provides factory pattern for LuaEngine instances with proper configuration and validation
 
-package gopherlua
+package lua
 
 import (
 	"fmt"

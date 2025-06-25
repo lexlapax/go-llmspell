@@ -1,7 +1,7 @@
 // ABOUTME: Tests for bridge adapter system that wraps go-llms bridges for Lua script access
 // ABOUTME: Validates bridge method wrapping, type conversion, error handling, and metadata exposure
 
-package gopherlua
+package lua
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
 func TestBridgeAdapter_Creation(t *testing.T) {
@@ -26,7 +28,7 @@ func TestBridgeAdapter_Creation(t *testing.T) {
 		})
 
 		// Create adapter
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		require.NotNil(t, adapter)
 
 		// Verify bridge is wrapped
@@ -42,7 +44,7 @@ func TestBridgeAdapter_Creation(t *testing.T) {
 			Author:      "Test Author",
 		})
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		metadata := adapter.GetMetadata()
 
 		assert.Equal(t, "Test Bridge", metadata.Name)
@@ -70,7 +72,7 @@ func TestBridgeAdapter_MethodDiscovery(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		methods := adapter.GetMethods()
 
 		assert.Len(t, methods, 2)
@@ -94,7 +96,7 @@ func TestBridgeAdapter_MethodDiscovery(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		info, err := adapter.GetMethodInfo("testMethod")
 
 		require.NoError(t, err)
@@ -113,7 +115,7 @@ func TestBridgeAdapter_MethodDiscovery(t *testing.T) {
 			methods: []engine.MethodInfo{},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		_, err := adapter.GetMethodInfo("unknown")
 
 		assert.Error(t, err)
@@ -133,7 +135,7 @@ func TestBridgeAdapter_LuaModule(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -173,7 +175,7 @@ func TestBridgeAdapter_MethodWrapping(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -205,7 +207,7 @@ func TestBridgeAdapter_MethodWrapping(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -232,7 +234,7 @@ func TestBridgeAdapter_MethodWrapping(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -262,7 +264,7 @@ func TestBridgeAdapter_MethodWrapping(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		L := lua.NewState()
 		defer L.Close()
 
@@ -302,8 +304,8 @@ func TestBridgeAdapter_TypeConversion(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
-		converter := NewLuaTypeConverter()
+		adapter := adapters.NewBridgeAdapter(mockBridge)
+		converter := converters.NewLuaTypeConverter()
 		adapter.SetTypeConverter(converter)
 
 		L := lua.NewState()
@@ -336,11 +338,18 @@ func TestBridgeAdapter_Registration(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		ms := NewModuleSystem()
 
-		// Register adapter as module
-		err := adapter.RegisterAsModule(ms, "testbridge")
+		// Create module definition using adapter's CreateLuaModule
+		module := ModuleDefinition{
+			Name:        "testbridge",
+			Description: "Test bridge module",
+			LoadFunc:    adapter.CreateLuaModule(),
+		}
+
+		// Register module
+		err := ms.Register(module)
 		assert.NoError(t, err)
 
 		// Module should exist
@@ -363,11 +372,19 @@ func TestBridgeAdapter_Registration(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		ms := NewModuleSystem()
 
-		// Register with dependencies
-		err := adapter.RegisterAsModule(ms, "dependent")
+		// Create module definition with dependencies
+		module := ModuleDefinition{
+			Name:         "dependent",
+			Description:  "Dependent bridge module",
+			Dependencies: []string{"base-bridge"},
+			LoadFunc:     adapter.CreateLuaModule(),
+		}
+
+		// Register module
+		err := ms.Register(module)
 		assert.NoError(t, err)
 
 		// Check module has dependencies
@@ -412,7 +429,7 @@ func TestBridgeAdapter_MethodValidation(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		adapter.EnableValidation(true)
 
 		L := lua.NewState()
@@ -452,7 +469,7 @@ func TestBridgeAdapter_Performance(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 
 		// Get same method multiple times
 		fn1 := adapter.WrapMethod("cached")
@@ -477,7 +494,7 @@ func TestBridgeAdapter_ErrorHandling(t *testing.T) {
 			},
 		}
 
-		adapter := NewBridgeAdapter(mockBridge)
+		adapter := adapters.NewBridgeAdapter(mockBridge)
 		L := lua.NewState()
 		defer L.Close()
 

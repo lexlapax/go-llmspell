@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LStateFactory which creates and configures new Lua VM instances
 // ABOUTME: Validates state creation, library loading, initialization, and configuration
 
-package gopherlua
+package lua
 
 import (
 	"strings"

@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LuaTypeConverter implementation - Go ↔ Lua type conversions
 // ABOUTME: Validates ToLua, FromLua, circular reference detection, and custom type registration
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

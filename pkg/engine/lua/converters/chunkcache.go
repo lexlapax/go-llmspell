@@ -1,7 +1,7 @@
 // ABOUTME: ChunkCache implements compiled Lua chunk caching for performance optimization
 // ABOUTME: Provides LRU-based caching with TTL support and optional disk persistence
 
-package gopherlua
+package converters
 
 import (
 	"crypto/sha256"

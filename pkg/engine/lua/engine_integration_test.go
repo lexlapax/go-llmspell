@@ -1,7 +1,7 @@
 // ABOUTME: Integration tests for complete LuaEngine functionality combining all components
 // ABOUTME: Tests real-world scenarios with bridges, security, type conversion, and execution pipeline
 
-package gopherlua
+package lua
 
 import (
 	"context"

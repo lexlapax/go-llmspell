@@ -1,7 +1,7 @@
 // ABOUTME: Tests for State bridge adapter that exposes go-llms state management functionality to Lua scripts
 // ABOUTME: Validates state and context management, transforms, validation, persistence, and merging operations
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -162,7 +162,7 @@ func TestStateAdapter_StateCreation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -207,7 +207,7 @@ func TestStateAdapter_StateCreation(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -264,7 +264,7 @@ func TestStateAdapter_StateOperations(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -320,7 +320,7 @@ func TestStateAdapter_StateOperations(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -371,7 +371,7 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -407,7 +407,7 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -477,7 +477,7 @@ func TestStateAdapter_StatePersistence(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -537,7 +537,7 @@ func TestStateAdapter_StateContext(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -590,7 +590,7 @@ func TestStateAdapter_StateMerging(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -628,7 +628,7 @@ func TestStateAdapter_ErrorHandling(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 
@@ -672,7 +672,7 @@ func TestStateAdapter_ConvenienceMethods(t *testing.T) {
 		defer L.Close()
 
 		// Register module
-		ms := gopherlua.NewModuleSystem()
+		ms := enginelua.NewModuleSystem()
 		err := adapter.RegisterAsModule(ms, "state")
 		require.NoError(t, err)
 

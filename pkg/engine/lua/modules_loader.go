@@ -1,7 +1,7 @@
 // ABOUTME: Module loader implementation with support for lazy loading, profile-based loading, and module bundling
 // ABOUTME: Provides PreloadModule, module initialization callbacks, and version management
 
-package gopherlua
+package lua
 
 import (
 	"fmt"

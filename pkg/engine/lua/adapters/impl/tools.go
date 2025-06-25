@@ -1,7 +1,7 @@
 // ABOUTME: Tools bridge adapter that exposes go-llms tool functionality to Lua scripts
 // ABOUTME: Provides tool discovery, execution, registration, validation, and metrics capabilities
 
-package adapters
+package impl
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 // ToolsAdapter bridges go-llms tools functionality to Lua.
@@ -174,7 +174,7 @@ func (ta *ToolsAdapter) GetMethods() []string {
 // The ms parameter is the module system to register with. The name parameter
 // specifies the module name that scripts will use to import this functionality.
 // Returns an error if registration fails.
-func (ta *ToolsAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string) error {
+func (ta *ToolsAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
 	// Get bridge metadata
 	var bridgeMetadata engine.BridgeMetadata
 	if ta.GetBridge() != nil {
@@ -187,7 +187,7 @@ func (ta *ToolsAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string
 	}
 
 	// Create module definition using our overridden CreateLuaModule
-	module := gopherlua.ModuleDefinition{
+	module := enginelua.ModuleDefinition{
 		Name:         name,
 		Description:  bridgeMetadata.Description,
 		Dependencies: []string{},           // Tools module has no dependencies by default
@@ -380,8 +380,7 @@ func (ta *ToolsAdapter) registerCustomTool(L *lua.LState) int {
 
 	// Convert toolDef to ScriptValue
 	toolDefValue := luaToScriptValue(toolDef)
-	
-	
+
 	args := []engine.ScriptValue{
 		toolDefValue,
 	}

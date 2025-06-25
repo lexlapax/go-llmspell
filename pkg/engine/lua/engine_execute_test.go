@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LuaEngine execution pipeline functionality
 // ABOUTME: Validates state acquisition, security sandbox, parameter injection, script compilation, and result extraction
 
-package gopherlua
+package lua
 
 import (
 	"context"

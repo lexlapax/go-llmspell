@@ -4,7 +4,7 @@
 // Package gopherlua provides a Lua engine implementation for go-llmspell.
 // This file implements comprehensive script validation including syntax checking,
 // security validation, performance analysis, and code quality linting.
-package gopherlua
+package lua
 
 import (
 	"fmt"

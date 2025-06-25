@@ -1,7 +1,7 @@
 // ABOUTME: ScriptValue to Lua LValue bi-directional converter for the GopherLua engine
 // ABOUTME: Provides seamless conversion between ScriptValue system and Lua types with circular reference detection
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

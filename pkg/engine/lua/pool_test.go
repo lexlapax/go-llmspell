@@ -1,7 +1,7 @@
 // ABOUTME: Tests for LStatePool which manages a pool of reusable Lua VM instances
 // ABOUTME: Validates pool management, health checking, adaptive scaling, and resource management
 
-package gopherlua
+package lua
 
 import (
 	"context"

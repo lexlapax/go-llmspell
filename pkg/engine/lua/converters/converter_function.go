@@ -1,7 +1,7 @@
 // ABOUTME: FunctionConverter handles wrapping Go functions for Lua execution
 // ABOUTME: Provides argument conversion, return value handling, panic recovery, and variadic function support
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/runner"
 )
 
@@ -470,8 +470,8 @@ func TestIntegrationSpellValidation(t *testing.T) {
 	}
 
 	// Create validator with default config
-	validatorConfig := gopherlua.DefaultValidatorConfig()
-	validator := gopherlua.NewScriptValidator(validatorConfig)
+	validatorConfig := lua.DefaultValidatorConfig()
+	validator := lua.NewScriptValidator(validatorConfig)
 	require.NotNil(t, validator)
 
 	tests := []struct {

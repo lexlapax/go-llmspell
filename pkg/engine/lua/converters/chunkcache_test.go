@@ -1,7 +1,7 @@
 // ABOUTME: Tests for ChunkCache which caches compiled Lua bytecode for performance optimization
 // ABOUTME: Validates LRU eviction, TTL expiration, cache key generation, and concurrent access patterns
 
-package gopherlua
+package converters
 
 import (
 	"fmt"

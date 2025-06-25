@@ -1,7 +1,7 @@
 // ABOUTME: Tests for Lua engine profiling infrastructure including execution time, memory usage, and allocation tracking
 // ABOUTME: Validates profiler API, data collection accuracy, and performance overhead measurement
 
-package gopherlua
+package lua
 
 import (
 	"context"

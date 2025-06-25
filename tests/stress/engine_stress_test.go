@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	"github.com/lexlapax/go-llmspell/pkg/engine/gopherlua"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 // TestEngineConcurrentExecution tests concurrent script execution
@@ -23,7 +23,7 @@ func TestEngineConcurrentExecution(t *testing.T) {
 		t.Skip("Skipping stress test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	err := luaEngine.Initialize(engine.EngineConfig{
@@ -100,7 +100,7 @@ func TestEngineMemoryStress(t *testing.T) {
 		t.Skip("Skipping stress test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	// Set a reasonable memory limit
@@ -160,7 +160,7 @@ func TestEngineTimeoutStress(t *testing.T) {
 		t.Skip("Skipping stress test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	// Very short timeout to force timeouts
@@ -210,7 +210,7 @@ func TestEngineResourceExhaustion(t *testing.T) {
 		t.Skip("Skipping stress test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	// Very low memory limit to trigger exhaustion
@@ -256,7 +256,7 @@ func TestEngineRapidScriptSwitching(t *testing.T) {
 		t.Skip("Skipping stress test in short mode")
 	}
 
-	luaEngine := gopherlua.NewLuaEngine()
+	luaEngine := lua.NewLuaEngine()
 	require.NotNil(t, luaEngine)
 
 	err := luaEngine.Initialize(engine.EngineConfig{
