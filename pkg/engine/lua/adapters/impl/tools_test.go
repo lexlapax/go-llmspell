@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -194,15 +193,14 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- List all tools - returns a single table
@@ -246,15 +244,14 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Search for math tools - returns a single table
@@ -297,15 +294,14 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Get existing tool info
@@ -363,15 +359,14 @@ func TestToolsAdapter_ToolExecution(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Execute calculator tool
@@ -417,15 +412,14 @@ func TestToolsAdapter_ToolExecution(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Execute tool asynchronously
@@ -466,15 +460,14 @@ func TestToolsAdapter_CustomTools(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Register a custom tool
@@ -563,15 +556,14 @@ func TestToolsAdapter_Validation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Get tool schema
@@ -627,15 +619,14 @@ func TestToolsAdapter_Metrics(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Get metrics for existing tool
@@ -693,15 +684,14 @@ func TestToolsAdapter_Categories(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Get all categories - returns a single table
@@ -740,15 +730,14 @@ func TestToolsAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Try to execute tool with bridge error
@@ -773,15 +762,14 @@ func TestToolsAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Try to register invalid tool
@@ -811,15 +799,14 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Use builder pattern to create tool
@@ -866,15 +853,14 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- List tools by multiple tags - returns a single table
@@ -1047,16 +1033,15 @@ func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
 		// Test all registry methods
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- Test getTool
@@ -1117,16 +1102,15 @@ func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "tools")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "tools")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("tools", module)
 
 		// Registry methods should not exist
-		err = L.DoString(`
+		err := L.DoString(`
 			local tools = require("tools")
 			
 			-- These methods should not exist

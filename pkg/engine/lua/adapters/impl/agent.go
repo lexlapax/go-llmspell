@@ -12,7 +12,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
@@ -1304,30 +1303,6 @@ func (aa *AgentAdapter) mapToTable(L *lua.LState, m map[string]engine.ScriptValu
 	return table
 }
 
-// RegisterAsModule registers the adapter as a module in the module system
-func (aa *AgentAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
-	// Get bridge metadata
-	var bridgeMetadata engine.BridgeMetadata
-	if aa.GetBridge() != nil {
-		bridgeMetadata = aa.GetBridge().GetMetadata()
-	} else {
-		bridgeMetadata = engine.BridgeMetadata{
-			Name:        "Agent Adapter",
-			Description: "Agent system functionality",
-		}
-	}
-
-	// Create module definition using our overridden CreateLuaModule
-	module := enginelua.ModuleDefinition{
-		Name:         name,
-		Description:  bridgeMetadata.Description,
-		Dependencies: []string{},           // Agent module has no dependencies by default
-		LoadFunc:     aa.CreateLuaModule(), // Use our enhanced module creator
-	}
-
-	// Register the module
-	return ms.Register(module)
-}
 
 // GetBridge returns the underlying bridge
 func (aa *AgentAdapter) GetBridge() engine.Bridge {

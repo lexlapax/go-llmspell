@@ -10,7 +10,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
@@ -932,34 +931,6 @@ func (sa *StateAdapter) tableToMap(L *lua.LState, table *lua.LTable) map[string]
 	})
 
 	return result
-}
-
-// RegisterAsModule registers the adapter as a module in the module system.
-// The ms parameter is the module system to register with. The name parameter
-// specifies the module name that scripts will use to import this functionality.
-// Returns an error if registration fails.
-func (sa *StateAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
-	// Get bridge metadata
-	var bridgeMetadata engine.BridgeMetadata
-	if sa.GetBridge() != nil {
-		bridgeMetadata = sa.GetBridge().GetMetadata()
-	} else {
-		bridgeMetadata = engine.BridgeMetadata{
-			Name:        "State Adapter",
-			Description: "State management functionality",
-		}
-	}
-
-	// Create module definition using our overridden CreateLuaModule
-	module := enginelua.ModuleDefinition{
-		Name:         name,
-		Description:  bridgeMetadata.Description,
-		Dependencies: []string{},           // State module has no dependencies by default
-		LoadFunc:     sa.CreateLuaModule(), // Use our enhanced module creator
-	}
-
-	// Register the module
-	return ms.Register(module)
 }
 
 // GetBridge returns the underlying bridge

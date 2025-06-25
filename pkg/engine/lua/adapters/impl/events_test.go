@@ -14,8 +14,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
-
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -177,16 +175,15 @@ func TestEventsAdapter_EventPublication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Publish event from Lua
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			local result, err = events.publishEvent({
 				type = "test_event",
@@ -211,16 +208,15 @@ func TestEventsAdapter_EventPublication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test flattened bus methods
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Publish through flattened method
@@ -257,16 +253,15 @@ func TestEventsAdapter_EventSubscription(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test subscription
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Subscribe to pattern
@@ -301,16 +296,15 @@ func TestEventsAdapter_EventSubscription(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test filter subscription
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Subscribe with custom filter
@@ -351,16 +345,15 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test filter creation
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Create pattern filter
@@ -395,16 +388,15 @@ func TestEventsAdapter_EventFiltering(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test composite filter creation
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Create individual filters
@@ -456,16 +448,15 @@ func TestEventsAdapter_EventQuery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test event query
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Query events (arrays return as multiple values)
@@ -502,16 +493,15 @@ func TestEventsAdapter_EventQuery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test event history
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Get event history (arrays return as multiple values)
@@ -550,16 +540,15 @@ func TestEventsAdapter_EventRecording(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test recording operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Start recording
@@ -609,16 +598,15 @@ func TestEventsAdapter_EventReplay(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test replay operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Start replay
@@ -676,16 +664,15 @@ func TestEventsAdapter_EventAggregation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test aggregation
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Create aggregator
@@ -732,16 +719,15 @@ func TestEventsAdapter_EventSerialization(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test serialization
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Serialize event
@@ -793,16 +779,15 @@ func TestEventsAdapter_SubscriptionInfo(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test subscription info
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Get subscription count
@@ -835,16 +820,15 @@ func TestEventsAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test error handling
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			local result, err = events.publishEvent({
@@ -882,16 +866,15 @@ func TestEventsAdapter_EventCorrelation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "events")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "events")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("events", module)
 
 		// Test event correlation
-		err = L.DoString(`
+		err := L.DoString(`
 			local events = require("events")
 			
 			-- Correlate events (arrays return as multiple values)

@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 // Mock providers bridge for testing
@@ -253,16 +252,15 @@ func TestLLMAdapter_ProvidersEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test all provider methods
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Test basic provider creation
@@ -403,16 +401,15 @@ func TestLLMAdapter_ProvidersEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test multi-provider functionality
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Create multi-provider
@@ -461,16 +458,15 @@ func TestLLMAdapter_ProvidersEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Enhanced provider methods should not exist
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Basic provider methods should still work

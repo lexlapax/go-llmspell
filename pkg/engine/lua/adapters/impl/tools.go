@@ -10,7 +10,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 // ToolsAdapter bridges go-llms tools functionality to Lua.
@@ -168,34 +167,6 @@ func (ta *ToolsAdapter) GetMethods() []string {
 	}
 
 	return methods
-}
-
-// RegisterAsModule registers the adapter as a module in the module system.
-// The ms parameter is the module system to register with. The name parameter
-// specifies the module name that scripts will use to import this functionality.
-// Returns an error if registration fails.
-func (ta *ToolsAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
-	// Get bridge metadata
-	var bridgeMetadata engine.BridgeMetadata
-	if ta.GetBridge() != nil {
-		bridgeMetadata = ta.GetBridge().GetMetadata()
-	} else {
-		bridgeMetadata = engine.BridgeMetadata{
-			Name:        "Tools Adapter",
-			Description: "Tool discovery and execution functionality",
-		}
-	}
-
-	// Create module definition using our overridden CreateLuaModule
-	module := enginelua.ModuleDefinition{
-		Name:         name,
-		Description:  bridgeMetadata.Description,
-		Dependencies: []string{},           // Tools module has no dependencies by default
-		LoadFunc:     ta.CreateLuaModule(), // Use our enhanced module creator
-	}
-
-	// Register the module
-	return ms.Register(module)
 }
 
 // Core tool discovery methods

@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -186,15 +185,14 @@ func TestUtilsAdapter_Auth(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Authenticate with OAuth2 (using flattened method)
@@ -236,15 +234,14 @@ func TestUtilsAdapter_Auth(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Validate valid token (using flattened method)
@@ -283,15 +280,14 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Set debug level (using flattened method)
@@ -325,15 +321,14 @@ func TestUtilsAdapter_Debug(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Log debug message (using flattened method)
@@ -370,15 +365,14 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Create error (using flattened method)
@@ -412,15 +406,14 @@ func TestUtilsAdapter_Errors(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Wrap error (using flattened method)
@@ -464,15 +457,14 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Parse JSON (using flattened method)
@@ -501,15 +493,14 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Serialize to JSON (using flattened method)
@@ -541,15 +532,14 @@ func TestUtilsAdapter_General(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Generate UUID (using flattened method)
@@ -581,15 +571,14 @@ func TestUtilsAdapter_General(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Hash data (using flattened method)
@@ -620,15 +609,14 @@ func TestUtilsAdapter_General(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Sleep for duration (using flattened method)
@@ -655,15 +643,14 @@ func TestUtilsAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Try authentication with error (using flattened method)
@@ -698,15 +685,14 @@ func TestUtilsAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "utils")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "utils")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("utils", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local utils = require("utils")
 			
 			-- Retry operation (using flattened method)

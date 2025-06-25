@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -233,16 +232,15 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Create agent from Lua
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			local newAgent = agent.lifecycleCreate("test-agent", {
 				name = "Test Agent",
@@ -282,16 +280,15 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Create LLM agent from Lua
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			local llmAgent = agent.lifecycleCreateLLM("Smart Agent", {
 				provider = "openai",
@@ -347,16 +344,15 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test listing and getting agents (arrays return as multiple values)
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- List agents - get individual agents as multiple returns
@@ -387,16 +383,15 @@ func TestAgentAdapter_AgentLifecycle(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test agent removal
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			local result, err = agent.lifecycleRemove("test-agent")
@@ -426,16 +421,15 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test agent execution
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			local result, err = agent.run("test-agent", {
@@ -468,16 +462,15 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test async agent execution
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			local channel, err = agent.runAsync("test-agent", {
@@ -537,16 +530,15 @@ func TestAgentAdapter_AgentCommunication(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test tool registration and listing
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Register a tool
@@ -595,16 +587,15 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test state operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Get agent state
@@ -655,16 +646,15 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test state export/import
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Export agent state
@@ -733,16 +723,15 @@ func TestAgentAdapter_StateManagement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test snapshot operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Save snapshot
@@ -796,16 +785,15 @@ func TestAgentAdapter_Events(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test event operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Emit event
@@ -889,16 +877,15 @@ func TestAgentAdapter_Events(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test event recording and replay
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Start recording
@@ -963,16 +950,15 @@ func TestAgentAdapter_Profiling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test profiling operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Start profiling
@@ -1053,16 +1039,15 @@ func TestAgentAdapter_Workflow(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test workflow operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Create workflow
@@ -1100,16 +1085,15 @@ func TestAgentAdapter_Hooks(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test hook operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Set before run hook
@@ -1139,16 +1123,15 @@ func TestAgentAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test error handling
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			local result, err = agent.createAgent("test-agent", {
@@ -1174,16 +1157,15 @@ func TestAgentAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test invalid agent ID handling
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			local result, err = agent.getAgent("nonexistent-agent")
@@ -1208,16 +1190,15 @@ func TestAgentAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test agent constants
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			-- Check that constants are available
@@ -1257,16 +1238,15 @@ func TestAgentAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "agent")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "agent")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("agent", module)
 
 		// Test metrics and utilities
-		err = L.DoString(`
+		err := L.DoString(`
 			local agent = require("agent")
 			
 			local metrics, err = agent.lifecycleGetMetrics("test-agent")

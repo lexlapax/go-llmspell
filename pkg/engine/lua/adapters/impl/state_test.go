@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -161,16 +160,15 @@ func TestStateAdapter_StateCreation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Create state from Lua
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local newState = state.createState()
 			assert(newState ~= nil)
@@ -206,16 +204,15 @@ func TestStateAdapter_StateCreation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Create state with initial data
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local newState = state.createState({
 				name = "test",
@@ -263,16 +260,15 @@ func TestStateAdapter_StateOperations(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test get/set operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local mockState = { id = "state-123" }
 			
@@ -319,16 +315,15 @@ func TestStateAdapter_StateOperations(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test keys/values operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local mockState = { id = "state-123" }
 			
@@ -370,16 +365,15 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test transform application
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local mockState = { id = "state-123" }
 			
@@ -406,16 +400,15 @@ func TestStateAdapter_StateTransforms(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test custom transform registration
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			
 			-- Define a custom transform function
@@ -476,16 +469,15 @@ func TestStateAdapter_StatePersistence(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test persistence operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local mockState = { id = "state-123", data = { key = "value" } }
 			
@@ -536,16 +528,15 @@ func TestStateAdapter_StateContext(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test shared context creation
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			
 			-- Create shared context
@@ -589,16 +580,15 @@ func TestStateAdapter_StateMerging(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test state merging
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local state1 = { id = "state-1", data = { key1 = "value1" } }
 			local state2 = { id = "state-2", data = { key2 = "value2" } }
@@ -627,16 +617,15 @@ func TestStateAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test error handling
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local mockState = { id = "state-123" }
 			
@@ -671,16 +660,15 @@ func TestStateAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "state")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "state")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("state", module)
 
 		// Test enhanced state object methods
-		err = L.DoString(`
+		err := L.DoString(`
 			local state = require("state")
 			local newState = state.createState()
 			

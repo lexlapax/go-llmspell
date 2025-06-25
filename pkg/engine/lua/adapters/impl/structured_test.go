@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -178,16 +177,15 @@ func TestStructuredAdapter_SchemaCreation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Create schema from Lua
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			local result = structured.createSchema({
 				type = "object",
@@ -235,16 +233,15 @@ func TestStructuredAdapter_SchemaCreation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Create property with constraints
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			local property = structured.createProperty("string", {
 				minLength = 5,
@@ -280,16 +277,15 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test JSON validation
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = {
@@ -341,16 +337,15 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test validation with errors
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = {
@@ -394,16 +389,15 @@ func TestStructuredAdapter_SchemaValidation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test struct validation
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = {
@@ -457,16 +451,15 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test schema generation from type
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local typeInfo = {
@@ -512,16 +505,15 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test schema generation from tags
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local structData = {
@@ -566,16 +558,15 @@ func TestStructuredAdapter_SchemaGeneration(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test JSON schema conversion
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local jsonSchema = [[{
@@ -634,16 +625,15 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test schema repository operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = {
@@ -684,16 +674,15 @@ func TestStructuredAdapter_SchemaRepository(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test file repository initialization
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local result, err = structured.repositoryInitializeFile("/tmp/schemas")
@@ -724,16 +713,15 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test JSON schema export
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = {
@@ -771,16 +759,15 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test OpenAPI export
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = {
@@ -819,16 +806,15 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test file import
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local result, err = structured.importExportFromFile("/path/to/schema.json", "json")
@@ -868,16 +854,15 @@ func TestStructuredAdapter_ImportExport(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test schema merging
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema1 = {
@@ -929,16 +914,15 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test custom validator registration and usage
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			-- Define custom validator
@@ -982,16 +966,15 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test listing custom validators (arrays return as multiple values)
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local validator1, validator2, validator3 = structured.customListValidators()
@@ -1034,16 +1017,15 @@ func TestStructuredAdapter_CustomValidation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test async validation and metrics
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = { type = "object" }
@@ -1079,16 +1061,15 @@ func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test error handling
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local schema = { type = "object" }
@@ -1114,16 +1095,15 @@ func TestStructuredAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test invalid schema handling
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local invalidSchema = "{ invalid json }"
@@ -1150,16 +1130,15 @@ func TestStructuredAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test schema constants
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			-- Check that constants are available
@@ -1201,16 +1180,15 @@ func TestStructuredAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "structured")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "structured")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("structured", module)
 
 		// Test utility methods
-		err = L.DoString(`
+		err := L.DoString(`
 			local structured = require("structured")
 			
 			local oldSchema = {

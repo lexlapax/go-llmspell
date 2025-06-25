@@ -44,6 +44,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/factory"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 	"github.com/lexlapax/go-llmspell/pkg/security"
 )
@@ -67,9 +68,11 @@ type LuaEngine struct {
 
 	// Bridge management
 	bridgeManager *BridgeManager
+	bridgeMap     map[string]engine.Bridge
+	bridgeMapMu   sync.RWMutex
 
 	// Adapter management  
-	adapterCreator func(bridgeID string, bridge engine.Bridge) (interface{}, error)
+	adapterFactory *factory.AdapterFactory
 	adapters       map[string]interface{}
 	adapterMu      sync.RWMutex
 
@@ -112,10 +115,11 @@ type EngineMetrics struct {
 func NewLuaEngine() *LuaEngine {
 	converter := converters.NewLuaTypeConverter()
 	
-	return &LuaEngine{
-		converter:     converter,
-		bridgeManager: NewBridgeManager(converter),
-		adapters:      make(map[string]interface{}),
+	e := &LuaEngine{
+		converter:      converter,
+		bridgeMap:      make(map[string]engine.Bridge),
+		adapterFactory: factory.NewAdapterFactory(),
+		adapters:       make(map[string]interface{}),
 		chunkCache: converters.NewChunkCache(converters.ChunkCacheConfig{
 			MaxSize:         100,
 			TTL:             30 * time.Minute,
@@ -123,6 +127,31 @@ func NewLuaEngine() *LuaEngine {
 		}),
 		profiler: NewProfiler(), // Initialize with default profiler
 	}
+	
+	// Create moduleCreator closure that accesses adapters
+	moduleCreator := func(bridgeID string) (lua.LGFunction, error) {
+		adapter := e.GetAdapter(bridgeID)
+		if adapter == nil {
+			return nil, fmt.Errorf("no adapter found for bridge %s", bridgeID)
+		}
+		
+		// Type assert to get CreateLuaModule method
+		type moduleProvider interface {
+			CreateLuaModule() lua.LGFunction
+		}
+		
+		provider, ok := adapter.(moduleProvider)
+		if !ok {
+			return nil, fmt.Errorf("adapter for bridge %s does not implement CreateLuaModule", bridgeID)
+		}
+		
+		return provider.CreateLuaModule(), nil
+	}
+	
+	// Create BridgeManager with moduleCreator
+	e.bridgeManager = NewBridgeManagerWithModuleCreator(converter, moduleCreator)
+	
+	return e
 }
 
 // SetProfiler sets the profiler for the engine.
@@ -401,10 +430,19 @@ func (e *LuaEngine) RegisterBridge(bridge engine.Bridge) error {
 
 	bridgeID := bridge.GetID()
 
-	// Create adapter for the bridge if adapter creator is available
-	if e.adapterCreator != nil {
-		adapter, err := e.adapterCreator(bridgeID, bridge)
+	// Store bridge in bridge map
+	e.bridgeMapMu.Lock()
+	e.bridgeMap[bridgeID] = bridge
+	e.bridgeMapMu.Unlock()
+
+	// Create adapter for the bridge using factory
+	if e.adapterFactory != nil {
+		adapter, err := e.adapterFactory.CreateAdapter(bridgeID, e.bridgeMap)
 		if err != nil {
+			// Remove bridge from map on failure
+			e.bridgeMapMu.Lock()
+			delete(e.bridgeMap, bridgeID)
+			e.bridgeMapMu.Unlock()
 			return fmt.Errorf("failed to create adapter for bridge %s: %w", bridgeID, err)
 		}
 
@@ -433,6 +471,11 @@ func (e *LuaEngine) UnregisterBridge(name string) error {
 	delete(e.adapters, name)
 	e.adapterMu.Unlock()
 	
+	// Remove bridge from bridge map
+	e.bridgeMapMu.Lock()
+	delete(e.bridgeMap, name)
+	e.bridgeMapMu.Unlock()
+	
 	return e.bridgeManager.UnregisterBridge(name)
 }
 
@@ -448,12 +491,6 @@ func (e *LuaEngine) GetAdapter(bridgeID string) interface{} {
 	return e.adapters[bridgeID]
 }
 
-// SetAdapterCreator sets the function used to create adapters
-func (e *LuaEngine) SetAdapterCreator(creator func(bridgeID string, bridge engine.Bridge) (interface{}, error)) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.adapterCreator = creator
-}
 
 // GetBridge retrieves a bridge by name
 func (e *LuaEngine) GetBridge(name string) (engine.Bridge, error) {

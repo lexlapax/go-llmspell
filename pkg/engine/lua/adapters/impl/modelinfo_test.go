@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -188,15 +187,14 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- List all models
@@ -238,15 +236,14 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Fetch inventory
@@ -286,15 +283,14 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Get model capabilities
@@ -338,15 +334,14 @@ func TestModelInfoAdapter_Discovery(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Find models by capability
@@ -405,15 +400,14 @@ func TestModelInfoAdapter_Selection(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Suggest model with function calling requirement
@@ -467,15 +461,14 @@ func TestModelInfoAdapter_Selection(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Compare two models
@@ -507,15 +500,14 @@ func TestModelInfoAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Try to fetch inventory with error
@@ -542,15 +534,14 @@ func TestModelInfoAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Try to get capabilities for non-existent model
@@ -587,15 +578,14 @@ func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Estimate cost for 1000 input tokens and 500 output tokens
@@ -639,15 +629,14 @@ func TestModelInfoAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Get best model for function calling task
@@ -694,15 +683,14 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Test flattened discovery methods
@@ -760,15 +748,14 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Test flattened capabilities methods
@@ -830,15 +817,14 @@ func TestModelInfoAdapter_FlattenedMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "modelinfo")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "modelinfo")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("modelinfo", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local modelinfo = require("modelinfo")
 			
 			-- Test flattened selection methods

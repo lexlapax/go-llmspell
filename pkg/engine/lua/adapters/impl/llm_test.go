@@ -14,7 +14,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 )
 
 func TestLLMAdapter_Creation(t *testing.T) {
@@ -104,16 +103,15 @@ func TestLLMAdapter_AgentCreation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Create agent from Lua
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local agent = llm.createAgent({
 				model = "gpt-4",
@@ -147,16 +145,15 @@ func TestLLMAdapter_AgentCreation(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Create agent with tools
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local agent = llm.createAgent({
 				model = "gpt-4",
@@ -189,16 +186,15 @@ func TestLLMAdapter_Completion(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test completion
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local response = llm.complete("Hello, world!")
 			assert(response.text == "Response to: Hello, world!")
@@ -227,16 +223,15 @@ func TestLLMAdapter_Completion(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test completion with options
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local response = llm.complete("Generate text", {
 				temperature = 0.8,
@@ -269,16 +264,15 @@ func TestLLMAdapter_Streaming(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test streaming
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local stream = llm.stream("Tell me a story", {
 				onChunk = function(chunk)
@@ -323,16 +317,15 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test listing models
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			-- Check that models namespace doesn't exist (flattened)
 			assert(llm.models == nil, "models namespace should not exist (flattened)")
@@ -368,16 +361,15 @@ func TestLLMAdapter_ModelManagement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test model selection
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local result = llm.selectModel("claude-3")
 			assert(result.selected == "claude-3")
@@ -408,16 +400,15 @@ func TestLLMAdapter_TokenCounting(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test token counting
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local result = llm.countTokens("This is a test string for counting tokens")
 			assert(result.tokens > 0)
@@ -443,16 +434,15 @@ func TestLLMAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test error handling
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			local response, err = llm.complete("Hello")
 			assert(response == nil)
@@ -491,16 +481,15 @@ func TestLLMAdapter_ChainedOperations(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test chained operations
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Create agent
@@ -839,16 +828,15 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test flattened pool methods
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Test poolCreate (basic method)
@@ -940,16 +928,15 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test object pooling methods
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Test response pooling
@@ -1000,16 +987,15 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Enhanced pool methods should not exist
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Basic pool methods should still work
@@ -1049,16 +1035,15 @@ func TestLLMAdapter_PoolEnhancement(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "llm")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "llm")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("llm", module)
 
 		// Test that namespaces have been flattened
-		err = L.DoString(`
+		err := L.DoString(`
 			local llm = require("llm")
 			
 			-- Provider methods should be flattened

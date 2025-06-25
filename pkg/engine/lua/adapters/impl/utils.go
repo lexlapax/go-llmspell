@@ -9,7 +9,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
 
@@ -2066,20 +2065,6 @@ func (ua *UtilsAdapter) tableToScriptValue(L *lua.LState, table *lua.LTable) eng
 	})
 
 	return engine.NewObjectValue(result)
-}
-
-// RegisterAsModule registers the adapter as a module in the module system
-func (ua *UtilsAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
-	// Create module definition using our CreateLuaModule
-	module := enginelua.ModuleDefinition{
-		Name:         name,
-		Description:  "Comprehensive utility functions for auth, debug, errors, json, logging and general purposes",
-		Dependencies: []string{}, // Utils module has no dependencies by default
-		LoadFunc:     ua.CreateLuaModule(),
-	}
-
-	// Register the module
-	return ms.Register(module)
 }
 
 // GetMethods returns the available methods

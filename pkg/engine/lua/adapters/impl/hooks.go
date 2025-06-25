@@ -9,7 +9,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
 )
@@ -298,33 +297,6 @@ func (ha *HooksAdapter) tableToScriptValue(L *lua.LState, table *lua.LTable) eng
 	return engine.NewObjectValue(result)
 }
 
-// RegisterAsModule registers the adapter as a module in the module system.
-// The ms parameter is the module system to register with. The name parameter
-// specifies the module name that scripts will use to import this functionality.
-// Returns an error if registration fails.
-func (ha *HooksAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
-	// Get bridge metadata
-	var bridgeMetadata engine.BridgeMetadata
-	if ha.GetBridge() != nil {
-		bridgeMetadata = ha.GetBridge().GetMetadata()
-	} else {
-		bridgeMetadata = engine.BridgeMetadata{
-			Name:        "Hooks Adapter",
-			Description: "Hook management and lifecycle functionality",
-		}
-	}
-
-	// Create module definition using our overridden CreateLuaModule
-	module := enginelua.ModuleDefinition{
-		Name:         name,
-		Description:  bridgeMetadata.Description,
-		Dependencies: []string{},           // Hooks module has no dependencies by default
-		LoadFunc:     ha.CreateLuaModule(), // Use our enhanced module creator
-	}
-
-	// Register the module
-	return ms.Register(module)
-}
 
 // GetMethods returns the available methods as a map of method names to availability.
 // The returned map includes all hook-related operations such as registration,

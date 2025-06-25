@@ -13,7 +13,6 @@ import (
 	lua "github.com/yuin/gopher-lua"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -175,15 +174,14 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Enable guardrails with configuration
@@ -226,15 +224,14 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Validate safe content
@@ -272,15 +269,14 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Add behavioral constraint
@@ -322,15 +318,14 @@ func TestObservabilityAdapter_Guardrails(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Check compliance
@@ -373,15 +368,14 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Create counter
@@ -420,15 +414,14 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Create gauge
@@ -467,15 +460,14 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Create timer
@@ -512,15 +504,14 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Record metric value
@@ -561,15 +552,14 @@ func TestObservabilityAdapter_Metrics(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Get all metrics
@@ -608,15 +598,14 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Start a span
@@ -659,15 +648,14 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Add span event
@@ -705,15 +693,14 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Set span attribute
@@ -751,15 +738,14 @@ func TestObservabilityAdapter_Tracing(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- End span
@@ -787,15 +773,14 @@ func TestObservabilityAdapter_ErrorHandling(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Try to validate content with error
@@ -826,15 +811,14 @@ func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Use metric builder
@@ -867,15 +851,14 @@ func TestObservabilityAdapter_ConvenienceMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Get current span context
@@ -924,15 +907,14 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Test flattened guardrails methods
@@ -999,15 +981,14 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Test flattened metrics methods
@@ -1073,15 +1054,14 @@ func TestObservabilityAdapter_FlattenedMethods(t *testing.T) {
 		L := lua.NewState()
 		defer L.Close()
 
-		// Register module
-		ms := enginelua.NewModuleSystem()
-		err := adapter.RegisterAsModule(ms, "observability")
-		require.NoError(t, err)
+		// Create module
+		module := adapter.CreateLuaModule()
+		require.NotNil(t, module)
 
-		err = ms.LoadModule(L, "observability")
-		require.NoError(t, err)
+		// Register module for require
+		L.PreloadModule("observability", module)
 
-		err = L.DoString(`
+		err := L.DoString(`
 			local obs = require("observability")
 			
 			-- Test flattened tracing methods

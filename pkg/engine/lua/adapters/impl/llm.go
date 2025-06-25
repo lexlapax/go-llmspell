@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
-	enginelua "github.com/lexlapax/go-llmspell/pkg/engine/lua"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/adapters"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -1607,25 +1606,6 @@ func (la *LLMAdapter) tableToMap(table *lua.LTable) map[string]engine.ScriptValu
 	return result
 }
 
-// RegisterAsModule registers the adapter as a module in the module system.
-// The ms parameter is the module system to register with. The name parameter
-// specifies the module name that scripts will use to import this functionality.
-// Returns an error if registration fails.
-func (la *LLMAdapter) RegisterAsModule(ms *enginelua.ModuleSystem, name string) error {
-	// Get bridge metadata
-	bridgeMetadata := la.GetBridge().GetMetadata()
-
-	// Create module definition using our overridden CreateLuaModule
-	module := enginelua.ModuleDefinition{
-		Name:         name,
-		Description:  bridgeMetadata.Description,
-		Dependencies: []string{},           // LLM module has no dependencies by default
-		LoadFunc:     la.CreateLuaModule(), // Use our enhanced module creator
-	}
-
-	// Register the module
-	return ms.Register(module)
-}
 
 // GetBridge returns the underlying bridge
 func (la *LLMAdapter) GetBridge() engine.Bridge {
