@@ -38,9 +38,8 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock generate method
 	llmBridge.RawSetString("generate", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		prompt := L.CheckString(2)
-		_ = L.OptTable(3, L.NewTable()) // options parameter
+		prompt := L.CheckString(1)
+		_ = L.OptTable(2, L.NewTable()) // options parameter
 		mockBridge.callLog = append(mockBridge.callLog, "generate:"+prompt)
 
 		response := L.NewTable()
@@ -53,10 +52,9 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock generateWithProvider method
 	llmBridge.RawSetString("generateWithProvider", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		provider := L.CheckString(2)
-		prompt := L.CheckString(3)
-		_ = L.OptTable(4, L.NewTable()) // options parameter
+		provider := L.CheckString(1)
+		prompt := L.CheckString(2)
+		_ = L.OptTable(3, L.NewTable()) // options parameter
 		mockBridge.callLog = append(mockBridge.callLog, "generateWithProvider:"+provider+":"+prompt)
 
 		response := L.NewTable()
@@ -69,9 +67,8 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock generateMessage method
 	llmBridge.RawSetString("generateMessage", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1)             // self (bridge table)
-		_ = L.CheckTable(2)             // messages table - not used in mock
-		_ = L.OptTable(3, L.NewTable()) // options parameter
+		_ = L.CheckTable(1)             // messages table - not used in mock
+		_ = L.OptTable(2, L.NewTable()) // options parameter
 		mockBridge.callLog = append(mockBridge.callLog, "generateMessage")
 
 		response := L.NewTable()
@@ -83,7 +80,6 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock listProviders method
 	llmBridge.RawSetString("listProviders", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
 		providers := L.NewTable()
 		for i, provider := range mockBridge.providers {
 			providers.RawSetInt(i+1, lua.LString(provider))
@@ -94,9 +90,8 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock setProvider method
 	llmBridge.RawSetString("setProvider", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		provider := L.CheckString(2)
-		_ = L.OptTable(3, L.NewTable()) // config parameter (optional)
+		provider := L.CheckString(1)
+		_ = L.OptTable(2, L.NewTable()) // config parameter (optional)
 		mockBridge.callLog = append(mockBridge.callLog, "setProvider:"+provider)
 		L.Push(lua.LTrue)
 		return 1
@@ -104,8 +99,7 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock testProviderConnection method
 	llmBridge.RawSetString("testProviderConnection", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		provider := L.CheckString(2)
+		provider := L.CheckString(1)
 		mockBridge.callLog = append(mockBridge.callLog, "testProviderConnection:"+provider)
 		L.Push(lua.LTrue)
 		return 1
@@ -113,8 +107,7 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock getModelInfo method
 	llmBridge.RawSetString("getModelInfo", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		modelId := L.CheckString(2)
+		modelId := L.CheckString(1)
 		mockBridge.callLog = append(mockBridge.callLog, "getModelInfo:"+modelId)
 
 		info := L.NewTable()
@@ -130,9 +123,8 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock stream method
 	llmBridge.RawSetString("stream", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		prompt := L.CheckString(2)
-		_ = L.OptTable(3, L.NewTable()) // options parameter
+		prompt := L.CheckString(1)
+		_ = L.OptTable(2, L.NewTable()) // options parameter
 		mockBridge.callLog = append(mockBridge.callLog, "stream:"+prompt)
 		L.Push(lua.LString("stream_123"))
 		return 1
@@ -140,8 +132,7 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock readStream method
 	llmBridge.RawSetString("readStream", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		streamId := L.CheckString(2)
+		streamId := L.CheckString(1)
 		mockBridge.callLog = append(mockBridge.callLog, "readStream:"+streamId)
 
 		// Return chunks for testing
@@ -158,8 +149,7 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Mock closeStream method
 	llmBridge.RawSetString("closeStream", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		streamId := L.CheckString(2)
+		streamId := L.CheckString(1)
 		mockBridge.callLog = append(mockBridge.callLog, "closeStream:"+streamId)
 		delete(mockBridge.streamChunks, streamId)
 		L.Push(lua.LTrue)
@@ -168,8 +158,7 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Add missing methods for model discovery
 	llmBridge.RawSetString("listModels", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1)  // self (bridge table)
-		_ = L.CheckString(2) // provider parameter
+		_ = L.CheckString(1) // provider parameter
 		mockBridge.callLog = append(mockBridge.callLog, "listModels")
 
 		models := L.NewTable()
@@ -183,10 +172,9 @@ func setupMockBridges(L *lua.LState, mockBridge *MockLLMBridge) {
 
 	// Add missing streamWithProvider method
 	llmBridge.RawSetString("streamWithProvider", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1)             // self (bridge table)
-		_ = L.CheckString(2)            // provider parameter
-		_ = L.CheckString(3)            // prompt parameter
-		_ = L.OptTable(4, L.NewTable()) // options parameter
+		_ = L.CheckString(1)            // provider parameter
+		_ = L.CheckString(2)            // prompt parameter
+		_ = L.OptTable(3, L.NewTable()) // options parameter
 		mockBridge.callLog = append(mockBridge.callLog, "streamWithProvider")
 		L.Push(lua.LString("stream_123"))
 		return 1

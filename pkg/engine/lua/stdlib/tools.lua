@@ -26,11 +26,13 @@ local function get_tools_bridge()
     return bridges.agent_tools
 end
 
--- Helper function to get registry bridge if available (reserved for future use)
--- local function get_registry_bridge()
---     -- Registry bridge is optional, return nil if not available
---     return _G.registry
--- end
+-- Helper function to get registry bridge (optional)
+local function get_registry_bridge()
+    if bridges and bridges.agent_tools_registry then
+        return bridges.agent_tools_registry
+    end
+    return nil
+end
 
 -- Helper function to generate unique execution ID
 local function generate_execution_id()
@@ -765,6 +767,303 @@ function tools.export_tool(name, format)
     else
         error("Unsupported export format: " .. format)
     end
+end
+
+-- ===================================================================
+-- MISSING TOOLSADAPTER METHODS - Adding for full compatibility  
+-- ===================================================================
+
+-- Constants (from ToolsAdapter)
+
+-- Tool categories
+tools.CATEGORIES = {
+    MATH = "math",
+    API = "api", 
+    TEXT = "text",
+    FILE = "file",
+    SYSTEM = "system"
+}
+
+-- Permission types
+tools.PERMISSIONS = {
+    NETWORK = "network",
+    FILE_READ = "file_read",
+    FILE_WRITE = "file_write",
+    SYSTEM = "system"
+}
+
+-- Resource usage levels
+tools.RESOURCE_USAGE = {
+    LOW = "low",
+    MEDIUM = "medium", 
+    HIGH = "high"
+}
+
+-- Core Tool Discovery Methods (Bridge wrappers)
+
+-- List all tools via bridge
+function tools.listTools()
+    local bridge = get_tools_bridge()
+    return bridge.listTools()
+end
+
+-- Search tools by query via bridge
+function tools.searchTools(query)
+    validate_required(query, "query")
+    
+    local bridge = get_tools_bridge()
+    return bridge.searchTools(query)
+end
+
+-- Get tool info via bridge
+function tools.getToolInfo(toolName)
+    validate_required(toolName, "toolName")
+    
+    local bridge = get_tools_bridge()
+    return bridge.getToolInfo(toolName)
+end
+
+-- Get tool schema via bridge
+function tools.getToolSchema(toolName)
+    validate_required(toolName, "toolName")
+    
+    local bridge = get_tools_bridge()
+    return bridge.getToolSchema(toolName)
+end
+
+-- Get available categories via bridge
+function tools.getCategories()
+    local bridge = get_tools_bridge()
+    return bridge.getCategories()
+end
+
+-- List tools by category via bridge
+function tools.listByCategory(category)
+    validate_required(category, "category")
+    
+    local bridge = get_tools_bridge()
+    return bridge.listByCategory(category)
+end
+
+-- List tools by tags via bridge
+function tools.listByTags(tags)
+    validate_required(tags, "tags")
+    
+    if type(tags) ~= "table" then
+        error("tags must be a table")
+    end
+    
+    local bridge = get_tools_bridge()
+    return bridge.listByTags(tags)
+end
+
+-- Tool Execution Methods (Bridge wrappers)
+
+-- Execute tool via bridge
+function tools.executeTool(toolName, params)
+    validate_required(toolName, "toolName")
+    validate_required(params, "params")
+    
+    if type(params) ~= "table" then
+        error("params must be a table")
+    end
+    
+    local bridge = get_tools_bridge()
+    return bridge.executeTool(toolName, params)
+end
+
+-- Execute tool async via bridge
+function tools.executeAsync(toolName, params)
+    validate_required(toolName, "toolName")
+    validate_required(params, "params")
+    
+    if type(params) ~= "table" then
+        error("params must be a table")
+    end
+    
+    local bridge = get_tools_bridge()
+    return bridge.executeAsync(toolName, params)
+end
+
+-- Custom Tool Registration (Bridge wrapper)
+
+-- Register custom tool via bridge
+function tools.registerCustomTool(toolDef)
+    validate_required(toolDef, "toolDef")
+    
+    if type(toolDef) ~= "table" then
+        error("toolDef must be a table")
+    end
+    
+    local bridge = get_tools_bridge()
+    return bridge.registerCustomTool(toolDef)
+end
+
+-- Validation Methods (Bridge wrapper)
+
+-- Validate tool input via bridge
+function tools.validateToolInput(toolName, params)
+    validate_required(toolName, "toolName")
+    validate_required(params, "params")
+    
+    if type(params) ~= "table" then
+        error("params must be a table")
+    end
+    
+    local bridge = get_tools_bridge()
+    return bridge.validateToolInput(toolName, params)
+end
+
+-- Metrics Methods (Bridge wrapper)
+
+-- Get tool metrics via bridge
+function tools.getToolMetrics(toolName)
+    validate_required(toolName, "toolName")
+    
+    local bridge = get_tools_bridge()
+    return bridge.getToolMetrics(toolName)
+end
+
+-- Builder Pattern Support
+
+-- Create tool builder for fluent API
+function tools.createBuilder(toolName)
+    validate_required(toolName, "toolName")
+    
+    local builder = {
+        _toolDef = {
+            name = toolName
+        }
+    }
+    
+    -- Builder methods
+    function builder:withDescription(description)
+        validate_required(description, "description")
+        self._toolDef.description = description
+        return self
+    end
+    
+    function builder:withCategory(category)
+        validate_required(category, "category")
+        self._toolDef.category = category
+        return self
+    end
+    
+    function builder:withTags(tags)
+        validate_required(tags, "tags")
+        if type(tags) ~= "table" then
+            error("tags must be a table")
+        end
+        self._toolDef.tags = tags
+        return self
+    end
+    
+    function builder:withParameter(name, paramType, description, required)
+        validate_required(name, "parameter name")
+        validate_required(paramType, "parameter type")
+        validate_required(description, "parameter description")
+        
+        if not self._toolDef.parameterSchema then
+            self._toolDef.parameterSchema = {
+                type = "object",
+                properties = {},
+                required = {}
+            }
+        end
+        
+        -- Add parameter
+        self._toolDef.parameterSchema.properties[name] = {
+            type = paramType,
+            description = description
+        }
+        
+        -- Add to required if needed
+        if required then
+            table.insert(self._toolDef.parameterSchema.required, name)
+        end
+        
+        return self
+    end
+    
+    function builder:withExecute(executeFn)
+        validate_required(executeFn, "execute function")
+        if type(executeFn) ~= "function" then
+            error("execute function must be a function")
+        end
+        self._toolDef.execute = executeFn
+        return self
+    end
+    
+    function builder:build()
+        return tools.registerCustomTool(self._toolDef)
+    end
+    
+    return builder
+end
+
+-- Registry Bridge Methods (optional, require registry bridge)
+
+-- Helper for registry methods
+local function with_registry_bridge(method_name, ...)
+    local registry_bridge = get_registry_bridge()
+    if not registry_bridge then
+        error("Registry bridge not available for " .. method_name)
+    end
+    return registry_bridge[method_name](...)
+end
+
+-- Get complete tool from registry
+function tools.getTool(toolName)
+    validate_required(toolName, "toolName")
+    
+    return with_registry_bridge("getTool", toolName)
+end
+
+-- List tools by permission
+function tools.listToolsByPermission(permission)
+    validate_required(permission, "permission")
+    
+    return with_registry_bridge("listToolsByPermission", permission)
+end
+
+-- List tools by resource usage
+function tools.listToolsByResourceUsage(criteria)
+    validate_required(criteria, "criteria")
+    
+    if type(criteria) ~= "table" then
+        error("criteria must be a table")
+    end
+    
+    return with_registry_bridge("listToolsByResourceUsage", criteria)
+end
+
+-- Get tool documentation
+function tools.getToolDocumentation(toolName)
+    validate_required(toolName, "toolName")
+    
+    return with_registry_bridge("getToolDocumentation", toolName)
+end
+
+-- Export single tool to MCP format
+function tools.exportToolToMCP(toolName)
+    validate_required(toolName, "toolName")
+    
+    return with_registry_bridge("exportToolToMCP", toolName)
+end
+
+-- Export all tools to MCP catalog
+function tools.exportAllToolsToMCP()
+    return with_registry_bridge("exportAllToolsToMCP")
+end
+
+-- Clear registry (testing only)
+function tools.clearRegistry()
+    return with_registry_bridge("clearRegistry")
+end
+
+-- Get registry statistics
+function tools.getRegistryStats()
+    return with_registry_bridge("getRegistryStats")
 end
 
 -- If tools global already exists (from bridge), extend it instead of replacing

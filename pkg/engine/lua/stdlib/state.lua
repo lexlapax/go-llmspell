@@ -3,12 +3,29 @@
 
 local state = {}
 
--- Get the state_context bridge
-local function get_state_context()
-    if not bridges or not bridges.state_context then
-        error("State context bridge not available. Ensure go-llmspell is properly initialized with state feature set.")
+-- Get the state bridge (try both state_manager and state_context)
+local function get_state_bridge()
+    if not bridges then
+        error("Bridge system not available. Ensure go-llmspell is properly initialized.")
     end
-    return bridges.state_context
+    
+    -- Try state_manager first (preferred)
+    if bridges.state_manager then
+        return bridges.state_manager
+    end
+    
+    -- Fall back to state_context
+    if bridges.state_context then
+        return bridges.state_context
+    end
+    
+    local available = {}
+    if bridges then
+        for k, _ in pairs(bridges) do
+            table.insert(available, k)
+        end
+    end
+    error("State bridge not available. Ensure go-llmspell is properly initialized with state feature set. Available bridges: " .. table.concat(available, ", "))
 end
 
 -- Internal state storage using the bridge
@@ -18,7 +35,7 @@ local _initialized = false
 -- Initialize state context
 local function ensure_initialized()
     if not _initialized then
-        local bridge = get_state_context()
+        local bridge = get_state_bridge()
         -- Create a shared context for the script
         local success, ctx = pcall(function()
             return bridge.createSharedContext("script_state")
@@ -79,7 +96,7 @@ end
 -- Get a value from state
 function state.get(path)
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     
     if not path or path == "" then
         -- Return all state
@@ -133,7 +150,7 @@ end
 -- Set a value in state
 function state.set(path, value)
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     
     if not path or path == "" then
         error("Path is required for state.set")
@@ -196,7 +213,7 @@ end
 -- Delete a value from state
 function state.delete(path)
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     
     if not path or path == "" then
         error("Path is required for state.delete")
@@ -215,7 +232,7 @@ end
 -- Check if a path exists in state
 function state.has(path)
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     
     if not path or path == "" then
         return false
@@ -233,28 +250,28 @@ end
 -- Get all keys in state
 function state.keys()
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     return bridge.keys(_context) or {}
 end
 
 -- Clear all state
 function state.clear()
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     bridge.clearContext(_context)
 end
 
 -- Create a snapshot of current state
 function state.snapshot()
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     return bridge.createSnapshot(_context)
 end
 
 -- Save state to persistent storage
 function state.save(name)
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     name = name or "default"
     return bridge.saveState(_context, name)
 end
@@ -262,7 +279,7 @@ end
 -- Load state from persistent storage
 function state.load(name)
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     name = name or "default"
     return bridge.loadState(_context, name)
 end
@@ -270,15 +287,211 @@ end
 -- Export state as a table
 function state.export()
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     return bridge.exportState(_context)
 end
 
 -- Import state from a table
 function state.import(data)
     ensure_initialized()
-    local bridge = get_state_context()
+    local bridge = get_state_bridge()
     return bridge.importState(_context, data)
+end
+
+-- Core state creation method
+function state.create(state_data)
+    local bridge = get_state_bridge()
+    local success, new_state = pcall(function()
+        return bridge.createState(state_data or {})
+    end)
+    if not success then
+        error("Failed to create state: " .. tostring(new_state))
+    end
+    return new_state
+end
+
+-- Missing basic method: values
+function state.values()
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.values(_context) or {}
+end
+
+-- State management methods
+function state.list_states()
+    local bridge = get_state_bridge()
+    return bridge.listStates()
+end
+
+function state.delete_state(state_id)
+    local bridge = get_state_bridge()
+    return bridge.deleteState(state_id)
+end
+
+-- Metadata methods
+function state.set_metadata(key, value)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.setMetadata(_context, key, value)
+end
+
+function state.get_metadata(key)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.getMetadata(_context, key)
+end
+
+function state.get_all_metadata()
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.getAllMetadata(_context)
+end
+
+-- Artifact methods
+function state.add_artifact(name, data, metadata)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.addArtifact(_context, name, data, metadata or {})
+end
+
+function state.get_artifact(name)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.getArtifact(_context, name)
+end
+
+function state.artifacts()
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.artifacts(_context)
+end
+
+-- Message methods
+function state.add_message(message_data)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.addMessage(_context, message_data)
+end
+
+function state.messages()
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.messages(_context)
+end
+
+-- Transform methods
+function state.apply_transform(transform_name, options)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.applyTransform(_context, transform_name, options or {})
+end
+
+function state.register_transform(transform_name, transform_func)
+    local bridge = get_state_bridge()
+    return bridge.registerTransform(transform_name, transform_func)
+end
+
+-- Validation and utility methods
+function state.merge_states(states, strategy)
+    local bridge = get_state_bridge()
+    return bridge.mergeStates(states, strategy or "merge_all")
+end
+
+function state.validate_state(state_obj)
+    local bridge = get_state_bridge()
+    return bridge.validateState(state_obj)
+end
+
+-- Transform namespace methods (flattened to state level)
+state.transforms = {}
+
+function state.transforms.apply(transform_name, options)
+    return state.apply_transform(transform_name, options)
+end
+
+function state.transforms.register(transform_name, transform_func)
+    return state.register_transform(transform_name, transform_func)
+end
+
+function state.transforms.chain(transform_names, options)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.chainTransforms(_context, transform_names, options or {})
+end
+
+function state.transforms.validate(transform_name)
+    local bridge = get_state_bridge()
+    return bridge.validateTransform(transform_name)
+end
+
+function state.transforms.get_available()
+    local bridge = get_state_bridge()
+    return bridge.getAvailableTransforms()
+end
+
+-- Context namespace methods (flattened to state level)
+state.context = {}
+
+function state.context.get(key)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.getContext(_context, key)
+end
+
+function state.context.set(key, value)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.setContext(_context, key, value)
+end
+
+function state.context.merge(context_data)
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.mergeContext(_context, context_data)
+end
+
+function state.context.clear()
+    ensure_initialized()
+    local bridge = get_state_bridge()
+    return bridge.clearContext(_context)
+end
+
+function state.context.create_shared(parent_context)
+    local bridge = get_state_bridge()
+    return bridge.createSharedContext(parent_context)
+end
+
+function state.context.with_inheritance(shared_context, inherit_messages, inherit_artifacts, inherit_metadata)
+    local bridge = get_state_bridge()
+    return bridge.withInheritanceConfig(shared_context, inherit_messages, inherit_artifacts, inherit_metadata)
+end
+
+-- Persistence namespace methods (flattened to state level)
+state.persistence = {}
+
+function state.persistence.save(state_obj)
+    local bridge = get_state_bridge()
+    return bridge.saveState(state_obj)
+end
+
+function state.persistence.load(state_id)
+    local bridge = get_state_bridge()
+    return bridge.loadState(state_id)
+end
+
+function state.persistence.exists(state_id)
+    local bridge = get_state_bridge()
+    return bridge.stateExists(state_id)
+end
+
+function state.persistence.delete(state_id)
+    local bridge = get_state_bridge()
+    return bridge.deleteState(state_id)
+end
+
+function state.persistence.list_versions()
+    local bridge = get_state_bridge()
+    return bridge.listStates()
 end
 
 return state

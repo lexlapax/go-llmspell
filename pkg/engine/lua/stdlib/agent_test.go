@@ -52,9 +52,8 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 
 	// Agent lifecycle methods
 	agentBridgeTable.RawSetString("lifecycleCreate", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		name := L.CheckString(2)
-		_ = L.OptTable(3, L.NewTable()) // config parameter
+		name := L.CheckString(1)
+		_ = L.OptTable(2, L.NewTable()) // config parameter
 		agentBridge.callLog = append(agentBridge.callLog, "lifecycleCreate:"+name)
 
 		agentID := "agent_" + name
@@ -69,8 +68,7 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	agentBridgeTable.RawSetString("lifecycleGet", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
+		agentID := L.CheckString(1)
 		agentBridge.callLog = append(agentBridge.callLog, "lifecycleGet:"+agentID)
 
 		if agentData, exists := agentBridge.agents[agentID]; exists {
@@ -82,7 +80,6 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	agentBridgeTable.RawSetString("lifecycleList", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
 		agentBridge.callLog = append(agentBridge.callLog, "lifecycleList")
 
 		agents := L.NewTable()
@@ -96,8 +93,7 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	agentBridgeTable.RawSetString("lifecycleRemove", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
+		agentID := L.CheckString(1)
 		agentBridge.callLog = append(agentBridge.callLog, "lifecycleRemove:"+agentID)
 
 		if _, exists := agentBridge.agents[agentID]; exists {
@@ -111,10 +107,9 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 
 	// Agent execution methods
 	agentBridgeTable.RawSetString("run", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
-		_ = L.CheckAny(3)               // input parameter
-		_ = L.OptTable(4, L.NewTable()) // options parameter
+		agentID := L.CheckString(1)
+		_ = L.CheckAny(2)               // input parameter
+		_ = L.OptTable(3, L.NewTable()) // options parameter
 		agentBridge.callLog = append(agentBridge.callLog, "run:"+agentID)
 
 		response := L.NewTable()
@@ -126,10 +121,9 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	agentBridgeTable.RawSetString("runAsync", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
-		_ = L.CheckAny(3)               // input parameter
-		_ = L.OptTable(4, L.NewTable()) // options parameter
+		agentID := L.CheckString(1)
+		_ = L.CheckAny(2)               // input parameter
+		_ = L.OptTable(3, L.NewTable()) // options parameter
 		agentBridge.callLog = append(agentBridge.callLog, "runAsync:"+agentID)
 
 		response := L.NewTable()
@@ -142,8 +136,7 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 
 	// Agent state methods
 	agentBridgeTable.RawSetString("stateGet", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
+		agentID := L.CheckString(1)
 		agentBridge.callLog = append(agentBridge.callLog, "stateGet:"+agentID)
 
 		state := L.NewTable()
@@ -155,9 +148,8 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	agentBridgeTable.RawSetString("stateSet", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
-		_ = L.CheckTable(3) // state parameter
+		agentID := L.CheckString(1)
+		_ = L.CheckTable(2) // state parameter
 		agentBridge.callLog = append(agentBridge.callLog, "stateSet:"+agentID)
 
 		L.Push(lua.LTrue)
@@ -166,9 +158,8 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 
 	// Agent tool methods
 	agentBridgeTable.RawSetString("registerTool", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
-		_ = L.CheckTable(3) // tool parameter
+		agentID := L.CheckString(1)
+		_ = L.CheckAny(2) // tool parameter (could be name or table)
 		agentBridge.callLog = append(agentBridge.callLog, "registerTool:"+agentID)
 
 		if agentBridge.tools[agentID] == nil {
@@ -180,9 +171,16 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 		return 1
 	}))
 
+	agentBridgeTable.RawSetString("unregisterTool", L.NewFunction(func(L *lua.LState) int {
+		agentID := L.CheckString(1)
+		toolName := L.CheckString(2)
+		agentBridge.callLog = append(agentBridge.callLog, "unregisterTool:"+agentID+":"+toolName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
 	agentBridgeTable.RawSetString("listTools", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		agentID := L.CheckString(2)
+		agentID := L.CheckString(1)
 		agentBridge.callLog = append(agentBridge.callLog, "listTools:"+agentID)
 
 		tools := L.NewTable()
@@ -198,13 +196,245 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 		return 1
 	}))
 
+	// Add missing AgentAdapter bridge methods for complete testing coverage
+
+	// Lifecycle methods
+	agentBridgeTable.RawSetString("lifecycleCreateLLM", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		name := L.CheckString(2)
+		_ = L.OptTable(3, L.NewTable()) // config parameter
+		agentBridge.callLog = append(agentBridge.callLog, "lifecycleCreateLLM:"+name)
+
+		agentID := "llm_agent_" + name
+		agent := L.NewTable()
+		agent.RawSetString("id", lua.LString(agentID))
+		agent.RawSetString("name", lua.LString(name))
+		agent.RawSetString("type", lua.LString("llm"))
+		agent.RawSetString("state", lua.LString("created"))
+
+		agentBridge.agents[agentID] = agent
+		L.Push(agent)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("lifecycleGetMetrics", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentBridge.callLog = append(agentBridge.callLog, "lifecycleGetMetrics")
+		metrics := L.NewTable()
+		metrics.RawSetString("total_agents", lua.LNumber(len(agentBridge.agents)))
+		metrics.RawSetString("active_agents", lua.LNumber(1))
+		L.Push(metrics)
+		return 1
+	}))
+
+	// State methods
+	agentBridgeTable.RawSetString("stateExport", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		agentBridge.callLog = append(agentBridge.callLog, "stateExport:"+agentID)
+		exportData := L.NewTable()
+		exportData.RawSetString("agent_id", lua.LString(agentID))
+		exportData.RawSetString("exported_at", lua.LNumber(1234567890))
+		L.Push(exportData)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("stateImport", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		_ = L.CheckTable(3) // state_data parameter
+		agentBridge.callLog = append(agentBridge.callLog, "stateImport:"+agentID)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("stateSaveSnapshot", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		snapshotName := L.CheckString(3)
+		agentBridge.callLog = append(agentBridge.callLog, "stateSaveSnapshot:"+agentID+":"+snapshotName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("stateLoadSnapshot", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		snapshotName := L.CheckString(3)
+		agentBridge.callLog = append(agentBridge.callLog, "stateLoadSnapshot:"+agentID+":"+snapshotName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("stateListSnapshots", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		agentBridge.callLog = append(agentBridge.callLog, "stateListSnapshots:"+agentID)
+		snapshots := L.NewTable()
+		snapshots.RawSetInt(1, lua.LString("snapshot1"))
+		snapshots.RawSetInt(2, lua.LString("snapshot2"))
+		L.Push(snapshots)
+		return 1
+	}))
+
+	// Events methods
+	agentBridgeTable.RawSetString("eventsEmit", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		eventName := L.CheckString(3)
+		_ = L.CheckAny(4) // event_data parameter
+		agentBridge.callLog = append(agentBridge.callLog, "eventsEmit:"+agentID+":"+eventName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("eventsSubscribe", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		eventName := L.CheckString(3)
+		_ = L.CheckFunction(4) // handler parameter
+		agentBridge.callLog = append(agentBridge.callLog, "eventsSubscribe:"+agentID+":"+eventName)
+		L.Push(lua.LString("subscription_id_123"))
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("eventsUnsubscribe", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		eventName := L.CheckString(3)
+		handlerID := L.CheckString(4)
+		agentBridge.callLog = append(agentBridge.callLog, "eventsUnsubscribe:"+agentID+":"+eventName+":"+handlerID)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("eventsStartRecording", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		agentBridge.callLog = append(agentBridge.callLog, "eventsStartRecording:"+agentID)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("eventsStopRecording", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		agentBridge.callLog = append(agentBridge.callLog, "eventsStopRecording:"+agentID)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("eventsReplay", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		_ = L.CheckTable(3) // events parameter
+		agentBridge.callLog = append(agentBridge.callLog, "eventsReplay:"+agentID)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	// Profiling methods
+	agentBridgeTable.RawSetString("profilingStart", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		profileName := L.CheckString(3)
+		agentBridge.callLog = append(agentBridge.callLog, "profilingStart:"+agentID+":"+profileName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("profilingStop", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		profileName := L.CheckString(3)
+		agentBridge.callLog = append(agentBridge.callLog, "profilingStop:"+agentID+":"+profileName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("profilingGetMetrics", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		agentBridge.callLog = append(agentBridge.callLog, "profilingGetMetrics:"+agentID)
+		metrics := L.NewTable()
+		metrics.RawSetString("cpu_usage", lua.LNumber(25.5))
+		metrics.RawSetString("memory_usage", lua.LNumber(128))
+		L.Push(metrics)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("profilingGetReport", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		profileName := L.CheckString(3)
+		agentBridge.callLog = append(agentBridge.callLog, "profilingGetReport:"+agentID+":"+profileName)
+		report := L.NewTable()
+		report.RawSetString("profile_name", lua.LString(profileName))
+		report.RawSetString("duration", lua.LNumber(1500))
+		L.Push(report)
+		return 1
+	}))
+
+	// Hooks methods
+	agentBridgeTable.RawSetString("hooksRegister", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		hookName := L.CheckString(3)
+		_ = L.CheckFunction(4) // hook_function parameter
+		agentBridge.callLog = append(agentBridge.callLog, "hooksRegister:"+agentID+":"+hookName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("hooksUnregister", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		hookName := L.CheckString(3)
+		agentBridge.callLog = append(agentBridge.callLog, "hooksUnregister:"+agentID+":"+hookName)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("hooksExecute", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		hookName := L.CheckString(3)
+		_ = L.CheckTable(4) // context parameter
+		agentBridge.callLog = append(agentBridge.callLog, "hooksExecute:"+agentID+":"+hookName)
+		result := L.NewTable()
+		result.RawSetString("hook_executed", lua.LTrue)
+		L.Push(result)
+		return 1
+	}))
+
+	agentBridgeTable.RawSetString("hooksList", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		agentID := L.CheckString(2)
+		agentBridge.callLog = append(agentBridge.callLog, "hooksList:"+agentID)
+		hooks := L.NewTable()
+		hooks.RawSetInt(1, lua.LString("pre_run"))
+		hooks.RawSetInt(2, lua.LString("post_run"))
+		L.Push(hooks)
+		return 1
+	}))
+
+	// Add workflow bridge methods to agent bridge for workflow testing
+	agentBridgeTable.RawSetString("workflowAddStep", L.NewFunction(func(L *lua.LState) int {
+		_ = L.CheckTable(1) // self (bridge table)
+		workflowID := L.CheckString(2)
+		_ = L.CheckTable(3) // step parameter
+		_ = L.OptNumber(4, 0) // position parameter
+		agentBridge.callLog = append(agentBridge.callLog, "workflowAddStep:"+workflowID)
+		L.Push(lua.LTrue)
+		return 1
+	}))
+
 	// Create mock workflow bridge table
 	workflowBridgeTable := L.NewTable()
 
 	workflowBridgeTable.RawSetString("create", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		name := L.CheckString(2)
-		_ = L.OptTable(3, L.NewTable()) // config parameter
+		name := L.CheckString(1)
+		_ = L.OptTable(2, L.NewTable()) // config parameter
 		workflowBridge.callLog = append(workflowBridge.callLog, "create:"+name)
 
 		workflowID := "workflow_" + name
@@ -219,9 +449,8 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	workflowBridgeTable.RawSetString("addStep", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		workflowID := L.CheckString(2)
-		_ = L.CheckTable(3) // step parameter
+		workflowID := L.CheckString(1)
+		_ = L.CheckTable(2) // step parameter
 		workflowBridge.callLog = append(workflowBridge.callLog, "addStep:"+workflowID)
 
 		if workflowBridge.steps[workflowID] == nil {
@@ -234,10 +463,9 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	workflowBridgeTable.RawSetString("execute", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		workflowID := L.CheckString(2)
-		_ = L.CheckAny(3)               // input parameter
-		_ = L.OptTable(4, L.NewTable()) // options parameter
+		workflowID := L.CheckString(1)
+		_ = L.CheckAny(2)               // input parameter
+		_ = L.OptTable(3, L.NewTable()) // options parameter
 		workflowBridge.callLog = append(workflowBridge.callLog, "execute:"+workflowID)
 
 		response := L.NewTable()
@@ -250,8 +478,7 @@ func setupMockAgentBridges(L *lua.LState, agentBridge *MockAgentBridge, workflow
 	}))
 
 	workflowBridgeTable.RawSetString("get", L.NewFunction(func(L *lua.LState) int {
-		_ = L.CheckTable(1) // self (bridge table)
-		workflowID := L.CheckString(2)
+		workflowID := L.CheckString(1)
 		workflowBridge.callLog = append(workflowBridge.callLog, "get:"+workflowID)
 
 		if workflowData, exists := workflowBridge.workflows[workflowID]; exists {

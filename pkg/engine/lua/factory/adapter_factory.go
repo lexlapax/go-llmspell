@@ -65,7 +65,7 @@ func (f *AdapterFactory) CreateAdapter(bridgeID string, bridgeMap map[string]eng
 		return impl.NewLLMAdapter(coreBridge, providersBridge, poolBridge), nil
 
 	// State management
-	case "state_manager":
+	case "state_manager", "state_context":
 		return impl.NewStateAdapter(bridge), nil
 
 	// Event system
@@ -89,7 +89,7 @@ func (f *AdapterFactory) CreateAdapter(bridgeID string, bridgeMap map[string]eng
 		return impl.NewWorkflowAdapter(bridge), nil
 
 	// Tools
-	case "agent_tools":
+	case "agent_tools", "agent_tools_registry":
 		// Check if registry bridge is available for enhanced functionality
 		registryBridge := bridgeMap["tools_registry"] // May be nil
 		if registryBridge != nil {
@@ -130,7 +130,7 @@ func (f *AdapterFactory) CreateAdapter(bridgeID string, bridgeMap map[string]eng
 		return impl.NewModelInfoAdapter(bridge), nil
 
 	// Utils (requires multiple bridges)
-	case "util_core", "auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_script_logger", "util_slog":
+	case "util_core", "auth", "util_auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_llm", "util_script_logger", "util_slog":
 		// Utils adapter needs all utility bridges
 		// Note: The primary bridge is already validated above, so we pass the full map
 		return f.createUtilsAdapter(bridgeMap)
@@ -216,7 +216,7 @@ func (f *AdapterFactory) IsMultiBridgeAdapter(bridgeID string) bool {
 	switch bridgeID {
 	case "llm_core", "llm_providers", "llm_pool", "observability_metrics":
 		return true
-	case "util_core", "auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_script_logger", "util_slog":
+	case "util_core", "auth", "util_auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_llm", "util_script_logger", "util_slog":
 		return true // Any util bridge triggers multi-bridge utils adapter
 	default:
 		return false
@@ -230,7 +230,7 @@ func (f *AdapterFactory) GetRequiredBridges(bridgeID string) []string {
 		return []string{"llm_core"} // providers and pool are optional
 	case "observability_metrics":
 		return []string{"observability_metrics"} // tracing and guardrails are optional
-	case "util_core", "auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_script_logger", "util_slog":
+	case "util_core", "auth", "util_auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_llm", "util_script_logger", "util_slog":
 		// At least one utility bridge is required
 		return []string{} // No specific bridge required, just at least one
 	default:
@@ -245,9 +245,9 @@ func (f *AdapterFactory) GetOptionalBridges(bridgeID string) []string {
 		return []string{"llm_providers", "llm_pool"}
 	case "observability_metrics":
 		return []string{"observability_tracing", "observability_guardrails"}
-	case "agent_tools":
+	case "agent_tools", "agent_tools_registry":
 		return []string{"tools_registry"}
-	case "util_core", "auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_script_logger", "util_slog":
+	case "util_core", "auth", "util_auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_llm", "util_script_logger", "util_slog":
 		// All utility bridges are optional as long as at least one is present
 		return []string{
 			"auth", "util_core", "util_debug", "util_errors",

@@ -160,7 +160,7 @@ return core
 
 - **data.lua**: Reuse merge and clone functions
 - **testing.lua**: Reuse UUID and random string generation
-- **crypto bridge**: May need to access crypto functions from go-llms
+- **crypto adapter**: May need to access crypto functions from go-llms through adapters
 - **time functions**: May need to use Go's time package for complex operations
 
 ## Testing Requirements

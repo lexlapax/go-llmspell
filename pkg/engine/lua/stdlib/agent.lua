@@ -10,6 +10,36 @@ local promise = _G.promise or require("promise")
 local active_agents = {}
 local active_workflows = {}
 
+-- Agent object metatable for object-oriented syntax
+local agent_mt = {
+    __index = {
+        run = function(self, input, options)
+            return agent.run(self.id, input, options)
+        end,
+        run_async = function(self, input, options)
+            return agent.run_async(self.id, input, options)
+        end,
+        configure = function(self, settings)
+            return agent.configure(self.id, settings)
+        end,
+        add_tools = function(self, tools)
+            return agent.add_tools(self.id, tools)
+        end,
+        get_tools = function(self)
+            return agent.get_tools(self.id)
+        end,
+        get_status = function(self)
+            return agent.get_status(self.id)
+        end,
+        remove = function(self)
+            return agent.remove(self.id)
+        end,
+        clone = function(self, new_name, modifications)
+            return agent.clone(self.id, new_name, modifications)
+        end
+    }
+}
+
 -- Helper function to validate required parameters
 local function validate_required(param, name)
     if not param or param == "" then
@@ -69,6 +99,9 @@ function agent.create(name, config)
             created_at = os.time(),
             state = "created",
         }
+        
+        -- Add object-oriented methods to the agent object
+        setmetatable(agent_obj, agent_mt)
     end
 
     return agent_obj
@@ -157,7 +190,17 @@ function agent.run(agent_id, input, options)
         active_agents[agent_id].last_run = os.time()
     end
 
-    local result = bridge.run(agent_id, input, opts)
+    -- Convert string input to message format if needed
+    local formatted_input = input
+    if type(input) == "string" then
+        formatted_input = {
+            messages = {
+                {role = "user", content = input}
+            }
+        }
+    end
+    
+    local result = bridge.run(agent_id, formatted_input, opts)
 
     -- Update agent state based on result
     if active_agents[agent_id] then
@@ -664,6 +707,306 @@ end
 -- List active workflows (locally tracked)
 function agent.list_active_workflows()
     return active_workflows
+end
+
+-- ===================================================================
+-- MISSING AGENTADAPTER METHODS - Adding for full compatibility
+-- ===================================================================
+
+-- Standard convenience methods (AgentAdapter naming)
+function agent.createAgent(name, config)
+    return agent.create(name, config)
+end
+
+function agent.createLLMAgent(name, config)
+    local bridge = get_agent_bridge()
+    local agent_config = config or {}
+    local agent_obj = bridge.lifecycleCreateLLM(name, agent_config)
+    
+    if agent_obj and agent_obj.id then
+        active_agents[agent_obj.id] = {
+            name = name,
+            config = agent_config,
+            created_at = os.time(),
+            state = "created",
+            type = "llm"
+        }
+        setmetatable(agent_obj, agent_mt)
+    end
+    
+    return agent_obj
+end
+
+function agent.listAgents()
+    return agent.list()
+end
+
+function agent.getAgent(agent_id)
+    return agent.get(agent_id)
+end
+
+function agent.removeAgent(agent_id)
+    return agent.remove(agent_id)
+end
+
+-- Lifecycle methods (flattened naming)
+function agent.lifecycleCreate(name, config)
+    return agent.create(name, config)
+end
+
+function agent.lifecycleCreateLLM(name, config)
+    return agent.createLLMAgent(name, config)
+end
+
+function agent.lifecycleList()
+    return agent.list()
+end
+
+function agent.lifecycleGet(agent_id)
+    return agent.get(agent_id)
+end
+
+function agent.lifecycleRemove(agent_id)
+    return agent.remove(agent_id)
+end
+
+function agent.lifecycleGetMetrics()
+    local bridge = get_agent_bridge()
+    return bridge.lifecycleGetMetrics()
+end
+
+-- Tool management methods (AgentAdapter naming)
+function agent.registerTool(agent_id, tool_name, tool_config)
+    local bridge = get_agent_bridge()
+    return bridge.registerTool(agent_id, tool_name, tool_config)
+end
+
+function agent.unregisterTool(agent_id, tool_name)
+    local bridge = get_agent_bridge()
+    return bridge.unregisterTool(agent_id, tool_name)
+end
+
+function agent.listTools(agent_id)
+    return agent.get_tools(agent_id)
+end
+
+-- State methods (flattened naming)
+agent.state = {}
+
+function agent.stateGet(agent_id, key)
+    local bridge = get_agent_bridge()
+    return bridge.stateGet(agent_id, key)
+end
+
+function agent.stateSet(agent_id, key, value)
+    local bridge = get_agent_bridge()
+    return bridge.stateSet(agent_id, key, value)
+end
+
+function agent.stateExport(agent_id)
+    local bridge = get_agent_bridge()
+    return bridge.stateExport(agent_id)
+end
+
+function agent.stateImport(agent_id, state_data)
+    local bridge = get_agent_bridge()
+    return bridge.stateImport(agent_id, state_data)
+end
+
+function agent.stateSaveSnapshot(agent_id, snapshot_name)
+    local bridge = get_agent_bridge()
+    return bridge.stateSaveSnapshot(agent_id, snapshot_name)
+end
+
+function agent.stateLoadSnapshot(agent_id, snapshot_name)
+    local bridge = get_agent_bridge()
+    return bridge.stateLoadSnapshot(agent_id, snapshot_name)
+end
+
+function agent.stateListSnapshots(agent_id)
+    local bridge = get_agent_bridge()
+    return bridge.stateListSnapshots(agent_id)
+end
+
+-- State namespace methods
+function agent.state.get(agent_id, key)
+    return agent.stateGet(agent_id, key)
+end
+
+function agent.state.set(agent_id, key, value)
+    return agent.stateSet(agent_id, key, value)
+end
+
+function agent.state.export(agent_id)
+    return agent.stateExport(agent_id)
+end
+
+function agent.state.import(agent_id, state_data)
+    return agent.stateImport(agent_id, state_data)
+end
+
+function agent.state.save_snapshot(agent_id, snapshot_name)
+    return agent.stateSaveSnapshot(agent_id, snapshot_name)
+end
+
+function agent.state.load_snapshot(agent_id, snapshot_name)
+    return agent.stateLoadSnapshot(agent_id, snapshot_name)
+end
+
+function agent.state.list_snapshots(agent_id)
+    return agent.stateListSnapshots(agent_id)
+end
+
+-- Events methods (flattened naming)
+agent.events = {}
+
+function agent.eventsEmit(agent_id, event_name, event_data)
+    local bridge = get_agent_bridge()
+    return bridge.eventsEmit(agent_id, event_name, event_data)
+end
+
+function agent.eventsSubscribe(agent_id, event_name, handler)
+    local bridge = get_agent_bridge()
+    return bridge.eventsSubscribe(agent_id, event_name, handler)
+end
+
+function agent.eventsUnsubscribe(agent_id, event_name, handler_id)
+    local bridge = get_agent_bridge()
+    return bridge.eventsUnsubscribe(agent_id, event_name, handler_id)
+end
+
+function agent.eventsStartRecording(agent_id)
+    local bridge = get_agent_bridge()
+    return bridge.eventsStartRecording(agent_id)
+end
+
+function agent.eventsStopRecording(agent_id)
+    local bridge = get_agent_bridge()
+    return bridge.eventsStopRecording(agent_id)
+end
+
+function agent.eventsReplay(agent_id, events)
+    local bridge = get_agent_bridge()
+    return bridge.eventsReplay(agent_id, events)
+end
+
+-- Events namespace methods
+function agent.events.emit(agent_id, event_name, event_data)
+    return agent.eventsEmit(agent_id, event_name, event_data)
+end
+
+function agent.events.subscribe(agent_id, event_name, handler)
+    return agent.eventsSubscribe(agent_id, event_name, handler)
+end
+
+function agent.events.unsubscribe(agent_id, event_name, handler_id)
+    return agent.eventsUnsubscribe(agent_id, event_name, handler_id)
+end
+
+function agent.events.start_recording(agent_id)
+    return agent.eventsStartRecording(agent_id)
+end
+
+function agent.events.stop_recording(agent_id)
+    return agent.eventsStopRecording(agent_id)
+end
+
+function agent.events.replay(agent_id, events)
+    return agent.eventsReplay(agent_id, events)
+end
+
+-- Profiling methods (flattened naming)
+agent.profiling = {}
+
+function agent.profilingStart(agent_id, profile_name)
+    local bridge = get_agent_bridge()
+    return bridge.profilingStart(agent_id, profile_name)
+end
+
+function agent.profilingStop(agent_id, profile_name)
+    local bridge = get_agent_bridge()
+    return bridge.profilingStop(agent_id, profile_name)
+end
+
+function agent.profilingGetMetrics(agent_id)
+    local bridge = get_agent_bridge()
+    return bridge.profilingGetMetrics(agent_id)
+end
+
+function agent.profilingGetReport(agent_id, profile_name)
+    local bridge = get_agent_bridge()
+    return bridge.profilingGetReport(agent_id, profile_name)
+end
+
+-- Profiling namespace methods
+function agent.profiling.start(agent_id, profile_name)
+    return agent.profilingStart(agent_id, profile_name)
+end
+
+function agent.profiling.stop(agent_id, profile_name)
+    return agent.profilingStop(agent_id, profile_name)
+end
+
+function agent.profiling.get_metrics(agent_id)
+    return agent.profilingGetMetrics(agent_id)
+end
+
+function agent.profiling.get_report(agent_id, profile_name)
+    return agent.profilingGetReport(agent_id, profile_name)
+end
+
+-- Workflow methods (flattened naming) - note: some already exist with different names
+function agent.workflowCreate(name, steps, options)
+    return agent.workflow_create(name, steps, options)
+end
+
+function agent.workflowExecute(workflow_id, input, options)
+    return agent.workflow_run(workflow_id, input, options)
+end
+
+function agent.workflowAddStep(workflow_id, step, position)
+    local bridge = get_workflow_bridge()
+    return bridge.workflowAddStep(workflow_id, step, position)
+end
+
+-- Hooks methods (flattened naming)
+agent.hooks = {}
+
+function agent.hooksRegister(agent_id, hook_name, hook_function)
+    local bridge = get_agent_bridge()
+    return bridge.hooksRegister(agent_id, hook_name, hook_function)
+end
+
+function agent.hooksUnregister(agent_id, hook_name)
+    local bridge = get_agent_bridge()
+    return bridge.hooksUnregister(agent_id, hook_name)
+end
+
+function agent.hooksExecute(agent_id, hook_name, context)
+    local bridge = get_agent_bridge()
+    return bridge.hooksExecute(agent_id, hook_name, context)
+end
+
+function agent.hooksList(agent_id)
+    local bridge = get_agent_bridge()
+    return bridge.hooksList(agent_id)
+end
+
+-- Hooks namespace methods
+function agent.hooks.register(agent_id, hook_name, hook_function)
+    return agent.hooksRegister(agent_id, hook_name, hook_function)
+end
+
+function agent.hooks.unregister(agent_id, hook_name)
+    return agent.hooksUnregister(agent_id, hook_name)
+end
+
+function agent.hooks.execute(agent_id, hook_name, context)
+    return agent.hooksExecute(agent_id, hook_name, context)
+end
+
+function agent.hooks.list(agent_id)
+    return agent.hooksList(agent_id)
 end
 
 -- Export the module

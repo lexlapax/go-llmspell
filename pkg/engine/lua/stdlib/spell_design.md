@@ -217,7 +217,7 @@ spell.library("ml-utils", {
 
 ## Integration with Existing Systems
 
-- **Bridge Architecture**: Leverage existing bridge system for advanced features
+- **Adapter Architecture**: Leverage existing adapter system for advanced features
 - **Module System**: Integrate with current Lua module loading
 - **Global Objects**: Extend rather than replace existing globals
 - **Backward Compatibility**: Ensure existing spells continue to work unchanged

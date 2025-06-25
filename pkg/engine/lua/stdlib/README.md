@@ -1,14 +1,14 @@
 # go-llmspell Lua Standard Library
 
-A comprehensive, bridge-first Lua standard library for go-llmspell that provides scriptable LLM interactions through clean, idiomatic APIs.
+A comprehensive, adapter-based Lua standard library for go-llmspell that provides scriptable LLM interactions through clean, idiomatic APIs.
 
 ## Philosophy
 
-The go-llmspell Lua standard library follows a **bridge-first architecture** where we wrap existing functionality from the go-llms ecosystem rather than reimplementing features. This ensures consistency, reliability, and compatibility while providing script-friendly APIs.
+The go-llmspell Lua standard library follows an **adapter-based architecture** where we wrap existing functionality from the go-llms ecosystem rather than reimplementing features. This ensures consistency, reliability, and compatibility while providing script-friendly APIs.
 
 ### Core Principles
 
-1. **Bridge-First Design**: All functionality wraps go-llms capabilities, never reimplements them
+1. **Adapter-Based Design**: All functionality wraps go-llms capabilities through a clean adapter layer, never reimplements them
 2. **Script-Friendly APIs**: Clean, Lua-idiomatic interfaces that feel natural to script authors
 3. **Comprehensive Testing**: Each module has extensive Go-based tests ensuring reliability
 4. **Async/Promise Support**: Full support for asynchronous operations and Promise patterns
@@ -156,23 +156,29 @@ end)
 
 ## Architecture Integration
 
-### Bridge Pattern
-All modules follow the bridge pattern, wrapping go-llms functionality:
+### Adapter Pattern
+All modules follow the adapter pattern, providing high-level Lua APIs that wrap go-llms functionality through adapters:
 
 ```lua
--- llm.lua bridges go-llms LLM providers
+-- llm.lua uses the LLM adapter to access go-llms providers
 function llm.chat(message, options)
-    -- Validates parameters and forwards to Go bridge
-    return bridge.llm.chat(message, options or {})
+    -- Validates parameters and forwards to adapter
+    return bridges.llm_provider.chat(message, options or {})
 end
 
--- agent.lua bridges go-llms agent management
+-- agent.lua uses the Agent adapter for agent management
 function agent.create(config)
-    -- Type validation then bridge call
+    -- Type validation then adapter call
     validate_agent_config(config)
-    return bridge.agent.create(config)
+    return bridges.agent_manager.create(config)
 end
 ```
+
+The adapter layer provides:
+- **Type conversion** between Lua and Go types
+- **Error handling** with consistent error messages
+- **API standardization** with snake_case naming conventions
+- **Bridge aggregation** for multi-bridge adapters (e.g., observability combines metrics, tracing, and guardrails)
 
 ### Resource Management
 Automatic cleanup and resource lifecycle management:
@@ -246,7 +252,7 @@ end)
 2. **Use promises for async operations** to avoid blocking
 3. **Implement proper error handling** with recovery strategies
 4. **Test thoroughly** using the built-in testing framework
-5. **Follow bridge-first principles** - wrap, don't reimplement
+5. **Follow adapter-first principles** - wrap, don't reimplement
 6. **Document your spells** with clear descriptions and examples
 7. **Use resource management** for cleanup of temporary resources
 8. **Leverage composition** to build complex workflows from simple spells

@@ -43,6 +43,22 @@ local function get_llm_bridge()
     return bridges.llm_core
 end
 
+-- Helper function to get providers bridge (optional)
+local function get_providers_bridge()
+    if bridges and bridges.llm_providers then
+        return bridges.llm_providers
+    end
+    return nil
+end
+
+-- Helper function to get pool bridge (optional) 
+local function get_pool_bridge()
+    if bridges and bridges.llm_pool then
+        return bridges.llm_pool
+    end
+    return nil
+end
+
 -- High-level LLM operation helpers
 
 -- Quick prompt for simple prompting
@@ -556,6 +572,566 @@ function llm.reset_provider_metrics(provider_name)
     local bridge = get_llm_bridge()
     return bridge.resetProviderMetrics(provider_name_to_use)
 end
+
+-- ===================================================================
+-- MISSING LLMADAPTER METHODS - Adding for full compatibility  
+-- ===================================================================
+
+-- Core LLM Methods (from base bridge)
+
+-- Generate text from prompt
+function llm.generate(prompt, options)
+    validate_required(prompt, "prompt")
+    
+    local bridge = get_llm_bridge()
+    local opts = merge_options(options)
+    
+    return bridge.generate(prompt, opts)
+end
+
+-- Generate from message array
+function llm.generateMessage(messages, options)
+    validate_required(messages, "messages")
+    
+    if type(messages) ~= "table" then
+        error("messages must be a table")
+    end
+    
+    local bridge = get_llm_bridge()
+    local opts = merge_options(options)
+    
+    return bridge.generateMessage(messages, opts)
+end
+
+-- Stream response
+function llm.stream(prompt, options)
+    validate_required(prompt, "prompt")
+    
+    local bridge = get_llm_bridge()
+    local opts = merge_options(options)
+    
+    return bridge.stream(prompt, opts)
+end
+
+-- Count tokens in text
+function llm.countTokens(text, model)
+    validate_required(text, "text")
+    
+    local bridge = get_llm_bridge()
+    local model_name = model or ""
+    
+    return bridge.countTokens(text, model_name)
+end
+
+-- Create agent
+function llm.createAgent(config)
+    local bridge = get_llm_bridge()
+    local agent_config = config or {}
+    
+    return bridge.createAgent(agent_config)
+end
+
+-- Agent alias
+function llm.Agent(config)
+    return llm.createAgent(config)
+end
+
+-- Agent completion
+function llm.agentComplete(agentId, prompt, options)
+    validate_required(agentId, "agentId")
+    validate_required(prompt, "prompt")
+    
+    local bridge = get_llm_bridge()
+    local opts = merge_options(options)
+    
+    return bridge.agentComplete(agentId, prompt, opts)
+end
+
+-- Agent streaming
+function llm.agentStream(agentId, prompt, options)
+    validate_required(agentId, "agentId")
+    validate_required(prompt, "prompt")
+    
+    local bridge = get_llm_bridge()
+    local opts = merge_options(options)
+    
+    return bridge.agentStream(agentId, prompt, opts)
+end
+
+-- Convenience Methods
+
+-- Quick completion with default model
+function llm.quick(prompt)
+    validate_required(prompt, "prompt")
+    
+    return llm.generate(prompt)
+end
+
+-- Batch completion
+function llm.batchComplete(prompts, options)
+    if type(prompts) ~= "table" then
+        error("prompts must be a table")
+    end
+    
+    local results = {}
+    local opts = merge_options(options)
+    
+    for i, prompt in ipairs(prompts) do
+        if type(prompt) == "string" then
+            local success, result = pcall(function()
+                return llm.generate(prompt, opts)
+            end)
+            
+            if success then
+                results[i] = result
+            else
+                results[i] = {error = result}
+            end
+        else
+            results[i] = {error = "Invalid prompt type at index " .. i}
+        end
+    end
+    
+    return results
+end
+
+-- Provider Methods (flattened naming)
+
+-- Create provider
+function llm.providersCreate(providerType, name, config)
+    validate_required(providerType, "providerType")
+    validate_required(name, "name")
+    
+    local bridge = get_llm_bridge()
+    local provider_config = config or {}
+    
+    return bridge.createProvider(providerType, name, provider_config)
+end
+
+-- Get provider
+function llm.providersGet(name)
+    validate_required(name, "name")
+    
+    local bridge = get_llm_bridge()
+    return bridge.getProvider(name)
+end
+
+-- List providers
+function llm.providersList()
+    local bridge = get_llm_bridge()
+    return bridge.listProviders()
+end
+
+-- Get provider template
+function llm.providersGetTemplate(templateName)
+    validate_required(templateName, "templateName")
+    
+    local bridge = get_llm_bridge()
+    return bridge.getProviderTemplate(templateName)
+end
+
+-- Create multi-provider
+function llm.providersCreateMulti(name, providerList, strategy, config)
+    validate_required(name, "name")
+    validate_required(providerList, "providerList")
+    validate_required(strategy, "strategy")
+    
+    if type(providerList) ~= "table" then
+        error("providerList must be a table")
+    end
+    
+    local bridge = get_llm_bridge()
+    local provider_config = config or {}
+    
+    return bridge.createMultiProvider(name, providerList, strategy, provider_config)
+end
+
+-- Provider methods that require providers bridge
+local function with_providers_bridge(method_name, ...)
+    local providers_bridge = get_providers_bridge()
+    if not providers_bridge then
+        error("Providers bridge not available for " .. method_name)
+    end
+    return providers_bridge[method_name](...)
+end
+
+-- Create provider from environment
+function llm.providersCreateFromEnvironment(providerType, name)
+    validate_required(providerType, "providerType")
+    validate_required(name, "name")
+    
+    return with_providers_bridge("createProviderFromEnvironment", providerType, name)
+end
+
+-- Remove provider
+function llm.providersRemove(name)
+    validate_required(name, "name")
+    
+    return with_providers_bridge("removeProvider", name)
+end
+
+-- List provider templates
+function llm.providersTemplatesList()
+    return with_providers_bridge("listProviderTemplates")
+end
+
+-- Validate provider config
+function llm.providersTemplatesValidate(providerType, config)
+    validate_required(providerType, "providerType")
+    validate_required(config, "config")
+    
+    if type(config) ~= "table" then
+        error("config must be a table")
+    end
+    
+    return with_providers_bridge("validateProviderConfig", providerType, config)
+end
+
+-- Configure multi-provider
+function llm.providersConfigureMulti(name, config)
+    validate_required(name, "name")
+    validate_required(config, "config")
+    
+    if type(config) ~= "table" then
+        error("config must be a table")
+    end
+    
+    return with_providers_bridge("configureMultiProvider", name, config)
+end
+
+-- Get multi-provider
+function llm.providersGetMulti(name)
+    validate_required(name, "name")
+    
+    return with_providers_bridge("getMultiProvider", name)
+end
+
+-- Create mock provider
+function llm.providersCreateMock(name, responses)
+    validate_required(name, "name")
+    validate_required(responses, "responses")
+    
+    if type(responses) ~= "table" then
+        error("responses must be a table")
+    end
+    
+    return with_providers_bridge("createMockProvider", name, responses)
+end
+
+-- Generate with specific provider
+function llm.providersGenerateWith(providerName, prompt, options)
+    validate_required(providerName, "providerName")
+    validate_required(prompt, "prompt")
+    
+    local opts = merge_options(options)
+    return with_providers_bridge("generateWithProvider", providerName, prompt, opts)
+end
+
+-- Export provider config
+function llm.providersExportConfig()
+    return with_providers_bridge("exportProviderConfig")
+end
+
+-- Import provider config
+function llm.providersImportConfig(config)
+    validate_required(config, "config")
+    
+    if type(config) ~= "table" then
+        error("config must be a table")
+    end
+    
+    return with_providers_bridge("importProviderConfig", config)
+end
+
+-- Set provider metadata
+function llm.providersSetMetadata(providerName, metadata)
+    validate_required(providerName, "providerName")
+    validate_required(metadata, "metadata")
+    
+    if type(metadata) ~= "table" then
+        error("metadata must be a table")
+    end
+    
+    return with_providers_bridge("setProviderMetadata", providerName, metadata)
+end
+
+-- Get provider metadata
+function llm.providersGetMetadata(providerName)
+    validate_required(providerName, "providerName")
+    
+    return with_providers_bridge("getProviderMetadata", providerName)
+end
+
+-- List providers by capability
+function llm.providersListByCapability(capability)
+    validate_required(capability, "capability")
+    
+    return with_providers_bridge("listProvidersByCapability", capability)
+end
+
+-- Pool Methods (flattened naming)
+
+-- Create pool
+function llm.poolCreate(name, providers, strategy, config)
+    validate_required(name, "name")
+    validate_required(providers, "providers")
+    validate_required(strategy, "strategy")
+    
+    if type(providers) ~= "table" then
+        error("providers must be a table")
+    end
+    
+    local bridge = get_llm_bridge()
+    local pool_config = config or {}
+    
+    return bridge.createPool(name, providers, strategy, pool_config)
+end
+
+-- Get pool health
+function llm.poolGetHealth(poolName)
+    validate_required(poolName, "poolName")
+    
+    local bridge = get_llm_bridge()
+    return bridge.getPoolHealth(poolName)
+end
+
+-- Generate with pool
+function llm.poolGenerate(poolName, prompt, options)
+    validate_required(poolName, "poolName")
+    validate_required(prompt, "prompt")
+    
+    local bridge = get_llm_bridge()
+    local opts = merge_options(options)
+    
+    return bridge.generateWithPool(poolName, prompt, opts)
+end
+
+-- Get pool metrics
+function llm.poolGetMetrics(poolName)
+    validate_required(poolName, "poolName")
+    
+    local bridge = get_llm_bridge()
+    return bridge.getPoolMetrics(poolName)
+end
+
+-- Pool methods that require pool bridge
+local function with_pool_bridge(method_name, ...)
+    local pool_bridge = get_pool_bridge()
+    if not pool_bridge then
+        error("Pool bridge not available for " .. method_name)
+    end
+    return pool_bridge[method_name](...)
+end
+
+-- Get pool
+function llm.poolGet(poolName)
+    validate_required(poolName, "poolName")
+    
+    return with_pool_bridge("getPool", poolName)
+end
+
+-- List pools
+function llm.poolList()
+    return with_pool_bridge("listPools")
+end
+
+-- Remove pool
+function llm.poolRemove(poolName)
+    validate_required(poolName, "poolName")
+    
+    return with_pool_bridge("removePool", poolName)
+end
+
+-- Get provider health in pool
+function llm.poolGetProviderHealth(poolName)
+    validate_required(poolName, "poolName")
+    
+    return with_pool_bridge("getProviderHealth", poolName)
+end
+
+-- Reset pool metrics
+function llm.poolResetMetrics(poolName)
+    validate_required(poolName, "poolName")
+    
+    return with_pool_bridge("resetPoolMetrics", poolName)
+end
+
+-- Generate message with pool
+function llm.poolGenerateMessage(poolName, messages, options)
+    validate_required(poolName, "poolName")
+    validate_required(messages, "messages")
+    
+    if type(messages) ~= "table" then
+        error("messages must be a table")
+    end
+    
+    local opts = merge_options(options)
+    return with_pool_bridge("generateMessageWithPool", poolName, messages, opts)
+end
+
+-- Stream with pool
+function llm.poolStream(poolName, prompt, options)
+    validate_required(poolName, "poolName")
+    validate_required(prompt, "prompt")
+    
+    local opts = merge_options(options)
+    return with_pool_bridge("streamWithPool", poolName, prompt, opts)
+end
+
+-- Object pooling methods
+function llm.poolGetResponse()
+    return with_pool_bridge("getResponseFromPool")
+end
+
+function llm.poolReturnResponse(response)
+    validate_required(response, "response")
+    
+    if type(response) ~= "table" then
+        error("response must be a table")
+    end
+    
+    return with_pool_bridge("returnResponseToPool", response)
+end
+
+function llm.poolGetToken()
+    return with_pool_bridge("getTokenFromPool")
+end
+
+function llm.poolReturnToken(token)
+    validate_required(token, "token")
+    
+    if type(token) ~= "table" then
+        error("token must be a table")
+    end
+    
+    return with_pool_bridge("returnTokenToPool", token)
+end
+
+function llm.poolGetChannel()
+    return with_pool_bridge("getChannelFromPool")
+end
+
+function llm.poolReturnChannel(channel)
+    validate_required(channel, "channel")
+    
+    if type(channel) ~= "table" then
+        error("channel must be a table")
+    end
+    
+    return with_pool_bridge("returnChannelToPool", channel)
+end
+
+-- Model Methods (flattened naming)
+
+-- List models
+function llm.modelsList(provider)
+    local bridge = get_llm_bridge()
+    local provider_name = provider or ""
+    
+    return bridge.listModels(provider_name)
+end
+
+-- Get model info
+function llm.modelsGetInfo(modelName)
+    validate_required(modelName, "modelName")
+    
+    local bridge = get_llm_bridge()
+    return bridge.getModelInfo(modelName)
+end
+
+-- Check model capabilities
+function llm.modelsCheckCapabilities(modelName, capability)
+    validate_required(modelName, "modelName")
+    validate_required(capability, "capability")
+    
+    local bridge = get_llm_bridge()
+    return bridge.checkModelCapability(modelName, capability)
+end
+
+-- Namespace Methods (for organized access)
+
+-- Provider namespace
+llm.providers = {
+    create = llm.providersCreate,
+    get = llm.providersGet,
+    list = llm.providersList,
+    getTemplate = llm.providersGetTemplate,
+    createMulti = llm.providersCreateMulti,
+    createFromEnvironment = llm.providersCreateFromEnvironment,
+    remove = llm.providersRemove,
+    templatesList = llm.providersTemplatesList,
+    templatesValidate = llm.providersTemplatesValidate,
+    configureMulti = llm.providersConfigureMulti,
+    getMulti = llm.providersGetMulti,
+    createMock = llm.providersCreateMock,
+    generateWith = llm.providersGenerateWith,
+    exportConfig = llm.providersExportConfig,
+    importConfig = llm.providersImportConfig,
+    setMetadata = llm.providersSetMetadata,
+    getMetadata = llm.providersGetMetadata,
+    listByCapability = llm.providersListByCapability
+}
+
+-- Pool namespace
+llm.pool = {
+    create = llm.poolCreate,
+    getHealth = llm.poolGetHealth,
+    generate = llm.poolGenerate,
+    getMetrics = llm.poolGetMetrics,
+    get = llm.poolGet,
+    list = llm.poolList,
+    remove = llm.poolRemove,
+    getProviderHealth = llm.poolGetProviderHealth,
+    resetMetrics = llm.poolResetMetrics,
+    generateMessage = llm.poolGenerateMessage,
+    stream = llm.poolStream,
+    getResponse = llm.poolGetResponse,
+    returnResponse = llm.poolReturnResponse,
+    getToken = llm.poolGetToken,
+    returnToken = llm.poolReturnToken,
+    getChannel = llm.poolGetChannel,
+    returnChannel = llm.poolReturnChannel
+}
+
+-- Models namespace
+llm.models = {
+    list = llm.modelsList,
+    getInfo = llm.modelsGetInfo,
+    checkCapabilities = llm.modelsCheckCapabilities
+}
+
+-- Constants (from LLMAdapter)
+
+-- Model constants
+llm.MODELS = {
+    GPT4 = "gpt-4",
+    GPT35_TURBO = "gpt-3.5-turbo", 
+    CLAUDE3 = "claude-3",
+    CLAUDE2 = "claude-2"
+}
+
+-- Default options
+llm.DEFAULTS = {
+    temperature = 0.7,
+    maxTokens = 1000,
+    topP = 1.0
+}
+
+-- Error codes
+llm.ERRORS = {
+    RATE_LIMIT = "rate_limit_exceeded",
+    INVALID_MODEL = "invalid_model",
+    CONTEXT_LENGTH = "context_length_exceeded"
+}
+
+-- Pool strategies
+llm.STRATEGIES = {
+    ROUND_ROBIN = "round_robin",
+    FAILOVER = "failover",
+    FASTEST = "fastest",
+    WEIGHTED = "weighted",
+    LEAST_USED = "least_used"
+}
 
 -- Export the module
 return llm

@@ -221,7 +221,7 @@ results.tests -- array of test results
 
 ### 7. Validation Integration
 ```lua
--- Schema validation (bridge to go-llms)
+-- Schema validation (through go-llms adapters)
 testing.validate.schema(data, schema)
 testing.validate.json_schema(data, schema_path)
 
@@ -286,7 +286,7 @@ testing.helpers.capture_logs(func)
 
 ## Implementation Notes
 
-1. **Bridge Integration**: Integrate with existing validation bridge
+1. **Adapter Integration**: Integrate with existing validation infrastructure through adapters
 2. **Async Support**: Use promise library for async test support
 3. **Performance**: Minimize overhead in test execution
 4. **Isolation**: Ensure test isolation and cleanup

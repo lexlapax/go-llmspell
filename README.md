@@ -22,7 +22,7 @@ log.info("Story created!")
 - **🤖 Agent Orchestration**: AI agents with tools and workflows  
 - **⚡ Go Performance**: Native speed with scripting flexibility
 - **🔒 Secure Execution**: Sandboxed scripts with resource limits
-- **🌉 Bridge Architecture**: Leverages go-llms without duplication
+- **🏗️ Adapter Architecture**: Leverages go-llms without duplication
 
 ## 📖 Documentation
 
@@ -40,14 +40,14 @@ log.info("Story created!")
 
 - ✅ **Phase 1** - Engine and Bridge Foundation [COMPLETED - 2025-06-17]
   - 38+ bridges across 13 categories
-  - Pure bridge architecture with zero business logic duplication
+  - Clean adapter-based architecture with zero business logic duplication
   - Complete ScriptValue type system for cross-engine compatibility
 
 - ✅ **Phase 2** - Lua Engine Implementation [COMPLETED - 2025-06-20]
   - ✅ Complete Lua engine with GopherLua integration
   - ✅ Async/coroutine support with promises and channels
   - ✅ Comprehensive Lua standard library (18 modules)
-  - ✅ Bridge integration layer with namespace flattening
+  - ✅ Adapter integration layer with namespace flattening
   - ✅ Development tools: Debugger & Script Validator (100% coverage)
   - ✅ Performance optimization and profiling infrastructure
 
@@ -62,7 +62,7 @@ log.info("Story created!")
 - 🔄 **Phase 4** - JavaScript Engine Implementation [READY TO START]
   - Research goja integration and ES6+ support design
   - Implement complete JavaScript engine with async/await
-  - Create JavaScript standard library bridging go-llms
+  - Create JavaScript standard library with adapter layer for go-llms
 
 - 🔲 **Phase 5** - Tengo Engine Implementation [PLANNED]
 - 🔲 **Phase 6** - Integration and Examples [PLANNED]
@@ -162,15 +162,17 @@ For complete CLI documentation, see: [CLI Usage Guide](docs/cli-usage.md)
 ┌─────────────────────────┐
 │   Spell Scripts         │  ← Your spells (Lua/JS/Tengo)
 ├─────────────────────────┤
-│   Script Engines        │  ← Multi-language execution
+│   Stdlib Modules        │  ← High-level scripting APIs
+├─────────────────────────┤
+│   Adapter Layer         │  ← Type conversion & API standardization
 ├─────────────────────────┤  
-│   Bridge Layer          │  ← Type-safe go-llms access
+│   Bridge Layer          │  ← Direct go-llms access
 ├─────────────────────────┤
 │   go-llms Library       │  ← LLM providers & tools
 └─────────────────────────┘
 ```
 
-**Key Principle**: We bridge to go-llms functionality rather than reimplementing it.
+**Key Principle**: We wrap go-llms functionality through adapters rather than reimplementing it.
 
 ## 🔮 Example Spells
 
@@ -208,7 +210,7 @@ We welcome contributions! See our [Contributing Guidelines](CONTRIBUTING.md) for
 
 - **Development setup** and TDD workflow
 - **Code standards** and quality requirements  
-- **Architecture principles** and bridge-first design
+- **Architecture principles** and adapter-first design
 - **Community guidelines** and communication channels
 
 **Quick development workflow:**

@@ -1,7 +1,7 @@
 # Lua Logging & Debug Library Design
 
 ## Overview
-A comprehensive logging and debug library that bridges the existing go-llmspell logging infrastructure:
+A comprehensive logging and debug library that integrates with the existing go-llmspell logging infrastructure through adapters:
 - util/debug.go - Debug logging with component control
 - util/slog.go - Structured logging with slog
 - util/script_logger.go - Unified script-friendly logger
@@ -215,8 +215,8 @@ local stats = logging.stats({
 
 ### 12. Integration Helpers
 ```lua
--- Create logger from bridge
-local bridge_logger = logging.from_bridge(_G.util_script_logger)
+-- Create logger from adapter
+local adapter_logger = logging.from_adapter(bridges.util_logger)
 
 -- Export logs
 logging.export({
@@ -234,11 +234,11 @@ end)
 
 ## Implementation Notes
 
-1. **Bridge Integration**: Wrap existing bridges (debug, slog, script_logger)
+1. **Adapter Integration**: Wrap existing logging infrastructure through adapters (debug, slog, script_logger)
 2. **Performance**: Lazy evaluation of expensive operations
-3. **Thread Safety**: Use appropriate synchronization from bridges
+3. **Thread Safety**: Use appropriate synchronization from adapters
 4. **Memory Management**: Implement log buffer limits
-5. **Error Handling**: Graceful degradation if bridges unavailable
+5. **Error Handling**: Graceful degradation if adapters unavailable
 
 ## Example Usage
 
