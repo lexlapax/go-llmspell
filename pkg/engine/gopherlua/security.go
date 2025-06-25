@@ -5,6 +5,7 @@ package gopherlua
 
 import (
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -70,8 +71,9 @@ type SecurityConfig struct {
 
 // SecurityManager manages security policies for Lua states
 type SecurityManager struct {
-	mu     sync.RWMutex
-	config SecurityConfig
+	mu           sync.RWMutex
+	config       SecurityConfig
+	outputWriter io.Writer // Writer for print output (optional)
 }
 
 // ResourceMonitor monitors resource usage
@@ -164,6 +166,13 @@ func NewSecurityManager(config SecurityConfig) *SecurityManager {
 	}
 }
 
+// SetOutputWriter sets the writer for print output
+func (sm *SecurityManager) SetOutputWriter(w io.Writer) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sm.outputWriter = w
+}
+
 // NewSecurityManagerFromLevel creates a security manager from a centralized security level
 func NewSecurityManagerFromLevel(level security.SecurityLevel) (*SecurityManager, error) {
 	engineLevel := mapSecurityLevel(level)
@@ -195,10 +204,16 @@ func NewSecurityManagerFromProfile(profile string) (*SecurityManager, error) {
 // LoadLibraries loads allowed libraries into the Lua state
 func (sm *SecurityManager) LoadLibraries(L *lua.LState) error {
 	sm.mu.RLock()
-	defer sm.mu.RUnlock()
+	outputWriter := sm.outputWriter
+	sm.mu.RUnlock()
 
 	// Create safe library loader
 	loader := NewSafeLibraryLoader(sm.config.Level)
+	
+	// Set output writer if configured
+	if outputWriter != nil {
+		loader.SetOutputWriter(outputWriter)
+	}
 
 	// Load libraries
 	if err := loader.LoadLibraries(L, sm.config.AllowedLibraries); err != nil {

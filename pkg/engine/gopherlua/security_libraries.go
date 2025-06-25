@@ -8,6 +8,7 @@ package gopherlua
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	lua "github.com/yuin/gopher-lua"
@@ -21,6 +22,7 @@ type SafeLibraryLoader struct {
 	libraryLoaders  map[string]lua.LGFunction
 	deniedFunctions map[string][]string // library -> functions to remove
 	replacements    map[string]lua.LGFunction
+	outputWriter    io.Writer // Writer for print output (optional)
 }
 
 // NewSafeLibraryLoader creates a new safe library loader.
@@ -48,6 +50,13 @@ func NewSafeLibraryLoader(level SecurityLevel) *SafeLibraryLoader {
 	loader.configureReplacements()
 
 	return loader
+}
+
+// SetOutputWriter sets the writer for print output
+func (sll *SafeLibraryLoader) SetOutputWriter(w io.Writer) {
+	sll.outputWriter = w
+	// Reconfigure replacements to use the new writer
+	sll.configureReplacements()
 }
 
 // LoadLibraries loads the specified libraries with security restrictions.
@@ -162,8 +171,10 @@ func (sll *SafeLibraryLoader) configureReplacements() {
 			}
 		}
 
-		// In production, this could log to a safe location
-		// For now, we just capture it
+		// If an output writer is configured, write to it
+		if sll.outputWriter != nil {
+			fmt.Fprintln(sll.outputWriter, output)
+		}
 
 		return 0
 	}

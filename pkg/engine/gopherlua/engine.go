@@ -67,6 +67,11 @@ type LuaEngine struct {
 	// Bridge management
 	bridgeManager *BridgeManager
 
+	// Adapter management  
+	adapterCreator func(bridgeID string, bridge engine.Bridge) (interface{}, error)
+	adapters       map[string]interface{}
+	adapterMu      sync.RWMutex
+
 	// Resource limits
 	memoryLimit    int64
 	timeoutLimit   time.Duration
@@ -105,9 +110,11 @@ type EngineMetrics struct {
 // The engine must be initialized with Initialize() before use.
 func NewLuaEngine() *LuaEngine {
 	converter := NewLuaTypeConverter()
+	
 	return &LuaEngine{
 		converter:     converter,
 		bridgeManager: NewBridgeManager(converter),
+		adapters:      make(map[string]interface{}),
 		chunkCache: NewChunkCache(ChunkCacheConfig{
 			MaxSize:         100,
 			TTL:             30 * time.Minute,
@@ -368,20 +375,51 @@ func (e *LuaEngine) Shutdown() error {
 		_ = e.bridgeManager.Cleanup()
 	}
 
+	// Cleanup adapters (we don't clear the map to avoid breaking references)
+	// Adapters will be garbage collected when no longer referenced
+
 	e.initialized = false
 	e.shuttingDown = false
 	return nil
 }
 
-// RegisterBridge registers a bridge with the engine
+// Cleanup performs cleanup of the engine resources
+func (e *LuaEngine) Cleanup(ctx context.Context) error {
+	return e.Shutdown()
+}
+
+// RegisterBridge registers a bridge with the engine and creates its adapter
 func (e *LuaEngine) RegisterBridge(bridge engine.Bridge) error {
 	if !e.initialized {
 		return fmt.Errorf("engine not initialized")
 	}
 
+	if bridge == nil {
+		return fmt.Errorf("bridge cannot be nil")
+	}
+
+	bridgeID := bridge.GetID()
+
+	// Create adapter for the bridge if adapter creator is available
+	if e.adapterCreator != nil {
+		adapter, err := e.adapterCreator(bridgeID, bridge)
+		if err != nil {
+			return fmt.Errorf("failed to create adapter for bridge %s: %w", bridgeID, err)
+		}
+
+		// Store adapter
+		e.adapterMu.Lock()
+		e.adapters[bridgeID] = adapter
+		e.adapterMu.Unlock()
+	}
+
 	// Register with engine
 	if err := bridge.RegisterWithEngine(e); err != nil {
-		return fmt.Errorf("failed to register bridge %s with engine: %w", bridge.GetID(), err)
+		// Clean up adapter on failure
+		e.adapterMu.Lock()
+		delete(e.adapters, bridgeID)
+		e.adapterMu.Unlock()
+		return fmt.Errorf("failed to register bridge %s with engine: %w", bridgeID, err)
 	}
 
 	return e.bridgeManager.RegisterBridge(bridge)
@@ -389,7 +427,31 @@ func (e *LuaEngine) RegisterBridge(bridge engine.Bridge) error {
 
 // UnregisterBridge unregisters a bridge from the engine
 func (e *LuaEngine) UnregisterBridge(name string) error {
+	// Remove adapter
+	e.adapterMu.Lock()
+	delete(e.adapters, name)
+	e.adapterMu.Unlock()
+	
 	return e.bridgeManager.UnregisterBridge(name)
+}
+
+// GetAdapter retrieves an adapter by bridge ID
+func (e *LuaEngine) GetAdapter(bridgeID string) interface{} {
+	if bridgeID == "" {
+		return nil
+	}
+	
+	e.adapterMu.RLock()
+	defer e.adapterMu.RUnlock()
+	
+	return e.adapters[bridgeID]
+}
+
+// SetAdapterCreator sets the function used to create adapters
+func (e *LuaEngine) SetAdapterCreator(creator func(bridgeID string, bridge engine.Bridge) (interface{}, error)) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.adapterCreator = creator
 }
 
 // GetBridge retrieves a bridge by name

@@ -2,8 +2,8 @@
 -- ABOUTME: Shows event handling, reactive systems, and asynchronous event flows
 
 -- Required modules
-local core = require("core")
 local agent = require("agent")
+local utils = require("utils")  -- For file operations and sleep
 
 -- Event-Driven Spells Example
 -- This spell demonstrates event-driven patterns:
@@ -24,8 +24,8 @@ print("Scenario: " .. scenario)
 print()
 
 -- Ensure output directory exists
-if not tools.file_exists(output_dir) then
-    tools.create_directory(output_dir)
+if not utils.file_exists(output_dir) then
+    utils.mkdir(output_dir)
 end
 
 -- Helper function for counting table entries
@@ -54,6 +54,12 @@ function EventSystem:on(event_name, handler, options)
     options = options or {}
     if not self.handlers[event_name] then
         self.handlers[event_name] = {}
+    end
+    
+    -- Debug: Check types
+    if type(self.handlers[event_name]) ~= "table" then
+        print("ERROR: self.handlers[event_name] is not a table!", type(self.handlers[event_name]))
+        return
     end
     
     table.insert(self.handlers[event_name], {
@@ -161,13 +167,12 @@ end
 function EventSystem:process_async_queue()
     while #self.async_queue > 0 do
         local task = table.remove(self.async_queue, 1)
-        core.async(function()
-            print("  ⚡ Processing async event: " .. task.event_name)
-            local success, result = pcall(task.handler, task.data)
-            if not success then
-                print("  ⚠️ Async handler error: " .. tostring(result))
-            end
-        end)
+        -- Process async task (simplified without core.async)
+        print("  ⚡ Processing async event: " .. task.event_name)
+        local success, result = pcall(task.handler, task.data)
+        if not success then
+            print("  ⚠️ Async handler error: " .. tostring(result))
+        end
     end
 end
 
@@ -217,8 +222,7 @@ local moderation_state = {
 }
 
 -- Create moderation agent
-local moderator = agent.create({
-    name = "Content Moderator",
+local moderator = agent.create("Content Moderator", {
     model = model,
     system = "You are a content moderator. Analyze content for inappropriate material. Respond with: SAFE, WARNING, or VIOLATION",
     temperature = 0.1
@@ -302,7 +306,7 @@ local test_contents = {
 
 for _, submission in ipairs(test_contents) do
     moderation_system:emit("content_submitted", submission)
-    core.sleep(0.5)  -- Small delay for readability
+    utils.sleep(0.5)  -- Small delay for readability
 end
 
 print()
@@ -373,7 +377,7 @@ doc_processor:add_transition("rejected", "idle", "reset")
 -- Define state handlers
 doc_processor:on_state("uploading", function(data)
     print("  📤 Uploading document...")
-    core.sleep(1)
+    utils.sleep(1)
     doc_processor:trigger("upload_complete", {filename = "document.pdf"})
 end)
 
@@ -381,15 +385,14 @@ doc_processor:on_state("processing", function(data)
     print("  ⚙️ Processing document: " .. (data.data.filename or "unknown"))
     
     -- Simulate processing with agent
-    local processor = agent.create({
-        name = "Document Processor",
+    local processor = agent.create("Document Processor", {
         model = model,
         system = "You process documents. Extract key information.",
         temperature = 0.3
     })
     
     local result = processor:run("Process this document: [Document content here]")
-    core.sleep(1)
+    utils.sleep(1)
     
     doc_processor:trigger("process_complete", {result = result})
 end)
@@ -399,14 +402,14 @@ doc_processor:on_state("reviewing", function(data)
     
     -- Simulate review decision
     local decision = math.random() > 0.3 and "approve" or "reject"
-    core.sleep(1)
+    utils.sleep(1)
     
     doc_processor:trigger(decision, {reason = "Review complete"})
 end)
 
 doc_processor:on_state("approved", function(data)
     print("  ✅ Document approved!")
-    tools.file_write(output_dir .. "/approved_doc.txt", "Document approved: " .. os.date())
+    utils.file_write(output_dir .. "/approved_doc.txt", "Document approved: " .. os.date())
     doc_processor:trigger("reset")
 end)
 
@@ -501,7 +504,7 @@ cascade_system:on("generate_report", function(results)
         )
     end
     
-    tools.file_write(
+    utils.file_write(
         output_dir .. "/cascade_report_" .. cascade_state.reports_generated .. ".txt",
         report
     )
@@ -530,7 +533,7 @@ local test_data = {
 
 for _, data_point in ipairs(test_data) do
     cascade_system:emit("data_received", data_point)
-    core.sleep(0.3)
+    utils.sleep(0.3)
 end
 
 print()
@@ -542,8 +545,7 @@ local async_system = EventSystem:new()
 
 -- Register async handlers
 async_system:on("analyze_text", function(data)
-    local analyzer = agent.create({
-        name = "Text Analyzer",
+    local analyzer = agent.create("Text Analyzer", {
         model = model,
         system = "Analyze text sentiment and key themes.",
         temperature = 0.4
@@ -560,7 +562,7 @@ end, {async = true})
 
 async_system:on("analysis_complete", function(data)
     print("  ✅ Analysis complete for ID: " .. data.id)
-    tools.file_write(
+    utils.file_write(
         output_dir .. "/analysis_" .. data.id .. ".txt",
         "Text: " .. data.text .. "\n\nAnalysis: " .. data.analysis
     )
@@ -582,7 +584,7 @@ end
 -- Process async queue
 print("  ⏳ Processing async queue...")
 async_system:process_async_queue()
-core.sleep(2)  -- Wait for async processing
+utils.sleep(2)  -- Wait for async processing
 
 print()
 
@@ -669,9 +671,11 @@ print()
 
 -- List generated files
 print("Files created in " .. output_dir .. ":")
-local files = tools.list_files(output_dir)
-for _, file in ipairs(files) do
-    print("  - " .. file)
+local files = utils.list_files(output_dir)
+if files then
+    for _, file in ipairs(files) do
+        print("  - " .. file)
+    end
 end
 
 -- Return summary
@@ -688,5 +692,5 @@ return {
         "async_processing",
         "filtering_transformation"
     },
-    files_generated = #files
+    files_generated = files and #files or 0
 }

@@ -208,14 +208,9 @@ func (ta *ToolsAdapter) listTools(L *lua.LState) int {
 		return 2
 	}
 
-	// Convert array result to multiple return values
-	if arrayVal, ok := result.(engine.ArrayValue); ok {
-		return pushArrayAsMultipleValues(L, arrayVal)
-	}
-
-	L.Push(lua.LNil)
-	L.Push(lua.LString("unexpected result type"))
-	return 2
+	// Convert result to Lua table (single return value)
+	L.Push(scriptValueToLua(L, result))
+	return 1
 }
 
 func (ta *ToolsAdapter) searchTools(L *lua.LState) int {
@@ -232,14 +227,9 @@ func (ta *ToolsAdapter) searchTools(L *lua.LState) int {
 		return 2
 	}
 
-	// Convert array result to multiple return values
-	if arrayVal, ok := result.(engine.ArrayValue); ok {
-		return pushArrayAsMultipleValues(L, arrayVal)
-	}
-
-	L.Push(lua.LNil)
-	L.Push(lua.LString("unexpected result type"))
-	return 2
+	// Convert result to Lua table (single return value)
+	L.Push(scriptValueToLua(L, result))
+	return 1
 }
 
 func (ta *ToolsAdapter) getToolInfo(L *lua.LState) int {
@@ -288,14 +278,9 @@ func (ta *ToolsAdapter) getToolCategories(L *lua.LState) int {
 		return 2
 	}
 
-	// Convert array result to multiple return values
-	if arrayVal, ok := result.(engine.ArrayValue); ok {
-		return pushArrayAsMultipleValues(L, arrayVal)
-	}
-
-	L.Push(lua.LNil)
-	L.Push(lua.LString("unexpected result type"))
-	return 2
+	// Convert result to Lua table (single return value)
+	L.Push(scriptValueToLua(L, result))
+	return 1
 }
 
 func (ta *ToolsAdapter) listToolsByCategory(L *lua.LState) int {
@@ -312,14 +297,9 @@ func (ta *ToolsAdapter) listToolsByCategory(L *lua.LState) int {
 		return 2
 	}
 
-	// Convert array result to multiple return values
-	if arrayVal, ok := result.(engine.ArrayValue); ok {
-		return pushArrayAsMultipleValues(L, arrayVal)
-	}
-
-	L.Push(lua.LNil)
-	L.Push(lua.LString("unexpected result type"))
-	return 2
+	// Convert result to Lua table (single return value)
+	L.Push(scriptValueToLua(L, result))
+	return 1
 }
 
 func (ta *ToolsAdapter) listToolsByTags(L *lua.LState) int {
@@ -344,14 +324,9 @@ func (ta *ToolsAdapter) listToolsByTags(L *lua.LState) int {
 		return 2
 	}
 
-	// Convert array result to multiple return values
-	if arrayVal, ok := result.(engine.ArrayValue); ok {
-		return pushArrayAsMultipleValues(L, arrayVal)
-	}
-
-	L.Push(lua.LNil)
-	L.Push(lua.LString("unexpected result type"))
-	return 2
+	// Convert result to Lua table (single return value)
+	L.Push(scriptValueToLua(L, result))
+	return 1
 }
 
 // Tool execution methods
@@ -403,8 +378,12 @@ func (ta *ToolsAdapter) executeToolAsync(L *lua.LState) int {
 func (ta *ToolsAdapter) registerCustomTool(L *lua.LState) int {
 	toolDef := L.CheckTable(1)
 
+	// Convert toolDef to ScriptValue
+	toolDefValue := luaToScriptValue(toolDef)
+	
+	
 	args := []engine.ScriptValue{
-		luaToScriptValue(toolDef),
+		toolDefValue,
 	}
 
 	result, err := ta.bridge.ExecuteMethod(context.Background(), "registerCustomTool", args)
@@ -747,14 +726,9 @@ func (ta *ToolsAdapter) listToolsByPermission(L *lua.LState) int {
 		return 2
 	}
 
-	// Convert array result to multiple return values
-	if arrayVal, ok := result.(engine.ArrayValue); ok {
-		return pushArrayAsMultipleValues(L, arrayVal)
-	}
-
-	L.Push(lua.LNil)
-	L.Push(lua.LString("unexpected result type"))
-	return 2
+	// Convert result to Lua table (single return value)
+	L.Push(scriptValueToLua(L, result))
+	return 1
 }
 
 // listToolsByResourceUsage lists tools matching resource criteria
@@ -777,14 +751,9 @@ func (ta *ToolsAdapter) listToolsByResourceUsage(L *lua.LState) int {
 		return 2
 	}
 
-	// Convert array result to multiple return values
-	if arrayVal, ok := result.(engine.ArrayValue); ok {
-		return pushArrayAsMultipleValues(L, arrayVal)
-	}
-
-	L.Push(lua.LNil)
-	L.Push(lua.LString("unexpected result type"))
-	return 2
+	// Convert result to Lua table (single return value)
+	L.Push(scriptValueToLua(L, result))
+	return 1
 }
 
 // getToolDocumentation gets comprehensive documentation for a tool

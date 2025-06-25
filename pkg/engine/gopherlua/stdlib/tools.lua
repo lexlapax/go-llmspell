@@ -114,9 +114,19 @@ function tools.define(name, description, schema, func)
     -- Register with bridge if available
     local bridge = get_tools_bridge()
     if bridge and bridge.registerCustomTool then
-        local success = bridge.registerCustomTool(tool_def)
+        -- The bridge method returns two values: success (bool) and error (string/nil)
+        local result = {bridge.registerCustomTool(tool_def)}
+        local success = result[1]
+        local err = result[2]
+        
+        -- If only one value returned, treat it as success boolean
+        if #result == 1 then
+            success = result[1]
+            err = nil
+        end
+        
         if not success then
-            error("Failed to register tool with bridge: " .. name)
+            error("Failed to register tool with bridge: " .. name .. " - " .. tostring(err))
         end
     end
 
@@ -254,7 +264,7 @@ function tools.execute_safe(tool, params, options)
             -- Try to get from bridge
             local bridge = get_tools_bridge()
             if bridge and bridge.getToolInfo then
-                local info = bridge:getToolInfo(tool_name)
+                local info = bridge.getToolInfo(tool_name)
                 if info then
                     tool_def = info
                 end
@@ -280,13 +290,28 @@ function tools.execute_safe(tool, params, options)
 
     -- Execute with error handling
     local success, result, error_msg
-    if options.timeout then
-        -- Execute with timeout (simplified - would need promise integration)
-        success, result = pcall(tool_def.execute, params)
-        error_msg = not success and result or nil
+    
+    -- Check if this is a custom tool with execute method or a bridge tool
+    if tool_def.execute then
+        -- Custom tool with execute method
+        if options.timeout then
+            -- Execute with timeout (simplified - would need promise integration)
+            success, result = pcall(tool_def.execute, params)
+            error_msg = not success and result or nil
+        else
+            success, result = pcall(tool_def.execute, params)
+            error_msg = not success and result or nil
+        end
     else
-        success, result = pcall(tool_def.execute, params)
-        error_msg = not success and result or nil
+        -- Bridge tool - use executeTool
+        local bridge = get_tools_bridge()
+        if bridge and bridge.executeTool then
+            success, result = pcall(bridge.executeTool, tool_name, params)
+            error_msg = not success and result or nil
+        else
+            success = false
+            error_msg = "No execute method found for tool: " .. tool_name
+        end
     end
 
     local duration = os.clock() - start_time

@@ -218,9 +218,10 @@ func TestToolsBridge_ExecuteMethod_RegisterCustomTool(t *testing.T) {
 	result, err := bridge.ExecuteMethod(ctx, "registerCustomTool", args)
 	assert.NoError(t, err)
 
-	// registerCustomTool returns nil on success
-	_, ok := result.(types.NilValue)
-	assert.True(t, ok, "Expected NilValue from registerCustomTool")
+	// registerCustomTool returns true on success
+	boolVal, ok := result.(types.BoolValue)
+	assert.True(t, ok, "Expected BoolValue from registerCustomTool")
+	assert.True(t, boolVal.Value(), "Expected true from registerCustomTool")
 
 	// Verify tool was registered
 	toolInfo, err := bridge.ExecuteMethod(ctx, "getToolInfo", []types.ScriptValue{sv("customTool")})

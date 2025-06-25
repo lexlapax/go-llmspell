@@ -13,14 +13,19 @@ import (
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 )
 
+// ModuleCreator defines a function that creates Lua modules from bridge IDs via adapters.
+// This callback pattern allows BridgeManager to access adapter functionality without import cycles.
+type ModuleCreator func(bridgeID string) (lua.LGFunction, error)
+
 // BridgeManager manages bridge registration and Lua module creation.
 // It handles the bridge lifecycle, creates Lua modules for each bridge,
 // and provides thread-safe access to registered bridges.
 type BridgeManager struct {
-	bridges   map[string]engine.Bridge
-	modules   map[string]*lua.LTable
-	converter *LuaTypeConverter
-	mu        sync.RWMutex
+	bridges       map[string]engine.Bridge
+	modules       map[string]*lua.LTable
+	converter     *LuaTypeConverter
+	moduleCreator ModuleCreator
+	mu            sync.RWMutex
 }
 
 // NewBridgeManager creates a new bridge manager.
@@ -30,6 +35,18 @@ func NewBridgeManager(converter *LuaTypeConverter) *BridgeManager {
 		bridges:   make(map[string]engine.Bridge),
 		modules:   make(map[string]*lua.LTable),
 		converter: converter,
+	}
+}
+
+// NewBridgeManagerWithModuleCreator creates a new bridge manager with adapter support.
+// The moduleCreator callback allows the manager to create Lua modules via adapters
+// instead of directly from bridges, enabling the adapter pattern without import cycles.
+func NewBridgeManagerWithModuleCreator(converter *LuaTypeConverter, moduleCreator ModuleCreator) *BridgeManager {
+	return &BridgeManager{
+		bridges:       make(map[string]engine.Bridge),
+		modules:       make(map[string]*lua.LTable),
+		converter:     converter,
+		moduleCreator: moduleCreator,
 	}
 }
 
@@ -118,10 +135,10 @@ func (bm *BridgeManager) ListBridges() []string {
 	return ids
 }
 
-// CreateLuaModule creates a Lua module for a bridge
+// CreateLuaModule creates a Lua module for a bridge via its adapter
 func (bm *BridgeManager) CreateLuaModule(L *lua.LState, bridgeID string) (*lua.LTable, error) {
 	bm.mu.RLock()
-	bridge, exists := bm.bridges[bridgeID]
+	_, exists := bm.bridges[bridgeID]
 	bm.mu.RUnlock()
 
 	if !exists {
@@ -136,28 +153,25 @@ func (bm *BridgeManager) CreateLuaModule(L *lua.LState, bridgeID string) (*lua.L
 	}
 	bm.mu.Unlock()
 
-	// Create new module
-	module := L.NewTable()
-
-	// Add metadata
-	meta := bridge.GetMetadata()
-	metaTable := L.NewTable()
-	metaTable.RawSetString("name", lua.LString(meta.Name))
-	metaTable.RawSetString("version", lua.LString(meta.Version))
-	metaTable.RawSetString("description", lua.LString(meta.Description))
-	if meta.Author != "" {
-		metaTable.RawSetString("author", lua.LString(meta.Author))
+	// Every bridge must have an adapter - no fallback to direct bridge methods
+	if bm.moduleCreator == nil {
+		return nil, fmt.Errorf("no module creator configured - every bridge requires an adapter")
 	}
-	if meta.License != "" {
-		metaTable.RawSetString("license", lua.LString(meta.License))
-	}
-	module.RawSetString("_meta", metaTable)
 
-	// Add methods
-	methods := bridge.Methods()
-	for _, methodInfo := range methods {
-		wrappedMethod := bm.wrapBridgeMethod(L, bridge, methodInfo)
-		module.RawSetString(methodInfo.Name, wrappedMethod)
+	// Create module via adapter (required for all bridges)
+	moduleFunc, err := bm.moduleCreator(bridgeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create adapter module for bridge %s: %w", bridgeID, err)
+	}
+
+	// Execute the adapter's module creation function
+	moduleFunc(L)
+	adapterModule := L.Get(-1)
+	L.Pop(1)
+	
+	module, ok := adapterModule.(*lua.LTable)
+	if !ok {
+		return nil, fmt.Errorf("adapter for bridge %s did not return a valid Lua table", bridgeID)
 	}
 
 	// Cache the module
@@ -167,6 +181,7 @@ func (bm *BridgeManager) CreateLuaModule(L *lua.LState, bridgeID string) (*lua.L
 
 	return module, nil
 }
+
 
 // wrapBridgeMethod wraps a bridge method for Lua consumption
 func (bm *BridgeManager) wrapBridgeMethod(L *lua.LState, bridge engine.Bridge, methodInfo engine.MethodInfo) *lua.LFunction {

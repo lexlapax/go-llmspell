@@ -257,7 +257,7 @@ func TestCrossAdapterCommunication(t *testing.T) {
 			local agent = require("agent")
 			
 			-- List available tools
-			local toolList = {tools.listTools()}
+			local toolList = tools.listTools()
 			assert(#toolList == 2, "should have 2 tools")
 			
 			-- Create agent
@@ -833,3 +833,4 @@ func (ta *testAdapter) RegisterAsModule(ms *gopherlua.ModuleSystem, name string)
 	}
 	return ms.Register(def)
 }
+

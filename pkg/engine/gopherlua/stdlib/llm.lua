@@ -54,9 +54,9 @@ function llm.quick_prompt(prompt, options)
 
     -- Use current provider if set, otherwise use default
     if current_provider then
-        return bridge:generateWithProvider(current_provider, prompt, opts)
+        return bridge.generateWithProvider(current_provider, prompt, opts)
     else
-        return bridge:generate(prompt, opts)
+        return bridge.generate(prompt, opts)
     end
 end
 
@@ -99,9 +99,9 @@ function llm.chat_session(system_prompt)
 
         local response
         if current_provider then
-            response = bridge:generateWithProvider(current_provider, self.messages, opts)
+            response = bridge.generateWithProvider(current_provider, self.messages, opts)
         else
-            response = bridge:generateMessage(self.messages, opts)
+            response = bridge.generateMessage(self.messages, opts)
         end
 
         -- Add assistant response to conversation
@@ -164,9 +164,9 @@ function llm.streaming_response(prompt, callback, options)
     -- Start streaming
     local stream_id
     if current_provider then
-        stream_id = bridge:streamWithProvider(current_provider, prompt, opts)
+        stream_id = bridge.streamWithProvider(current_provider, prompt, opts)
     else
-        stream_id = bridge:stream(prompt, opts)
+        stream_id = bridge.stream(prompt, opts)
     end
 
     if not stream_id then
@@ -176,7 +176,7 @@ function llm.streaming_response(prompt, callback, options)
     -- Read stream in chunks and call callback
     local function read_stream()
         while true do
-            local chunk = bridge:readStream(stream_id)
+            local chunk = bridge.readStream(stream_id)
             if not chunk then
                 break -- Stream ended
             end
@@ -189,7 +189,7 @@ function llm.streaming_response(prompt, callback, options)
         end
 
         -- Close stream
-        bridge:closeStream(stream_id)
+        bridge.closeStream(stream_id)
     end
 
     -- Return promise that resolves when streaming completes
@@ -211,9 +211,9 @@ function llm.batch_process(prompts, options)
         if type(prompt) == "string" then
             local response
             if current_provider then
-                response = bridge:generateWithProvider(current_provider, prompt, opts)
+                response = bridge.generateWithProvider(current_provider, prompt, opts)
             else
-                response = bridge:generate(prompt, opts)
+                response = bridge.generate(prompt, opts)
             end
             results[i] = response
         else
@@ -251,23 +251,21 @@ function llm.use_provider(name, config)
 
     local bridge = get_llm_bridge()
 
-    -- Set provider configuration if provided
-    if config then
-        bridge:setProvider(name, config)
+    -- Set the provider in the bridge
+    local success, err = pcall(function()
+        if config then
+            return bridge.setProvider(name, config)
+        else
+            -- Try setting with default config
+            return bridge.setProvider(name, {})
+        end
+    end)
+    
+    if not success then
+        error("Failed to set provider '" .. name .. "': " .. tostring(err))
     end
 
     current_provider = name
-
-    -- Verify provider is working
-    local success, err = pcall(function()
-        return bridge:testProviderConnection(name)
-    end)
-
-    if not success then
-        current_provider = nil
-        error("Failed to connect to provider '" .. name .. "': " .. tostring(err))
-    end
-
     return true
 end
 
@@ -279,7 +277,7 @@ end
 -- List available providers
 function llm.list_providers()
     local bridge = get_llm_bridge()
-    return bridge:listProviders()
+    return bridge.listProviders()
 end
 
 -- Compare providers with the same prompt
@@ -298,7 +296,7 @@ function llm.compare_providers(prompt, providers, options)
     for i, provider_name in ipairs(providers) do
         local start_time = os.clock()
         local success, response = pcall(function()
-            return bridge:generateWithProvider(provider_name, prompt, opts)
+            return bridge.generateWithProvider(provider_name, prompt, opts)
         end)
         local end_time = os.clock()
 
@@ -321,13 +319,13 @@ function llm.setup_fallback_chain(providers)
     end
 
     local bridge = get_llm_bridge()
-    return bridge:setFallbackChain(providers)
+    return bridge.setFallbackChain(providers)
 end
 
 -- Get current fallback chain
 function llm.get_fallback_chain()
     local bridge = get_llm_bridge()
-    return bridge:getFallbackChain()
+    return bridge.getFallbackChain()
 end
 
 -- Generate with fallback chain
@@ -336,7 +334,7 @@ function llm.generate_with_fallback(prompt, options)
 
     local opts = merge_options(options)
     local bridge = get_llm_bridge()
-    local fallback_chain = bridge:getFallbackChain()
+    local fallback_chain = bridge.getFallbackChain()
 
     if not fallback_chain or #fallback_chain == 0 then
         error("No fallback chain configured. Use llm.setup_fallback_chain() first.")
@@ -347,7 +345,7 @@ function llm.generate_with_fallback(prompt, options)
     -- Try each provider in the fallback chain
     for _, provider_name in ipairs(fallback_chain) do
         local success, result = pcall(function()
-            return bridge:generateWithProvider(provider_name, prompt, opts)
+            return bridge.generateWithProvider(provider_name, prompt, opts)
         end)
 
         if success then
@@ -372,16 +370,16 @@ function llm.find_model(requirements)
     local bridge = get_llm_bridge()
 
     -- Get all providers if none specified
-    local providers_to_check = requirements.providers or bridge:listProviders()
+    local providers_to_check = requirements.providers or bridge.listProviders()
 
     local suitable_models = {}
 
     for _, provider_name in ipairs(providers_to_check) do
-        local models = bridge:listModels(provider_name)
+        local models = bridge.listModels(provider_name)
 
         if models then
             for _, model in ipairs(models) do
-                local model_info = bridge:getModelInfo(model.id)
+                local model_info = bridge.getModelInfo(model.id)
 
                 -- Check requirements
                 local suitable = true
@@ -433,10 +431,10 @@ function llm.model_info(model_id, provider)
 
     if provider then
         -- Get info for specific provider
-        return bridge:getModelInfo(model_id, provider)
+        return bridge.getModelInfo(model_id, provider)
     else
         -- Get info from current or default provider
-        return bridge:getModelInfo(model_id)
+        return bridge.getModelInfo(model_id)
     end
 end
 
@@ -459,7 +457,7 @@ function llm.cost_estimate(operation, model, provider)
     end
 
     -- Get model info for cost calculation
-    local model_info = bridge:getModelInfo(model_id, provider_name)
+    local model_info = bridge.getModelInfo(model_id, provider_name)
 
     if not model_info or not model_info.cost_per_token then
         return {
@@ -501,7 +499,7 @@ function llm.get_provider_capabilities(provider_name)
     end
 
     local bridge = get_llm_bridge()
-    return bridge:getCapabilities(provider_name_to_use)
+    return bridge.getCapabilities(provider_name_to_use)
 end
 
 -- Utility functions
@@ -544,7 +542,7 @@ function llm.get_provider_metrics(provider_name)
     end
 
     local bridge = get_llm_bridge()
-    return bridge:getProviderMetrics(provider_name_to_use)
+    return bridge.getProviderMetrics(provider_name_to_use)
 end
 
 -- Reset provider metrics
@@ -556,7 +554,7 @@ function llm.reset_provider_metrics(provider_name)
     end
 
     local bridge = get_llm_bridge()
-    return bridge:resetProviderMetrics(provider_name_to_use)
+    return bridge.resetProviderMetrics(provider_name_to_use)
 end
 
 -- Export the module

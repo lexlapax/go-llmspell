@@ -312,6 +312,11 @@ func (e *ScriptExecutor) ExecuteWithOptions(ctx context.Context, script string, 
 		engineSecurityLevel = mapSecurityLevelToEngineLevel(securityLevel)
 	}
 	config.EngineOptions["security_level"] = engineSecurityLevel
+	
+	// Add output writer if provided
+	if options.OutputWriter != nil {
+		config.EngineOptions["output_writer"] = options.OutputWriter
+	}
 
 	// Get engine with bridges loaded lazily
 	engine, err := e.engineManager.GetEngine(engineName, config, security.SecurityLevel(securityLevel), registry.FeatureSet(featureSet))

@@ -90,6 +90,18 @@ end
 -- Simulate conversation
 local topics = {"Lua programming", "state management", "AI assistants"}
 
+-- Create an agent instead of using llm directly
+print("Creating assistant agent...")
+print("Model:", state.get("app.user_preferences.model"))
+print("Temperature:", state.get("app.user_preferences.temperature"))
+
+local assistant = agent.create("Assistant", {
+    model = state.get("app.user_preferences.model"),
+    system = "You are a helpful assistant with memory of our conversation.",
+    temperature = state.get("app.user_preferences.temperature")
+})
+print("Assistant created successfully")
+
 for i, topic in ipairs(topics) do
     print("\nTurn " .. i .. ": Discussing " .. topic)
     
@@ -99,17 +111,21 @@ for i, topic in ipairs(topics) do
     
     -- Get response with context
     local messages = get_conversation_context()
-    table.insert(messages, {role = "user", content = user_message})
     
-    local response = llm.complete({
-        model = state.get("app.user_preferences.model"),
-        messages = messages,
-        temperature = state.get("app.user_preferences.temperature"),
-        max_tokens = state.get("app.user_preferences.max_tokens")
-    })
+    -- Build context-aware prompt
+    local context_prompt = ""
+    for _, msg in ipairs(messages) do
+        if msg.role ~= "system" then
+            context_prompt = context_prompt .. msg.role .. ": " .. msg.content .. "\n"
+        end
+    end
+    context_prompt = context_prompt .. "user: " .. user_message .. "\nassistant: "
+    
+    -- Get response using agent
+    local response = assistant:run(context_prompt)
     
     -- Save response to history
-    add_to_history("assistant", response.content)
+    add_to_history("assistant", response)
     
     -- Track topics
     state.update("app.session_data.topics_discussed", function(topics)
@@ -118,7 +134,7 @@ for i, topic in ipairs(topics) do
         return topics
     end)
     
-    print("Assistant: " .. string.sub(response.content, 1, 100) .. "...")
+    print("Assistant: " .. string.sub(response, 1, 100) .. "...")
 end
 
 -- Show session summary
@@ -154,10 +170,9 @@ print()
 print("=== Example 3: Shared State Between Agents ===")
 
 -- Create a research coordinator agent
-local coordinator = agent.create({
-    name = "Research Coordinator",
+local coordinator = agent.create("Research Coordinator", {
     model = "gpt-4",
-    instructions = [[
+    system = [[
         You coordinate research tasks. 
         Track progress in shared state under 'research.progress'.
         Assign tasks to researcher agents.
@@ -165,16 +180,14 @@ local coordinator = agent.create({
 })
 
 -- Create researcher agents
-local researcher1 = agent.create({
-    name = "Researcher 1",
+local researcher1 = agent.create("Researcher 1", {
     model = "gpt-3.5-turbo",
-    instructions = "You research technical topics and update shared state with findings."
+    system = "You research technical topics and update shared state with findings."
 })
 
-local researcher2 = agent.create({
-    name = "Researcher 2", 
+local researcher2 = agent.create("Researcher 2", {
     model = "gpt-3.5-turbo",
-    instructions = "You research practical applications and update shared state with findings."
+    system = "You research practical applications and update shared state with findings."
 })
 
 -- Initialize research state

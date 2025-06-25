@@ -711,7 +711,7 @@ function events.bridge.emit(event_type, data)
         }
 
         -- Publish through bridge
-        return bridges.agent_events:publishEvent(event)
+        return bridges.agent_events.publishEvent(event)
     else
         -- Fallback to local emission
         return events.emit(event_type, data)
@@ -721,7 +721,7 @@ end
 -- Subscribe through bridge if available
 function events.bridge.subscribe(pattern, handler)
     if bridges and bridges.agent_events then
-        return bridges.agent_events:subscribe(pattern, handler)
+        return bridges.agent_events.subscribe(pattern, handler)
     else
         -- Fallback to local subscription with pattern support
         return events.filter(pattern, handler)

@@ -9,6 +9,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 )
 
@@ -130,6 +131,9 @@ type RunnerOptions struct {
 
 	// Debug enables debug mode for this execution
 	Debug bool
+	
+	// OutputWriter for print output (optional)
+	OutputWriter io.Writer
 }
 
 // RunnerOption is a function that configures RunnerOptions.

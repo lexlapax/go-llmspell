@@ -74,6 +74,7 @@ func (c *RunCmd) Run(ctx context.Context) error {
 			SecurityLevel: string(securityLevel),
 			FeatureSet:    string(featureSet),
 			Timeout:       time.Duration(c.Timeout) * time.Second,
+			OutputWriter:  os.Stdout,
 		}
 
 		// Execute the script content directly with options
@@ -104,6 +105,7 @@ func (c *RunCmd) Run(ctx context.Context) error {
 			Timeout:       time.Duration(c.Timeout) * time.Second,
 			SecurityLevel: string(securityLevel),
 			FeatureSet:    string(featureSet),
+			OutputWriter:  os.Stdout,
 		}
 
 		// Execute the file content with options

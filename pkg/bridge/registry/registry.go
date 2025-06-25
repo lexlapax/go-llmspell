@@ -137,6 +137,11 @@ func createStateBridges() ([]types.Bridge, error) {
 	}
 	bridges = append(bridges, stateContextBridge)
 
+	// Note: StateManagerBridge requires a types.StateManager instance
+	// which would typically come from go-llms. Since we don't have a 
+	// default implementation available, scripts that need state_manager
+	// will need to create their own or use state_context instead.
+
 	return bridges, nil
 }
 

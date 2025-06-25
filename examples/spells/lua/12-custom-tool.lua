@@ -21,32 +21,30 @@ local core = require("core")
 -- Example 1: Basic Custom Tool
 print("=== Example 1: Basic Custom Tool ===")
 
--- Define a calculator tool
-local calculator_tool = {
-    name = "calculator",
-    description = "Performs basic mathematical operations",
-    schema = {
-        type = "object",
-        properties = {
+-- Define a calculator tool using tools.define
+local calculator_tool = tools.define(
+    "calculator",
+    "Performs basic mathematical operations",
+    {
+        parameters = {
             operation = {
                 type = "string",
-                enum = {"add", "subtract", "multiply", "divide"},
-                description = "The mathematical operation to perform"
+                required = true,
+                description = "The mathematical operation to perform (add, subtract, multiply, divide)"
             },
             a = {
                 type = "number",
+                required = true,
                 description = "First operand"
             },
             b = {
-                type = "number", 
+                type = "number",
+                required = true,
                 description = "Second operand"
             }
-        },
-        required = {"operation", "a", "b"}
+        }
     },
-    
-    -- Implementation
-    execute = function(params)
+    function(params)
         local a = params.a
         local b = params.b
         
@@ -65,14 +63,11 @@ local calculator_tool = {
             error("Unknown operation: " .. params.operation)
         end
     end
-}
-
--- Register the tool
-tools.register(calculator_tool)
-print("Registered calculator tool")
+)
+print("Defined calculator tool: " .. calculator_tool.name)
 
 -- Test the tool directly
-local calc_result = tools.execute("calculator", {
+local calc_result = tools.execute_safe("calculator", {
     operation = "multiply",
     a = 7,
     b = 8
@@ -91,32 +86,29 @@ local weather_data = {
     ["Sydney"] = {temp = 68, condition = "Clear", humidity = 55}
 }
 
-local weather_tool = {
-    name = "get_weather",
-    description = "Get current weather for a city",
-    schema = {
-        type = "object",
-        properties = {
+local weather_tool = tools.define(
+    "get_weather",
+    "Get current weather for a city",
+    {
+        parameters = {
             city = {
                 type = "string",
+                required = true,
                 description = "City name"
             },
             units = {
                 type = "string",
-                enum = {"fahrenheit", "celsius"},
-                description = "Temperature units",
-                default = "fahrenheit"
+                required = false,
+                description = "Temperature units (fahrenheit or celsius)"
             }
-        },
-        required = {"city"}
+        }
     },
-    
-    execute = function(params)
+    function(params)
         local city = params.city
         local units = params.units or "fahrenheit"
         
         -- Simulate API call delay
-        core.sleep(0.1)
+        -- core.sleep(0.1) -- sleep not available in core module
         
         local data = weather_data[city]
         if not data then
@@ -144,12 +136,10 @@ local weather_tool = {
             timestamp = os.time()
         }
     end
-}
-
-tools.register(weather_tool)
+)
 
 -- Test weather tool
-local weather = tools.execute("get_weather", {city = "New York", units = "celsius"})
+local weather = tools.execute_safe("get_weather", {city = "New York", units = "celsius"})
 print(string.format("Weather in %s: %.1f°C, %s, %d%% humidity",
     weather.city, weather.temperature, weather.condition, weather.humidity))
 print()
@@ -158,64 +148,46 @@ print()
 print("=== Example 3: Tool with Validation and Error Handling ===")
 
 -- Create a text analysis tool
-local text_analyzer_tool = {
-    name = "analyze_text",
-    description = "Analyzes text for various metrics and patterns",
-    schema = {
-        type = "object",
-        properties = {
+local text_analyzer_tool = tools.define(
+    "analyze_text",
+    "Analyzes text for various metrics and patterns",
+    {
+        parameters = {
             text = {
                 type = "string",
-                description = "Text to analyze",
-                minLength = 1,
-                maxLength = 10000
+                required = true,
+                description = "Text to analyze (1-10000 chars)"
             },
             analyses = {
-                type = "array",
-                items = {
-                    type = "string",
-                    enum = {"word_count", "char_count", "sentiment", "language", "readability"}
-                },
-                description = "Types of analysis to perform",
-                default = {"word_count", "char_count"}
+                type = "table",
+                required = false,
+                description = "Types of analysis to perform: word_count, char_count, sentiment, language, readability"
             }
-        },
-        required = {"text"}
+        }
     },
-    
-    -- Custom validation
-    validate = function(params)
-        if not params.text or #params.text == 0 then
-            return false, "Text cannot be empty"
-        end
-        
-        if #params.text > 10000 then
-            return false, "Text too long (max 10000 characters)"
-        end
-        
-        -- Validate analyses
-        if params.analyses then
-            for _, analysis in ipairs(params.analyses) do
-                local valid = false
-                for _, allowed in ipairs({"word_count", "char_count", "sentiment", "language", "readability"}) do
-                    if analysis == allowed then
-                        valid = true
-                        break
-                    end
-                end
-                if not valid then
-                    return false, "Invalid analysis type: " .. analysis
-                end
-            end
-        end
-        
-        return true
-    end,
-    
-    execute = function(params)
+    function(params)
         local text = params.text
         local analyses = params.analyses or {"word_count", "char_count"}
         local results = {}
+        
+        -- Validation
+        if not text or #text == 0 then
+            error("Text cannot be empty")
+        end
+        
+        if #text > 10000 then
+            error("Text too long (max 10000 characters)")
+        end
+        
+        -- Validate analyses
+        if analyses then
+            local allowed = {word_count = true, char_count = true, sentiment = true, language = true, readability = true}
+            for _, analysis in ipairs(analyses) do
+                if not allowed[analysis] then
+                    error("Invalid analysis type: " .. analysis)
+                end
+            end
+        end
         
         for _, analysis in ipairs(analyses) do
             if analysis == "word_count" then
@@ -294,12 +266,10 @@ local text_analyzer_tool = {
         results.text_sample = string.sub(text, 1, 50) .. "..."
         return results
     end
-}
-
-tools.register(text_analyzer_tool)
+)
 
 -- Test with validation
-local analysis = tools.execute("analyze_text", {
+local analysis = tools.execute_safe("analyze_text", {
     text = "This is a great example of custom tool creation. It's wonderful!",
     analyses = {"word_count", "sentiment", "readability"}
 })
@@ -355,7 +325,7 @@ local research_tool = {
         })
         
         -- Step 2: Analyze the topic text
-        local topic_analysis = tools.execute("analyze_text", {
+        local topic_analysis = tools.execute_safe("analyze_text", {
             text = topic,
             analyses = {"word_count", "language"}
         })
@@ -392,10 +362,16 @@ local research_tool = {
     end
 }
 
-tools.register(research_tool)
+-- Register the research tool
+tools.define(
+    research_tool.name,
+    research_tool.description,
+    research_tool.schema,
+    research_tool.execute
+)
 
 -- Use the composite tool
-local research = tools.execute("research_assistant", {
+local research = tools.execute_safe("research_assistant", {
     topic = "Custom Tools in LLM Applications",
     depth = "standard"
 })
@@ -480,7 +456,12 @@ local converters = {
 
 -- Register all converters
 for _, converter in ipairs(converters) do
-    tools.register(converter)
+    tools.define(
+        converter.name,
+        converter.description,
+        converter.schema,
+        converter.execute
+    )
     print("Registered: " .. converter.name)
 end
 

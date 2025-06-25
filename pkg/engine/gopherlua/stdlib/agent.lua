@@ -59,7 +59,7 @@ function agent.create(name, config)
     local agent_config = config or {}
 
     -- Create agent through bridge
-    local agent_obj = bridge:lifecycleCreate(name, agent_config)
+    local agent_obj = bridge.lifecycleCreate(name, agent_config)
 
     if agent_obj and agent_obj.id then
         -- Track active agent locally
@@ -82,7 +82,7 @@ function agent.configure(agent_id, settings)
     local bridge = get_agent_bridge()
 
     -- Update agent configuration
-    local success = bridge:stateSet(agent_id, settings)
+    local success = bridge.stateSet(agent_id, settings)
 
     if success and active_agents[agent_id] then
         -- Update local tracking
@@ -101,7 +101,7 @@ function agent.clone(source_agent_id, new_name, modifications)
     local bridge = get_agent_bridge()
 
     -- Get source agent state
-    local source_state = bridge:stateGet(source_agent_id)
+    local source_state = bridge.stateGet(source_agent_id)
     if not source_state then
         error("Source agent not found: " .. tostring(source_agent_id))
     end
@@ -118,13 +118,13 @@ function agent.get(agent_id)
     validate_required(agent_id, "agent_id")
 
     local bridge = get_agent_bridge()
-    return bridge:lifecycleGet(agent_id)
+    return bridge.lifecycleGet(agent_id)
 end
 
 -- List all agents
 function agent.list()
     local bridge = get_agent_bridge()
-    return bridge:lifecycleList()
+    return bridge.lifecycleList()
 end
 
 -- Remove an agent
@@ -132,7 +132,7 @@ function agent.remove(agent_id)
     validate_required(agent_id, "agent_id")
 
     local bridge = get_agent_bridge()
-    local success = bridge:lifecycleRemove(agent_id)
+    local success = bridge.lifecycleRemove(agent_id)
 
     if success and active_agents[agent_id] then
         active_agents[agent_id] = nil
@@ -157,7 +157,7 @@ function agent.run(agent_id, input, options)
         active_agents[agent_id].last_run = os.time()
     end
 
-    local result = bridge:run(agent_id, input, opts)
+    local result = bridge.run(agent_id, input, opts)
 
     -- Update agent state based on result
     if active_agents[agent_id] then
@@ -182,7 +182,7 @@ function agent.run_async(agent_id, input, options)
             active_agents[agent_id].last_run = os.time()
         end
 
-        local result = bridge:runAsync(agent_id, input, opts)
+        local result = bridge.runAsync(agent_id, input, opts)
 
         -- Update agent state based on result
         if active_agents[agent_id] then
@@ -402,7 +402,7 @@ function agent.add_tools(agent_id, tools)
     local success_count = 0
 
     for _, tool in ipairs(tools) do
-        local success = bridge:registerTool(agent_id, tool)
+        local success = bridge.registerTool(agent_id, tool)
         if success then
             success_count = success_count + 1
         end
@@ -440,7 +440,7 @@ function agent.get_tools(agent_id)
     validate_required(agent_id, "agent_id")
 
     local bridge = get_agent_bridge()
-    return bridge:listTools(agent_id)
+    return bridge.listTools(agent_id)
 end
 
 -- Create a tool chain (pipeline of tools)
@@ -506,12 +506,12 @@ function agent.workflow_create(name, steps, options)
         type = "sequential", -- sequential, parallel, conditional, loop
     })
 
-    local workflow = bridge:create(name, workflow_config)
+    local workflow = bridge.create(name, workflow_config)
 
     if workflow and workflow.id then
         -- Add steps to workflow
         for _, step in ipairs(steps) do
-            bridge:addStep(workflow.id, step)
+            bridge.addStep(workflow.id, step)
         end
 
         -- Track workflow locally
@@ -540,7 +540,7 @@ function agent.workflow_run(workflow_id, input, options)
         active_workflows[workflow_id].last_run = os.time()
     end
 
-    local result = bridge:execute(workflow_id, input, opts)
+    local result = bridge.execute(workflow_id, input, opts)
 
     -- Update workflow state based on result
     if active_workflows[workflow_id] then
@@ -631,7 +631,7 @@ function agent.get_status(agent_id)
     validate_required(agent_id, "agent_id")
 
     local bridge = get_agent_bridge()
-    local agent_info = bridge:lifecycleGet(agent_id)
+    local agent_info = bridge.lifecycleGet(agent_id)
     local local_info = active_agents[agent_id]
 
     return {
@@ -646,7 +646,7 @@ function agent.get_workflow_status(workflow_id)
     validate_required(workflow_id, "workflow_id")
 
     local bridge = get_workflow_bridge()
-    local workflow_info = bridge:get(workflow_id)
+    local workflow_info = bridge.get(workflow_id)
     local local_info = active_workflows[workflow_id]
 
     return {

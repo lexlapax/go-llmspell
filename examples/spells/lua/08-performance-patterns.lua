@@ -5,6 +5,7 @@
 local core = require("core")
 local agent = require("agent")
 local data = require("data")
+local utils = require("utils")  -- Add utils for file operations
 
 -- Performance Patterns Example
 -- This spell demonstrates performance optimization techniques:
@@ -26,8 +27,8 @@ print("Model: " .. model)
 print()
 
 -- Ensure output directory exists
-if not tools.file_exists(output_dir) then
-    tools.create_directory(output_dir)
+if not utils.file_exists(output_dir) then
+    utils.mkdir(output_dir)
 end
 
 -- Performance monitoring utilities
@@ -316,7 +317,7 @@ end
 function RequestBatcher:auto_flush()
     core.async(function()
         while true do
-            core.sleep(0.5)
+            utils.sleep(0.5)
             if os.time() - self.last_flush >= self.flush_interval and #self.queue > 0 then
                 self:flush()
             end
@@ -342,11 +343,11 @@ for i = 1, 7 do
         batch_results[i] = response
         print("  ✓ Received response for request " .. i)
     end)
-    core.sleep(0.2)  -- Simulate time between requests
+    utils.sleep(0.2)  -- Simulate time between requests
 end
 
 -- Ensure final flush
-core.sleep(2.5)
+utils.sleep(2.5)
 print("  Completed " .. #batch_results .. " batched requests")
 print()
 
@@ -623,7 +624,7 @@ for i = 1, 6 do
                 local result = agent:run("Analyze the number " .. i)
                 
                 -- Simulate work
-                core.sleep(math.random() * 2)
+                utils.sleep(math.random() * 2)
                 
                 -- Release agent
                 pool:release(id)
@@ -673,7 +674,7 @@ end
 -- Generate performance report
 local perf_report = create_performance_report()
 local report_json = data.to_json(perf_report, {pretty = true})
-tools.file_write(output_dir .. "/performance-report.json", report_json)
+utils.file_write(output_dir .. "/performance-report.json", report_json)
 
 print("\nPerformance Dashboard:")
 print("  📊 Cache Performance:")
@@ -719,7 +720,7 @@ print()
 
 -- List generated files
 print("Files created in " .. output_dir .. ":")
-local files = tools.list_files(output_dir)
+local files = utils.list_files(output_dir)
 for _, file in ipairs(files) do
     print("  - " .. file)
 end

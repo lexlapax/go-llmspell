@@ -205,8 +205,9 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		err = L.DoString(`
 			local tools = require("tools")
 			
-			-- List all tools - handles array as multiple return values
-			local toolList = {tools.listTools()}
+			-- List all tools - returns a single table
+			local toolList = tools.listTools()
+			assert(type(toolList) == "table", "listTools should return a table")
 			assert(#toolList == 2, "should have 2 tools")
 			
 			-- Check first tool
@@ -256,13 +257,15 @@ func TestToolsAdapter_ToolDiscovery(t *testing.T) {
 		err = L.DoString(`
 			local tools = require("tools")
 			
-			-- Search for math tools
-			local mathTools = {tools.searchTools("math")}
+			-- Search for math tools - returns a single table
+			local mathTools = tools.searchTools("math")
+			assert(type(mathTools) == "table", "searchTools should return a table")
 			assert(#mathTools == 1, "should find 1 math tool")
 			assert(mathTools[1].name == "calculator", "should find calculator")
 			
 			-- Search for non-existent tools
-			local noTools = {tools.searchTools("nonexistent")}
+			local noTools = tools.searchTools("nonexistent")
+			assert(type(noTools) == "table", "searchTools should return a table")
 			assert(#noTools == 0, "should find no tools")
 		`)
 		assert.NoError(t, err)
@@ -701,19 +704,22 @@ func TestToolsAdapter_Categories(t *testing.T) {
 		err = L.DoString(`
 			local tools = require("tools")
 			
-			-- Get all categories
-			local categories = {tools.getCategories()}
+			-- Get all categories - returns a single table
+			local categories = tools.getCategories()
+			assert(type(categories) == "table", "getCategories should return a table")
 			assert(#categories == 4, "should have 4 categories")
 			assert(categories[1] == "math", "should have math category")
 			
-			-- List tools by category
-			local mathTools = {tools.listByCategory("math")}
+			-- List tools by category - returns a single table
+			local mathTools = tools.listByCategory("math")
+			assert(type(mathTools) == "table", "listByCategory should return a table")
 			assert(#mathTools == 2, "should have 2 math tools")
 			assert(mathTools[1].name == "calculator", "should have calculator")
 			assert(mathTools[2].name == "statistics", "should have statistics")
 			
 			-- List tools for empty category
-			local emptyTools = {tools.listByCategory("nonexistent")}
+			local emptyTools = tools.listByCategory("nonexistent")
+			assert(type(emptyTools) == "table", "listByCategory should return a table")
 			assert(#emptyTools == 0, "should have no tools")
 		`)
 		assert.NoError(t, err)
@@ -871,8 +877,9 @@ func TestToolsAdapter_ConvenienceMethods(t *testing.T) {
 		err = L.DoString(`
 			local tools = require("tools")
 			
-			-- List tools by multiple tags
-			local taggedTools = {tools.listByTags({"api", "weather"})}
+			-- List tools by multiple tags - returns a single table
+			local taggedTools = tools.listByTags({"api", "weather"})
+			assert(type(taggedTools) == "table", "listByTags should return a table")
 			assert(#taggedTools == 2, "should find 2 tools")
 			assert(taggedTools[1].name == "tool1", "should have tool1")
 			assert(taggedTools[2].name == "tool2", "should have tool2")
@@ -1059,13 +1066,15 @@ func TestToolsAdapter_RegistryEnhancement(t *testing.T) {
 			assert(tool.version == "2.0.0", "should have version")
 			assert(tool.is_deterministic == true, "should be deterministic")
 			
-			-- Test listToolsByPermission
-			local netTools = {tools.listToolsByPermission("network")}
+			-- Test listToolsByPermission - returns a single table
+			local netTools = tools.listToolsByPermission("network")
+			assert(type(netTools) == "table", "listToolsByPermission should return a table")
 			assert(#netTools == 1, "should find 1 network tool")
 			assert(netTools[1].name == "api_tool", "should have api_tool")
 			
-			-- Test listToolsByResourceUsage
-			local lightTools = {tools.listToolsByResourceUsage({maxMemory = "low"})}
+			-- Test listToolsByResourceUsage - returns a single table
+			local lightTools = tools.listToolsByResourceUsage({maxMemory = "low"})
+			assert(type(lightTools) == "table", "listToolsByResourceUsage should return a table")
 			assert(#lightTools == 1, "should find 1 light tool")
 			assert(lightTools[1].name == "light_tool", "should have light_tool")
 			

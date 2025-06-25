@@ -5,6 +5,7 @@ package gopherlua
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
@@ -39,6 +40,9 @@ type FactoryConfig struct {
 
 	// DisableStdlib prevents loading of stdlib modules
 	DisableStdlib bool
+	
+	// OutputWriter for print output (optional)
+	OutputWriter io.Writer
 }
 
 // LStateFactory creates configured Lua VM instances.
@@ -104,6 +108,11 @@ func (f *LStateFactory) Create() (*lua.LState, error) {
 	L := lua.NewState(opts)
 	if L == nil {
 		return nil, fmt.Errorf("failed to create Lua state")
+	}
+
+	// Set output writer on SecurityManager if provided
+	if config.OutputWriter != nil {
+		config.SecurityManager.SetOutputWriter(config.OutputWriter)
 	}
 
 	// Load libraries using SecurityManager

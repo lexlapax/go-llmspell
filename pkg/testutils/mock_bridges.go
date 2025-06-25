@@ -270,7 +270,9 @@ func (b *MockBridge) RegisterWithEngine(engine engine.ScriptEngine) error {
 		return b.registerError
 	}
 
-	return engine.RegisterBridge(b)
+	// Mock bridge just records successful registration
+	b.initialized = true
+	return nil
 }
 
 func (b *MockBridge) Methods() []engine.MethodInfo {
