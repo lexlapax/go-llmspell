@@ -72,7 +72,7 @@ type LuaEngine struct {
 	bridgeMapMu   sync.RWMutex
 
 	// Adapter management  
-	adapterFactory *factory.AdapterFactory
+	adapterFactory AdapterFactoryInterface
 	adapters       map[string]interface{}
 	adapterMu      sync.RWMutex
 
@@ -119,6 +119,56 @@ func NewLuaEngine() *LuaEngine {
 		converter:      converter,
 		bridgeMap:      make(map[string]engine.Bridge),
 		adapterFactory: factory.NewAdapterFactory(),
+		adapters:       make(map[string]interface{}),
+		chunkCache: converters.NewChunkCache(converters.ChunkCacheConfig{
+			MaxSize:         100,
+			TTL:             30 * time.Minute,
+			EnableDiskCache: false,
+		}),
+		profiler: NewProfiler(), // Initialize with default profiler
+	}
+	
+	// Create moduleCreator closure that accesses adapters
+	moduleCreator := func(bridgeID string) (lua.LGFunction, error) {
+		adapter := e.GetAdapter(bridgeID)
+		if adapter == nil {
+			return nil, fmt.Errorf("no adapter found for bridge %s", bridgeID)
+		}
+		
+		// Type assert to get CreateLuaModule method
+		type moduleProvider interface {
+			CreateLuaModule() lua.LGFunction
+		}
+		
+		provider, ok := adapter.(moduleProvider)
+		if !ok {
+			return nil, fmt.Errorf("adapter for bridge %s does not implement CreateLuaModule", bridgeID)
+		}
+		
+		return provider.CreateLuaModule(), nil
+	}
+	
+	// Create BridgeManager with moduleCreator
+	e.bridgeManager = NewBridgeManagerWithModuleCreator(converter, moduleCreator)
+	
+	return e
+}
+
+// AdapterFactoryInterface defines the interface for adapter factories.
+// This allows dependency injection of custom factories for testing.
+type AdapterFactoryInterface interface {
+	CreateAdapter(bridgeID string, bridgeMap map[string]engine.Bridge) (interface{}, error)
+}
+
+// NewLuaEngineWithFactory creates a new Lua script engine with a custom adapter factory.
+// This constructor allows dependency injection for testing with mock factories.
+func NewLuaEngineWithFactory(adapterFactory AdapterFactoryInterface) *LuaEngine {
+	converter := converters.NewLuaTypeConverter()
+	
+	e := &LuaEngine{
+		converter:      converter,
+		bridgeMap:      make(map[string]engine.Bridge),
+		adapterFactory: adapterFactory,
 		adapters:       make(map[string]interface{}),
 		chunkCache: converters.NewChunkCache(converters.ChunkCacheConfig{
 			MaxSize:         100,

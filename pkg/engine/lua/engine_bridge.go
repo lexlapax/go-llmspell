@@ -241,8 +241,41 @@ func (bm *BridgeManager) LoadBridgeModules(L *lua.LState) error {
 	}
 	bm.mu.RUnlock()
 
-	// Create a bridges global table
-	bridgesTable := L.NewTable()
+	// Get existing bridges table or create new one
+	var bridgesTable *lua.LTable
+	existingBridges := L.GetGlobal("bridges")
+	if existingBridges.Type() == lua.LTTable {
+		bridgesTable = existingBridges.(*lua.LTable)
+		
+		// Remove bridge modules that are no longer registered
+		// but preserve any custom non-bridge keys
+		var keysToRemove []string
+		bridgesTable.ForEach(func(key lua.LValue, value lua.LValue) {
+			if keyStr, ok := key.(lua.LString); ok {
+				keyString := string(keyStr)
+				// Check if this key represents a bridge that's no longer registered
+				bm.mu.RLock()
+				_, stillExists := bm.bridges[keyString]
+				bm.mu.RUnlock()
+				
+				// If it's a Lua table (likely a bridge module) and the bridge no longer exists, remove it
+				if value.Type() == lua.LTTable && !stillExists {
+					// Additional check: see if this looks like a bridge ID pattern
+					// This helps distinguish bridge modules from custom state
+					if len(keyString) > 3 && (keyString[0] != '_') { // Simple heuristic
+						keysToRemove = append(keysToRemove, keyString)
+					}
+				}
+			}
+		})
+		
+		// Remove identified old bridge modules
+		for _, key := range keysToRemove {
+			bridgesTable.RawSetString(key, lua.LNil)
+		}
+	} else {
+		bridgesTable = L.NewTable()
+	}
 
 	for _, bridgeID := range bridgeIDs {
 		module, err := bm.CreateLuaModule(L, bridgeID)
@@ -256,7 +289,7 @@ func (bm *BridgeManager) LoadBridgeModules(L *lua.LState) error {
 		L.SetGlobal(bridgeID, module)
 	}
 
-	// Set global bridges table
+	// Set global bridges table (preserving custom state)
 	L.SetGlobal("bridges", bridgesTable)
 
 	return nil

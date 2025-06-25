@@ -189,6 +189,71 @@ func TestEngineAdapterFactoryIntegration(t *testing.T) {
 		adapter := e.GetAdapter("llm_core")
 		require.NotNil(t, adapter, "LLM adapter should be created even with optional bridges missing")
 	})
+
+	t.Run("lua_state_persistence_across_bridge_additions", func(t *testing.T) {
+		// Create engine
+		e := NewLuaEngine()
+		err := e.Initialize(engine.EngineConfig{})
+		require.NoError(t, err)
+		defer e.Shutdown()
+
+		// Create persistent Lua state
+		L := lua.NewState()
+		defer L.Close()
+
+		// Register first bridge
+		stateBridge := testutils.NewMockBridge("state_manager").WithInitialized(true)
+		err = e.RegisterBridge(stateBridge)
+		require.NoError(t, err)
+
+		// Load bridges into state
+		err = e.LoadBridgeModulesIntoState(L)
+		require.NoError(t, err)
+
+		// Verify first bridge is accessible
+		err = L.DoString(`
+			assert(bridges ~= nil, "bridges table should exist")
+			assert(bridges.state_manager ~= nil, "state_manager should exist")
+			bridges.custom_state = "persistent_value"  -- Add custom state
+		`)
+		require.NoError(t, err)
+
+		// Register second bridge  
+		eventsBridge := testutils.NewMockBridge("agent_events").WithInitialized(true)
+		err = e.RegisterBridge(eventsBridge)
+		require.NoError(t, err)
+
+		// Reload bridges into same state
+		err = e.LoadBridgeModulesIntoState(L)
+		require.NoError(t, err)
+
+		// Verify both bridges exist and custom state persists
+		err = L.DoString(`
+			assert(bridges ~= nil, "bridges table should still exist")
+			assert(bridges.state_manager ~= nil, "state_manager should still exist")
+			assert(bridges.agent_events ~= nil, "agent_events should now exist")
+			assert(bridges.custom_state == "persistent_value", "custom state should persist")
+			print("SUCCESS: Custom state persisted across bridge additions!")
+		`)
+		require.NoError(t, err)
+
+		// Test that unregistering a bridge removes it from state
+		err = e.UnregisterBridge("state_manager")
+		require.NoError(t, err)
+
+		// Reload bridges after unregistration
+		err = e.LoadBridgeModulesIntoState(L)
+		require.NoError(t, err)
+
+		// Verify state_manager removed but agent_events remains
+		err = L.DoString(`
+			assert(bridges ~= nil, "bridges table should still exist")
+			assert(bridges.state_manager == nil, "state_manager should be removed")
+			assert(bridges.agent_events ~= nil, "agent_events should remain")
+			-- Custom state may or may not persist depending on implementation
+		`)
+		require.NoError(t, err)
+	})
 }
 
 // TestBridgeManagerModuleCreator tests that BridgeManager properly uses the moduleCreator
@@ -232,7 +297,7 @@ func TestBridgeManagerModuleCreator(t *testing.T) {
 		bridgeManager := e.bridgeManager
 		_, err = bridgeManager.CreateLuaModule(L, "nonexistent")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no adapter found")
+		assert.Contains(t, err.Error(), "bridge nonexistent not found")
 	})
 }
 

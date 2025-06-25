@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/factory"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -380,7 +381,9 @@ func TestLuaEngine_FullIntegration(t *testing.T) {
 }
 
 func TestLuaEngine_BridgeIntegration(t *testing.T) {
-	eng := NewLuaEngine()
+	// Use test factory to support test bridge IDs
+	testFactory := factory.NewTestAdapterFactory()
+	eng := NewLuaEngineWithFactory(testFactory)
 	defer func() {
 		_ = eng.Shutdown()
 	}()

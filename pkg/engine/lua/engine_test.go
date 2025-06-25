@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/factory"
 )
 
 func TestLuaEngine_Lifecycle(t *testing.T) {
@@ -608,7 +609,9 @@ func (b *testBridge) RequiredPermissions() []engine.Permission {
 }
 
 func TestLuaEngine_BridgeManagement(t *testing.T) {
-	eng := NewLuaEngine()
+	// Use test factory to support test bridge IDs
+	testFactory := factory.NewTestAdapterFactory()
+	eng := NewLuaEngineWithFactory(testFactory)
 	defer func() {
 		_ = eng.Shutdown()
 	}()

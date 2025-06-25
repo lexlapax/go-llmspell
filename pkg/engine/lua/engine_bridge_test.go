@@ -14,6 +14,7 @@ import (
 
 	"github.com/lexlapax/go-llmspell/pkg/engine"
 	"github.com/lexlapax/go-llmspell/pkg/engine/lua/converters"
+	"github.com/lexlapax/go-llmspell/pkg/engine/lua/factory"
 	"github.com/lexlapax/go-llmspell/pkg/testutils"
 )
 
@@ -418,7 +419,9 @@ func TestLuaEngine_BridgeValidation(t *testing.T) {
 }
 
 func TestLuaEngine_MultipleBridgeManagement(t *testing.T) {
-	eng := NewLuaEngine()
+	// Use test factory to support test bridge IDs
+	testFactory := factory.NewTestAdapterFactory()
+	eng := NewLuaEngineWithFactory(testFactory)
 	defer func() {
 		_ = eng.Shutdown()
 	}()

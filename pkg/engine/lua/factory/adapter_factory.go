@@ -98,11 +98,32 @@ func (f *AdapterFactory) CreateAdapter(bridgeID string, bridgeMap map[string]eng
 		return impl.NewToolsAdapter(bridge), nil
 
 	// Observability (requires multiple bridges)
-	case "observability_metrics":
-		// Observability adapter needs tracing and guardrails bridges
-		tracingBridge := bridgeMap["observability_tracing"]      // May be nil
-		guardrailsBridge := bridgeMap["observability_guardrails"] // May be nil
-		return impl.NewObservabilityAdapter(bridge, tracingBridge, guardrailsBridge), nil
+	case "observability_metrics", "observability_tracing", "observability_guardrails":
+		// Observability adapter needs all three bridges
+		var metricsBridge, tracingBridge, guardrailsBridge engine.Bridge
+		
+		// Determine which bridge we have and look up the others
+		switch bridgeID {
+		case "observability_metrics":
+			metricsBridge = bridge
+			tracingBridge = bridgeMap["observability_tracing"]      // May be nil
+			guardrailsBridge = bridgeMap["observability_guardrails"] // May be nil
+		case "observability_tracing":
+			metricsBridge = bridgeMap["observability_metrics"]       // May be nil
+			tracingBridge = bridge
+			guardrailsBridge = bridgeMap["observability_guardrails"] // May be nil
+		case "observability_guardrails":
+			metricsBridge = bridgeMap["observability_metrics"]       // May be nil
+			tracingBridge = bridgeMap["observability_tracing"]       // May be nil
+			guardrailsBridge = bridge
+		}
+		
+		// At least one bridge must be available
+		if metricsBridge == nil && tracingBridge == nil && guardrailsBridge == nil {
+			return nil, fmt.Errorf("at least one observability bridge required")
+		}
+		
+		return impl.NewObservabilityAdapter(guardrailsBridge, metricsBridge, tracingBridge), nil
 
 	// Model info
 	case "llm_modelinfo":
