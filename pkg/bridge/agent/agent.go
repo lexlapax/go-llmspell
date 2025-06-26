@@ -12,6 +12,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/lexlapax/go-llmspell/pkg/bridge/types"
@@ -44,6 +46,7 @@ type AgentBridge struct {
 	eventStorage  events.EventStorage   // Storage for event replay
 	eventReplayer *events.EventReplayer // Event replay functionality
 	profiler      *profiling.Profiler   // Performance profiling
+	engine        types.ScriptEngine    // Reference to engine for inter-bridge communication
 }
 
 // NewAgentBridge creates a new agent bridge.
@@ -122,10 +125,12 @@ func (b *AgentBridge) IsInitialized() bool {
 }
 
 // RegisterWithEngine registers the bridge with a script types.
-// Delegates to the engine's RegisterBridge method for proper integration.
+// Stores the engine reference to enable inter-bridge communication.
 func (b *AgentBridge) RegisterWithEngine(engine types.ScriptEngine) error {
-	// Bridge registration is handled by the caller (types.RegisterBridge)
-	// This method can be used for additional setup if needed
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	
+	b.engine = engine
 	return nil
 }
 
@@ -715,12 +720,25 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []typ
 		// Create agent based on type
 		var agent types.BaseAgent
 
-		// For examples, create a mock agent that can respond
-		// In production, this would integrate with real LLM providers
-		baseAgent := agentcore.NewBaseAgent(name, description, domain.AgentType(agentTypeStr))
-		agent = &MockAgent{
-			BaseAgent:   baseAgent,
-			AgentConfig: config,
+		// Check if model is specified in config - if so, create LLM agent
+		if modelName, hasModel := config["model"].(string); hasModel && modelName != "" {
+			// This is an LLM agent request
+			// For now, still create a mock agent but mark it as LLM type
+			baseAgent := agentcore.NewBaseAgent(name, description, domain.AgentTypeLLM)
+			agent = &MockAgent{
+				BaseAgent:   baseAgent,
+				AgentConfig: config,
+			}
+			// TODO: When provider integration is ready, create real LLM agent:
+			// provider := b.getProviderForModel(modelName)
+			// agent = agentcore.NewAgent(name, provider)
+		} else {
+			// Regular agent based on type
+			baseAgent := agentcore.NewBaseAgent(name, description, domain.AgentType(agentTypeStr))
+			agent = &MockAgent{
+				BaseAgent:   baseAgent,
+				AgentConfig: config,
+			}
 		}
 
 		// Store agent with its internal ID, not the provided name
@@ -731,6 +749,48 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []typ
 			"id":   types.NewStringValue(agent.ID()),
 			"type": types.NewStringValue(string(agent.Type())),
 			"name": types.NewStringValue(agent.Name()),
+		}
+		return types.NewObjectValue(result), nil
+
+	case "createLLMAgent":
+		b.mu.Lock()
+		defer b.mu.Unlock()
+
+		if len(args) < 2 {
+			return types.NewErrorValue(fmt.Errorf("createLLMAgent requires name and config parameters")), nil
+		}
+		
+		name := args[0].(types.StringValue).Value()
+		config := args[1].ToGo().(map[string]interface{})
+		
+		// Extract model from config
+		modelName, ok := config["model"].(string)
+		if !ok || modelName == "" {
+			return types.NewErrorValue(fmt.Errorf("createLLMAgent requires 'model' in config")), nil
+		}
+		
+		// For now, create a MockAgent marked as LLM type with the model config
+		// TODO: Integrate with real LLM providers when available
+		description := "LLM Agent"
+		if desc, ok := config["description"].(string); ok {
+			description = desc
+		}
+		
+		baseAgent := agentcore.NewBaseAgent(name, description, domain.AgentTypeLLM)
+		agent := &MockAgent{
+			BaseAgent:   baseAgent,
+			AgentConfig: config,
+		}
+		
+		// Store agent
+		b.agents[agent.ID()] = agent
+		
+		// Return agent info
+		result := map[string]types.ScriptValue{
+			"id":   types.NewStringValue(agent.ID()),
+			"type": types.NewStringValue("llm"),
+			"name": types.NewStringValue(name),
+			"model": types.NewStringValue(modelName),
 		}
 		return types.NewObjectValue(result), nil
 
@@ -1602,15 +1662,61 @@ func (m *MockAgent) Run(ctx context.Context, state *domain.State) (*domain.State
 		return state, fmt.Errorf("no messages provided")
 	}
 	
-	// Get system prompt from config
+	// Get model and system prompt from config
+	modelName, _ := m.AgentConfig["model"].(string)
+	if modelName == "" {
+		modelName = "mock-model"
+	}
+	
 	systemPrompt, _ := m.AgentConfig["system"].(string)
 	if systemPrompt == "" {
 		systemPrompt = "You are a helpful assistant"
 	}
 	
-	// Create a mock response based on the agent's name and system prompt
-	response := fmt.Sprintf("[Mock %s Response] %s: I received your message and would respond based on my role: %s", 
-		m.BaseAgent.Name(), m.BaseAgent.Name(), systemPrompt)
+	// Extract the last user message
+	var userMessage string
+	if msgList, ok := messages.([]interface{}); ok && len(msgList) > 0 {
+		// Get the last message
+		if lastMsg, ok := msgList[len(msgList)-1].(map[string]interface{}); ok {
+			if content, ok := lastMsg["content"].(string); ok {
+				userMessage = content
+			}
+		}
+	}
+	
+	// Create a more realistic mock response based on the agent's configuration
+	var response string
+	
+	// Check if API keys are set
+	openaiKey := os.Getenv("OPENAI_API_KEY")
+	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
+	
+	if (strings.HasPrefix(modelName, "gpt") && openaiKey == "") ||
+	   (strings.HasPrefix(modelName, "claude") && anthropicKey == "") {
+		// No API key set for the requested model
+		response = fmt.Sprintf("no active provider set")
+	} else {
+		// Simulate a model-appropriate response
+		agentType := m.BaseAgent.Name()
+		
+		// Generate context-aware mock responses
+		if strings.Contains(strings.ToLower(systemPrompt), "analyst") {
+			response = fmt.Sprintf("Based on my analysis of '%s', here are three key insights:\n\n1. [Analysis Point 1]\n2. [Analysis Point 2]\n3. [Analysis Point 3]\n\n[Mock %s response using %s]", 
+				userMessage, agentType, modelName)
+		} else if strings.Contains(strings.ToLower(systemPrompt), "optimist") {
+			response = fmt.Sprintf("This is wonderful! '%s' presents amazing opportunities for growth and innovation. [Mock %s response using %s]",
+				userMessage, agentType, modelName)
+		} else if strings.Contains(strings.ToLower(systemPrompt), "pessimist") {
+			response = fmt.Sprintf("I have concerns about '%s'. There are significant risks and challenges to consider. [Mock %s response using %s]",
+				userMessage, agentType, modelName)
+		} else if strings.Contains(strings.ToLower(systemPrompt), "step-by-step") {
+			response = fmt.Sprintf("Let me think through '%s' step by step:\n\n1. Understanding: %s\n2. Reasoning: [Step-by-step analysis]\n3. Conclusion: [Final answer]\n\n[Mock %s response using %s]",
+				userMessage, userMessage, agentType, modelName)
+		} else {
+			response = fmt.Sprintf("[Mock %s response to '%s' using %s model with system prompt: %s]", 
+				agentType, userMessage, modelName, systemPrompt)
+		}
+	}
 	
 	// Create result state
 	result := domain.NewState()
