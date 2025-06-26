@@ -9,7 +9,8 @@
 -- 4. Custom debug utilities
 
 -- Required modules
-local log = require("log")
+local logging = require("logging")
+local log = logging.default()
 local llm = require("llm")
 local agent = require("agent")
 local data = require("data")
@@ -23,13 +24,9 @@ local output_dir = params.output_dir or "./debug-output"
 print("=== Debug Usage Example (Simplified) ===")
 print()
 
--- Ensure output directory exists
-if not utils.file_exists(output_dir) then
-    utils.mkdir(output_dir)
-end
+-- Note: File operations removed as they're not available in this environment
 
--- Set log level
-log.set_level("debug")
+-- Note: log.set_level not available, using default level
 
 -- Custom debug utilities
 local Debug = {}
@@ -333,25 +330,13 @@ for name, timer in pairs(debugger.timers) do
     end
 end
 
--- Save report
-utils.file_write(output_dir .. "/debug_report.json", data.to_json(report))
-print("\nDebug report saved to: " .. output_dir .. "/debug_report.json")
+-- In production, would save report to file:
+-- utils.file_write(output_dir .. "/debug_report.json", data.to_json(report))
+print("\nDebug report would be saved to: " .. output_dir .. "/debug_report.json")
 
--- Save trace log
-local trace_log = "Debug Trace Log\n"
-trace_log = trace_log .. "===============\n\n"
-
-for _, trace in ipairs(debugger.traces) do
-    trace_log = trace_log .. string.format(
-        "[%s] %s: %s\n",
-        os.date("%H:%M:%S", trace.timestamp),
-        trace.name,
-        type(trace.data) == "table" and data.to_json(trace.data) or tostring(trace.data)
-    )
-end
-
-utils.file_write(output_dir .. "/trace.log", trace_log)
-print("Trace log saved to: " .. output_dir .. "/trace.log")
+-- In production, would save trace log:
+-- utils.file_write(output_dir .. "/trace.log", trace_log)
+print("Trace log would be saved to: " .. output_dir .. "/trace.log")
 
 print()
 
@@ -377,5 +362,5 @@ return {
     total_traces = #debugger.traces,
     total_errors = #debugger.errors,
     performance_tests = #operations,
-    files_created = 2
+    files_created = 0  -- File operations not available
 }

@@ -25,8 +25,7 @@ print()
 print("=== Example 1: Basic Agent Creation ===")
 
 -- Create a simple analyst agent
-local analyst = agent.create({
-    name = "Data Analyst",
+local analyst = agent.create("Data Analyst", {
     model = model,
     system = "You are a data analyst who provides clear, insightful analysis. Focus on facts and logical reasoning.",
     temperature = 0.3  -- Lower temperature for more focused responses
@@ -42,8 +41,7 @@ print()
 print("=== Example 2: Chain of Thought Agent ===")
 
 -- Create an agent that uses chain of thought reasoning
-local thinker = agent.create({
-    name = "Deep Thinker",
+local thinker = agent.create("Deep Thinker", {
     model = model,
     system = [[You are a careful thinker who uses step-by-step reasoning.
 Always structure your response as:
@@ -64,22 +62,19 @@ print()
 print("=== Example 3: Multiple Agent Personalities ===")
 
 -- Create agents with different perspectives
-local optimist = agent.create({
-    name = "Optimist",
+local optimist = agent.create("Optimist", {
     model = model,
     system = "You are an optimistic futurist who sees the positive potential in everything. Focus on opportunities and benefits.",
     temperature = 0.7
 })
 
-local pessimist = agent.create({
-    name = "Pessimist", 
+local pessimist = agent.create("Pessimist", {
     model = model,
     system = "You are a cautious analyst who identifies risks and potential problems. Focus on challenges and concerns.",
     temperature = 0.7
 })
 
-local realist = agent.create({
-    name = "Realist",
+local realist = agent.create("Realist", {
     model = model,
     system = "You are a balanced analyst who considers both opportunities and challenges objectively. Provide nuanced perspectives.",
     temperature = 0.5
@@ -104,8 +99,7 @@ print()
 print("=== Example 4: Agent Debate ===")
 
 -- Create a moderator
-local moderator = agent.create({
-    name = "Moderator",
+local moderator = agent.create("Moderator", {
     model = model,
     system = "You are a debate moderator. Keep discussions focused and balanced. Summarize key points.",
     temperature = 0.3
@@ -146,8 +140,7 @@ print()
 print("=== Example 5: Agent with Memory ===")
 
 -- Create a teaching agent that remembers previous interactions
-local teacher = agent.create({
-    name = "Teacher",
+local teacher = agent.create("Teacher", {
     model = model,
     system = "You are a patient teacher who builds on previous concepts. Remember what was discussed and reference it.",
     temperature = 0.5
@@ -194,22 +187,19 @@ end
 print("=== Example 6: Creative Agents ===")
 
 -- Create agents for creative tasks
-local poet = agent.create({
-    name = "Poet",
+local poet = agent.create("Poet", {
     model = model,
     system = "You are a creative poet who writes meaningful, evocative poetry. Use vivid imagery and metaphors.",
     temperature = 0.9  -- High temperature for creativity
 })
 
-local storyteller = agent.create({
-    name = "Storyteller",
+local storyteller = agent.create("Storyteller", {
     model = model,
     system = "You are a master storyteller who creates engaging micro-stories. Every story should have a beginning, middle, and end.",
     temperature = 0.8
 })
 
-local comedian = agent.create({
-    name = "Comedian",
+local comedian = agent.create("Comedian", {
     model = model,
     system = "You are a witty comedian who finds humor in everyday situations. Keep it clean and clever.",
     temperature = 0.8
@@ -235,22 +225,19 @@ print()
 print("=== Example 7: Analytical Pipeline ===")
 
 -- Create a pipeline of analytical agents
-local researcher = agent.create({
-    name = "Researcher",
+local researcher = agent.create("Researcher", {
     model = model,
     system = "You are a researcher who identifies key facts and questions about a topic.",
     temperature = 0.4
 })
 
-local critic = agent.create({
-    name = "Critic",
+local critic = agent.create("Critic", {
     model = model,
     system = "You are a critical thinker who identifies gaps, assumptions, and potential flaws in reasoning.",
     temperature = 0.4
 })
 
-local synthesizer = agent.create({
-    name = "Synthesizer",
+local synthesizer = agent.create("Synthesizer", {
     model = model,
     system = "You are a synthesizer who combines different viewpoints into coherent conclusions.",
     temperature = 0.3

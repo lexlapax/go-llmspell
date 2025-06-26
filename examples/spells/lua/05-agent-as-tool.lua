@@ -3,6 +3,7 @@
 
 -- Required modules
 local agent = require("agent")
+local tools = require("tools")
 
 -- Agent as Tool Example
 -- This spell demonstrates advanced agent patterns:
@@ -22,17 +23,13 @@ print("Project: " .. project)
 print("Model: " .. model)
 print()
 
--- Ensure output directory exists
-if not tools.file_exists(output_dir) then
-    tools.create_directory(output_dir)
-end
+-- File operations removed - focus on agent-as-tool pattern
 
 -- Example 1: Simple Agent as Tool
 print("=== Example 1: Basic Agent as Tool ===")
 
 -- Create a specialized research agent
-local market_researcher = agent.create({
-    name = "Market Research Specialist",
+local market_researcher = agent.create("Market Research Specialist", {
     model = model,
     system = "You are a market research specialist. Provide detailed market analysis with data and trends.",
     tools = {"web_search"},
@@ -40,20 +37,21 @@ local market_researcher = agent.create({
 })
 
 -- Wrap the agent as a tool
-tools.register({
-    name = "market_research",
-    description = "Conduct detailed market research on any topic",
-    parameters = {
-        query = {type = "string", required = true, description = "What to research"}
+local market_research_tool = tools.define(
+    "market_research",
+    "Conduct detailed market research on any topic",
+    {
+        parameters = {
+            query = {type = "string", required = true, description = "What to research"}
+        }
     },
-    execute = function(args)
+    function(args)
         return market_researcher:run(args.query)
     end
-})
+)
 
 -- Create a business analyst that uses the market research tool
-local business_analyst = agent.create({
-    name = "Business Analyst",
+local business_analyst = agent.create("Business Analyst", {
     model = model,
     system = "You are a business analyst who creates comprehensive reports. Use the market_research tool for data.",
     tools = {"market_research", "file_write", "calculator"},
@@ -73,24 +71,21 @@ print()
 print("=== Example 2: Multiple Agent Tools ===")
 
 -- Create specialized agents
-local financial_analyst = agent.create({
-    name = "Financial Analyst",
+local financial_analyst = agent.create("Financial Analyst", {
     model = model,
     system = "You are a financial analyst specializing in cost projections and ROI calculations.",
     tools = {"calculator"},
     temperature = 0.2
 })
 
-local legal_advisor = agent.create({
-    name = "Legal Advisor",
+local legal_advisor = agent.create("Legal Advisor", {
     model = model,
     system = "You are a legal advisor who identifies regulatory requirements and compliance needs.",
     tools = {"web_search"},
     temperature = 0.2
 })
 
-local marketing_expert = agent.create({
-    name = "Marketing Expert",
+local marketing_expert = agent.create("Marketing Expert", {
     model = model,
     system = "You are a marketing expert who creates compelling strategies and brand positioning.",
     tools = {"web_search"},
@@ -98,42 +93,47 @@ local marketing_expert = agent.create({
 })
 
 -- Register all specialist agents as tools
-tools.register({
-    name = "financial_analysis",
-    description = "Get detailed financial analysis and projections",
-    parameters = {
-        request = {type = "string", required = true}
+local financial_analysis_tool = tools.define(
+    "financial_analysis",
+    "Get detailed financial analysis and projections",
+    {
+        parameters = {
+            request = {type = "string", required = true}
+        }
     },
-    execute = function(args)
+    function(args)
         return financial_analyst:run(args.request)
     end
-})
+)
 
-tools.register({
-    name = "legal_consultation",
-    description = "Get legal and regulatory compliance advice",
-    parameters = {
-        request = {type = "string", required = true}
+local legal_consultation_tool = tools.define(
+    "legal_consultation",
+    "Get legal and regulatory compliance advice",
+    {
+        parameters = {
+            request = {type = "string", required = true}
+        }
     },
-    execute = function(args)
+    function(args)
         return legal_advisor:run(args.request)
     end
-})
+)
 
-tools.register({
-    name = "marketing_strategy",
-    description = "Get marketing strategy and branding advice",
-    parameters = {
-        request = {type = "string", required = true}
+local marketing_strategy_tool = tools.define(
+    "marketing_strategy",
+    "Get marketing strategy and branding advice",
+    {
+        parameters = {
+            request = {type = "string", required = true}
+        }
     },
-    execute = function(args)
+    function(args)
         return marketing_expert:run(args.request)
     end
-})
+)
 
 -- Create a project manager that coordinates all specialists
-local project_manager = agent.create({
-    name = "Project Manager",
+local project_manager = agent.create("Project Manager", {
     model = model,
     system = [[You are a senior project manager coordinating a team of specialists.
 You have access to:
@@ -169,8 +169,7 @@ print()
 print("=== Example 3: Recursive Agent Structure ===")
 
 -- Create a review agent that can use other agents
-local reviewer = agent.create({
-    name = "Quality Reviewer",
+local reviewer = agent.create("Quality Reviewer", {
     model = model,
     system = "You are a quality reviewer who ensures work meets high standards. Provide constructive feedback.",
     tools = {"file_read"},
@@ -178,20 +177,21 @@ local reviewer = agent.create({
 })
 
 -- Register the reviewer as a tool
-tools.register({
-    name = "quality_review",
-    description = "Review and provide feedback on any work",
-    parameters = {
-        work = {type = "string", required = true}
+local registered_tool = tools.define(
+    "quality_review",
+    "Review and provide feedback on any work",
+    {
+        parameters = {
+            work = {type = "string", required = true}
+        }
     },
-    execute = function(args)
+    function(args)
         return reviewer:run("Review this work and provide feedback:\n" .. args.work)
     end
-})
+)
 
 -- Create a writer agent that uses the reviewer
-local writer = agent.create({
-    name = "Content Writer",
+local writer = agent.create("Content Writer", {
     model = model,
     system = "You are a content writer. Use quality_review to check your work and iterate based on feedback.",
     tools = {"quality_review", "file_write"},
@@ -199,16 +199,18 @@ local writer = agent.create({
 })
 
 -- Register the writer as a tool (creating recursion potential)
-tools.register({
-    name = "content_writing",
-    description = "Create written content with built-in quality review",
-    parameters = {
-        topic = {type = "string", required = true}
+local registered_tool = tools.define(
+    "content_writing",
+    "Create written content with built-in quality review",
+    {
+        parameters = {
+            topic = {type = "string", required = true}
+        }
     },
-    execute = function(args)
+    function(args)
         return writer:run("Write about: " .. args.topic .. ". Review your work and revise based on feedback.")
     end
-})
+)
 
 -- Use the recursive system
 print("Testing recursive agent system...")
@@ -225,24 +227,25 @@ print("=== Example 4: Dynamic Agent Teams ===")
 
 -- Function to create specialist agent tools dynamically
 local function create_specialist_tool(name, specialty, model_override)
-    local specialist = agent.create({
-        name = name,
+    local specialist = agent.create(name, {
         model = model_override or model,
         system = "You are a specialist in " .. specialty .. ". Provide expert insights in your domain.",
         tools = {"web_search", "calculator"},
         temperature = 0.4
     })
     
-    tools.register({
-        name = name:lower():gsub(" ", "_"),
-        description = specialty .. " specialist",
-        parameters = {
-            query = {type = "string", required = true}
+    local registered_tool = tools.define(
+        name:lower():gsub(" ", "_"),
+        specialty .. " specialist",
+        {
+            parameters = {
+                query = {type = "string", required = true}
+            }
         },
-        execute = function(args)
+        function(args)
             return specialist:run(args.query)
         end
-    })
+    )
     
     return name:lower():gsub(" ", "_")
 end
@@ -268,8 +271,7 @@ for _, tool_name in ipairs(tool_names) do
     table.insert(all_tools, tool_name)
 end
 
-local coordinator = agent.create({
-    name = "Team Coordinator",
+local coordinator = agent.create("Team Coordinator", {
     model = model,
     system = "You coordinate a dynamic team of specialists. Use their expertise to solve complex problems.",
     tools = all_tools,
@@ -293,8 +295,7 @@ print()
 print("=== Example 5: Stateful Agent Tools ===")
 
 -- Create an agent with memory
-local memory_agent = agent.create({
-    name = "Memory Assistant",
+local memory_agent = agent.create("Memory Assistant", {
     model = model,
     system = "You are an assistant with perfect memory. Remember all previous interactions and reference them.",
     tools = {"file_read", "file_write"},
@@ -304,13 +305,15 @@ local memory_agent = agent.create({
 -- Create a stateful wrapper
 local conversation_history = {}
 
-tools.register({
-    name = "memory_assistant",
-    description = "An assistant that remembers previous interactions",
-    parameters = {
-        message = {type = "string", required = true}
+local registered_tool = tools.define(
+    "memory_assistant",
+    "An assistant that remembers previous interactions",
+    {
+        parameters = {
+            message = {type = "string", required = true}
+        }
     },
-    execute = function(args)
+    function(args)
         -- Add context from history
         local context = "Previous conversations:\n"
         for i, entry in ipairs(conversation_history) do
@@ -330,11 +333,10 @@ tools.register({
         
         return response
     end
-})
+)
 
 -- Create a main agent that uses the stateful assistant
-local main_agent = agent.create({
-    name = "Main Coordinator",
+local main_agent = agent.create("Main Coordinator", {
     model = model,
     system = "You coordinate tasks and use the memory_assistant for continuity across interactions.",
     tools = {"memory_assistant", "file_write"},
@@ -361,24 +363,21 @@ print("=== Example 6: Agent Pipeline Tool ===")
 
 -- Create a pipeline of agents as a single tool
 local function create_analysis_pipeline()
-    local data_collector = agent.create({
-        name = "Data Collector",
+    local data_collector = agent.create("Data Collector", {
         model = model,
         system = "You collect relevant data and statistics.",
         tools = {"web_search"},
         temperature = 0.3
     })
     
-    local data_analyzer = agent.create({
-        name = "Data Analyzer",
+    local data_analyzer = agent.create("Data Analyzer", {
         model = model,
         system = "You analyze data and identify patterns and insights.",
         tools = {"calculator"},
         temperature = 0.3
     })
     
-    local report_generator = agent.create({
-        name = "Report Generator",
+    local report_generator = agent.create("Report Generator", {
         model = model,
         system = "You create clear, professional reports from analyzed data.",
         tools = {"file_write"},
@@ -386,13 +385,15 @@ local function create_analysis_pipeline()
     })
     
     -- Create pipeline tool
-    tools.register({
-        name = "analysis_pipeline",
-        description = "Complete analysis pipeline: collect, analyze, and report",
-        parameters = {
-            topic = {type = "string", required = true}
+    local registered_tool = tools.define(
+        "analysis_pipeline",
+        "Complete analysis pipeline: collect, analyze, and report",
+        {
+            parameters = {
+                topic = {type = "string", required = true}
+            }
         },
-        execute = function(args)
+        function(args)
             print("  [Pipeline] Stage 1: Collecting data...")
             local data = data_collector:run("Collect data about: " .. args.topic)
             
@@ -407,14 +408,13 @@ local function create_analysis_pipeline()
             
             return report
         end
-    })
+    )
 end
 
 create_analysis_pipeline()
 
 -- Use the pipeline tool
-local executive = agent.create({
-    name = "Executive",
+local executive = agent.create("Executive", {
     model = model,
     system = "You are an executive who delegates complex analysis tasks. Use the analysis_pipeline for research.",
     tools = {"analysis_pipeline", "file_read"},
@@ -447,12 +447,8 @@ print("- State can be maintained across agent tool calls")
 print("- Complex pipelines can be encapsulated as single tools")
 print()
 
--- List created files
-print("Files created in " .. output_dir .. ":")
-local files = tools.list_files(output_dir)
-for _, file in ipairs(files) do
-    print("  - " .. file)
-end
+-- In production, would list created files
+print("Example completed - agents successfully wrapped as tools")
 
 -- Return summary
 return {

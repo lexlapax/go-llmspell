@@ -3,7 +3,7 @@
 
 -- Required modules
 local agent = require("agent")
-local core = require("core")
+local utils = require("utils")
 
 -- Complex Workflows Example
 -- This spell demonstrates advanced workflow patterns:
@@ -25,10 +25,8 @@ print("Workflow type: " .. workflow_type)
 print("Topic: " .. topic)
 print()
 
--- Ensure output directory exists
-if not tools.file_exists(output_dir) then
-    tools.create_directory(output_dir)
-end
+-- Note: In production, would ensure output directory exists
+-- For this example, we'll simulate file writes with prints
 
 -- Table copy helper (defined before use)
 local function table_copy(t)
@@ -107,8 +105,7 @@ local function content_pipeline(topic)
     
     -- Step 1: Research
     print("Step 1: Research Phase")
-    local researcher = agent.create({
-        name = "Researcher",
+    local researcher = agent.create("Researcher", {
         model = model,
         system = "You are a thorough researcher. Find key facts and recent developments.",
         tools = {"web_search"},
@@ -118,13 +115,12 @@ local function content_pipeline(topic)
     local research = researcher:run("Research: " .. topic .. ". Find 5 key facts.")
     state:set("research", research)
     state:checkpoint("after_research")
-    tools.file_write(output_dir .. "/1_research.txt", research)
+    -- Would save to file: output_dir .. "/1_research.txt"
     print("  ✓ Research completed")
     
     -- Step 2: Outline Creation
     print("\nStep 2: Outline Creation")
-    local outliner = agent.create({
-        name = "Outliner",
+    local outliner = agent.create("Outliner", {
         model = model,
         system = "You create structured outlines for articles.",
         temperature = 0.4
@@ -136,13 +132,12 @@ local function content_pipeline(topic)
     )
     state:set("outline", outline)
     state:checkpoint("after_outline")
-    tools.file_write(output_dir .. "/2_outline.txt", outline)
+    -- Would save to file: output_dir .. "/2_outline.txt"
     print("  ✓ Outline created")
     
     -- Step 3: Content Writing
     print("\nStep 3: Content Writing")
-    local writer = agent.create({
-        name = "Writer",
+    local writer = agent.create("Writer", {
         model = model,
         system = "You are a professional content writer. Write engaging, informative content.",
         temperature = 0.6
@@ -154,13 +149,12 @@ local function content_pipeline(topic)
     )
     state:set("content", content)
     state:checkpoint("after_writing")
-    tools.file_write(output_dir .. "/3_content.md", content)
+    -- Would save to file: output_dir .. "/3_content.md"
     print("  ✓ Content written")
     
     -- Step 4: Editing
     print("\nStep 4: Editing")
-    local editor = agent.create({
-        name = "Editor",
+    local editor = agent.create("Editor", {
         model = model,
         system = "You are a professional editor. Improve clarity, fix errors, enhance flow.",
         temperature = 0.3
@@ -169,13 +163,12 @@ local function content_pipeline(topic)
     local edited = editor:run("Edit and improve this article:\n" .. content)
     state:set("edited_content", edited)
     state:checkpoint("after_editing")
-    tools.file_write(output_dir .. "/4_edited.md", edited)
+    -- Would save to file: output_dir .. "/4_edited.md"
     print("  ✓ Content edited")
     
     -- Step 5: Final Review
     print("\nStep 5: Final Review")
-    local reviewer = agent.create({
-        name = "Reviewer",
+    local reviewer = agent.create("Reviewer", {
         model = model,
         system = "You are a quality reviewer. Check for accuracy, completeness, and quality.",
         temperature = 0.2
@@ -185,7 +178,7 @@ local function content_pipeline(topic)
         "Review this article and provide a quality score (1-10) and feedback:\n" .. edited
     )
     state:set("review", review)
-    tools.file_write(output_dir .. "/5_review.txt", review)
+    -- Would save to file: output_dir .. "/5_review.txt"
     print("  ✓ Review completed")
     
     -- Calculate duration
@@ -218,8 +211,7 @@ local function quality_control_workflow(content, min_quality_score)
         
         -- Quality check
         print("  Checking quality...")
-        local checker = agent.create({
-            name = "Quality Checker",
+        local checker = agent.create("Quality Checker", {
             model = model,
             system = "You evaluate content quality. Rate from 1-10 and explain.",
             temperature = 0.2
@@ -237,8 +229,7 @@ local function quality_control_workflow(content, min_quality_score)
         if quality_score < min_quality_score then
             -- Improve content
             print("  Score too low, improving content...")
-            local improver = agent.create({
-                name = "Content Improver",
+            local improver = agent.create("Content Improver", {
                 model = model,
                 system = "You improve content based on feedback.",
                 temperature = 0.5
@@ -304,37 +295,30 @@ local function parallel_analysis_workflow(topic)
         }
     }
     
-    -- Execute analyses in parallel
-    local promises = {}
+    -- Execute analyses (simulating parallel execution)
+    -- Note: True parallel execution would use promises/coroutines
+    local results = {}
     
+    print("\n  ⏳ Starting analysts...")
     for _, analyst_config in ipairs(analysts) do
-        local p = promise.new(function(resolve, reject)
-            core.async(function()
-                print("  🔄 Starting: " .. analyst_config.name)
-                
-                local analyst = agent.create({
-                    name = analyst_config.name,
-                    model = model,
-                    system = analyst_config.system,
-                    temperature = 0.4
-                })
-                
-                local result = analyst:run("Analyze " .. topic .. " from your perspective. Be concise.")
-                
-                print("  ✓ Completed: " .. analyst_config.name)
-                resolve({
-                    key = analyst_config.output_key,
-                    value = result
-                })
-            end)
-        end)
+        print("  🔄 Starting: " .. analyst_config.name)
         
-        table.insert(promises, p)
+        local analyst = agent.create(analyst_config.name, {
+            model = model,
+            system = analyst_config.system,
+            temperature = 0.4
+        })
+        
+        local result = analyst:run("Analyze " .. topic .. " from your perspective. Be concise.")
+        
+        print("  ✓ Completed: " .. analyst_config.name)
+        table.insert(results, {
+            key = analyst_config.output_key,
+            value = result
+        })
     end
     
-    -- Wait for all to complete
-    print("\n  ⏳ Waiting for all analysts to complete...")
-    local results = promise.all(promises):await()
+    print("  ✅ All analysts completed")
     
     -- Store results
     for _, result in ipairs(results) do
@@ -343,8 +327,7 @@ local function parallel_analysis_workflow(topic)
     
     -- Synthesize results
     print("\n  📊 Synthesizing results...")
-    local synthesizer = agent.create({
-        name = "Synthesizer",
+    local synthesizer = agent.create("Synthesizer", {
         model = model,
         system = "You synthesize multiple analyses into a coherent summary.",
         temperature = 0.3
@@ -360,7 +343,7 @@ local function parallel_analysis_workflow(topic)
         "Synthesize these analyses into a comprehensive summary:\n" .. synthesis_input
     )
     state:set("synthesis", synthesis)
-    tools.file_write(output_dir .. "/parallel_synthesis.md", synthesis)
+    -- Would save to file: output_dir .. "/parallel_synthesis.md"
     
     print("  ✓ Parallel workflow completed")
     return state
@@ -389,14 +372,13 @@ local function robust_workflow(tasks)
             end
             
             -- Execute task
-            local agent = agent.create({
-                name = task.name,
+            local agent_obj = agent.create(task.name, {
                 model = model,
                 system = task.system or "You are a helpful assistant.",
                 temperature = 0.4
             })
             
-            return agent:run(task.prompt)
+            return agent_obj:run(task.prompt)
         end)
         
         if success then
@@ -414,15 +396,14 @@ local function robust_workflow(tasks)
                 
                 if task.recovery_strategy == "retry" then
                     -- Simple retry
-                    core.sleep(1)
+                    utils.general_sleep(1)
                     success, result = pcall(function()
-                        local agent = agent.create({
-                            name = task.name .. "_retry",
+                        local agent_obj = agent.create(task.name .. "_retry", {
                             model = model,
                             system = task.system,
                             temperature = 0.4
                         })
-                        return agent:run(task.prompt)
+                        return agent_obj:run(task.prompt)
                     end)
                     
                     if success then
@@ -488,8 +469,7 @@ local WorkflowComponents = {}
 
 function WorkflowComponents.research_component(topic, state)
     print("  📚 Research Component")
-    local researcher = agent.create({
-        name = "Researcher",
+    local researcher = agent.create("Researcher", {
         model = model,
         system = "You are a research specialist.",
         tools = {"web_search"},
@@ -503,8 +483,7 @@ end
 
 function WorkflowComponents.validation_component(data, criteria, state)
     print("  ✅ Validation Component")
-    local validator = agent.create({
-        name = "Validator",
+    local validator = agent.create("Validator", {
         model = model,
         system = "You validate data against criteria.",
         temperature = 0.2
@@ -525,8 +504,7 @@ end
 
 function WorkflowComponents.transformation_component(data, format, state)
     print("  🔄 Transformation Component")
-    local transformer = agent.create({
-        name = "Transformer",
+    local transformer = agent.create("Transformer", {
         model = model,
         system = "You transform data into different formats.",
         temperature = 0.3
@@ -573,10 +551,7 @@ local function composed_workflow(topic)
     for _, format in ipairs(formats) do
         print("  Transforming to: " .. format)
         local transformed = WorkflowComponents.transformation_component(research, format, state)
-        tools.file_write(
-            output_dir .. "/composed_" .. format:gsub(" ", "_") .. ".txt",
-            transformed
-        )
+        -- Would save to file: output_dir .. "/composed_" .. format:gsub(" ", "_") .. ".txt"
     end
     
     print("\n✓ Composed workflow completed")
@@ -631,12 +606,9 @@ print("- Error handling makes workflows robust")
 print("- Composition enables reusable workflow building blocks")
 print()
 
--- List generated files
-print("Files created in " .. output_dir .. ":")
-local files = tools.list_files(output_dir)
-for _, file in ipairs(files) do
-    print("  - " .. file)
-end
+-- In production, would list generated files
+print("Files would be created in " .. output_dir)
+local files = {}
 
 -- Return workflow statistics
 return {

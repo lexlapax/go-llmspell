@@ -302,6 +302,15 @@ func (aa *AgentAdapter) addFlattenedMethods(L *lua.LState, module *lua.LTable) {
 			return 2
 		}
 
+		// If result is a table with a "response" field, extract it
+		if tbl, ok := luaResult.(*lua.LTable); ok {
+			if response := tbl.RawGetString("response"); response != lua.LNil {
+				L.Push(response)
+				L.Push(lua.LNil)
+				return 2
+			}
+		}
+
 		L.Push(luaResult)
 		L.Push(lua.LNil)
 		return 2

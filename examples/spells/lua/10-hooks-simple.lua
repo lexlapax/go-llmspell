@@ -11,9 +11,12 @@
 -- Required modules
 local llm = require("llm")
 local agent = require("agent")
-local log = require("log")
+local logging = require("logging")
 local data = require("data")
 local utils = require("utils")
+
+-- Create logger
+local log = logging.default()
 
 -- Parameters
 local model = params.model or "gpt-4"
@@ -22,10 +25,8 @@ local output_dir = params.output_dir or "./hooks-output"
 print("=== Hooks Pattern Example (Simplified) ===")
 print()
 
--- Ensure output directory exists
-if not utils.file_exists(output_dir) then
-    utils.mkdir(output_dir)
-end
+-- Note: File operations removed - focus on hook patterns
+-- In production, results would be saved to files
 
 -- Simple hook system implementation
 local SimpleHooks = {}
@@ -56,7 +57,7 @@ function SimpleHooks.wrap(hooks, name, original_fn)
         end
         
         -- Execute original function
-        local success, result = pcall(original_fn, table.unpack(args))
+        local success, result = pcall(original_fn, unpack(args))
         
         -- Track metrics
         hooks.metrics.calls[name] = (hooks.metrics.calls[name] or 0) + 1
@@ -111,11 +112,8 @@ SimpleHooks.register(hook_system, "agent.run.pre", function(args)
         os.date("%H:%M:%S"), 
         tostring(args[1])
     )
-    local f = io.open(output_dir .. "/agent_calls.log", "a")
-    if f then
-        f:write(log_entry)
-        f:close()
-    end
+    -- In production would append to log file
+    print(log_entry)
     
     return args
 end)
@@ -135,11 +133,8 @@ SimpleHooks.register(hook_system, "agent.run.post", function(result, args)
         os.date("%H:%M:%S"),
         #tostring(result)
     )
-    local f = io.open(output_dir .. "/agent_calls.log", "a")
-    if f then
-        f:write(log_entry)
-        f:close()
-    end
+    -- In production would append to log file
+    print(log_entry)
     
     return result
 end)
@@ -170,16 +165,11 @@ SimpleHooks.register(hook_system, "calculation.error", function(error_msg, args)
     print("  ❌ Error hook triggered: " .. error_msg)
     print("    Arguments: " .. data.to_json(args))
     
-    -- Log error
-    utils.file_write(
-        output_dir .. "/errors.log",
-        string.format("[%s] ERROR: %s | Args: %s\n",
-            os.date("%H:%M:%S"),
-            error_msg,
-            data.to_json(args)
-        ),
-        true  -- append
-    )
+    -- Log error (in production would write to file)
+    print(string.format("[%s] ERROR: %s",
+        os.date("%H:%M:%S"),
+        error_msg
+    ))
 end)
 
 -- Create error-prone function
@@ -316,10 +306,12 @@ for name, duration in pairs(hook_system.metrics.durations) do
 end
 
 -- Save metrics
-utils.file_write(
-    output_dir .. "/metrics.json",
-    data.to_json(hook_system.metrics)
-)
+-- In production, would save metrics to file
+print("\nHook metrics (would be saved to metrics.json)")
+if hook_system and hook_system.metrics then
+    print("  Total calls:", #(hook_system.metrics.calls or {}))
+    print("  Total errors:", #(hook_system.metrics.errors or {}))
+end
 
 print()
 

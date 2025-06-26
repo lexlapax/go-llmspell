@@ -3,7 +3,8 @@
 
 -- Required modules
 local agent = require("agent")
-local utils = require("utils")  -- For file operations and sleep
+local utils = require("utils")  -- For utilities
+local events = require("events")  -- For event system
 
 -- Event-Driven Spells Example
 -- This spell demonstrates event-driven patterns:
@@ -23,10 +24,8 @@ print("=== Event-Driven Spells Example ===")
 print("Scenario: " .. scenario)
 print()
 
--- Ensure output directory exists
-if not utils.file_exists(output_dir) then
-    utils.mkdir(output_dir)
-end
+-- File operations not available in current implementation
+-- In production, would ensure output directory exists
 
 -- Helper function for counting table entries
 local function table_count(t)
@@ -306,7 +305,7 @@ local test_contents = {
 
 for _, submission in ipairs(test_contents) do
     moderation_system:emit("content_submitted", submission)
-    utils.sleep(0.5)  -- Small delay for readability
+    utils.general_sleep(0.5)  -- Small delay for readability
 end
 
 print()
@@ -377,7 +376,7 @@ doc_processor:add_transition("rejected", "idle", "reset")
 -- Define state handlers
 doc_processor:on_state("uploading", function(data)
     print("  📤 Uploading document...")
-    utils.sleep(1)
+    utils.general_sleep(1)
     doc_processor:trigger("upload_complete", {filename = "document.pdf"})
 end)
 
@@ -392,7 +391,7 @@ doc_processor:on_state("processing", function(data)
     })
     
     local result = processor:run("Process this document: [Document content here]")
-    utils.sleep(1)
+    utils.general_sleep(1)
     
     doc_processor:trigger("process_complete", {result = result})
 end)
@@ -402,14 +401,15 @@ doc_processor:on_state("reviewing", function(data)
     
     -- Simulate review decision
     local decision = math.random() > 0.3 and "approve" or "reject"
-    utils.sleep(1)
+    utils.general_sleep(1)
     
     doc_processor:trigger(decision, {reason = "Review complete"})
 end)
 
 doc_processor:on_state("approved", function(data)
     print("  ✅ Document approved!")
-    utils.file_write(output_dir .. "/approved_doc.txt", "Document approved: " .. os.date())
+    -- Would save: output_dir .. "/approved_doc.txt"
+    print("      Would save approval record")
     doc_processor:trigger("reset")
 end)
 
@@ -504,10 +504,8 @@ cascade_system:on("generate_report", function(results)
         )
     end
     
-    utils.file_write(
-        output_dir .. "/cascade_report_" .. cascade_state.reports_generated .. ".txt",
-        report
-    )
+    -- Would save report to: output_dir .. "/cascade_report_" .. cascade_state.reports_generated .. ".txt"
+    print("    Cascade report generated: #" .. cascade_state.reports_generated)
     
     -- Clear processed results
     cascade_state.analysis_results = {}
@@ -533,7 +531,7 @@ local test_data = {
 
 for _, data_point in ipairs(test_data) do
     cascade_system:emit("data_received", data_point)
-    utils.sleep(0.3)
+    utils.general_sleep(0.3)
 end
 
 print()
@@ -562,10 +560,8 @@ end, {async = true})
 
 async_system:on("analysis_complete", function(data)
     print("  ✅ Analysis complete for ID: " .. data.id)
-    utils.file_write(
-        output_dir .. "/analysis_" .. data.id .. ".txt",
-        "Text: " .. data.text .. "\n\nAnalysis: " .. data.analysis
-    )
+    -- Would save analysis to: output_dir .. "/analysis_" .. data.id .. ".txt"
+    -- Content: text and analysis results
 end)
 
 -- Submit multiple texts for async processing
@@ -584,7 +580,7 @@ end
 -- Process async queue
 print("  ⏳ Processing async queue...")
 async_system:process_async_queue()
-utils.sleep(2)  -- Wait for async processing
+utils.general_sleep(2)  -- Wait for async processing
 
 print()
 
@@ -669,14 +665,8 @@ print("- Async processing improves performance")
 print("- Filtering and transformation add flexibility")
 print()
 
--- List generated files
-print("Files created in " .. output_dir .. ":")
-local files = utils.list_files(output_dir)
-if files then
-    for _, file in ipairs(files) do
-        print("  - " .. file)
-    end
-end
+-- In production, files would be created in output directory
+print("Event processing complete - events handled asynchronously")
 
 -- Return summary
 return {

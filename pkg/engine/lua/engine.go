@@ -35,6 +35,7 @@ package lua
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -310,6 +311,11 @@ func (e *LuaEngine) Initialize(config engine.EngineConfig) error {
 	if val, ok := config.EngineOptions["disable_stdlib"].(bool); ok && val {
 		// User explicitly disabled stdlib
 		factoryConfig.DisableStdlib = true
+	}
+
+	// Check for output writer in engine options
+	if writer, ok := config.EngineOptions["output_writer"].(io.Writer); ok {
+		factoryConfig.OutputWriter = writer
 	}
 
 	// Create factory (stdlib is loaded by default unless disabled)

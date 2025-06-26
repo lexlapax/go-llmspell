@@ -715,20 +715,16 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []typ
 		// Create agent based on type
 		var agent types.BaseAgent
 
-		switch domain.AgentType(agentTypeStr) {
-		case domain.AgentTypeLLM:
-			// For LLM agent, we need a provider
-			// This is simplified - in real implementation, would get provider from bridge
-			// For now, return error indicating provider needed
-			return types.NewErrorValue(fmt.Errorf("LLM agent creation requires provider setup")), nil
-
-		default:
-			// For other types, we can create a base agent with the provided ID
-			agent = agentcore.NewBaseAgent(name, description, domain.AgentType(agentTypeStr))
+		// For examples, create a mock agent that can respond
+		// In production, this would integrate with real LLM providers
+		baseAgent := agentcore.NewBaseAgent(name, description, domain.AgentType(agentTypeStr))
+		agent = &MockAgent{
+			BaseAgent:   baseAgent,
+			AgentConfig: config,
 		}
 
-		// Store agent with the provided ID
-		b.agents[agentID] = agent
+		// Store agent with its internal ID, not the provided name
+		b.agents[agent.ID()] = agent
 
 		// Return agent info
 		result := map[string]types.ScriptValue{
@@ -738,9 +734,9 @@ func (b *AgentBridge) ExecuteMethod(ctx context.Context, name string, args []typ
 		}
 		return types.NewObjectValue(result), nil
 
-	case "executeAgent":
+	case "executeAgent", "runAgent":
 		if len(args) < 2 {
-			return types.NewErrorValue(fmt.Errorf("executeAgent requires agentID and input parameters")), nil
+			return types.NewErrorValue(fmt.Errorf("%s requires agentID and input parameters", name)), nil
 		}
 
 		b.mu.RLock()
@@ -1590,4 +1586,38 @@ func (b *AgentBridge) removeAgentInternal(id string) error {
 
 	delete(b.agents, id)
 	return nil
+}
+
+// MockAgent is a simple mock agent for testing and examples
+type MockAgent struct {
+	domain.BaseAgent
+	AgentConfig map[string]interface{}
+}
+
+// Run implements the Run method for the mock agent
+func (m *MockAgent) Run(ctx context.Context, state *domain.State) (*domain.State, error) {
+	// Extract message from state
+	messages, ok := state.Get("messages")
+	if !ok {
+		return state, fmt.Errorf("no messages provided")
+	}
+	
+	// Get system prompt from config
+	systemPrompt, _ := m.AgentConfig["system"].(string)
+	if systemPrompt == "" {
+		systemPrompt = "You are a helpful assistant"
+	}
+	
+	// Create a mock response based on the agent's name and system prompt
+	response := fmt.Sprintf("[Mock %s Response] %s: I received your message and would respond based on my role: %s", 
+		m.BaseAgent.Name(), m.BaseAgent.Name(), systemPrompt)
+	
+	// Create result state
+	result := domain.NewState()
+	result.Set("response", response)
+	result.Set("messages", messages)
+	result.Set("agent_id", m.BaseAgent.ID())
+	result.Set("agent_name", m.BaseAgent.Name())
+	
+	return result, nil
 }

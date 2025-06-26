@@ -1,436 +1,389 @@
--- ABOUTME: Hooks example showing lifecycle hooks, execution hooks, and custom event handling
--- ABOUTME: Demonstrates hooks module usage for intercepting and modifying behavior at runtime
+-- ABOUTME: Example demonstrating LLM pipeline hooks for intercepting agent/LLM operations
+-- ABOUTME: Shows hook registration, priorities, and lifecycle management using the hooks module
 
--- Hooks Example
--- This spell demonstrates comprehensive hook usage including:
--- 1. Pre/post execution hooks
--- 2. Error handling hooks
--- 3. Transform hooks for data modification
--- 4. Conditional hooks with predicates
--- 5. Hook priorities and ordering
+-- LLM Pipeline Hooks Example
+-- This spell demonstrates the hooks module for LLM pipeline integration:
+-- 1. Before/After generate hooks
+-- 2. Before/After tool call hooks
+-- 3. Hook priorities and ordering
+-- 4. Hook management (enable/disable/list)
+-- 5. Practical use cases
 
 -- Required modules
 local hooks = require("hooks")
-local llm = require("llm")
 local agent = require("agent")
-local log = require("log")
-local errors = require("errors")
+local tools = require("tools")
 local data = require("data")
-local core = require("core")
-local utils = require("utils")
 
--- Example 1: Basic Pre/Post Execution Hooks
-print("=== Example 1: Basic Pre/Post Execution Hooks ===")
+-- Parameters
+local model = params.model or "gpt-4"
 
--- Register a pre-execution hook for LLM calls
-hooks.register("llm.complete.pre", function(args)
-    log.debug("Pre-execution hook: LLM call starting")
-    log.debug("Model: " .. (args.model or "default"))
-    log.debug("Messages: " .. #(args.messages or {}))
-    
-    -- Modify arguments (e.g., inject system message)
-    if not args.messages[1] or args.messages[1].role ~= "system" then
-        table.insert(args.messages, 1, {
-            role = "system",
-            content = "You are a helpful assistant. Always be concise."
-        })
-        log.info("Injected system message via hook")
-    end
-    
-    -- Track timing
-    args.__start_time = os.time()
-    
-    return args  -- Return modified arguments
-end)
-
--- Register a post-execution hook for LLM calls
-hooks.register("llm.complete.post", function(result, args)
-    local elapsed = os.time() - (args.__start_time or 0)
-    log.debug("Post-execution hook: LLM call completed in " .. elapsed .. "s")
-    
-    -- Add metadata to result
-    result.metadata = result.metadata or {}
-    result.metadata.execution_time = elapsed
-    result.metadata.hook_processed = true
-    
-    -- Log token usage
-    if result.usage then
-        log.info(string.format("Tokens used - Prompt: %d, Completion: %d, Total: %d",
-            result.usage.prompt_tokens or 0,
-            result.usage.completion_tokens or 0,
-            result.usage.total_tokens or 0))
-    end
-    
-    return result  -- Return modified result
-end)
-
--- Make an LLM call that triggers hooks
-local response = llm.complete({
-    model = "gpt-3.5-turbo",
-    messages = {
-        {role = "user", content = "What is a hook in programming?"}
-    }
-})
-
-print("Response: " .. string.sub(response.content, 1, 100) .. "...")
-print("Hook metadata added: " .. tostring(response.metadata and response.metadata.hook_processed))
+print("=== LLM Pipeline Hooks Example ===")
 print()
 
--- Example 2: Error Handling Hooks
-print("=== Example 2: Error Handling Hooks ===")
+-- Example 1: Basic Generate Hooks
+print("=== Example 1: Before/After Generate Hooks ===")
 
--- Global error counter
-local error_count = 0
-
--- Register error hook
-hooks.register("error", function(err, context)
-    error_count = error_count + 1
-    log.error("Error hook triggered (#" .. error_count .. ")")
-    log.error("Error: " .. tostring(err))
-    log.error("Context: " .. (context.operation or "unknown"))
-    
-    -- Attempt recovery for specific errors
-    if string.find(tostring(err), "rate limit") then
-        log.warn("Rate limit detected, adding delay...")
-        utils.general_sleep(2000)
-        return {retry = true, delay = 2}
-    end
-    
-    -- Log stack trace for other errors
-    if context.stack_trace then
-        log.debug("Stack trace: " .. context.stack_trace)
-    end
-    
-    return {retry = false}
-end)
-
--- Simulate an error-prone operation
-local function risky_operation(should_fail)
-    hooks.trigger("operation.start", {name = "risky_operation"})
-    
-    if should_fail then
-        local err = errors.new("SIMULATED_ERROR", "Simulated rate limit exceeded")
-        local recovery = hooks.trigger("error", err, {
-            operation = "risky_operation",
-            attempt = 1
-        })
+-- Register a before-generate hook to modify prompts
+hooks.register_hook("enhance_prompt", {
+    type = hooks.TYPES.BEFORE_GENERATE,
+    priority = hooks.PRIORITY.HIGH,
+    handler = function(context)
+        print("  [BEFORE_GENERATE] Original prompt: " .. (context.prompt or "N/A"))
         
-        if recovery and recovery.retry then
-            print("Error handled by hook, retrying...")
-            return "Success after retry"
+        -- Enhance the prompt with additional context
+        if context.prompt then
+            context.prompt = "Please provide a detailed response. " .. context.prompt
+            print("  [BEFORE_GENERATE] Enhanced prompt: " .. context.prompt)
+        end
+        
+        -- Track timing
+        context.start_time = os.time()
+        
+        return context
+    end
+})
+
+-- Register an after-generate hook to analyze responses
+hooks.register_hook("analyze_response", {
+    type = hooks.TYPES.AFTER_GENERATE,
+    priority = hooks.PRIORITY.NORMAL,
+    handler = function(context)
+        local elapsed = os.time() - (context.start_time or 0)
+        print("  [AFTER_GENERATE] Generation took " .. elapsed .. " seconds")
+        
+        if context.response then
+            -- Count words in response
+            local word_count = 0
+            for word in string.gmatch(context.response, "%S+") do
+                word_count = word_count + 1
+            end
+            print("  [AFTER_GENERATE] Response word count: " .. word_count)
+            
+            -- Add metadata
+            context.metadata = context.metadata or {}
+            context.metadata.word_count = word_count
+            context.metadata.generation_time = elapsed
+        end
+        
+        return context
+    end
+})
+
+-- Create an agent that will trigger hooks
+local assistant = agent.create("Assistant", {
+    model = model,
+    system = "You are a helpful assistant.",
+    temperature = 0.7
+})
+
+-- Test the hooks with a simple query
+print("\nTesting generate hooks:")
+local response = assistant:run("What is the capital of France?")
+print("Response: " .. response)
+print()
+
+-- Example 2: Tool Call Hooks
+print("=== Example 2: Tool Call Hooks ===")
+
+-- Define a simple calculator tool
+local calc_tool = tools.define(
+    "calculator",
+    "Performs basic arithmetic operations",
+    {
+        parameters = {
+            a = {type = "number", required = true},
+            b = {type = "number", required = true},
+            operation = {type = "string", required = true}
+        }
+    },
+    function(args)
+        if args.operation == "add" then
+            return args.a + args.b
+        elseif args.operation == "subtract" then
+            return args.a - args.b
+        elseif args.operation == "multiply" then
+            return args.a * args.b
+        elseif args.operation == "divide" then
+            if args.b == 0 then
+                error("Division by zero")
+            end
+            return args.a / args.b
         else
-            error(err)
+            error("Unknown operation: " .. args.operation)
         end
     end
-    
-    hooks.trigger("operation.end", {name = "risky_operation", status = "success"})
-    return "Success"
-end
+)
 
--- Test error handling
-local result = risky_operation(true)
-print("Operation result: " .. result)
-print("Total errors handled: " .. error_count)
-print()
-
--- Example 3: Transform Hooks for Data Processing
-print("=== Example 3: Transform Hooks for Data Processing ===")
-
--- Register transform hooks for agent responses
-hooks.register("agent.response.transform", function(response)
-    -- Add thinking process as metadata
-    local thinking_pattern = "(?<thinking>.*?)</thinking>"
-    local thinking = string.match(response.content, "<thinking>(.-)</thinking>")
-    
-    if thinking then
-        response.metadata = response.metadata or {}
-        response.metadata.thinking = thinking
-        -- Remove thinking tags from visible response
-        response.content = string.gsub(response.content, "<thinking>.-</thinking>", "")
-        log.debug("Extracted thinking process via hook")
-    end
-    
-    -- Add word count
-    local word_count = 0
-    for word in string.gmatch(response.content, "%S+") do
-        word_count = word_count + 1
-    end
-    response.metadata = response.metadata or {}
-    response.metadata.word_count = word_count
-    
-    return response
-end)
-
--- Register output sanitization hook
-hooks.register("output.sanitize", function(text)
-    -- Remove any potential sensitive information
-    text = string.gsub(text, "%d%d%d%d%d%d%d%d%d+", "[REDACTED_NUMBER]")
-    text = string.gsub(text, "[%w%.%-]+@[%w%.%-]+", "[REDACTED_EMAIL]")
-    
-    -- Ensure proper formatting
-    text = string.gsub(text, "%s+", " ")  -- Normalize whitespace
-    text = string.gsub(text, "^%s+", "")  -- Trim start
-    text = string.gsub(text, "%s+$", "")  -- Trim end
-    
-    return text
-end)
-
--- Create an agent that will trigger transform hooks
-local analytical_agent = agent.create({
-    name = "Analytical Assistant",
-    model = "gpt-4",
-    instructions = [[
-        When answering, first think through your response in <thinking> tags,
-        then provide your answer. Include some numbers in your response.
-    ]]
-})
-
--- Get response that will be transformed
-local agent_response = analytical_agent:run({
-    prompt = "What are the top 3 benefits of using hooks? My phone is 1234567890.",
-    max_tokens = 200
-})
-
--- Apply transform hooks
-agent_response = hooks.trigger("agent.response.transform", agent_response)
-agent_response.content = hooks.trigger("output.sanitize", agent_response.content)
-
-print("Transformed response: " .. agent_response.content)
-print("Word count: " .. (agent_response.metadata and agent_response.metadata.word_count or "N/A"))
-print()
-
--- Example 4: Conditional Hooks with Priorities
-print("=== Example 4: Conditional Hooks with Priorities ===")
-
--- Register multiple hooks with different priorities
-hooks.register("data.validate", function(data)
-    log.debug("Validation hook 1 (priority 10)")
-    if not data.name then
-        error("Name is required")
-    end
-    return data
-end, {priority = 10})
-
-hooks.register("data.validate", function(data)
-    log.debug("Validation hook 2 (priority 5)")
-    if data.age and data.age < 0 then
-        data.age = 0  -- Fix negative age
-        log.warn("Fixed negative age")
-    end
-    return data
-end, {priority = 5})
-
-hooks.register("data.validate", function(data)
-    log.debug("Validation hook 3 (priority 1)")
-    -- Add timestamp
-    data.validated_at = os.time()
-    return data
-end, {priority = 1})
-
--- Conditional hook that only runs for specific data types
-hooks.register("data.process", function(data)
-    if data.type ~= "user" then
-        return data  -- Skip non-user data
-    end
-    
-    log.debug("Processing user data")
-    data.processed = true
-    
-    -- Normalize name
-    if data.name then
-        data.name = string.upper(string.sub(data.name, 1, 1)) .. 
-                   string.lower(string.sub(data.name, 2))
-    end
-    
-    return data
-end, {
-    condition = function(data)
-        return data.type == "user"
+-- Register before-tool-call hook for validation
+hooks.register_hook("validate_tool_call", {
+    type = hooks.TYPES.BEFORE_TOOL_CALL,
+    priority = hooks.PRIORITY.HIGH,
+    handler = function(context)
+        print("  [BEFORE_TOOL_CALL] Tool: " .. (context.tool_name or "unknown"))
+        print("  [BEFORE_TOOL_CALL] Arguments: " .. data.to_json(context.arguments or {}))
+        
+        -- Validate calculator inputs
+        if context.tool_name == "calculator" then
+            local args = context.arguments
+            if args and args.operation == "divide" and args.b == 0 then
+                print("  [BEFORE_TOOL_CALL] Warning: Division by zero detected!")
+                -- Could modify args or throw error here
+            end
+        end
+        
+        context.tool_start_time = os.time()
+        return context
     end
 })
 
--- Test hook execution order and conditions
-local test_data = {
-    type = "user",
-    name = "john doe",
-    age = -5
-}
+-- Register after-tool-call hook for logging
+hooks.register_hook("log_tool_result", {
+    type = hooks.TYPES.AFTER_TOOL_CALL,
+    priority = hooks.PRIORITY.NORMAL,
+    handler = function(context)
+        local elapsed = os.time() - (context.tool_start_time or 0)
+        print("  [AFTER_TOOL_CALL] Tool execution took " .. elapsed .. " seconds")
+        
+        if context.result then
+            print("  [AFTER_TOOL_CALL] Result: " .. tostring(context.result))
+        end
+        
+        if context.error then
+            print("  [AFTER_TOOL_CALL] Error: " .. tostring(context.error))
+        end
+        
+        return context
+    end
+})
 
-print("Original data: " .. data.to_json(test_data))
+-- Create an agent with tool access
+local math_assistant = agent.create("Math Assistant", {
+    model = model,
+    system = "You are a math assistant. Use the calculator tool for computations.",
+    tools = {"calculator"},
+    temperature = 0.3
+})
 
--- Trigger validation hooks (executed by priority)
-test_data = hooks.trigger("data.validate", test_data)
-print("After validation: " .. data.to_json(test_data))
-
--- Trigger conditional processing
-test_data = hooks.trigger("data.process", test_data)
-print("After processing: " .. data.to_json(test_data))
+-- Test tool call hooks
+print("\nTesting tool call hooks:")
+local result = math_assistant:run("Calculate 15 divided by 3")
+print("Result: " .. result)
 print()
 
--- Example 5: Hook Chains and Middleware
-print("=== Example 5: Hook Chains and Middleware ===")
+-- Example 3: Hook Priorities and Multiple Handlers
+print("=== Example 3: Hook Priorities ===")
 
--- Create a middleware system using hooks
-local middleware_stack = {}
-
-local function add_middleware(name, handler)
-    table.insert(middleware_stack, {name = name, handler = handler})
-    
-    hooks.register("middleware.execute", function(context)
-        log.debug("Middleware: " .. name)
-        return handler(context)
-    end, {
-        name = name,
-        condition = function(ctx)
-            return ctx.middleware == name or ctx.middleware == "all"
-        end
-    })
-end
-
--- Add authentication middleware
-add_middleware("auth", function(context)
-    if not context.user then
-        error("Authentication required")
+-- Register multiple before-generate hooks with different priorities
+hooks.register_hook("priority_highest", {
+    type = hooks.TYPES.BEFORE_GENERATE,
+    priority = hooks.PRIORITY.HIGHEST,
+    handler = function(context)
+        print("  [Priority 1000] Highest priority hook")
+        context.hook_chain = (context.hook_chain or "") .. "1-"
+        return context
     end
-    context.authenticated = true
-    log.info("User authenticated: " .. context.user)
-    return context
-end)
+})
 
--- Add logging middleware
-add_middleware("logging", function(context)
-    local start_time = os.time()
-    
-    -- Log request
-    log.info(string.format("[%s] %s by %s",
-        os.date("%Y-%m-%d %H:%M:%S"),
-        context.action or "unknown",
-        context.user or "anonymous"))
-    
-    -- Add cleanup hook
-    hooks.register("middleware.cleanup", function()
-        local duration = os.time() - start_time
-        log.info("Request completed in " .. duration .. "s")
-    end, {once = true})  -- Only run once
-    
-    return context
-end)
-
--- Add rate limiting middleware
-local request_counts = {}
-add_middleware("rate_limit", function(context)
-    local user = context.user or "anonymous"
-    local current_time = os.time()
-    
-    -- Initialize or clean old entries
-    if not request_counts[user] then
-        request_counts[user] = {}
+hooks.register_hook("priority_normal", {
+    type = hooks.TYPES.BEFORE_GENERATE,
+    priority = hooks.PRIORITY.NORMAL,
+    handler = function(context)
+        print("  [Priority 0] Normal priority hook")
+        context.hook_chain = (context.hook_chain or "") .. "2-"
+        return context
     end
-    
-    -- Count recent requests (last 60 seconds)
-    local recent_count = 0
-    local cutoff_time = current_time - 60
-    local new_requests = {}
-    
-    for _, timestamp in ipairs(request_counts[user]) do
-        if timestamp > cutoff_time then
-            recent_count = recent_count + 1
-            table.insert(new_requests, timestamp)
-        end
-    end
-    
-    request_counts[user] = new_requests
-    
-    -- Check rate limit
-    if recent_count >= 10 then
-        error("Rate limit exceeded: " .. recent_count .. " requests in last minute")
-    end
-    
-    -- Record this request
-    table.insert(request_counts[user], current_time)
-    context.rate_limit_remaining = 10 - recent_count - 1
-    
-    return context
-end)
+})
 
--- Execute middleware chain
-local function execute_request(context)
-    -- Run all middleware
-    for _, mw in ipairs(middleware_stack) do
-        context.middleware = mw.name
-        context = hooks.trigger("middleware.execute", context)
+hooks.register_hook("priority_low", {
+    type = hooks.TYPES.BEFORE_GENERATE,
+    priority = hooks.PRIORITY.LOW,
+    handler = function(context)
+        print("  [Priority -100] Low priority hook")
+        context.hook_chain = (context.hook_chain or "") .. "3"
+        return context
     end
-    
-    -- Execute the actual action
-    print("Executing action: " .. (context.action or "none"))
-    
-    -- Cleanup
-    hooks.trigger("middleware.cleanup")
-    
-    return context
-end
+})
 
--- Test middleware chain
-local request_context = {
-    user = "alice",
-    action = "generate_report"
-}
-
-local result = execute_request(request_context)
-print("Request completed. Rate limit remaining: " .. (result.rate_limit_remaining or "N/A"))
+-- Test priority ordering
+print("\nTesting hook priorities (should execute in order: highest, normal, low):")
+local test_response = assistant:run("Say hello")
+print("Hook execution chain: " .. (assistant.last_context and assistant.last_context.hook_chain or "N/A"))
 print()
 
--- Example 6: Dynamic Hook Management
-print("=== Example 6: Dynamic Hook Management ===")
+-- Example 4: Hook Management
+print("=== Example 4: Hook Management ===")
 
 -- List all registered hooks
-local registered_hooks = hooks.list()
-print("Total registered hooks: " .. #registered_hooks)
+local all_hooks = hooks.list_hooks()
+print("\nRegistered hooks: " .. #all_hooks)
+for i, hook in ipairs(all_hooks) do
+    print(string.format("  %d. %s (type: %s, priority: %s)", 
+        i, hook.id, hook.type, hook.priority))
+end
 
--- Disable specific hooks temporarily
-print("\nDisabling error hooks temporarily...")
-hooks.disable("error")
+-- Disable specific hooks
+print("\nDisabling 'priority_normal' hook...")
+hooks.disable_hook("priority_normal")
 
--- This error won't trigger the error hook
-local success, err = pcall(function()
-    error("This error won't be caught by hooks")
-end)
-print("Error occurred: " .. tostring(not success))
-print("Error caught by hook: false")
+-- Enable it again
+print("Re-enabling 'priority_normal' hook...")
+hooks.enable_hook("priority_normal")
 
--- Re-enable error hooks
-hooks.enable("error")
+-- Remove hooks we don't need anymore
+print("\nCleaning up priority test hooks...")
+hooks.unregister_hook("priority_highest")
+hooks.unregister_hook("priority_normal")
+hooks.unregister_hook("priority_low")
 
--- Remove specific hooks
-print("\nCleaning up hooks...")
-local removed = hooks.remove("middleware.cleanup")
-print("Removed " .. removed .. " cleanup hooks")
+-- Example 5: Practical Use Cases
+print("\n=== Example 5: Practical Use Cases ===")
 
--- Clear all hooks of a specific type
-hooks.clear("data.validate")
-print("Cleared all validation hooks")
+-- Use case 1: Token counting and limits
+hooks.register_hook("token_limiter", {
+    type = hooks.TYPES.BEFORE_GENERATE,
+    priority = hooks.PRIORITY.HIGH,
+    handler = function(context)
+        -- In production, would use actual tokenizer
+        local estimated_tokens = context.prompt and #context.prompt / 4 or 0
+        print("  [Token Limiter] Estimated tokens: " .. math.floor(estimated_tokens))
+        
+        if estimated_tokens > 1000 then
+            print("  [Token Limiter] Warning: Prompt may be too long!")
+            -- Could truncate or modify prompt here
+        end
+        
+        return context
+    end
+})
 
--- Register a one-time hook
-hooks.register("final.cleanup", function()
-    print("One-time cleanup hook executed")
-    return {
-        hooks_remaining = #hooks.list(),
-        errors_handled = error_count
-    }
-end, {once = true})
+-- Use case 2: Response caching
+local response_cache = {}
+hooks.register_hook("response_cache", {
+    type = hooks.TYPES.BEFORE_GENERATE,
+    priority = hooks.PRIORITY.HIGHEST,
+    handler = function(context)
+        local cache_key = context.prompt or ""
+        if response_cache[cache_key] then
+            print("  [Cache] Hit! Returning cached response")
+            context.response = response_cache[cache_key]
+            context.skip_generation = true  -- If supported by the bridge
+        end
+        return context
+    end
+})
 
--- Trigger the one-time hook
-local cleanup_result = hooks.trigger("final.cleanup")
+hooks.register_hook("cache_store", {
+    type = hooks.TYPES.AFTER_GENERATE,
+    priority = hooks.PRIORITY.LOWEST,
+    handler = function(context)
+        if context.response and context.prompt then
+            response_cache[context.prompt] = context.response
+            print("  [Cache] Stored response in cache")
+        end
+        return context
+    end
+})
 
--- Try triggering again (won't execute)
-local second_result = hooks.trigger("final.cleanup")
-print("Second trigger result: " .. tostring(second_result))
+-- Test practical hooks
+print("\nTesting practical hooks:")
+local query = "What is 2+2?"
 
--- Return summary
+-- First call - should cache
+print("First call:")
+assistant:run(query)
+
+-- Second call - should hit cache
+print("\nSecond call (should hit cache):")
+assistant:run(query)
+
+-- Example 6: Advanced Hook Patterns
+print("\n=== Example 6: Advanced Patterns ===")
+
+-- Pattern 1: Conditional hooks using context
+hooks.register_hook("dev_mode_logger", {
+    type = hooks.TYPES.AFTER_GENERATE,
+    priority = hooks.PRIORITY.LOW,
+    handler = function(context)
+        -- Only log in development mode
+        if context.dev_mode then
+            print("  [DEV] Full context: " .. data.to_json(context))
+        end
+        return context
+    end
+})
+
+-- Pattern 2: Error handling in hooks
+hooks.register_hook("safe_processor", {
+    type = hooks.TYPES.AFTER_GENERATE,
+    priority = hooks.PRIORITY.NORMAL,
+    handler = function(context)
+        local success, result = pcall(function()
+            -- Some processing that might fail
+            if context.response and string.find(context.response, "error") then
+                error("Response contains error word")
+            end
+            return context
+        end)
+        
+        if not success then
+            print("  [Safe Processor] Error caught: " .. tostring(result))
+            context.processing_error = tostring(result)
+        end
+        
+        return context
+    end
+})
+
+-- Pattern 3: Chain of responsibility
+hooks.register_hook("response_filter", {
+    type = hooks.TYPES.AFTER_GENERATE,
+    priority = hooks.PRIORITY.HIGH,
+    handler = function(context)
+        if context.response then
+            -- Remove any potential sensitive data
+            context.response = string.gsub(context.response, "%d%d%d%-?%d%d%-?%d%d%d%d", "[REDACTED]")
+            print("  [Filter] Applied sensitive data filter")
+        end
+        return context
+    end
+})
+
+-- Test advanced patterns
+print("\nTesting advanced patterns:")
+local sensitive_response = assistant:run("My SSN is 123-45-6789")
+print("Filtered response: " .. sensitive_response)
+
+-- Cleanup
+print("\n=== Cleanup ===")
+print("Unregistering all example hooks...")
+
+-- Get current hooks and unregister them
+local final_hooks = hooks.list_hooks()
+for _, hook in ipairs(final_hooks) do
+    hooks.unregister_hook(hook.id)
+end
+
+print("All hooks cleaned up. Total remaining: " .. #hooks.list_hooks())
+
+-- Summary
+print("\n=== Summary ===")
+print("This example demonstrated:")
+print("1. Before/After generate hooks for modifying prompts and responses")
+print("2. Before/After tool call hooks for monitoring tool usage")
+print("3. Hook priorities and execution order")
+print("4. Hook management (list, enable, disable, unregister)")
+print("5. Practical use cases (token limiting, caching, filtering)")
+print("6. Advanced patterns (conditional hooks, error handling)")
+
 return {
-    success = true,
-    total_errors_handled = error_count,
-    hooks_executed = true,
-    middleware_tested = true,
-    final_hook_count = cleanup_result and cleanup_result.hooks_remaining or 0
+    hooks_demonstrated = 6,
+    patterns_shown = {
+        "basic_lifecycle",
+        "tool_monitoring",
+        "priority_ordering",
+        "management_operations",
+        "practical_applications",
+        "advanced_patterns"
+    }
 }

@@ -15,7 +15,8 @@ local agent = require("agent")
 local llm = require("llm")
 local data = require("data")
 local errors = require("errors")
-local log = require("log")
+local logging = require("logging")
+local log = logging.default()
 local core = require("core")
 local utils = require("utils")
 
@@ -309,21 +310,10 @@ local research_tool = {
         local topic = params.topic
         local depth = params.depth or "standard"
         
-        log.info("Starting research on: " .. topic)
+        log:info("Starting research on: " .. topic)
         
-        -- Step 1: Generate research questions
-        local questions_response = llm.complete({
-            model = "gpt-3.5-turbo",
-            messages = {
-                {role = "system", content = "You are a research assistant."},
-                {role = "user", content = string.format(
-                    "Generate %d key questions about: %s",
-                    depth == "quick" and 2 or (depth == "deep" and 5 or 3),
-                    topic
-                )}
-            },
-            max_tokens = 200
-        })
+        -- Step 1: Generate research questions based on depth
+        local num_questions = depth == "quick" and 2 or (depth == "deep" and 5 or 3)
         
         -- Step 2: Analyze the topic text
         local topic_analysis = tools.execute_safe("analyze_text", {
@@ -331,11 +321,26 @@ local research_tool = {
             analyses = {"word_count", "language"}
         })
         
+        -- Generate basic questions
+        local questions = {}
+        questions[1] = "What is " .. topic .. "?"
+        questions[2] = "Why is " .. topic .. " important?"
+        
+        if num_questions >= 3 then
+            questions[3] = "How does " .. topic .. " work?"
+        end
+        if num_questions >= 4 then
+            questions[4] = "What are the applications of " .. topic .. "?"
+        end
+        if num_questions >= 5 then
+            questions[5] = "What is the future of " .. topic .. "?"
+        end
+        
         -- Step 3: Simulate gathering data (would use web search in real implementation)
         local research_data = {
             topic = topic,
             depth = depth,
-            questions = questions_response.content,
+            questions = questions,
             analysis = topic_analysis,
             sources = {
                 {type = "article", title = "Introduction to " .. topic, relevance = 0.9},
@@ -345,19 +350,17 @@ local research_tool = {
             timestamp = os.time()
         }
         
-        -- Step 4: Generate summary
-        local summary_response = llm.complete({
-            model = "gpt-3.5-turbo",
-            messages = {
-                {role = "user", content = string.format(
-                    "Summarize research on '%s' with these questions: %s",
-                    topic, questions_response.content
-                )}
-            },
-            max_tokens = 150
-        })
+        -- Step 4: Generate summary without LLM
+        local summary = string.format(
+            "Research on '%s' completed. Generated %d questions and analyzed the topic. " ..
+            "Sentiment: %s, Readability: %s",
+            topic, 
+            num_questions,
+            topic_analysis.sentiment or "neutral",
+            topic_analysis.readability or "medium"
+        )
         
-        research_data.summary = summary_response.content
+        research_data.summary = summary
         
         return research_data
     end
@@ -387,10 +390,9 @@ print()
 print("=== Example 5: Tool Integration with Agents ===")
 
 -- Create an agent that can use our custom tools
-local tool_agent = agent.create({
-    name = "Tool Master",
+local tool_agent = agent.create("Tool Master", {
     model = "gpt-4",
-    instructions = [[
+    system = [[
         You are an assistant that helps users by using custom tools.
         Available tools:
         - calculator: for math operations
@@ -405,16 +407,8 @@ local tool_agent = agent.create({
 
 -- Test agent with tools
 print("Agent using calculator tool:")
-local calc_response = tool_agent:run({
-    prompt = "What is 158 multiplied by 37?",
-    max_tokens = 100
-})
-print("Agent: " .. calc_response.content)
-
--- Check if tool was used
-if calc_response.tool_calls and #calc_response.tool_calls > 0 then
-    print("Tool used: " .. calc_response.tool_calls[1].name)
-end
+local calc_response = tool_agent:run("What is 158 multiplied by 37?")
+print("Agent: " .. calc_response)
 print()
 
 -- Example 6: Dynamic Tool Creation

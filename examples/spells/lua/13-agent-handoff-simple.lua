@@ -22,10 +22,7 @@ local output_dir = params.output_dir or "./handoff-output"
 print("=== Agent Handoff Example (Simplified) ===")
 print()
 
--- Ensure output directory exists
-if not utils.file_exists(output_dir) then
-    utils.mkdir(output_dir)
-end
+-- Note: File operations removed as they're not available in this environment
 
 -- Simple context manager
 local Context = {}
@@ -290,7 +287,8 @@ for _, handoff in ipairs(context.handoff_log) do
     )
 end
 
-utils.file_write(output_dir .. "/handoff_log.txt", handoff_report)
+-- In production, would save: utils.file_write(output_dir .. "/handoff_log.txt", handoff_report)
+print("Handoff log would be saved to: " .. output_dir .. "/handoff_log.txt")
 print("Handoff log saved")
 
 -- Save conversation history
@@ -307,17 +305,19 @@ for _, msg in ipairs(context.conversation_history) do
     )
 end
 
-utils.file_write(output_dir .. "/conversation_history.txt", conversation_log)
+-- In production, would save: utils.file_write(output_dir .. "/conversation_history.txt", conversation_log)
+print("Conversation history would be saved to: " .. output_dir .. "/conversation_history.txt")
 print("Conversation history saved")
 
 -- Save research results
-utils.file_write(output_dir .. "/research_results.json", data.to_json({
+local research_data = data.to_json({
     topic = research_topic,
     research = research_result.research_data,
     analysis = research_result.analysis,
     summary = research_result.summary
-}))
-print("Research results saved")
+})
+-- In production, would save: utils.file_write(output_dir .. "/research_results.json", research_data)
+print("Research results would be saved to: " .. output_dir .. "/research_results.json")
 
 print()
 

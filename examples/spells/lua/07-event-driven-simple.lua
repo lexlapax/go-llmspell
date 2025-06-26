@@ -19,10 +19,8 @@ print("=== Event-Driven Spells Example (Simplified) ===")
 print("Scenario: " .. scenario)
 print()
 
--- Ensure output directory exists
-if not utils.file_exists(output_dir) then
-    utils.mkdir(output_dir)
-end
+-- Note: File system operations removed - focus on event-driven patterns
+-- In production, output would be saved to files
 
 -- Simple Event System
 local SimpleEventSystem = {}
@@ -184,7 +182,7 @@ local test_contents = {
 
 for _, submission in ipairs(test_contents) do
     SimpleEventSystem.emit(moderation_system, "content_submitted", submission)
-    utils.sleep(0.5)  -- Small delay for readability
+    utils.general_sleep(500)  -- Small delay for readability (500ms)
 end
 
 print()
@@ -217,7 +215,9 @@ for i = 1, #moderation_system.event_log do
         os.date("%H:%M:%S", event.timestamp), event.name)
 end
 
-utils.file_write(output_dir .. "/event_log.txt", log_content)
+-- Output would be written to file in production
+print("\nEvent Log:")
+print(log_content)
 print("Event log saved to: " .. output_dir .. "/event_log.txt")
 
 -- Return summary

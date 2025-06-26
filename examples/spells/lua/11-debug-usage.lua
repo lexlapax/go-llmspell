@@ -1,357 +1,360 @@
--- ABOUTME: Debug usage example showing debugging tools, profiling, and troubleshooting
--- ABOUTME: Demonstrates debug module usage for development, testing, and performance analysis
+-- ABOUTME: Debug usage example using utils debug functions and logging for troubleshooting
+-- ABOUTME: Demonstrates debugging patterns, logging levels, and performance monitoring
 
 -- Debug Usage Example
--- This spell demonstrates comprehensive debugging features including:
--- 1. Debug logging and tracing
--- 2. Performance profiling
--- 3. Memory usage tracking
--- 4. Call stack inspection
--- 5. Variable watching and breakpoints
+-- This spell demonstrates debugging features available through utils and logging:
+-- 1. Debug logging and levels
+-- 2. Performance timing
+-- 3. Error tracking and reporting
+-- 4. Data inspection
+-- 5. Debug configurations
 
 -- Required modules
-local debug = require("debug")
-local log = require("log")
+local utils = require("utils")
+local logging = require("logging")
 local llm = require("llm")
 local agent = require("agent")
-local core = require("core")
 local data = require("data")
 local errors = require("errors")
 
--- Enable debug mode
-debug.enable()
-log.set_level("debug")
+-- Parameters
+local model = params and params.model or "gpt-4"
 
--- Example 1: Debug Logging and Tracing
-print("=== Example 1: Debug Logging and Tracing ===")
+-- Get logger instance
+local log = logging.default()
 
--- Create a traced function
-local function calculate_fibonacci(n)
-    debug.trace("calculate_fibonacci", {n = n})
-    
-    if n <= 1 then
-        debug.trace("fibonacci_base_case", {n = n, result = n})
-        return n
-    end
-    
-    local result = calculate_fibonacci(n - 1) + calculate_fibonacci(n - 2)
-    debug.trace("fibonacci_recursive", {n = n, result = result})
-    
-    return result
-end
+-- Example 1: Debug Logging Setup
+print("=== Example 1: Debug Logging Setup ===")
 
--- Enable function tracing
-debug.start_trace()
+-- Set debug level
+local debug_level = "debug"
+utils.debug_set_level(debug_level)
+print("Debug level set to: " .. debug_level)
 
--- Calculate with tracing
-local fib_result = calculate_fibonacci(5)
-print("Fibonacci(5) = " .. fib_result)
+-- Get debug configuration
+local debug_config = utils.debug_get_config()
+print("Debug configuration: " .. data.to_json(debug_config))
 
--- Get trace results
-local trace_data = debug.stop_trace()
-print("Function calls traced: " .. #trace_data)
-print("First few traces:")
-for i = 1, math.min(3, #trace_data) do
-    local trace = trace_data[i]
-    print(string.format("  %s: %s", trace.name, data.to_json(trace.args)))
-end
+-- Log at different levels
+utils.debug_log("debug", "This is a debug message", {extra = "data"})
+utils.debug_log("info", "This is an info message", {user = "test"})
+utils.debug_log("warn", "This is a warning", {threshold = 0.8})
+utils.debug_log("error", "This is an error", {code = "TEST_ERROR"})
+
+-- Using logging module for structured logging
+log:debug("Debug message from logging module")
+log:info("Info message from logging module")
+log:warn("Warning from logging module")
+log:error("Error from logging module")
 print()
 
--- Example 2: Performance Profiling
-print("=== Example 2: Performance Profiling ===")
+-- Example 2: Performance Monitoring
+print("=== Example 2: Performance Monitoring ===")
 
--- Start profiling
-debug.start_profile()
+-- Simple timer utility
+local function timer()
+    local start_time = os.clock()
+    return function()
+        return os.clock() - start_time
+    end
+end
 
--- Expensive operation 1: String manipulation
-local function expensive_string_operation()
-    local result = ""
-    for i = 1, 1000 do
-        result = result .. "x"  -- Inefficient concatenation
+-- Create a function to profile
+local function expensive_operation(n)
+    local result = 0
+    for i = 1, n do
+        result = result + i
     end
     return result
 end
 
--- Expensive operation 2: Table operations
-local function expensive_table_operation()
-    local t = {}
-    for i = 1, 1000 do
-        table.insert(t, i)
-        table.sort(t)  -- Sorting after each insert (inefficient)
-    end
-    return t
-end
-
--- Expensive operation 3: LLM call
-local function expensive_llm_operation()
-    return llm.complete({
-        model = "gpt-3.5-turbo",
-        messages = {
-            {role = "user", content = "Count from 1 to 10"}
-        },
-        max_tokens = 50
+-- Profile the function
+print("\nProfiling expensive_operation:")
+local sizes = {1000, 10000, 100000}
+for _, size in ipairs(sizes) do
+    local get_elapsed = timer()
+    local result = expensive_operation(size)
+    local elapsed = get_elapsed()
+    
+    utils.debug_log("info", string.format("Operation with n=%d took %.4f seconds", size, elapsed), {
+        size = size,
+        result = result,
+        elapsed = elapsed
     })
 end
+print()
 
--- Run operations
-print("Running expensive operations...")
-expensive_string_operation()
-expensive_table_operation()
-expensive_llm_operation()
+-- Example 3: Error Tracking
+print("=== Example 3: Error Tracking ===")
 
--- Get profiling results
-local profile = debug.stop_profile()
-print("\nProfile Results:")
-print(string.format("Total time: %.3fs", profile.total_time))
-print(string.format("CPU time: %.3fs", profile.cpu_time))
-print(string.format("Memory allocated: %.2f MB", profile.memory_allocated / 1024 / 1024))
+-- Create custom error handler
+local error_count = 0
+local error_log = {}
 
-print("\nTop functions by time:")
-for i, func in ipairs(profile.functions) do
-    if i > 5 then break end
-    print(string.format("  %s: %.3fs (%.1f%%)", 
-        func.name, 
-        func.time, 
-        func.time / profile.total_time * 100))
+local function track_error(err, context)
+    error_count = error_count + 1
+    local error_entry = {
+        timestamp = os.time(),
+        error = tostring(err),
+        context = context,
+        count = error_count
+    }
+    table.insert(error_log, error_entry)
+    
+    utils.debug_log("error", "Error tracked", error_entry)
+    return error_entry
+end
+
+-- Test error tracking
+local function risky_function(should_fail)
+    if should_fail then
+        error("Simulated error for debugging")
+    end
+    return "Success"
+end
+
+-- Try operations with error tracking
+for i = 1, 3 do
+    local success, result = pcall(risky_function, i == 2)
+    if not success then
+        track_error(result, {operation = "risky_function", iteration = i})
+        print("  Error caught in iteration " .. i)
+    else
+        print("  Success in iteration " .. i)
+    end
+end
+
+print("\nError summary:")
+print("  Total errors: " .. error_count)
+print("  Error log entries: " .. #error_log)
+print()
+
+-- Example 4: Agent and LLM Debugging
+print("=== Example 4: Agent and LLM Debugging ===")
+print("DEBUG: About to create agent")
+print("DEBUG: agent type = " .. type(agent))
+print("DEBUG: agent.create type = " .. type(agent.create))
+
+-- Create a debug-enabled agent
+local debug_agent = agent.create("Debug Assistant", {
+    model = model,
+    system = "You are a helpful assistant. Be concise.",
+    temperature = 0.5
+})
+
+-- Function to debug agent calls
+local function debug_agent_call(prompt)
+    utils.debug_log("debug", "Agent call starting", {prompt = prompt})
+    
+    local get_elapsed = timer()
+    local response = debug_agent:run(prompt)
+    local elapsed = get_elapsed()
+    
+    -- Log details
+    local debug_info = {
+        prompt = prompt,
+        response_preview = string.sub(response, 1, 100),
+        response_length = #response,
+        elapsed_time = elapsed
+    }
+    
+    utils.debug_log("info", "Agent call completed", debug_info)
+    
+    return response, debug_info
+end
+
+-- Test debug agent calls
+local test_prompts = {
+    "What is 2+2?",
+    "Write a haiku about debugging",
+    "Explain recursion in one sentence"
+}
+
+print("\nTesting agent with debug logging:")
+for i, prompt in ipairs(test_prompts) do
+    print("\nPrompt " .. i .. ": " .. prompt)
+    local response, debug_info = debug_agent_call(prompt)
+    print("Response: " .. response)
+    print("Debug info: " .. data.to_json(debug_info))
 end
 print()
 
--- Example 3: Memory Usage Tracking
-print("=== Example 3: Memory Usage Tracking ===")
+-- Example 5: Data Inspection and Validation
+print("=== Example 5: Data Inspection and Validation ===")
 
--- Get initial memory snapshot
-local mem_start = debug.memory_snapshot()
+-- Debug data structures
+local complex_data = {
+    users = {
+        {id = 1, name = "Alice", active = true},
+        {id = 2, name = "Bob", active = false},
+        {id = 3, name = "Charlie", active = true}
+    },
+    settings = {
+        debug = true,
+        log_level = "debug",
+        features = {"auth", "api", "webhooks"}
+    },
+    metrics = {
+        requests = 1523,
+        errors = 23,
+        success_rate = 0.985
+    }
+}
 
--- Create some objects
-local large_table = {}
-for i = 1, 10000 do
-    large_table[i] = {
-        id = i,
-        data = string.rep("x", 100),
-        nested = {a = 1, b = 2, c = 3}
+-- Debug inspection function
+local function inspect_data(data_obj, path)
+    path = path or "root"
+    utils.debug_log("debug", "Inspecting data at: " .. path, {
+        type = type(data_obj),
+        size = type(data_obj) == "table" and #data_obj or nil
+    })
+    
+    if type(data_obj) == "table" then
+        for key, value in pairs(data_obj) do
+            local new_path = path .. "." .. tostring(key)
+            if type(value) == "table" then
+                inspect_data(value, new_path)
+            else
+                utils.debug_log("debug", "  " .. new_path .. " = " .. tostring(value), {
+                    type = type(value)
+                })
+            end
+        end
+    end
+end
+
+print("\nInspecting complex data structure:")
+inspect_data(complex_data)
+
+-- Data validation with debug output
+local function validate_user(user)
+    local validation_errors = {}
+    
+    if not user.id then
+        table.insert(validation_errors, "Missing user ID")
+    end
+    
+    if not user.name or #user.name < 2 then
+        table.insert(validation_errors, "Invalid user name")
+    end
+    
+    if type(user.active) ~= "boolean" then
+        table.insert(validation_errors, "Active status must be boolean")
+    end
+    
+    if #validation_errors > 0 then
+        utils.debug_log("warn", "User validation failed", {
+            user = user,
+            errors = validation_errors
+        })
+        return false, validation_errors
+    end
+    
+    utils.debug_log("info", "User validation passed", {user = user})
+    return true
+end
+
+print("\nValidating users:")
+for _, user in ipairs(complex_data.users) do
+    local valid, errors = validate_user(user)
+    print("  User " .. user.name .. ": " .. (valid and "Valid" or "Invalid"))
+end
+print()
+
+-- Example 6: Debug Configuration Management
+print("=== Example 6: Debug Configuration Management ===")
+
+-- Check current debug settings
+local current_config = utils.debug_get_config()
+print("\nCurrent debug configuration:")
+print(data.to_json(current_config, {pretty = true}))
+
+-- Create debug session manager
+local DebugSession = {}
+
+function DebugSession:new()
+    local obj = {
+        start_time = os.time(),
+        events = {},
+        metrics = {
+            agent_calls = 0,
+            errors = 0,
+            warnings = 0
+        }
+    }
+    setmetatable(obj, {__index = self})
+    return obj
+end
+
+function DebugSession:log_event(event_type, details)
+    local event = {
+        timestamp = os.time(),
+        type = event_type,
+        details = details
+    }
+    table.insert(self.events, event)
+    
+    -- Update metrics
+    if event_type == "agent_call" then
+        self.metrics.agent_calls = self.metrics.agent_calls + 1
+    elseif event_type == "error" then
+        self.metrics.errors = self.metrics.errors + 1
+    elseif event_type == "warning" then
+        self.metrics.warnings = self.metrics.warnings + 1
+    end
+    
+    utils.debug_log("debug", "Session event", event)
+end
+
+function DebugSession:get_summary()
+    local elapsed = os.time() - self.start_time
+    return {
+        duration = elapsed,
+        total_events = #self.events,
+        metrics = self.metrics
     }
 end
 
--- Verify table was created
-print(string.format("Created large table with %d entries", #large_table))
+-- Use debug session
+local session = DebugSession:new()
 
--- Create an agent (holds state)
-local memory_test_agent = agent.create({
-    name = "Memory Test Agent",
-    model = "gpt-3.5-turbo",
-    instructions = "You are testing memory usage."
-})
+-- Simulate some events
+session:log_event("start", {user = "developer"})
+session:log_event("agent_call", {prompt = "test prompt"})
+session:log_event("warning", {message = "Rate limit approaching"})
+session:log_event("agent_call", {prompt = "another test"})
+session:log_event("end", {status = "success"})
 
--- Get memory snapshot after allocations
-local mem_after = debug.memory_snapshot()
+print("\nDebug session summary:")
+print(data.to_json(session:get_summary(), {pretty = true}))
 
--- Calculate differences
-local mem_diff = debug.memory_diff(mem_start, mem_after)
-print(string.format("Memory allocated: %.2f MB", mem_diff.allocated / 1024 / 1024))
-print(string.format("Tables created: %d", mem_diff.tables))
-print(string.format("Strings created: %d", mem_diff.strings))
+-- Summary (commented out print statements)
+-- print("\n=== Summary ===")
+-- print("This example demonstrated:")
+-- print("1. Debug logging setup and configuration")
+-- print("2. Performance monitoring with timers")
+-- print("3. Error tracking and reporting")
+-- print("4. Agent/LLM call debugging")
+-- print("5. Data inspection and validation")
+-- print("6. Debug session management")
+-- print()
+-- print("Debug features used:")
+-- print("- utils.debug_set_level()")
+-- print("- utils.debug_log()")
+-- print("- utils.debug_get_config()")
+-- print("- logging module for structured logs")
+-- print("- Custom error tracking")
+-- print("- Performance profiling")
 
--- Force garbage collection
-collectgarbage("collect")
-local mem_gc = debug.memory_snapshot()
-local gc_diff = debug.memory_diff(mem_after, mem_gc)
-print(string.format("Memory freed by GC: %.2f MB", -gc_diff.allocated / 1024 / 1024))
-print()
-
--- Example 4: Call Stack Inspection
-print("=== Example 4: Call Stack Inspection ===")
-
-local function level3()
-    -- Inspect call stack
-    local stack = debug.get_stack(10)  -- Get up to 10 frames
-    
-    print("Current call stack:")
-    for i, frame in ipairs(stack) do
-        print(string.format("  %d: %s at %s:%d", 
-            i, 
-            frame.function_name or "anonymous",
-            frame.source or "unknown",
-            frame.line or 0))
-        
-        -- Show local variables for top frame
-        if i == 1 and frame.locals then
-            print("    Locals:")
-            for name, value in pairs(frame.locals) do
-                print(string.format("      %s = %s", name, tostring(value)))
-            end
-        end
-    end
-    
-    return "level3_result"
-end
-
-local function level2(param)
-    local local_var = "level2_local"
-    return level3()
-end
-
-local function level1()
-    return level2("test_param")
-end
-
--- Call through multiple levels
-level1()
-print()
-
--- Example 5: Variable Watching and Breakpoints
-print("=== Example 5: Variable Watching and Breakpoints ===")
-
--- Set up variable watchers
-local watch_values = {}
-debug.watch("counter", function(name, old_value, new_value)
-    print(string.format("Watch: %s changed from %s to %s", 
-        name, tostring(old_value), tostring(new_value)))
-    table.insert(watch_values, {name = name, old = old_value, new = new_value})
-end)
-
--- Function with conditional breakpoint
-local function process_items(items)
-    local counter = 0
-    local results = {}
-    
-    for i, item in ipairs(items) do
-        counter = counter + 1
-        debug.set_watched("counter", counter)
-        
-        -- Conditional breakpoint
-        if debug.breakpoint_enabled and item.value > 50 then
-            debug.breakpoint({
-                message = "High value item found",
-                item = item,
-                counter = counter
-            })
-        end
-        
-        -- Process item
-        local result = item.value * 2
-        table.insert(results, result)
-        
-        -- Simulate some work
-        core.sleep(0.01)
-    end
-    
-    return results
-end
-
--- Enable breakpoints
-debug.breakpoint_enabled = true
-debug.on_breakpoint = function(info)
-    print("BREAKPOINT HIT: " .. info.message)
-    print("  Item: " .. data.to_json(info.item))
-    print("  Counter: " .. info.counter)
-    -- In a real debugger, execution would pause here
-end
-
--- Process items with debugging
-local test_items = {
-    {id = 1, value = 10},
-    {id = 2, value = 25},
-    {id = 3, value = 75},  -- Will trigger breakpoint
-    {id = 4, value = 30}
-}
-
-local results = process_items(test_items)
-print("Processed " .. #results .. " items")
-print("Watch triggers: " .. #watch_values)
-print()
-
--- Example 6: Error Debugging and Recovery
-print("=== Example 6: Error Debugging and Recovery ===")
-
--- Enable detailed error tracking
-debug.track_errors = true
-
--- Function that may fail
-local function risky_llm_call(prompt, should_fail)
-    debug.trace("risky_llm_call_start", {prompt = prompt, should_fail = should_fail})
-    
-    if should_fail then
-        -- Simulate an error with full context
-        local err = errors.new("LLM_ERROR", "Simulated API failure")
-        err:with_context("prompt", prompt)
-        err:with_context("timestamp", os.time())
-        err:with_context("stack_trace", debug.get_stack(5))
-        
-        debug.trace("risky_llm_call_error", {error = err})
-        error(err)
-    end
-    
-    local result = llm.complete({
-        model = "gpt-3.5-turbo",
-        messages = {{role = "user", content = prompt}},
-        max_tokens = 50
-    })
-    
-    debug.trace("risky_llm_call_success", {result_length = #result.content})
-    return result
-end
-
--- Try with error capture
-local success, result = pcall(function()
-    return risky_llm_call("This will fail", true)
-end)
-
-if not success then
-    print("Error caught: " .. tostring(result))
-    
-    -- Get detailed error info
-    local error_info = debug.get_last_error()
-    if error_info then
-        print("Error details:")
-        print("  Type: " .. (error_info.type or "unknown"))
-        print("  Message: " .. (error_info.message or "none"))
-        print("  Location: " .. (error_info.location or "unknown"))
-        
-        if error_info.context then
-            print("  Context:")
-            for k, v in pairs(error_info.context) do
-                if k ~= "stack_trace" then  -- Skip large stack trace
-                    print(string.format("    %s: %s", k, tostring(v)))
-                end
-            end
-        end
-    end
-end
-print()
-
--- Example 7: Debug Report Generation
-print("=== Example 7: Debug Report Generation ===")
-
--- Generate comprehensive debug report
-local report = debug.generate_report({
-    include_profile = true,
-    include_memory = true,
-    include_traces = true,
-    include_errors = true,
-    include_config = true
-})
-
-print("Debug Report Summary:")
-print("  Script: " .. (report.script_name or "unknown"))
-print("  Runtime: " .. string.format("%.2fs", report.runtime or 0))
-print("  Memory peak: " .. string.format("%.2f MB", (report.memory_peak or 0) / 1024 / 1024))
-print("  Errors encountered: " .. (report.error_count or 0))
-print("  Functions traced: " .. (report.trace_count or 0))
-
--- Save detailed report
-local report_json = data.to_json(report, {pretty = true})
-print("\nDetailed report size: " .. #report_json .. " bytes")
-
--- Disable debug mode
-debug.disable()
-print("\nDebug mode disabled")
-
--- Return debug summary
 return {
-    success = true,
-    debug_enabled = debug.is_enabled(),
-    traces_collected = #(trace_data or {}),
-    errors_tracked = report.error_count or 0,
-    memory_peak_mb = (report.memory_peak or 0) / 1024 / 1024,
-    profiling_completed = profile ~= nil
+    debug_examples = 6,
+    error_count = error_count,
+    features_demonstrated = {
+        "logging_levels",
+        "performance_monitoring",
+        "error_tracking",
+        "agent_debugging",
+        "data_inspection",
+        "session_management"
+    }
 }

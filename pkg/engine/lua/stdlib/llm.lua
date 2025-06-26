@@ -605,7 +605,6 @@ end
 
 -- Aliases for backward compatibility
 llm.generateMessage = llm.generate_message
-llm.complete = llm.generate_message  -- For examples that use llm.complete
 
 -- Stream response
 function llm.stream(prompt, options)
