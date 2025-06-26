@@ -44,19 +44,19 @@ function data.parse_json(text, schema)
     local util = get_utils()
 
     if schema then
-        -- Parse with schema validation
+        -- Parse with schema validation using jsonExtractStructuredData
         if type(schema) ~= "table" then
             error("schema must be a table")
         end
 
-        local success, result = pcall(util.jsonParse, text, schema)
+        local success, result = pcall(util.jsonExtractStructuredData, text, schema)
         if not success then
-            error("JSON parsing failed: " .. tostring(result))
+            error("JSON parsing with schema failed: " .. tostring(result))
         end
 
         return result
     else
-        -- Parse without validation
+        -- Parse without validation using jsonDecode
         local success, result = pcall(util.jsonDecode, text)
         if not success then
             error("JSON parsing failed: " .. tostring(result))
@@ -76,7 +76,13 @@ function data.to_json(object, format)
     if type(format) == "string" then
         -- Simple format string
         if format == "pretty" then
-            local success, result = pcall(util.jsonPrettify, util.jsonEncode(object))
+            -- First encode the object to JSON
+            local encode_success, json_str = pcall(util.jsonEncode, object)
+            if not encode_success then
+                error("JSON encoding failed: " .. tostring(json_str))
+            end
+            -- Then pretty print it
+            local success, result = pcall(util.jsonPrettify, json_str)
             if not success then
                 error("JSON formatting failed: " .. tostring(result))
             end
@@ -89,7 +95,7 @@ function data.to_json(object, format)
             return result
         end
     elseif type(format) == "table" then
-        -- Detailed format options
+        -- Detailed format options using jsonToJSON
         local success, result = pcall(util.jsonToJSON, object, format)
         if not success then
             error("JSON formatting failed: " .. tostring(result))
@@ -565,6 +571,9 @@ function data.set_path(obj, path, value)
     current[keys[#keys]] = value
     return obj
 end
+
+-- Aliases for backward compatibility
+data.from_json = data.parse_json
 
 -- Export the module
 return data

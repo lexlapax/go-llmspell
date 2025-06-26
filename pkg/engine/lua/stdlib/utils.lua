@@ -516,7 +516,7 @@ function utils.general_sleep(milliseconds)
     if not util_bridge then
         error("Util bridge not available for sleep")
     end
-    return util_bridge.sleep(milliseconds)
+    return util_bridge.generalSleep(milliseconds)
 end
 
 function utils.general_uuid()

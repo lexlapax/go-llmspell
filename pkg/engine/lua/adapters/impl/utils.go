@@ -845,7 +845,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 			ua.tableToScriptValue(L, options),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "parseJSON", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "unmarshal", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
@@ -880,7 +880,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 			ua.tableToScriptValue(L, options),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "toJSON", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "marshal", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
@@ -915,7 +915,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 			ua.tableToScriptValue(L, schema),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "validateJSONSchema", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "validateWithSchema", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
@@ -950,7 +950,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 			ua.tableToScriptValue(L, schema),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "extractStructuredData", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "parseStructured", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
@@ -984,7 +984,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 			ua.tableToScriptValue(L, data),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "encode", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "marshal", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
@@ -1017,7 +1017,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 			engine.NewStringValue(text),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "decode", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "unmarshal", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
@@ -1045,12 +1045,14 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 		}
 
 		text := L.CheckString(1)
+		schema := L.CheckTable(2)
 
 		args := []engine.ScriptValue{
 			engine.NewStringValue(text),
+			ua.tableToScriptValue(L, schema),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "validate", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "validateWithSchema", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))
@@ -1083,7 +1085,7 @@ func (ua *UtilsAdapter) addJSONMethods(L *lua.LState, module *lua.LTable) {
 			engine.NewStringValue(text),
 		}
 
-		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "prettify", args)
+		result, err := ua.jsonBridge.ExecuteMethod(context.Background(), "prettyPrint", args)
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))

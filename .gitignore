@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+llmspell
 
 # Test binary, built with `go test -c`
 *.test
@@ -82,3 +83,4 @@ __debug_bin
 config.local.yaml
 config.local.json
 *.local.toml
+

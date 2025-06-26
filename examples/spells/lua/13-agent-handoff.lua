@@ -14,19 +14,30 @@ local agent = require("agent")
 local llm = require("llm")
 local tools = require("tools")
 local state = require("state")
-local log = require("log")
+-- local log = require("log")  -- Module doesn't exist, using print instead
 local data = require("data")
 local core = require("core")
 local errors = require("errors")
+local utils = require("utils")
+
+-- Helper function to extract content from various response formats
+local function get_response_content(response)
+    if type(response) == "string" then
+        return response
+    elseif type(response) == "table" and response.content then
+        return response.content
+    else
+        return tostring(response)
+    end
+end
 
 -- Example 1: Basic Agent Handoff
 print("=== Example 1: Basic Agent Handoff ===")
 
 -- Create specialized agents
-local customer_service_agent = agent.create({
-    name = "Customer Service Agent",
+local customer_service_agent = agent.create("Customer Service Agent", {
     model = "gpt-3.5-turbo",
-    instructions = [[
+    system = [[
         You are a friendly customer service representative.
         You help with general inquiries, account questions, and basic support.
         If the customer needs technical help, say "I'll transfer you to our technical support specialist."
@@ -34,10 +45,9 @@ local customer_service_agent = agent.create({
     ]]
 })
 
-local technical_support_agent = agent.create({
-    name = "Technical Support Agent",
+local technical_support_agent = agent.create("Technical Support Agent", {
     model = "gpt-4",
-    instructions = [[
+    system = [[
         You are a technical support specialist with deep knowledge of software and hardware issues.
         Provide detailed technical solutions and troubleshooting steps.
         If the issue is resolved, say "Is there anything else I can help you with?"
@@ -45,10 +55,9 @@ local technical_support_agent = agent.create({
     tools = {"web_search", "code_interpreter"}  -- Has additional tools
 })
 
-local billing_agent = agent.create({
-    name = "Billing Agent",
+local billing_agent = agent.create("Billing Agent", {
     model = "gpt-3.5-turbo",
-    instructions = [[
+    system = [[
         You handle billing inquiries, payment processing, and subscription management.
         Be professional and precise with financial information.
         Always confirm any changes with the customer.
@@ -58,24 +67,31 @@ local billing_agent = agent.create({
 -- Router function to determine which agent to use
 local function route_to_agent(query, context)
     -- Use a simple LLM call to classify the request
-    local classification = llm.complete({
+    local classification = llm.generate_message({
+        {role = "system", content = [[
+            Classify the customer query into one of these categories:
+            - general: General questions, greetings, account info
+            - technical: Software bugs, hardware issues, technical problems
+            - billing: Payments, subscriptions, invoices, refunds
+            
+            Respond with only the category name.
+        ]]},
+        {role = "user", content = query}
+    }, {
         model = "gpt-3.5-turbo",
-        messages = {
-            {role = "system", content = [[
-                Classify the customer query into one of these categories:
-                - general: General questions, greetings, account info
-                - technical: Software bugs, hardware issues, technical problems
-                - billing: Payments, subscriptions, invoices, refunds
-                
-                Respond with only the category name.
-            ]]},
-            {role = "user", content = query}
-        },
         max_tokens = 10
     })
     
-    local category = string.lower(string.gsub(classification.content, "%s+", ""))
-    log.debug("Classified query as: " .. category)
+    -- Default to general if classification fails
+    if not classification then
+        -- log.warn("Classification failed, defaulting to general")
+        return customer_service_agent, "general"
+    end
+    
+    -- Handle response whether it's a string or table with content field
+    local response_text = type(classification) == "string" and classification or (classification.content or tostring(classification))
+    local category = string.lower(string.gsub(response_text, "%s+", ""))
+    -- log.debug("Classified query as: " .. category)
     
     -- Return appropriate agent
     if string.find(category, "technical") then
@@ -102,43 +118,48 @@ local function handle_customer_interaction(initial_query)
     print("\n[" .. current_agent.name .. " handling query]")
     
     -- Process the query
-    local response = current_agent:generate({
+    local response = current_agent:run({
         prompt = initial_query,
         max_tokens = 200
     })
+    
+    -- Extract response content
+    local response_content = type(response) == "string" and response or (response and response.content or "No response")
     
     -- Add to conversation history
     table.insert(conversation_context.history, {
         agent = current_agent.name,
         user_message = initial_query,
-        agent_response = response.content
+        agent_response = response_content
     })
     
-    print("Response: " .. response.content)
+    print("Response: " .. response_content)
     
     -- Check if handoff is needed
-    if string.find(string.lower(response.content), "transfer you to") or 
-       string.find(string.lower(response.content), "connect you with") then
+    if string.find(string.lower(response_content), "transfer you to") or 
+       string.find(string.lower(response_content), "connect you with") then
         conversation_context.handoff_count = conversation_context.handoff_count + 1
         print("\n[Handoff detected - transferring...]")
         
         -- Simulate follow-up technical question
-        if string.find(string.lower(response.content), "technical") then
+        if string.find(string.lower(response_content), "technical") then
             local tech_query = "My application crashes when I try to export files"
             print("\nCustomer: " .. tech_query)
             
-            local tech_response = technical_support_agent:generate({
+            local tech_response = technical_support_agent:run({
                 prompt = tech_query .. "\n\nContext: Customer was just transferred from customer service.",
                 max_tokens = 300
             })
             
+            local tech_response_content = get_response_content(tech_response)
+            
             print("\n[" .. technical_support_agent.name .. " responds]")
-            print("Response: " .. tech_response.content)
+            print("Response: " .. tech_response_content)
             
             table.insert(conversation_context.history, {
                 agent = technical_support_agent.name,
                 user_message = tech_query,
-                agent_response = tech_response.content
+                agent_response = tech_response_content
             })
         end
     end
@@ -165,10 +186,9 @@ print()
 print("=== Example 2: Complex Multi-Agent Workflow ===")
 
 -- Create a team of specialized agents for a research project
-local research_coordinator = agent.create({
-    name = "Research Coordinator",
+local research_coordinator = agent.create("Research Coordinator", {
     model = "gpt-4",
-    instructions = [[
+    system = [[
         You coordinate research projects by:
         1. Breaking down research questions into subtasks
         2. Assigning tasks to appropriate specialist agents
@@ -177,10 +197,9 @@ local research_coordinator = agent.create({
     ]]
 })
 
-local data_analyst = agent.create({
-    name = "Data Analyst",
+local data_analyst = agent.create("Data Analyst", {
     model = "gpt-4",
-    instructions = [[
+    system = [[
         You analyze data and statistics related to research topics.
         Provide quantitative insights, trends, and data-driven conclusions.
         Always cite your sources and explain your methodology.
@@ -188,10 +207,9 @@ local data_analyst = agent.create({
     tools = {"calculator", "web_search"}
 })
 
-local literature_reviewer = agent.create({
-    name = "Literature Reviewer",
+local literature_reviewer = agent.create("Literature Reviewer", {
     model = "gpt-3.5-turbo",
-    instructions = [[
+    system = [[
         You review academic literature and research papers.
         Summarize key findings, identify research gaps, and synthesize knowledge.
         Focus on peer-reviewed sources and recent publications.
@@ -199,10 +217,9 @@ local literature_reviewer = agent.create({
     tools = {"web_search"}
 })
 
-local domain_expert = agent.create({
-    name = "Domain Expert",
+local domain_expert = agent.create("Domain Expert", {
     model = "gpt-4",
-    instructions = [[
+    system = [[
         You provide expert domain knowledge and practical insights.
         Explain complex concepts clearly and relate them to real-world applications.
         Highlight important considerations and potential challenges.
@@ -223,7 +240,7 @@ local function coordinate_research(topic)
     })
     
     -- Step 1: Break down the research
-    local breakdown = research_coordinator:generate({
+    local breakdown = research_coordinator:run({
         prompt = string.format([[
             Create a research plan for: %s
             
@@ -238,7 +255,7 @@ local function coordinate_research(topic)
     })
     
     print("Research plan created:")
-    print(breakdown.content)
+    print(get_response_content(breakdown))
     
     -- Store subtasks
     state.set("research_project.subtasks", {
@@ -254,36 +271,36 @@ local function coordinate_research(topic)
     
     -- Data Analyst work
     print("\n[Data Analyst working...]")
-    local data_findings = data_analyst:generate({
+    local data_findings = data_analyst:run({
         prompt = state.get("research_project.subtasks.data_analysis"),
         max_tokens = 250
     })
-    state.set("research_project.findings.data_analysis", data_findings.content)
+    state.set("research_project.findings.data_analysis", get_response_content(data_findings))
     print("✓ Data analysis complete")
     
     -- Literature Reviewer work
     print("\n[Literature Reviewer working...]")
-    local literature_findings = literature_reviewer:generate({
+    local literature_findings = literature_reviewer:run({
         prompt = state.get("research_project.subtasks.literature_review"),
         max_tokens = 250
     })
-    state.set("research_project.findings.literature_review", literature_findings.content)
+    state.set("research_project.findings.literature_review", get_response_content(literature_findings))
     print("✓ Literature review complete")
     
     -- Domain Expert work
     print("\n[Domain Expert working...]")
-    local expert_findings = domain_expert:generate({
+    local expert_findings = domain_expert:run({
         prompt = state.get("research_project.subtasks.domain_expertise"),
         max_tokens = 250
     })
-    state.set("research_project.findings.domain_expertise", expert_findings.content)
+    state.set("research_project.findings.domain_expertise", get_response_content(expert_findings))
     print("✓ Domain expertise gathered")
     
     -- Step 3: Synthesize results
     print("\n[Research Coordinator synthesizing findings...]")
     
     local findings = state.get("research_project.findings")
-    local synthesis = research_coordinator:generate({
+    local synthesis = research_coordinator:run({
         prompt = string.format([[
             Synthesize these research findings on "%s":
             
@@ -301,12 +318,12 @@ local function coordinate_research(topic)
         max_tokens = 400
     })
     
-    state.set("research_project.synthesis", synthesis.content)
+    state.set("research_project.synthesis", get_response_content(synthesis))
     state.set("research_project.status", "completed")
     
     return {
         topic = topic,
-        synthesis = synthesis.content,
+        synthesis = get_response_content(synthesis),
         agent_contributions = 4,
         status = "completed"
     }
@@ -324,28 +341,24 @@ print("=== Example 3: Dynamic Agent Selection with Context ===")
 
 -- Create a pool of specialized agents
 local agent_pool = {
-    python_expert = agent.create({
-        name = "Python Expert",
+    python_expert = agent.create("Python Expert", {
         model = "gpt-4",
-        instructions = "You are a Python programming expert. Help with Python code, libraries, and best practices."
+        system = "You are a Python programming expert. Help with Python code, libraries, and best practices."
     }),
     
-    javascript_expert = agent.create({
-        name = "JavaScript Expert",
+    javascript_expert = agent.create("JavaScript Expert", {
         model = "gpt-4",
-        instructions = "You are a JavaScript/Node.js expert. Help with JS, frameworks, and web development."
+        system = "You are a JavaScript/Node.js expert. Help with JS, frameworks, and web development."
     }),
     
-    database_expert = agent.create({
-        name = "Database Expert",
+    database_expert = agent.create("Database Expert", {
         model = "gpt-3.5-turbo",
-        instructions = "You are a database expert. Help with SQL, NoSQL, database design, and optimization."
+        system = "You are a database expert. Help with SQL, NoSQL, database design, and optimization."
     }),
     
-    devops_expert = agent.create({
-        name = "DevOps Expert",
+    devops_expert = agent.create("DevOps Expert", {
         model = "gpt-3.5-turbo",
-        instructions = "You are a DevOps expert. Help with CI/CD, containerization, cloud services, and deployment."
+        system = "You are a DevOps expert. Help with CI/CD, containerization, cloud services, and deployment."
     })
 }
 
@@ -358,29 +371,36 @@ local function select_expert(query, context)
     end
     
     -- Use LLM to select the best expert
-    local selection = llm.complete({
+    local selection = llm.generate_message({
+        {role = "system", content = [[
+            Select the best expert for this query from:
+            - python_expert: Python programming
+            - javascript_expert: JavaScript/web development
+            - database_expert: Database/SQL
+            - devops_expert: DevOps/deployment
+            
+            Consider the context and respond with only the expert key.
+        ]]},
+        {role = "user", content = "Query: " .. query .. "\n" .. context_str}
+    }, {
         model = "gpt-3.5-turbo",
-        messages = {
-            {role = "system", content = [[
-                Select the best expert for this query from:
-                - python_expert: Python programming
-                - javascript_expert: JavaScript/web development
-                - database_expert: Database/SQL
-                - devops_expert: DevOps/deployment
-                
-                Consider the context and respond with only the expert key.
-            ]]},
-            {role = "user", content = "Query: " .. query .. "\n" .. context_str}
-        },
         max_tokens = 20
     })
     
-    local expert_key = string.lower(string.gsub(selection.content, "%s+", ""))
+    -- Default to python_expert if selection fails
+    if not selection then
+        -- log.warn("Expert selection failed, defaulting to python_expert")
+        return agent_pool.python_expert, "python_expert"
+    end
+    
+    -- Handle response whether it's a string or table with content field
+    local response_text = type(selection) == "string" and selection or (selection.content or tostring(selection))
+    local expert_key = string.lower(string.gsub(response_text, "%s+", ""))
     expert_key = string.gsub(expert_key, "[^%w_]", "")  -- Clean the key
     
     -- Fallback to python expert if key not found
     if not agent_pool[expert_key] then
-        log.warn("Unknown expert key: " .. expert_key .. ", falling back to python_expert")
+        -- log.warn("Unknown expert key: " .. expert_key .. ", falling back to python_expert")
         expert_key = "python_expert"
     end
     
@@ -403,12 +423,12 @@ local function provide_help(queries)
         print("[Routing to " .. expert.name .. "]")
         
         -- Get response
-        local response = expert:generate({
+        local response = expert:run({
             prompt = query,
             max_tokens = 200
         })
         
-        print("Expert: " .. string.sub(response.content, 1, 150) .. "...")
+        print("Expert: " .. string.sub(get_response_content(response), 1, 150) .. "...")
         
         -- Update context
         table.insert(context.previous_topics, expert_key)
@@ -440,30 +460,27 @@ print()
 print("=== Example 4: Agent Handoff with State Transfer ===")
 
 -- Create agents that maintain and transfer state
-local intake_agent = agent.create({
-    name = "Intake Agent",
+local intake_agent = agent.create("Intake Agent", {
     model = "gpt-3.5-turbo",
-    instructions = [[
+    system = [[
         You gather initial information from users.
         Collect: name, issue type, urgency level, and any relevant details.
         Summarize the information before handoff.
     ]]
 })
 
-local resolution_agent = agent.create({
-    name = "Resolution Agent",
+local resolution_agent = agent.create("Resolution Agent", {
     model = "gpt-4",
-    instructions = [[
+    system = [[
         You resolve issues based on intake information.
         Review the provided context and offer specific solutions.
         Be thorough and actionable in your recommendations.
     ]]
 })
 
-local followup_agent = agent.create({
-    name = "Followup Agent",
+local followup_agent = agent.create("Followup Agent", {
     model = "gpt-3.5-turbo",
-    instructions = [[
+    system = [[
         You handle post-resolution followup.
         Check if the issue was resolved, gather feedback, and document outcomes.
         Be friendly and ensure customer satisfaction.
@@ -476,7 +493,7 @@ local function process_support_ticket(initial_message)
     
     -- Phase 1: Intake
     print("\n[Intake Agent gathering information...]")
-    local intake_response = intake_agent:generate({
+    local intake_response = intake_agent:run({
         prompt = "Customer says: " .. initial_message .. "\n\nGather necessary information and create a summary.",
         max_tokens = 200
     })
@@ -484,7 +501,7 @@ local function process_support_ticket(initial_message)
     -- Extract and structure intake data
     local ticket_data = {
         initial_message = initial_message,
-        intake_summary = intake_response.content,
+        intake_summary = get_response_content(intake_response),
         status = "intake_complete",
         timestamp = os.time()
     }
@@ -493,7 +510,7 @@ local function process_support_ticket(initial_message)
     
     -- Phase 2: Resolution
     print("\n[Handing off to Resolution Agent...]")
-    local resolution_response = resolution_agent:generate({
+    local resolution_response = resolution_agent:run({
         prompt = string.format([[
             Support ticket information:
             
@@ -502,34 +519,34 @@ local function process_support_ticket(initial_message)
             Intake Summary: %s
             
             Please provide a detailed resolution.
-        ]], initial_message, intake_response.content),
+        ]], initial_message, get_response_content(intake_response)),
         max_tokens = 300
     })
     
-    ticket_data.resolution = resolution_response.content
+    ticket_data.resolution = get_response_content(resolution_response)
     ticket_data.status = "resolved"
     
     print("Resolution provided.")
     
     -- Phase 3: Followup
     print("\n[Handing off to Followup Agent...]")
-    local followup_response = followup_agent:generate({
+    local followup_response = followup_agent:run({
         prompt = string.format([[
             Ticket Summary:
             - Original Issue: %s
             - Resolution Provided: %s
             
             Create a followup message to ensure customer satisfaction.
-        ]], initial_message, string.sub(resolution_response.content, 1, 100)),
+        ]], initial_message, string.sub(get_response_content(resolution_response), 1, 100)),
         max_tokens = 150
     })
     
-    ticket_data.followup = followup_response.content
+    ticket_data.followup = get_response_content(followup_response)
     ticket_data.status = "complete"
     
     print("\n=== Ticket Processing Complete ===")
     print("Agents involved: Intake → Resolution → Followup")
-    print("\nFollowup message: " .. followup_response.content)
+    print("\nFollowup message: " .. get_response_content(followup_response))
     
     return ticket_data
 end
@@ -542,22 +559,19 @@ print()
 print("=== Example 5: Parallel Agent Collaboration ===")
 
 -- Create agents that work in parallel
-local security_auditor = agent.create({
-    name = "Security Auditor",
+local security_auditor = agent.create("Security Auditor", {
     model = "gpt-4",
-    instructions = "You analyze code and systems for security vulnerabilities. Be thorough and specific."
+    system = "You analyze code and systems for security vulnerabilities. Be thorough and specific."
 })
 
-local performance_auditor = agent.create({
-    name = "Performance Auditor", 
+local performance_auditor = agent.create("Performance Auditor", {
     model = "gpt-3.5-turbo",
-    instructions = "You analyze code and systems for performance issues. Focus on optimization opportunities."
+    system = "You analyze code and systems for performance issues. Focus on optimization opportunities."
 })
 
-local code_reviewer = agent.create({
-    name = "Code Reviewer",
+local code_reviewer = agent.create("Code Reviewer", {
     model = "gpt-4",
-    instructions = "You review code for quality, maintainability, and best practices. Be constructive."
+    system = "You review code for quality, maintainability, and best practices. Be constructive."
 })
 
 -- Conduct parallel code review
@@ -576,21 +590,21 @@ local function parallel_code_review(code_snippet)
     print("\n[3 agents analyzing code simultaneously...]")
     
     -- Security audit
-    review_results.security = security_auditor:generate({
+    review_results.security = security_auditor:run({
         prompt = "Review this code for security issues:\n\n" .. code_snippet,
         max_tokens = 200
     })
     print("✓ Security audit complete")
     
     -- Performance audit
-    review_results.performance = performance_auditor:generate({
+    review_results.performance = performance_auditor:run({
         prompt = "Review this code for performance issues:\n\n" .. code_snippet,
         max_tokens = 200
     })
     print("✓ Performance audit complete")
     
     -- Code quality review
-    review_results.quality = code_reviewer:generate({
+    review_results.quality = code_reviewer:run({
         prompt = "Review this code for quality and best practices:\n\n" .. code_snippet,
         max_tokens = 200
     })
@@ -599,11 +613,11 @@ local function parallel_code_review(code_snippet)
     -- Aggregate results
     print("\n=== Consolidated Review Results ===")
     print("\nSecurity Findings:")
-    print(string.sub(review_results.security.content, 1, 150) .. "...")
+    print(string.sub(get_response_content(review_results.security), 1, 150) .. "...")
     print("\nPerformance Findings:")
-    print(string.sub(review_results.performance.content, 1, 150) .. "...")
+    print(string.sub(get_response_content(review_results.performance), 1, 150) .. "...")
     print("\nCode Quality Findings:")
-    print(string.sub(review_results.quality.content, 1, 150) .. "...")
+    print(string.sub(get_response_content(review_results.quality), 1, 150) .. "...")
     
     return review_results
 end

@@ -436,18 +436,16 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 	t.Run("parse_json", func(t *testing.T) {
 		jsonBridge := testutils.NewMockBridge("util_json").
 			WithInitialized(true).
-			WithMethod("parseJSON", engine.MethodInfo{
-				Name: "parseJSON",
+			WithMethod("unmarshal", engine.MethodInfo{
+				Name: "unmarshal",
 			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
 				text := args[0].(engine.StringValue).Value()
 
 				if text == `{"name":"test","value":42}` {
+					// Unmarshal should return the parsed object directly
 					return engine.NewObjectValue(map[string]engine.ScriptValue{
-						"parsed": engine.NewBoolValue(true),
-						"data": engine.NewObjectValue(map[string]engine.ScriptValue{
-							"name":  engine.NewStringValue("test"),
-							"value": engine.NewNumberValue(42),
-						}),
+						"name":  engine.NewStringValue("test"),
+						"value": engine.NewNumberValue(42),
 					}), nil
 				}
 				return nil, fmt.Errorf("invalid JSON")
@@ -470,9 +468,9 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 			-- Parse JSON (using flattened method)
 			local result, err = utils.jsonParse('{"name":"test","value":42}', {})
 			assert(err == nil, "should not error")
-			assert(result.parsed == true, "should be parsed")
-			assert(result.data.name == "test", "should have name")
-			assert(result.data.value == 42, "should have value")
+			assert(type(result) == "table", "result should be a table")
+			assert(result.name == "test", "should have name")
+			assert(result.value == 42, "should have value")
 		`)
 		assert.NoError(t, err)
 	})
@@ -480,13 +478,11 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 	t.Run("to_json", func(t *testing.T) {
 		jsonBridge := testutils.NewMockBridge("util_json").
 			WithInitialized(true).
-			WithMethod("toJSON", engine.MethodInfo{
-				Name: "toJSON",
+			WithMethod("marshal", engine.MethodInfo{
+				Name: "marshal",
 			}, func(ctx context.Context, args []engine.ScriptValue) (engine.ScriptValue, error) {
-				return engine.NewObjectValue(map[string]engine.ScriptValue{
-					"serialized": engine.NewBoolValue(true),
-					"json":       engine.NewStringValue(`{"name":"test","value":42}`),
-				}), nil
+				// Marshal should return the JSON string directly
+				return engine.NewStringValue(`{"name":"test","value":42}`), nil
 			})
 
 		adapter := NewUtilsAdapter(nil, nil, nil, jsonBridge, nil, nil, nil, nil)
@@ -509,8 +505,8 @@ func TestUtilsAdapter_JSON(t *testing.T) {
 				value = 42
 			}, {})
 			assert(err == nil, "should not error")
-			assert(result.serialized == true, "should be serialized")
-			assert(type(result.json) == "string", "should have JSON string")
+			assert(type(result) == "string", "result should be a JSON string")
+			assert(result == '{"name":"test","value":42}', "should have correct JSON")
 		`)
 		assert.NoError(t, err)
 	})

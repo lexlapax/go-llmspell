@@ -802,51 +802,69 @@ tools.RESOURCE_USAGE = {
 -- Core Tool Discovery Methods (Bridge wrappers)
 
 -- List all tools via bridge
-function tools.listTools()
+function tools.list_tools()
     local bridge = get_tools_bridge()
     return bridge.listTools()
 end
 
+-- Alias for backward compatibility
+tools.listTools = tools.list_tools
+
 -- Search tools by query via bridge
-function tools.searchTools(query)
+function tools.search_tools(query)
     validate_required(query, "query")
     
     local bridge = get_tools_bridge()
     return bridge.searchTools(query)
 end
 
+-- Alias for backward compatibility
+tools.searchTools = tools.search_tools
+
 -- Get tool info via bridge
-function tools.getToolInfo(toolName)
+function tools.get_tool_info(toolName)
     validate_required(toolName, "toolName")
     
     local bridge = get_tools_bridge()
     return bridge.getToolInfo(toolName)
 end
 
+-- Alias for backward compatibility
+tools.getToolInfo = tools.get_tool_info
+
 -- Get tool schema via bridge
-function tools.getToolSchema(toolName)
+function tools.get_tool_schema(toolName)
     validate_required(toolName, "toolName")
     
     local bridge = get_tools_bridge()
     return bridge.getToolSchema(toolName)
 end
 
+-- Alias for backward compatibility
+tools.getToolSchema = tools.get_tool_schema
+
 -- Get available categories via bridge
-function tools.getCategories()
+function tools.get_categories()
     local bridge = get_tools_bridge()
     return bridge.getCategories()
 end
 
+-- Alias for backward compatibility
+tools.getCategories = tools.get_categories
+
 -- List tools by category via bridge
-function tools.listByCategory(category)
+function tools.list_by_category(category)
     validate_required(category, "category")
     
     local bridge = get_tools_bridge()
     return bridge.listByCategory(category)
 end
 
+-- Alias for backward compatibility
+tools.listByCategory = tools.list_by_category
+
 -- List tools by tags via bridge
-function tools.listByTags(tags)
+function tools.list_by_tags(tags)
     validate_required(tags, "tags")
     
     if type(tags) ~= "table" then
@@ -856,6 +874,9 @@ function tools.listByTags(tags)
     local bridge = get_tools_bridge()
     return bridge.listByTags(tags)
 end
+
+-- Alias for backward compatibility
+tools.listByTags = tools.list_by_tags
 
 -- Tool Execution Methods (Bridge wrappers)
 

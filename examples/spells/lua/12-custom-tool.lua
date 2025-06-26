@@ -17,6 +17,7 @@ local data = require("data")
 local errors = require("errors")
 local log = require("log")
 local core = require("core")
+local utils = require("utils")
 
 -- Example 1: Basic Custom Tool
 print("=== Example 1: Basic Custom Tool ===")
@@ -108,7 +109,7 @@ local weather_tool = tools.define(
         local units = params.units or "fahrenheit"
         
         -- Simulate API call delay
-        -- core.sleep(0.1) -- sleep not available in core module
+        utils.general_sleep(100) -- 100ms delay
         
         local data = weather_data[city]
         if not data then
@@ -404,7 +405,7 @@ local tool_agent = agent.create({
 
 -- Test agent with tools
 print("Agent using calculator tool:")
-local calc_response = tool_agent:generate({
+local calc_response = tool_agent:run({
     prompt = "What is 158 multiplied by 37?",
     max_tokens = 100
 })

@@ -500,6 +500,10 @@ func (e *LuaEngine) RegisterBridge(bridge engine.Bridge) error {
 		e.adapterMu.Lock()
 		e.adapters[bridgeID] = adapter
 		e.adapterMu.Unlock()
+
+		// Check if this bridge is an optional dependency for existing multi-bridge adapters
+		// and recreate them if needed
+		e.recreateRelatedMultiBridgeAdapters(bridgeID)
 	}
 
 	// Register with engine
@@ -767,4 +771,53 @@ func (e *LuaEngine) ExportAPI(format engine.ExportFormat) ([]byte, error) {
 
 func (e *LuaEngine) GenerateClientLibrary(language string, options engine.ClientLibraryOptions) ([]byte, error) {
 	return nil, fmt.Errorf("GenerateClientLibrary not implemented yet")
+}
+
+// recreateRelatedMultiBridgeAdapters checks if the newly registered bridge
+// is an optional dependency for any existing multi-bridge adapters and recreates them
+func (e *LuaEngine) recreateRelatedMultiBridgeAdapters(newBridgeID string) {
+	// Define multi-bridge adapter groups
+	utilBridges := []string{"util_core", "auth", "util_auth", "util_debug", "util_errors", "util_json", "llm_utils", "util_llm", "util_script_logger", "util_slog"}
+	llmBridges := []string{"llm_core", "llm_providers", "llm_pool"}
+	observabilityBridges := []string{"observability_metrics", "observability_tracing", "observability_guardrails"}
+
+	// Helper to check if bridge is in a group
+	isInGroup := func(bridgeID string, group []string) bool {
+		for _, id := range group {
+			if id == bridgeID {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Helper to recreate adapters for a group
+	recreateGroupAdapters := func(group []string) {
+		e.adapterMu.Lock()
+		defer e.adapterMu.Unlock()
+
+		// Check which bridges in the group have existing adapters
+		for _, bridgeID := range group {
+			if _, exists := e.adapters[bridgeID]; exists {
+				// This adapter exists, try to recreate it with updated bridge map
+				e.bridgeMapMu.RLock()
+				adapter, err := e.adapterFactory.CreateAdapter(bridgeID, e.bridgeMap)
+				e.bridgeMapMu.RUnlock()
+				
+				if err == nil {
+					// Successfully created new adapter, replace the old one
+					e.adapters[bridgeID] = adapter
+				}
+			}
+		}
+	}
+
+	// Check which group the new bridge belongs to and recreate related adapters
+	if isInGroup(newBridgeID, utilBridges) {
+		recreateGroupAdapters(utilBridges)
+	} else if isInGroup(newBridgeID, llmBridges) {
+		recreateGroupAdapters(llmBridges)
+	} else if isInGroup(newBridgeID, observabilityBridges) {
+		recreateGroupAdapters(observabilityBridges)
+	}
 }

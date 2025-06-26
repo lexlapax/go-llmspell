@@ -590,7 +590,7 @@ function llm.generate(prompt, options)
 end
 
 -- Generate from message array
-function llm.generateMessage(messages, options)
+function llm.generate_message(messages, options)
     validate_required(messages, "messages")
     
     if type(messages) ~= "table" then
@@ -603,6 +603,10 @@ function llm.generateMessage(messages, options)
     return bridge.generateMessage(messages, opts)
 end
 
+-- Aliases for backward compatibility
+llm.generateMessage = llm.generate_message
+llm.complete = llm.generate_message  -- For examples that use llm.complete
+
 -- Stream response
 function llm.stream(prompt, options)
     validate_required(prompt, "prompt")
@@ -614,7 +618,7 @@ function llm.stream(prompt, options)
 end
 
 -- Count tokens in text
-function llm.countTokens(text, model)
+function llm.count_tokens(text, model)
     validate_required(text, "text")
     
     local bridge = get_llm_bridge()
@@ -622,6 +626,9 @@ function llm.countTokens(text, model)
     
     return bridge.countTokens(text, model_name)
 end
+
+-- Backward compatibility alias
+llm.countTokens = llm.count_tokens
 
 -- Create agent
 function llm.createAgent(config)
@@ -1052,52 +1059,52 @@ end
 
 -- Provider namespace
 llm.providers = {
-    create = llm.providersCreate,
-    get = llm.providersGet,
-    list = llm.providersList,
-    getTemplate = llm.providersGetTemplate,
-    createMulti = llm.providersCreateMulti,
-    createFromEnvironment = llm.providersCreateFromEnvironment,
-    remove = llm.providersRemove,
-    templatesList = llm.providersTemplatesList,
-    templatesValidate = llm.providersTemplatesValidate,
-    configureMulti = llm.providersConfigureMulti,
-    getMulti = llm.providersGetMulti,
-    createMock = llm.providersCreateMock,
-    generateWith = llm.providersGenerateWith,
-    exportConfig = llm.providersExportConfig,
-    importConfig = llm.providersImportConfig,
-    setMetadata = llm.providersSetMetadata,
-    getMetadata = llm.providersGetMetadata,
-    listByCapability = llm.providersListByCapability
+    create = llm.providers_create,
+    get = llm.providers_get,
+    list = llm.providers_list,
+    getTemplate = llm.providers_get_template,
+    createMulti = llm.providers_create_multi,
+    createFromEnvironment = llm.providers_create_from_environment,
+    remove = llm.providers_remove,
+    templatesList = llm.providers_templates_list,
+    templatesValidate = llm.providers_templates_validate,
+    configureMulti = llm.providers_configure_multi,
+    getMulti = llm.providers_get_multi,
+    createMock = llm.providers_create_mock,
+    generateWith = llm.providers_generate_with,
+    exportConfig = llm.providers_export_config,
+    importConfig = llm.providers_import_config,
+    setMetadata = llm.providers_set_metadata,
+    getMetadata = llm.providers_get_metadata,
+    listByCapability = llm.providers_list_by_capability
 }
 
 -- Pool namespace
 llm.pool = {
-    create = llm.poolCreate,
-    getHealth = llm.poolGetHealth,
-    generate = llm.poolGenerate,
-    getMetrics = llm.poolGetMetrics,
-    get = llm.poolGet,
-    list = llm.poolList,
-    remove = llm.poolRemove,
-    getProviderHealth = llm.poolGetProviderHealth,
-    resetMetrics = llm.poolResetMetrics,
-    generateMessage = llm.poolGenerateMessage,
-    stream = llm.poolStream,
-    getResponse = llm.poolGetResponse,
-    returnResponse = llm.poolReturnResponse,
-    getToken = llm.poolGetToken,
-    returnToken = llm.poolReturnToken,
-    getChannel = llm.poolGetChannel,
-    returnChannel = llm.poolReturnChannel
+    create = llm.pool_create,
+    getHealth = llm.pool_get_health,
+    generate = llm.pool_generate,
+    getMetrics = llm.pool_get_metrics,
+    get = llm.pool_get,
+    list = llm.pool_list,
+    remove = llm.pool_remove,
+    getProviderHealth = llm.pool_get_provider_health,
+    resetMetrics = llm.pool_reset_metrics,
+    generateMessage = llm.pool_generate_message,
+    stream = llm.pool_stream,
+    getResponse = llm.pool_get_response,
+    returnResponse = llm.pool_return_response,
+    getToken = llm.pool_get_token,
+    returnToken = llm.pool_return_token,
+    getChannel = llm.pool_get_channel,
+    returnChannel = llm.pool_return_channel
 }
 
 -- Models namespace
 llm.models = {
-    list = llm.modelsList,
-    getInfo = llm.modelsGetInfo,
-    checkCapabilities = llm.modelsCheckCapabilities
+    list = llm.models_list,
+    getInfo = llm.models_get_info,
+    checkCapabilities = llm.models_check_capabilities
 }
 
 -- Constants (from LLMAdapter)

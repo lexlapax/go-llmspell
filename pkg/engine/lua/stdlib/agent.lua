@@ -100,6 +100,9 @@ function agent.create(name, config)
             state = "created",
         }
         
+        -- Add name to the agent object
+        agent_obj.name = name
+        
         -- Add object-oriented methods to the agent object
         setmetatable(agent_obj, agent_mt)
     end
@@ -200,7 +203,18 @@ function agent.run(agent_id, input, options)
         }
     end
     
-    local result = bridge.run(agent_id, formatted_input, opts)
+    -- Merge options into input if provided
+    if opts and next(opts) then
+        if type(formatted_input) == "table" then
+            for k, v in pairs(opts) do
+                if not formatted_input[k] then
+                    formatted_input[k] = v
+                end
+            end
+        end
+    end
+    
+    local result = bridge.run(agent_id, formatted_input)
 
     -- Update agent state based on result
     if active_agents[agent_id] then
@@ -225,7 +239,28 @@ function agent.run_async(agent_id, input, options)
             active_agents[agent_id].last_run = os.time()
         end
 
-        local result = bridge.runAsync(agent_id, input, opts)
+        -- Convert string input to message format if needed
+        local formatted_input = input
+        if type(input) == "string" then
+            formatted_input = {
+                messages = {
+                    {role = "user", content = input}
+                }
+            }
+        end
+        
+        -- Merge options into input if provided
+        if opts and next(opts) then
+            if type(formatted_input) == "table" then
+                for k, v in pairs(opts) do
+                    if not formatted_input[k] then
+                        formatted_input[k] = v
+                    end
+                end
+            end
+        end
+        
+        local result = bridge.runAsync(agent_id, formatted_input)
 
         -- Update agent state based on result
         if active_agents[agent_id] then
@@ -714,11 +749,14 @@ end
 -- ===================================================================
 
 -- Standard convenience methods (AgentAdapter naming)
-function agent.createAgent(name, config)
+function agent.create_agent(name, config)
     return agent.create(name, config)
 end
 
-function agent.createLLMAgent(name, config)
+-- Backward compatibility alias
+agent.createAgent = agent.create_agent
+
+function agent.create_llm_agent(name, config)
     local bridge = get_agent_bridge()
     local agent_config = config or {}
     local agent_obj = bridge.lifecycleCreateLLM(name, agent_config)
@@ -731,102 +769,163 @@ function agent.createLLMAgent(name, config)
             state = "created",
             type = "llm"
         }
+        agent_obj.name = name
         setmetatable(agent_obj, agent_mt)
     end
     
     return agent_obj
 end
 
-function agent.listAgents()
+-- Backward compatibility alias
+agent.createLLMAgent = agent.create_llm_agent
+
+function agent.list_agents()
     return agent.list()
 end
 
-function agent.getAgent(agent_id)
+-- Backward compatibility alias
+agent.listAgents = agent.list_agents
+
+function agent.get_agent(agent_id)
     return agent.get(agent_id)
 end
 
-function agent.removeAgent(agent_id)
+-- Backward compatibility alias
+agent.getAgent = agent.get_agent
+
+function agent.remove_agent(agent_id)
     return agent.remove(agent_id)
 end
 
+-- Backward compatibility alias
+agent.removeAgent = agent.remove_agent
+
 -- Lifecycle methods (flattened naming)
-function agent.lifecycleCreate(name, config)
+function agent.lifecycle_create(name, config)
     return agent.create(name, config)
 end
 
-function agent.lifecycleCreateLLM(name, config)
-    return agent.createLLMAgent(name, config)
+-- Backward compatibility alias
+agent.lifecycleCreate = agent.lifecycle_create
+
+function agent.lifecycle_create_llm(name, config)
+    return agent.create_llm_agent(name, config)
 end
 
-function agent.lifecycleList()
+-- Backward compatibility alias
+agent.lifecycleCreateLLM = agent.lifecycle_create_llm
+
+function agent.lifecycle_list()
     return agent.list()
 end
 
-function agent.lifecycleGet(agent_id)
+-- Backward compatibility alias
+agent.lifecycleList = agent.lifecycle_list
+
+function agent.lifecycle_get(agent_id)
     return agent.get(agent_id)
 end
 
-function agent.lifecycleRemove(agent_id)
+-- Backward compatibility alias
+agent.lifecycleGet = agent.lifecycle_get
+
+function agent.lifecycle_remove(agent_id)
     return agent.remove(agent_id)
 end
 
-function agent.lifecycleGetMetrics()
+-- Backward compatibility alias
+agent.lifecycleRemove = agent.lifecycle_remove
+
+function agent.lifecycle_get_metrics()
     local bridge = get_agent_bridge()
     return bridge.lifecycleGetMetrics()
 end
 
+-- Backward compatibility alias
+agent.lifecycleGetMetrics = agent.lifecycle_get_metrics
+
 -- Tool management methods (AgentAdapter naming)
-function agent.registerTool(agent_id, tool_name, tool_config)
+function agent.register_tool(agent_id, tool_name, tool_config)
     local bridge = get_agent_bridge()
     return bridge.registerTool(agent_id, tool_name, tool_config)
 end
 
-function agent.unregisterTool(agent_id, tool_name)
+-- Backward compatibility alias
+agent.registerTool = agent.register_tool
+
+function agent.unregister_tool(agent_id, tool_name)
     local bridge = get_agent_bridge()
     return bridge.unregisterTool(agent_id, tool_name)
 end
 
-function agent.listTools(agent_id)
+-- Backward compatibility alias
+agent.unregisterTool = agent.unregister_tool
+
+function agent.list_tools(agent_id)
     return agent.get_tools(agent_id)
 end
+
+-- Backward compatibility alias
+agent.listTools = agent.list_tools
 
 -- State methods (flattened naming)
 agent.state = {}
 
-function agent.stateGet(agent_id, key)
+function agent.state_get(agent_id, key)
     local bridge = get_agent_bridge()
     return bridge.stateGet(agent_id, key)
 end
 
-function agent.stateSet(agent_id, key, value)
+-- Backward compatibility alias
+agent.stateGet = agent.state_get
+
+function agent.state_set(agent_id, key, value)
     local bridge = get_agent_bridge()
     return bridge.stateSet(agent_id, key, value)
 end
 
-function agent.stateExport(agent_id)
+-- Backward compatibility alias
+agent.stateSet = agent.state_set
+
+function agent.state_export(agent_id)
     local bridge = get_agent_bridge()
     return bridge.stateExport(agent_id)
 end
 
-function agent.stateImport(agent_id, state_data)
+-- Backward compatibility alias
+agent.stateExport = agent.state_export
+
+function agent.state_import(agent_id, state_data)
     local bridge = get_agent_bridge()
     return bridge.stateImport(agent_id, state_data)
 end
 
-function agent.stateSaveSnapshot(agent_id, snapshot_name)
+-- Backward compatibility alias
+agent.stateImport = agent.state_import
+
+function agent.state_save_snapshot(agent_id, snapshot_name)
     local bridge = get_agent_bridge()
     return bridge.stateSaveSnapshot(agent_id, snapshot_name)
 end
 
-function agent.stateLoadSnapshot(agent_id, snapshot_name)
+-- Backward compatibility alias
+agent.stateSaveSnapshot = agent.state_save_snapshot
+
+function agent.state_load_snapshot(agent_id, snapshot_name)
     local bridge = get_agent_bridge()
     return bridge.stateLoadSnapshot(agent_id, snapshot_name)
 end
 
-function agent.stateListSnapshots(agent_id)
+-- Backward compatibility alias
+agent.stateLoadSnapshot = agent.state_load_snapshot
+
+function agent.state_list_snapshots(agent_id)
     local bridge = get_agent_bridge()
     return bridge.stateListSnapshots(agent_id)
 end
+
+-- Backward compatibility alias
+agent.stateListSnapshots = agent.state_list_snapshots
 
 -- State namespace methods
 function agent.state.get(agent_id, key)
@@ -860,35 +959,53 @@ end
 -- Events methods (flattened naming)
 agent.events = {}
 
-function agent.eventsEmit(agent_id, event_name, event_data)
+function agent.events_emit(agent_id, event_name, event_data)
     local bridge = get_agent_bridge()
     return bridge.eventsEmit(agent_id, event_name, event_data)
 end
 
-function agent.eventsSubscribe(agent_id, event_name, handler)
+-- Backward compatibility alias
+agent.eventsEmit = agent.events_emit
+
+function agent.events_subscribe(agent_id, event_name, handler)
     local bridge = get_agent_bridge()
     return bridge.eventsSubscribe(agent_id, event_name, handler)
 end
 
-function agent.eventsUnsubscribe(agent_id, event_name, handler_id)
+-- Backward compatibility alias
+agent.eventsSubscribe = agent.events_subscribe
+
+function agent.events_unsubscribe(agent_id, event_name, handler_id)
     local bridge = get_agent_bridge()
     return bridge.eventsUnsubscribe(agent_id, event_name, handler_id)
 end
 
-function agent.eventsStartRecording(agent_id)
+-- Backward compatibility alias
+agent.eventsUnsubscribe = agent.events_unsubscribe
+
+function agent.events_start_recording(agent_id)
     local bridge = get_agent_bridge()
     return bridge.eventsStartRecording(agent_id)
 end
 
-function agent.eventsStopRecording(agent_id)
+-- Backward compatibility alias
+agent.eventsStartRecording = agent.events_start_recording
+
+function agent.events_stop_recording(agent_id)
     local bridge = get_agent_bridge()
     return bridge.eventsStopRecording(agent_id)
 end
 
-function agent.eventsReplay(agent_id, events)
+-- Backward compatibility alias
+agent.eventsStopRecording = agent.events_stop_recording
+
+function agent.events_replay(agent_id, events)
     local bridge = get_agent_bridge()
     return bridge.eventsReplay(agent_id, events)
 end
+
+-- Backward compatibility alias
+agent.eventsReplay = agent.events_replay
 
 -- Events namespace methods
 function agent.events.emit(agent_id, event_name, event_data)
@@ -918,25 +1035,37 @@ end
 -- Profiling methods (flattened naming)
 agent.profiling = {}
 
-function agent.profilingStart(agent_id, profile_name)
+function agent.profiling_start(agent_id, profile_name)
     local bridge = get_agent_bridge()
     return bridge.profilingStart(agent_id, profile_name)
 end
 
-function agent.profilingStop(agent_id, profile_name)
+-- Backward compatibility alias
+agent.profilingStart = agent.profiling_start
+
+function agent.profiling_stop(agent_id, profile_name)
     local bridge = get_agent_bridge()
     return bridge.profilingStop(agent_id, profile_name)
 end
 
-function agent.profilingGetMetrics(agent_id)
+-- Backward compatibility alias
+agent.profilingStop = agent.profiling_stop
+
+function agent.profiling_get_metrics(agent_id)
     local bridge = get_agent_bridge()
     return bridge.profilingGetMetrics(agent_id)
 end
 
-function agent.profilingGetReport(agent_id, profile_name)
+-- Backward compatibility alias
+agent.profilingGetMetrics = agent.profiling_get_metrics
+
+function agent.profiling_get_report(agent_id, profile_name)
     local bridge = get_agent_bridge()
     return bridge.profilingGetReport(agent_id, profile_name)
 end
+
+-- Backward compatibility alias
+agent.profilingGetReport = agent.profiling_get_report
 
 -- Profiling namespace methods
 function agent.profiling.start(agent_id, profile_name)
@@ -956,41 +1085,62 @@ function agent.profiling.get_report(agent_id, profile_name)
 end
 
 -- Workflow methods (flattened naming) - note: some already exist with different names
-function agent.workflowCreate(name, steps, options)
+function agent.workflow_create_alias(name, steps, options)
     return agent.workflow_create(name, steps, options)
 end
 
-function agent.workflowExecute(workflow_id, input, options)
+-- Backward compatibility alias
+agent.workflowCreate = agent.workflow_create_alias
+
+function agent.workflow_execute(workflow_id, input, options)
     return agent.workflow_run(workflow_id, input, options)
 end
 
-function agent.workflowAddStep(workflow_id, step, position)
+-- Backward compatibility alias
+agent.workflowExecute = agent.workflow_execute
+
+function agent.workflow_add_step(workflow_id, step, position)
     local bridge = get_workflow_bridge()
     return bridge.workflowAddStep(workflow_id, step, position)
 end
 
+-- Backward compatibility alias
+agent.workflowAddStep = agent.workflow_add_step
+
 -- Hooks methods (flattened naming)
 agent.hooks = {}
 
-function agent.hooksRegister(agent_id, hook_name, hook_function)
+function agent.hooks_register(agent_id, hook_name, hook_function)
     local bridge = get_agent_bridge()
     return bridge.hooksRegister(agent_id, hook_name, hook_function)
 end
 
-function agent.hooksUnregister(agent_id, hook_name)
+-- Backward compatibility alias
+agent.hooksRegister = agent.hooks_register
+
+function agent.hooks_unregister(agent_id, hook_name)
     local bridge = get_agent_bridge()
     return bridge.hooksUnregister(agent_id, hook_name)
 end
 
-function agent.hooksExecute(agent_id, hook_name, context)
+-- Backward compatibility alias
+agent.hooksUnregister = agent.hooks_unregister
+
+function agent.hooks_execute(agent_id, hook_name, context)
     local bridge = get_agent_bridge()
     return bridge.hooksExecute(agent_id, hook_name, context)
 end
 
-function agent.hooksList(agent_id)
+-- Backward compatibility alias
+agent.hooksExecute = agent.hooks_execute
+
+function agent.hooks_list(agent_id)
     local bridge = get_agent_bridge()
     return bridge.hooksList(agent_id)
 end
+
+-- Backward compatibility alias
+agent.hooksList = agent.hooks_list
 
 -- Hooks namespace methods
 function agent.hooks.register(agent_id, hook_name, hook_function)

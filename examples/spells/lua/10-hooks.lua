@@ -17,6 +17,7 @@ local log = require("log")
 local errors = require("errors")
 local data = require("data")
 local core = require("core")
+local utils = require("utils")
 
 -- Example 1: Basic Pre/Post Execution Hooks
 print("=== Example 1: Basic Pre/Post Execution Hooks ===")
@@ -91,7 +92,7 @@ hooks.register("error", function(err, context)
     -- Attempt recovery for specific errors
     if string.find(tostring(err), "rate limit") then
         log.warn("Rate limit detected, adding delay...")
-        core.sleep(2)
+        utils.general_sleep(2000)
         return {retry = true, delay = 2}
     end
     
@@ -185,7 +186,7 @@ local analytical_agent = agent.create({
 })
 
 -- Get response that will be transformed
-local agent_response = analytical_agent:generate({
+local agent_response = analytical_agent:run({
     prompt = "What are the top 3 benefits of using hooks? My phone is 1234567890.",
     max_tokens = 200
 })

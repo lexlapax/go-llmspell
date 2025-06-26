@@ -16,6 +16,7 @@ local agent = require("agent")
 local data = require("data")
 local core = require("core")
 local log = require("log")
+local utils = require("utils")
 
 -- Initialize state with default values
 local function initialize_state()
@@ -125,7 +126,7 @@ for i, topic in ipairs(topics) do
     local response = assistant:run(context_prompt)
     
     -- Save response to history
-    add_to_history("assistant", response)
+    add_to_history("assistant", response.content or response)
     
     -- Track topics
     state.update("app.session_data.topics_discussed", function(topics)
@@ -134,7 +135,7 @@ for i, topic in ipairs(topics) do
         return topics
     end)
     
-    print("Assistant: " .. string.sub(response, 1, 100) .. "...")
+    print("Assistant: " .. string.sub(response.content or tostring(response), 1, 100) .. "...")
 end
 
 -- Show session summary
@@ -203,7 +204,7 @@ state.set("research", {
 
 -- Coordinator assigns tasks
 print("Coordinator planning research...")
-local plan = coordinator:generate({
+local plan = coordinator:run({
     prompt = "Create a research plan for: " .. state.get("research.topic"),
     max_tokens = 200
 })
@@ -218,7 +219,7 @@ state.update("research.progress.technical_research", function()
     return "in_progress" 
 end)
 
-local tech_findings = researcher1:generate({
+local tech_findings = researcher1:run({
     prompt = "Research technical aspects of: " .. state.get("research.topic"),
     max_tokens = 300
 })
@@ -238,7 +239,7 @@ state.update("research.progress.practical_research", function()
     return "in_progress" 
 end)
 
-local practical_findings = researcher2:generate({
+local practical_findings = researcher2:run({
     prompt = "Research practical applications of: " .. state.get("research.topic"),
     max_tokens = 300
 })
@@ -256,11 +257,10 @@ end)
 -- Coordinator synthesizes findings
 print("\nCoordinator synthesizing findings...")
 local findings = state.get("research.findings")
-local synthesis = coordinator:generate({
+local synthesis = coordinator:run({
     prompt = string.format(
-        "Synthesize these research findings:\nTechnical: %s\nPractical: %s",
-        findings.technical or "none",
-        findings.practical or "none"
+        "Synthesize these research findings on \"%s\":\n\nTechnical: %s\n\nPractical: %s\n\nCreate a comprehensive summary with key insights and recommendations.",
+        state.get("research.topic"), findings.technical or "none", findings.practical or "none"
     ),
     max_tokens = 400
 })
@@ -426,7 +426,7 @@ end)
 for i = 1, 3 do
     add_to_history("user", "Test message " .. i)
     message_watcher()  -- Check for changes
-    core.sleep(0.1)
+    utils.general_sleep(100)  -- Sleep for 100ms
 end
 
 -- Final state summary
